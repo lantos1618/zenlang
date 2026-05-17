@@ -29,7 +29,7 @@ HashMap<K, V>: {
 
 // Create new empty hashmap
 HashMap<K, V>.new = (allocator: Allocator) HashMap<K, V> {
-    return HashMap<K, V> {
+    HashMap<K, V> {
         entries: DynVec<Entry<K, V>>.new(allocator),
         size: 0,
         capacity: 0,
@@ -39,7 +39,7 @@ HashMap<K, V>.new = (allocator: Allocator) HashMap<K, V> {
 
 // Create hashmap with initial capacity
 HashMap<K, V>.with_capacity = (allocator: Allocator, capacity: usize) HashMap<K, V> {
-    return HashMap<K, V> {
+    HashMap<K, V> {
         entries: DynVec<Entry<K, V>>.with_capacity(allocator, capacity),
         size: 0,
         capacity: capacity,
@@ -53,12 +53,12 @@ HashMap<K, V>.with_capacity = (allocator: Allocator, capacity: usize) HashMap<K,
 
 // Get number of entries
 HashMap<K, V>.len = (self: HashMap<K, V>) usize {
-    return self.size
+    self.size
 }
 
 // Check if empty
 HashMap<K, V>.is_empty = (self: HashMap<K, V>) bool {
-    return self.size == 0
+    self.size == 0
 }
 
 // ============================================================================
@@ -71,7 +71,7 @@ hash_bytes = (key_ptr: RawPtr<u8>, index: usize, key_size: usize, hash_val: u64,
     index >= key_size ?
         | true {
             // Base case: processed all bytes
-            return hash_val
+            hash_val
         }
         | false {
             // Load byte at current index
@@ -79,7 +79,7 @@ hash_bytes = (key_ptr: RawPtr<u8>, index: usize, key_size: usize, hash_val: u64,
             // Apply FNV-1a: hash = (hash ^ byte) * FNV_PRIME
             new_hash = (hash_val ^ b) * fnv_prime
             // Recurse to next byte
-            return hash_bytes(key_ptr, index + 1, key_size, new_hash, fnv_prime)
+            hash_bytes(key_ptr, index + 1, key_size, new_hash, fnv_prime)
         }
 }
 
@@ -105,7 +105,7 @@ hash<K> = (key: K) u64 {
     // Clean up
     compiler.raw_deallocate(key_ptr, key_size)
 
-    return hash_val
+    hash_val
 }
 
 // Helper: Check if two keys are equal using memcmp
@@ -126,15 +126,15 @@ keys_equal<K> = (key1: K, key2: K) bool {
     compiler.raw_deallocate(ptr1, key_size)
     compiler.raw_deallocate(ptr2, key_size)
 
-    return result == 0
+    result == 0
 }
 
 // Helper: Find slot for key using linear probing (recursive)
 find_slot<K, V> = (entries: DynVec<Entry<K, V>>, key: K, start_index: usize, probe: usize, capacity: usize) usize {
     probe >= capacity ?
         | true {
-            // Failed to find slot (table full) - return start_index
-            return start_index
+            // Failed to find slot (table full)
+            start_index
         }
         | false {
             current = (start_index + probe) % capacity
@@ -144,19 +144,19 @@ find_slot<K, V> = (entries: DynVec<Entry<K, V>>, key: K, start_index: usize, pro
                 | Some(entry) {
                     // Found empty slot or matching key
                     !entry.occupied ?
-                        | true { return current }
+                        | true { current }
                         | false {
                             keys_equal<K>(entry.key, key) ?
-                                | true { return current }
+                                | true { current }
                                 | false {
                                     // Continue probing
-                                    return find_slot<K, V>(entries, key, start_index, probe + 1, capacity)
+                                    find_slot<K, V>(entries, key, start_index, probe + 1, capacity)
                                 }
                         }
                 }
                 | None {
-                    // Shouldn't happen, return start_index
-                    return start_index
+                    // Shouldn't happen
+                    start_index
                 }
         }
 }
@@ -228,105 +228,98 @@ HashMap<K, V>.insert = (self: MutPtr<HashMap<K, V>>, key: K, value: V) void {
 
 // Get value by key
 HashMap<K, V>.get = (self: HashMap<K, V>, key: K) Option<V> {
-    // Return None if empty
     self.capacity == 0 ?
-        | true { return Option.None }
-        | false { }
+        | true { Option.None }
+        | false {
+            // Compute hash and find slot
+            h = hash<K>(key)
+            start_index = h % self.capacity
+            slot_index = find_slot<K, V>(self.entries, key, start_index, 0, self.capacity)
 
-    // Compute hash and find slot
-    h = hash<K>(key)
-    start_index = h % self.capacity
-    slot_index = find_slot<K, V>(self.entries, key, start_index, 0, self.capacity)
-
-    // Check if entry exists and is occupied
-    entry_opt = self.entries.get(slot_index)
-    entry_opt ?
-        | Some(entry) {
-            // Return value if occupied and key matches
-            entry.occupied ?
-                | true {
-                    keys_equal<K>(entry.key, key) ?
-                        | true { return Option.Some(entry.value) }
-                        | false { return Option.None }
+            // Check if entry exists and is occupied
+            entry_opt = self.entries.get(slot_index)
+            entry_opt ?
+                | Some(entry) {
+                    entry.occupied ?
+                        | true {
+                            keys_equal<K>(entry.key, key) ?
+                                | true { Option.Some(entry.value) }
+                                | false { Option.None }
+                        }
+                        | false { Option.None }
                 }
-                | false { return Option.None }
+                | None { Option.None }
         }
-        | None { return Option.None }
 }
 
 // Check if key exists
 HashMap<K, V>.contains_key = (self: HashMap<K, V>, key: K) bool {
-    // Return false if empty
     self.capacity == 0 ?
-        | true { return false }
-        | false { }
+        | true { false }
+        | false {
+            // Compute hash and find slot
+            h = hash<K>(key)
+            start_index = h % self.capacity
+            slot_index = find_slot<K, V>(self.entries, key, start_index, 0, self.capacity)
 
-    // Compute hash and find slot
-    h = hash<K>(key)
-    start_index = h % self.capacity
-    slot_index = find_slot<K, V>(self.entries, key, start_index, 0, self.capacity)
-
-    // Check if entry exists and is occupied
-    entry_opt = self.entries.get(slot_index)
-    entry_opt ?
-        | Some(entry) {
-            entry.occupied ?
-                | true {
-                    return keys_equal<K>(entry.key, key)
+            // Check if entry exists and is occupied
+            entry_opt = self.entries.get(slot_index)
+            entry_opt ?
+                | Some(entry) {
+                    entry.occupied ?
+                        | true { keys_equal<K>(entry.key, key) }
+                        | false { false }
                 }
-                | false { return false }
+                | None { false }
         }
-        | None { return false }
 }
 
-// Remove key and return value
+// Remove key and produce its value
 HashMap<K, V>.remove = (self: MutPtr<HashMap<K, V>>, key: K) Option<V> {
-    // Return None if empty
     self.val.capacity == 0 ?
-        | true { return Option.None }
-        | false { }
+        | true { Option.None }
+        | false {
+            // Compute hash and find slot
+            h = hash<K>(key)
+            start_index = h % self.val.capacity
+            slot_index = find_slot<K, V>(self.val.entries, key, start_index, 0, self.val.capacity)
 
-    // Compute hash and find slot
-    h = hash<K>(key)
-    start_index = h % self.val.capacity
-    slot_index = find_slot<K, V>(self.val.entries, key, start_index, 0, self.val.capacity)
-
-    // Check if entry exists and is occupied
-    entry_opt = self.val.entries.get(slot_index)
-    entry_opt ?
-        | Some(entry) {
-            entry.occupied ?
-                | true {
-                    // Check if key matches
-                    keys_equal<K>(entry.key, key) ?
+            // Check if entry exists and is occupied
+            entry_opt = self.val.entries.get(slot_index)
+            entry_opt ?
+                | Some(entry) {
+                    entry.occupied ?
                         | true {
-                            // Get pointer to entry and mark as unoccupied
-                            entry_ptr = self.val.entries.data.at(slot_index)
-                            entry_ptr ?
-                                | Some(_) {
-                                    addr = entry_ptr.addr()
+                            // Check if key matches
+                            keys_equal<K>(entry.key, key) ?
+                                | true {
+                                    // Get pointer to entry and mark as unoccupied
+                                    entry_ptr = self.val.entries.data.at(slot_index)
+                                    entry_ptr ?
+                                        | Some(_) {
+                                            addr = entry_ptr.addr()
 
-                                    // Create empty entry (keeping old key/value for dummy)
-                                    empty_entry = Entry<K, V> {
-                                        key: entry.key,
-                                        value: entry.value,
-                                        occupied: false
-                                    }
-                                    compiler.store<Entry<K, V>>(addr, empty_entry)
+                                            // Create empty entry (keeping old key/value for dummy)
+                                            empty_entry = Entry<K, V> {
+                                                key: entry.key,
+                                                value: entry.value,
+                                                occupied: false
+                                            }
+                                            compiler.store<Entry<K, V>>(addr, empty_entry)
 
-                                    // Decrement size
-                                    self.val.size = self.val.size - 1
+                                            // Decrement size
+                                            self.val.size = self.val.size - 1
 
-                                    // Return the removed value
-                                    return Option.Some(entry.value)
+                                            Option.Some(entry.value)
+                                        }
+                                        | None { Option.None }
                                 }
-                                | None { return Option.None }
+                                | false { Option.None }
                         }
-                        | false { return Option.None }
+                        | false { Option.None }
                 }
-                | false { return Option.None }
+                | None { Option.None }
         }
-        | None { return Option.None }
 }
 
 // Clear hashmap
@@ -359,7 +352,7 @@ HashMapIterator<K, V>: {
 
 // Create an iterator over the hashmap
 HashMap<K, V>.iter = (self: HashMap<K, V>) HashMapIterator<K, V> {
-    return HashMapIterator<K, V> {
+    HashMapIterator<K, V> {
         entries: self.entries,
         index: 0,
         capacity: self.capacity
@@ -375,16 +368,16 @@ KeyValuePair<K, V>: {
 // Helper: find next occupied entry (recursive)
 find_next_occupied<K, V> = (entries: DynVec<Entry<K, V>>, start: usize, capacity: usize) Option<usize> {
     start >= capacity ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             entry_opt = entries.get(start)
             entry_opt ?
                 | Some(entry) {
                     entry.occupied ?
-                        | true { return Option.Some(start) }
-                        | false { return find_next_occupied<K, V>(entries, start + 1, capacity) }
+                        | true { Option.Some(start) }
+                        | false { find_next_occupied<K, V>(entries, start + 1, capacity) }
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
@@ -407,19 +400,19 @@ HashMapIterator<K, V>.next = (self: MutPtr<HashMapIterator<K, V>>) Option<KeyVal
                         key: entry.key,
                         value: entry.value
                     }
-                    return Option.Some(pair)
+                    Option.Some(pair)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
-        | None { return Option.None }
+        | None { Option.None }
 }
 
 // Check if iterator has more elements
 HashMapIterator<K, V>.has_next = (self: HashMapIterator<K, V>) bool {
     next_idx_opt = find_next_occupied<K, V>(self.entries, self.index, self.capacity)
     next_idx_opt ?
-        | Some(_) { return true }
-        | None { return false }
+        | Some(_) { true }
+        | None { false }
 }
 
 // Keys iterator - iterate over just keys
@@ -429,7 +422,7 @@ HashMapKeyIterator<K, V>: {
 
 // Create keys iterator
 HashMap<K, V>.keys = (self: HashMap<K, V>) HashMapKeyIterator<K, V> {
-    return HashMapKeyIterator<K, V> {
+    HashMapKeyIterator<K, V> {
         inner: self.iter()
     }
 }
@@ -438,8 +431,8 @@ HashMap<K, V>.keys = (self: HashMap<K, V>) HashMapKeyIterator<K, V> {
 HashMapKeyIterator<K, V>.next = (self: MutPtr<HashMapKeyIterator<K, V>>) Option<K> {
     pair_opt = self.val.inner.mut_ref().next()
     pair_opt ?
-        | Some(pair) { return Option.Some(pair.key) }
-        | None { return Option.None }
+        | Some(pair) { Option.Some(pair.key) }
+        | None { Option.None }
 }
 
 // Values iterator - iterate over just values
@@ -449,7 +442,7 @@ HashMapValueIterator<K, V>: {
 
 // Create values iterator
 HashMap<K, V>.values = (self: HashMap<K, V>) HashMapValueIterator<K, V> {
-    return HashMapValueIterator<K, V> {
+    HashMapValueIterator<K, V> {
         inner: self.iter()
     }
 }
@@ -458,6 +451,6 @@ HashMap<K, V>.values = (self: HashMap<K, V>) HashMapValueIterator<K, V> {
 HashMapValueIterator<K, V>.next = (self: MutPtr<HashMapValueIterator<K, V>>) Option<V> {
     pair_opt = self.val.inner.mut_ref().next()
     pair_opt ?
-        | Some(pair) { return Option.Some(pair.value) }
-        | None { return Option.None }
+        | Some(pair) { Option.Some(pair.value) }
+        | None { Option.None }
 }

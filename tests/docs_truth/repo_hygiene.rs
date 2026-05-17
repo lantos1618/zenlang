@@ -124,6 +124,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
     for path in [
         "stdlib/build.zen",
         "stdlib/collections/char.zen",
+        "stdlib/collections/hashmap.zen",
         "stdlib/collections/queue.zen",
         "stdlib/collections/set.zen",
         "stdlib/collections/vec.zen",
