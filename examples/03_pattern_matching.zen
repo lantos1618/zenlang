@@ -3,33 +3,41 @@
 
 { io } = std
 
-// Simple enum
-Color: Red, Green, Blue
+Color:
+    Red,
+    Green,
+    Blue
 
-// Enum with payloads
-Shape:
-    Circle: f64,
-    Rectangle: { width: f64, height: f64 },
-    Triangle: { base: f64, height: f64 }
-
-// Pattern matching on enums
-describe_color = (c: Color) StringLiteral {
-    c ?
-        | .Red { "red" }
-        | .Green { "green" }
-        | .Blue { "blue" }
+Rectangle: {
+    width: f64,
+    height: f64,
 }
 
-// Pattern matching with payload extraction
+Triangle: {
+    base: f64,
+    height: f64,
+}
+
+Shape:
+    Circle(f64),
+    Rect(Rectangle),
+    Tri(Triangle)
+
+describe_color = (c: Color) StaticString {
+    c ?
+        | Red { "red" }
+        | Green { "green" }
+        | Blue { "blue" }
+}
+
 area = (s: Shape) f64 {
     s ?
-        | .Circle(radius) { 3.14159 * radius * radius }
-        | .Rectangle(r) { r.width * r.height }
-        | .Triangle(t) { 0.5 * t.base * t.height }
+        | Circle(radius) { 3.14159 * radius * radius }
+        | Rect(r) { r.width * r.height }
+        | Tri(t) { 0.5 * t.base * t.height }
 }
 
-// Conditional (boolean pattern matching)
-classify_number = (n: i32) StringLiteral {
+classify_number = (n: i32) StaticString {
     n > 0 ?
         | true { "positive" }
         | false {
@@ -40,20 +48,17 @@ classify_number = (n: i32) StringLiteral {
 }
 
 main = () i32 {
-    // Enum pattern matching
-    io.println(describe_color(.Red))
-    io.println(describe_color(.Blue))
+    io.println(describe_color(Color.Red))
+    io.println(describe_color(Color.Blue))
 
-    // Shape areas
     circle = Shape.Circle(5.0)
-    rect = Shape.Rectangle({ width: 10.0, height: 3.0 })
-    tri = Shape.Triangle({ base: 8.0, height: 4.0 })
+    rect = Shape.Rect(Rectangle { width: 10.0, height: 3.0 })
+    tri = Shape.Tri(Triangle { base: 8.0, height: 4.0 })
 
     io.println("Circle area: ${area(circle)}")
     io.println("Rectangle area: ${area(rect)}")
     io.println("Triangle area: ${area(tri)}")
 
-    // Number classification
     io.println(classify_number(42))
     io.println(classify_number(0))
     io.println(classify_number(-7))

@@ -22,6 +22,7 @@ these files as focused language samples.
 
 - [examples/project/main.zen](project/main.zen)
 - [examples/project/math_utils.zen](project/math_utils.zen)
+- [examples/project/test.zen](project/test.zen)
 - [examples/project/build.zen](project/build.zen)
 
 `examples/project/` is the canonical multi-file example. The numbered files are

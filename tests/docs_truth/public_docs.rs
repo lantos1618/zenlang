@@ -64,6 +64,7 @@ fn examples_index_uses_canonical_tutorial_and_project_paths() {
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
         "examples/project/main.zen",
+        "examples/project/test.zen",
     ] {
         assert!(
             examples.contains(required),
@@ -160,6 +161,7 @@ fn public_language_docs_and_examples_do_not_teach_return_keyword() {
         "examples/06_error_handling.zen",
         "examples/project/main.zen",
         "examples/project/math_utils.zen",
+        "examples/project/test.zen",
         "examples/project/build.zen",
         "tests/nested_struct_field_access.zen",
     ] {

@@ -1,0 +1,9 @@
+// test.zen - Deterministic test target for the project build graph
+
+{ factorial } = math_utils
+
+main = () i32 {
+    factorial(4) == 24 ?
+        | true { 0 }
+        | false { 1 }
+}

@@ -2,18 +2,21 @@
 //
 // Shows how to organize reusable functions in a separate file.
 
-{ abs, max, min } = std.math.math
-
-clamp = (value: i32, lo: i32, hi: i32) i32 {
-    value.max(lo).min(hi)
+pub clamp = (value: i32, lo: i32, hi: i32) i32 {
+    lower = value < lo ?
+        | true { lo }
+        | false { value }
+    lower > hi ?
+        | true { hi }
+        | false { lower }
 }
 
-factorial = (n: i32) i32 {
+pub factorial = (n: i32) i32 {
     n <= 1 ?
         | true { 1 }
         | false { n * factorial(n - 1) }
 }
 
-is_even = (n: i32) bool {
+pub is_even = (n: i32) bool {
     n % 2 == 0
 }
