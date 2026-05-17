@@ -318,6 +318,9 @@ checked-in docs, tests, and commits only.
 - Build graph lowering now owns accepted `build.zen` DSL spellings for target
   kinds, target fields, and builder identifiers in focused enums instead of
   scattering string literals through semantic lowering.
+- Build graph lowering spelling tests now live in a focused lowering test
+  module, keeping the production lowering implementation below the cleanup
+  threshold while preserving the same spelling guards.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
 - Typechecker resolver callable signature restoration now lives in a focused

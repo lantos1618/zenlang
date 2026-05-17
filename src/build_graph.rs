@@ -279,3 +279,7 @@ where
 }
 
 include!("build_graph/lowering.rs");
+
+#[cfg(test)]
+#[path = "build_graph/lowering_tests.rs"]
+mod lowering_tests;
