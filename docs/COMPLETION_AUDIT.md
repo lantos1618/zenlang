@@ -2698,6 +2698,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI compile helpers are now split into `src/cli/compile.rs`; this is an
   internal cleanup preserving the same build/emit behavior and keeping tracked
   Rust source files under the cleanup threshold.
+- CLI JSON emit handlers are now split into `src/cli/json_emit.rs`,
+  preserving frontend and build-graph JSON integration coverage while keeping
+  JSON output paths separate from root command dispatch.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the

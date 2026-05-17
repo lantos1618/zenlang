@@ -5,6 +5,7 @@ use std::process;
 mod build_graph_execution;
 mod compile;
 mod diagnostics;
+mod json_emit;
 mod usage;
 
 use build_graph_execution::{
@@ -13,6 +14,10 @@ use build_graph_execution::{
 };
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};
+use json_emit::{
+    cmd_emit_json_ast, cmd_emit_json_build_graph, cmd_emit_json_diagnostics, cmd_emit_json_symbols,
+    cmd_emit_json_typed,
+};
 use usage::print_usage;
 use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
@@ -168,96 +173,6 @@ fn graph_frontend(path_str: &str) -> zen::ast::typed::TypedProgram {
                 .filter(|d| d.severity == zen::error::Severity::Error)
                 .count();
             eprintln!("  {} error(s)", errors);
-            process::exit(1);
-        }
-    }
-}
-
-fn cmd_emit_json_ast(path_str: &str) {
-    reject_build_zen_for_emit_json_mode(path_str);
-    let (graph, _files) = load_module_graph(path_str);
-    match zen::ir_json::ast_graph_to_json(&graph) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
-}
-
-fn cmd_emit_json_symbols(path_str: &str) {
-    reject_build_zen_for_emit_json_mode(path_str);
-    let (graph, _files) = load_module_graph(path_str);
-    match zen::ir_json::symbols_graph_to_json(&graph) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
-}
-
-fn cmd_emit_json_typed(path_str: &str) {
-    reject_build_zen_for_emit_json_mode(path_str);
-    let typed = graph_frontend(path_str);
-    match zen::ir_json::typed_program_to_json(&typed) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
-}
-
-fn cmd_emit_json_diagnostics(path_str: &str) {
-    reject_build_zen_for_emit_json_mode(path_str);
-
-    let path = Path::new(path_str);
-    if !path.exists() {
-        eprintln!("error: file not found: {}", path_str);
-        process::exit(1);
-    }
-
-    let mut files = FileTable::new();
-    let mut module_system = ModuleSystem::new();
-    let mut diagnostics = match module_system.load_module_graph(path, &mut files) {
-        Ok(graph) => {
-            let mut checker = TypeChecker::new();
-            match checker.check_module_graph_entry(&graph) {
-                Ok(_) => checker.diagnostics().to_vec(),
-                Err(diags) => diags,
-            }
-        }
-        Err(errs) => errs.into_iter().map(Into::into).collect(),
-    };
-
-    diagnostics.sort_by_key(|diagnostic| {
-        diagnostic
-            .span
-            .map(|span| (span.file_id, span.start, span.end))
-            .unwrap_or((u32::MAX, u32::MAX, u32::MAX))
-    });
-
-    let has_errors = diagnostics.iter().any(|diagnostic| diagnostic.is_error());
-    match zen::ir_json::diagnostics_to_json(&diagnostics, &files) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
-
-    if has_errors {
-        process::exit(1);
-    }
-}
-
-fn cmd_emit_json_build_graph(path_str: &str) {
-    let graph = load_build_graph(path_str);
-    match graph.canonical_json() {
-        Ok(json) => println!("{json}"),
-        Err(err) => {
-            eprintln!("json emit error: {}", err);
             process::exit(1);
         }
     }

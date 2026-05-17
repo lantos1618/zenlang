@@ -2524,6 +2524,9 @@ checked-in docs, tests, and commits only.
   `src/cli/compile.rs`, keeping the root CLI module focused on command
   dispatch, graph loading, and frontend diagnostics while preserving existing
   build/emit integration coverage.
+- CLI JSON emission handlers now live in `src/cli/json_emit.rs`, keeping AST,
+  symbol, typed, diagnostic, and build-graph JSON output together while
+  preserving the existing frontend and build-graph JSON integration coverage.
 - Resolver validation now keeps imported behavior association dependency
   seeding in `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   separate from imported callable/type dependency seeding while preserving
