@@ -3059,6 +3059,12 @@ checked-in docs, tests, and commits only.
   `build_zen_commands_reject_missing_library_exports`,
   `build_zen_commands_reject_invalid_library_exports_type`, and
   `build_zen_commands_reject_empty_library_exports`.
+- `emit-json build-graph <build.zen>` now has matching graph-emission
+  diagnostics for malformed `Library` target metadata, covered by
+  `emit_json_build_graph_rejects_duplicate_library_target_fields`,
+  `emit_json_build_graph_rejects_missing_library_exports`,
+  `emit_json_build_graph_rejects_invalid_library_exports_type`, and
+  `emit_json_build_graph_rejects_empty_library_exports`.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.

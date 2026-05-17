@@ -3387,6 +3387,14 @@ and do not assume Phase 4 is ready without evidence.
   `build_zen_commands_reject_missing_library_exports`,
   `build_zen_commands_reject_invalid_library_exports_type`, and
   `build_zen_commands_reject_empty_library_exports`.
+- `emit-json build-graph <build.zen>` target metadata extraction now has
+  graph-emission diagnostics for malformed `Library` targets with duplicate
+  fields, missing required `exports`, invalid `exports` field types, and empty
+  export lists. Coverage:
+  `emit_json_build_graph_rejects_duplicate_library_target_fields`,
+  `emit_json_build_graph_rejects_missing_library_exports`,
+  `emit_json_build_graph_rejects_invalid_library_exports_type`, and
+  `emit_json_build_graph_rejects_empty_library_exports`.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown executable target fields before creating outputs. Coverage:
   `build_zen_commands_reject_unknown_target_fields`.

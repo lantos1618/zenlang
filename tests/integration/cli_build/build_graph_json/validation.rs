@@ -72,6 +72,62 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn emit_json_build_graph_rejects_duplicate_library_target_fields() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library {
+        name: "core",
+        name: "utils",
+        exports: ["src/lib.zen"],
+    })
+    .Ok(b.config())
+}
+"#,
+        "duplicate field `name` in `Library` build target",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_missing_library_exports() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core" })
+    .Ok(b.config())
+}
+"#,
+        "missing required field `exports` in `Library` build target",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_invalid_library_exports_type() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: "src/lib.zen" })
+    .Ok(b.config())
+}
+"#,
+        "field `exports` in `Library` build target must be an array of strings",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_empty_library_exports() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: [] })
+    .Ok(b.config())
+}
+"#,
+        "field `exports` in `Library` build target must contain at least one source",
+    );
+}
+
+#[test]
 fn emit_json_build_graph_rejects_unknown_target_dependencies() {
     assert_emit_json_build_graph_error_contains(
         r#"
