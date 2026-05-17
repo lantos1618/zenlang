@@ -2932,6 +2932,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving restored missing-method, inherited conflict, and cycle diagnostics
   while keeping behavior parent metadata restoration and default synthesis tests
   focused.
+- Resolver-restored top-level generic method integrity tests now live in
+  `src/typechecker/tests/resolver_collection/function_method_templates/generic_methods/integrity.rs`,
+  preserving stale AST fallback rejection, restored-key cleanup, and body
+  type-reference coverage while keeping template shape and mutability
+  restoration tests focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

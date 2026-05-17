@@ -2668,6 +2668,11 @@ checked-in docs, tests, and commits only.
   keeping restored missing-method, inherited conflict, and cycle diagnostics
   separate from behavior parent metadata restoration and default synthesis
   tests.
+- Resolver-restored top-level generic method integrity tests now live in
+  `src/typechecker/tests/resolver_collection/function_method_templates/generic_methods/integrity.rs`,
+  keeping stale AST fallback rejection, restored-key cleanup, and body
+  type-reference coverage separate from template shape and mutability
+  restoration tests.
 
 ## Current Phase
 
