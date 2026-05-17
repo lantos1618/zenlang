@@ -2770,6 +2770,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/codegen/c/types/runtime_helpers.rs`, preserving codegen unit coverage
   and runtime fixture execution while leaving C type/program/function emission
   smaller.
+- Module-qualified calls now reject explicit type arguments on non-generic
+  functions, covered by
+  `module_function_explicit_type_args_are_error`, so `io.println<i32>(...)`
+  cannot silently discard malformed type arguments.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

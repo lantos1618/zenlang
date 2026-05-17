@@ -24,6 +24,12 @@ impl TypeChecker {
                 let mangled = format!("{}_{}", recv_name, method);
                 // Try to look up the return type
                 let ret_type = if let Some(info) = self.functions.get(&mangled).cloned() {
+                    self.reject_module_call_type_args(
+                        "function",
+                        &format!("{}.{}", recv_name, method),
+                        type_args,
+                        span,
+                    );
                     self.check_call_signature(
                         "function",
                         &mangled,
@@ -35,6 +41,7 @@ impl TypeChecker {
                 } else {
                     let method_key = Self::method_key(recv_name, method);
                     if let Some(info) = self.methods.get(&method_key).cloned() {
+                        self.reject_module_call_type_args("method", &method_key, type_args, span);
                         self.check_call_signature(
                             "method",
                             &method_key,
@@ -44,6 +51,12 @@ impl TypeChecker {
                         );
                         self.resolve_type(&info.return_type)
                     } else if self.is_root_std_runtime_call(recv_name, method) {
+                        self.reject_module_call_type_args(
+                            "function",
+                            &format!("{}.{}", recv_name, method),
+                            type_args,
+                            span,
+                        );
                         Type::Void
                     } else {
                         self.diagnostics.push(Diagnostic::error(
@@ -364,5 +377,26 @@ impl TypeChecker {
         } else {
             self.unknown_method_expr(&type_name, method, typed_args, span)
         }
+    }
+
+    fn reject_module_call_type_args(
+        &mut self,
+        kind: &str,
+        name: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) {
+        if type_args.is_empty() {
+            return;
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E5001",
+            format!(
+                "non-generic {} `{}` does not accept type arguments",
+                kind, name
+            ),
+            span,
+        ));
     }
 }

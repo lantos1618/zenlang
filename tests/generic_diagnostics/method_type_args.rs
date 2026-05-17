@@ -28,6 +28,27 @@ main = () i32 {
 }
 
 #[test]
+fn module_function_explicit_type_args_are_error() {
+    let errors = typecheck_errors(
+        r#"
+{ io } = std
+
+main = () i32 {
+    io.println<i32>("bad")
+    0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic function `io.println` does not accept type arguments")),
+        "expected module function type-argument diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_explicit_type_arg_arity_is_error() {
     let errors = typecheck_errors(
         r#"
