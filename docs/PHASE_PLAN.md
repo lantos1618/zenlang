@@ -2663,6 +2663,11 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_validation/expected_symbols/composite_symbols.rs`,
   keeping behavior, struct, enum, and variant symbol metadata coverage separate
   from primitive expected metadata and leaf symbol builders.
+- Resolver behavior parent diagnostics now live in
+  `src/typechecker/tests/resolver_collection/behavior_parents/diagnostics.rs`,
+  keeping restored missing-method, inherited conflict, and cycle diagnostics
+  separate from behavior parent metadata restoration and default synthesis
+  tests.
 
 ## Current Phase
 
