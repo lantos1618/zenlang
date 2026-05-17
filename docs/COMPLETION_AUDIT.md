@@ -2357,6 +2357,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects`
   and
   `cargo test --test integration test_command_multi_target_build_zen_rejects_undeclared_host_effects`.
+  It rejects unknown, self, and cyclic target dependencies before execution
+  through
+  `cargo test --test integration test_command_build_zen_rejects_unknown_target_dependencies`,
+  `cargo test --test integration test_command_build_zen_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration test_command_build_zen_rejects_cyclic_target_dependencies`.
 - Normal `zen emit build.zen` emits generated C for the single executable graph
   target without compiling a binary, covered by
   `cargo test --test integration emit_command_build_zen_outputs_target_c_source`,
