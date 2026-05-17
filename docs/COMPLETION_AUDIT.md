@@ -2698,6 +2698,11 @@ and do not assume Phase 4 is ready without evidence.
   `direct_file_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`,
   and
   `emit_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`.
+- Legacy `zen build-graph build.zen` now has explicit matching coverage for the
+  same unrelated gated test source skip behavior and deterministic host-effect
+  ordering. Coverage includes
+  `build_graph_command_ignores_unrelated_gated_test_source_errors` and
+  `build_graph_command_rejects_undeclared_host_effects_before_skipping_unrelated_tests`.
 
 ## Unresolved Gaps
 
@@ -2717,7 +2722,7 @@ and do not assume Phase 4 is ready without evidence.
   build/test/emit graph execution, direct and transitive gated executable/test
   dependency rejection for selected target kinds, skipped source validation for
   unrelated gated executable/test targets during normal build/test execution
-  plus direct build and emit entrypoints,
+  plus direct build, legacy build-graph, and emit entrypoints,
   library-only graph execution rejection, and targeted rejection for legacy
   generic `emit-json build.zen` modes. Library
   execution, package/link semantics, and other broader graph semantics still

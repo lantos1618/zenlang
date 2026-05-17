@@ -2574,6 +2574,11 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`,
   and
   `emit_command_build_zen_rejects_undeclared_host_effects_before_skipping_unrelated_tests`.
+- Legacy `zen build-graph build.zen` now has matching coverage for skipping
+  unrelated gated test source validation while preserving deterministic
+  host-effect ordering. Coverage includes
+  `build_graph_command_ignores_unrelated_gated_test_source_errors` and
+  `build_graph_command_rejects_undeclared_host_effects_before_skipping_unrelated_tests`.
 - CLI C emission and binary compilation helpers now live in
   `src/cli/compile.rs`, keeping the root CLI module focused on command
   dispatch, graph loading, and frontend diagnostics while preserving existing
