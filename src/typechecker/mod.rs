@@ -17,6 +17,7 @@ mod closures;
 mod declaration_collection;
 mod declaration_collection_ast;
 mod declaration_collection_ast_callables;
+mod declaration_collection_resolver_semantic_tasks;
 mod declaration_collection_resolver_tasks;
 mod environment;
 mod expressions;

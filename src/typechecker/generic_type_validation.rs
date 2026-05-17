@@ -203,7 +203,15 @@ impl TypeChecker {
         tasks: &ResolverDeclarationMetadataTasks<'_>,
         symbols: Option<&SymbolTable>,
     ) {
-        for task in &tasks.type_references {
+        self.validate_resolver_type_reference_task_list(&tasks.type_references, symbols);
+    }
+
+    pub(super) fn validate_resolver_type_reference_task_list(
+        &mut self,
+        tasks: &[ResolverTypeReferenceValidationTask<'_>],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for task in tasks {
             match task {
                 ResolverTypeReferenceValidationTask::Struct { name, fields, span } => {
                     self.validate_resolver_struct_type_references(symbols, name, fields, *span);
