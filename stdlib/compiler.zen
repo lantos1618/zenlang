@@ -13,7 +13,7 @@
 
 // Allocate raw memory (wraps malloc)
 raw_allocate = (size: usize) RawPtr<u8> {
-    return @builtin.raw_allocate(size)
+    @builtin.raw_allocate(size)
 }
 
 // Deallocate raw memory (wraps free)
@@ -23,7 +23,7 @@ raw_deallocate = (ptr: RawPtr<u8>, size: usize) void {
 
 // Reallocate raw memory (wraps realloc)
 raw_reallocate = (ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
-    return @builtin.raw_reallocate(ptr, old_size, new_size)
+    @builtin.raw_reallocate(ptr, old_size, new_size)
 }
 
 // =============================================================================
@@ -32,22 +32,22 @@ raw_reallocate = (ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> 
 
 // Get null pointer
 null_ptr = () RawPtr<u8> {
-    return @builtin.null_ptr()
+    @builtin.null_ptr()
 }
 
 // Pointer arithmetic - offset by bytes
 gep = (base: RawPtr<u8>, offset: i64) RawPtr<u8> {
-    return @builtin.gep(base, offset)
+    @builtin.gep(base, offset)
 }
 
 // Struct field access by index (uses 8-byte alignment approximation)
 gep_struct = (ptr: RawPtr<u8>, field_index: i32) RawPtr<u8> {
-    return @builtin.gep_struct(ptr, field_index)
+    @builtin.gep_struct(ptr, field_index)
 }
 
 // Pointer type cast (zero-cost, affects type only)
 raw_ptr_cast = (ptr: RawPtr<u8>) RawPtr<u8> {
-    return @builtin.raw_ptr_cast(ptr)
+    @builtin.raw_ptr_cast(ptr)
 }
 
 // =============================================================================
@@ -56,12 +56,12 @@ raw_ptr_cast = (ptr: RawPtr<u8>) RawPtr<u8> {
 
 // Convert pointer to integer address
 ptr_to_int = (ptr: RawPtr<u8>) i64 {
-    return @builtin.ptr_to_int(ptr)
+    @builtin.ptr_to_int(ptr)
 }
 
 // Convert integer address to pointer
 int_to_ptr = (addr: i64) RawPtr<u8> {
-    return @builtin.int_to_ptr(addr)
+    @builtin.int_to_ptr(addr)
 }
 
 // =============================================================================
@@ -70,7 +70,7 @@ int_to_ptr = (addr: i64) RawPtr<u8> {
 
 // Load value from pointer (type T inferred or defaults to i32)
 load<T> = (ptr: RawPtr<u8>) T {
-    return @builtin.load<T>(ptr)
+    @builtin.load<T>(ptr)
 }
 
 // Store value to pointer (type T inferred from value)
@@ -85,7 +85,7 @@ store<T> = (ptr: RawPtr<u8>, value: T) void {
 // Get enum discriminant (variant tag)
 // Enums are laid out as: [i32 discriminant][padding][payload]
 discriminant = (enum_ptr: RawPtr<u8>) i32 {
-    return @builtin.discriminant(enum_ptr)
+    @builtin.discriminant(enum_ptr)
 }
 
 // Set enum discriminant
@@ -95,7 +95,7 @@ set_discriminant = (enum_ptr: RawPtr<u8>, tag: i32) void {
 
 // Get pointer to enum payload (offset 4 bytes from start)
 get_payload = (enum_ptr: RawPtr<u8>) RawPtr<u8> {
-    return @builtin.get_payload(enum_ptr)
+    @builtin.get_payload(enum_ptr)
 }
 
 // =============================================================================
@@ -119,7 +119,7 @@ memmove = (dest: RawPtr<u8>, src: RawPtr<u8>, size: usize) void {
 
 // Compare memory regions (returns 0 if equal, <0 if a<b, >0 if a>b)
 memcmp = (ptr1: RawPtr<u8>, ptr2: RawPtr<u8>, size: usize) i32 {
-    return @builtin.memcmp(ptr1, ptr2, size)
+    @builtin.memcmp(ptr1, ptr2, size)
 }
 
 // =============================================================================
@@ -128,7 +128,7 @@ memcmp = (ptr1: RawPtr<u8>, ptr2: RawPtr<u8>, size: usize) i32 {
 
 // Get size of type T in bytes
 sizeof<T> = () usize {
-    return @builtin.sizeof<T>()
+    @builtin.sizeof<T>()
 }
 
 // =============================================================================
@@ -137,32 +137,32 @@ sizeof<T> = () usize {
 
 // Byte swap for 16-bit integers (endianness conversion)
 bswap16 = (value: u16) u16 {
-    return @builtin.bswap16(value)
+    @builtin.bswap16(value)
 }
 
 // Byte swap for 32-bit integers (endianness conversion)
 bswap32 = (value: u32) u32 {
-    return @builtin.bswap32(value)
+    @builtin.bswap32(value)
 }
 
 // Byte swap for 64-bit integers (endianness conversion)
 bswap64 = (value: u64) u64 {
-    return @builtin.bswap64(value)
+    @builtin.bswap64(value)
 }
 
 // Count leading zeros
 ctlz = (value: u64) u64 {
-    return @builtin.ctlz(value)
+    @builtin.ctlz(value)
 }
 
 // Count trailing zeros
 cttz = (value: u64) u64 {
-    return @builtin.cttz(value)
+    @builtin.cttz(value)
 }
 
 // Population count (number of 1 bits)
 ctpop = (value: u64) u64 {
-    return @builtin.ctpop(value)
+    @builtin.ctpop(value)
 }
 
 // =============================================================================
@@ -182,14 +182,14 @@ panic = (message: StringLiteral) void {
 // Check if pointer is null
 is_null = (ptr: RawPtr<u8>) bool {
     addr = ptr_to_int(ptr)
-    return addr == 0
+    addr == 0
 }
 
 // Allocate and zero memory
 allocate_zeroed = (size: usize) RawPtr<u8> {
     ptr = raw_allocate(size)
     memset(ptr, 0, size)
-    return ptr
+    ptr
 }
 
 // =============================================================================
@@ -199,7 +199,7 @@ allocate_zeroed = (size: usize) RawPtr<u8> {
 // Cast a value to a different numeric type
 // This is the explicit form of the `as` keyword: value as Type
 cast = (value: i64, target_type: i64) i64 {
-    return @builtin.cast(value, target_type)
+    @builtin.cast(value, target_type)
 }
 
 // =============================================================================
@@ -213,14 +213,14 @@ cast = (value: i64, target_type: i64) i64 {
 // Returns a handle (opaque pointer) or null on failure
 // Example: lib = load_library("libm.so")
 load_library = (path: StringLiteral) RawPtr<u8> {
-    return @builtin.load_library(path)
+    @builtin.load_library(path)
 }
 
 // Get a symbol (function/variable) from a loaded library
 // Returns a pointer to the symbol or null if not found
 // Example: sin_fn = get_symbol(lib, "sin")
 get_symbol = (lib_handle: RawPtr<u8>, symbol_name: StringLiteral) RawPtr<u8> {
-    return @builtin.get_symbol(lib_handle, symbol_name)
+    @builtin.get_symbol(lib_handle, symbol_name)
 }
 
 // Unload a dynamic library
@@ -235,7 +235,7 @@ unload_library = (lib_handle: RawPtr<u8>) void {
 // Call immediately after a failed load_library/get_symbol
 // Example: err_msg = dlerror()
 dlerror = () RawPtr<u8> {
-    return @builtin.dlerror()
+    @builtin.dlerror()
 }
 
 // =============================================================================
@@ -248,7 +248,7 @@ dlerror = () RawPtr<u8> {
 // len: number of bytes to write
 // Returns: number of bytes written, or negative on error
 libc_write = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
-    return @builtin.libc_write(fd, buf, len)
+    @builtin.libc_write(fd, buf, len)
 }
 
 // Read from a file descriptor using libc read()
@@ -257,7 +257,7 @@ libc_write = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
 // len: maximum number of bytes to read
 // Returns: number of bytes read, or negative on error
 libc_read = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
-    return @builtin.libc_read(fd, buf, len)
+    @builtin.libc_read(fd, buf, len)
 }
 
 // =============================================================================
@@ -265,29 +265,29 @@ libc_read = (fd: i32, buf: RawPtr<u8>, len: usize) i64 {
 // =============================================================================
 
 syscall0 = (number: i64) i64 {
-    return @builtin.syscall0(number)
+    @builtin.syscall0(number)
 }
 
 syscall1 = (number: i64, arg0: i64) i64 {
-    return @builtin.syscall1(number, arg0)
+    @builtin.syscall1(number, arg0)
 }
 
 syscall2 = (number: i64, arg0: i64, arg1: i64) i64 {
-    return @builtin.syscall2(number, arg0, arg1)
+    @builtin.syscall2(number, arg0, arg1)
 }
 
 syscall3 = (number: i64, arg0: i64, arg1: i64, arg2: i64) i64 {
-    return @builtin.syscall3(number, arg0, arg1, arg2)
+    @builtin.syscall3(number, arg0, arg1, arg2)
 }
 
 syscall4 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64) i64 {
-    return @builtin.syscall4(number, arg0, arg1, arg2, arg3)
+    @builtin.syscall4(number, arg0, arg1, arg2, arg3)
 }
 
 syscall5 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64, arg4: i64) i64 {
-    return @builtin.syscall5(number, arg0, arg1, arg2, arg3, arg4)
+    @builtin.syscall5(number, arg0, arg1, arg2, arg3, arg4)
 }
 
 syscall6 = (number: i64, arg0: i64, arg1: i64, arg2: i64, arg3: i64, arg4: i64, arg5: i64) i64 {
-    return @builtin.syscall6(number, arg0, arg1, arg2, arg3, arg4, arg5)
+    @builtin.syscall6(number, arg0, arg1, arg2, arg3, arg4, arg5)
 }
