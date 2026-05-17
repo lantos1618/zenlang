@@ -2681,6 +2681,13 @@ and do not assume Phase 4 is ready without evidence.
   test execution. Coverage includes
   `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
   `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
+- Direct `zen build.zen`, legacy `zen build-graph build.zen`, and
+  `zen emit build.zen` now have explicit matching coverage for rejecting
+  transitive gated test dependencies pulled through graph-only libraries.
+  Coverage includes
+  `direct_file_command_build_zen_rejects_transitive_gated_test_dependencies`,
+  `build_graph_command_rejects_transitive_gated_test_dependencies`, and
+  `emit_command_build_zen_rejects_transitive_gated_test_dependencies`.
 - Build/test graph execution now validates graph-only library targets without
   validating unrelated gated executable/test target sources. Deterministic
   host-effect validation still runs before execution can skip unrelated gated
