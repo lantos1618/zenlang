@@ -2291,6 +2291,9 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_unsupported_package_targets` and
   `emit_json_build_graph_rejects_unsupported_link_targets` cover targeted
   package/link target rejection through the CLI graph-emission path.
+  `emit_json_build_graph_rejects_gated_package_fields` and
+  `emit_json_build_graph_rejects_gated_link_fields` cover recognized-but-gated
+  package/link fields through that same graph-emission path.
   The same package/link target gate is covered before execution or emission by
   `build_command_build_zen_rejects_unsupported_package_targets`,
   `build_command_build_zen_rejects_unsupported_link_targets`,
@@ -2305,8 +2308,8 @@ checked-in docs, tests, and commits only.
   `build_graph_command_rejects_unsupported_package_targets`, and
   `build_graph_command_rejects_unsupported_link_targets`.
   `build_zen_commands_reject_package_fields` and
-  `build_zen_commands_reject_link_fields` cover the same entrypoints for
-  recognized-but-gated package/link target fields.
+  `build_zen_commands_reject_link_fields` cover the execution/check
+  entrypoints for recognized-but-gated package/link target fields.
 - `build-graph <build.zen>` now consumes the deterministic graph for executable
   targets without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the
