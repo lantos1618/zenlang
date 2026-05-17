@@ -2289,6 +2289,11 @@ checked-in docs, tests, and commits only.
   `parse_project_build_zen_example`, and leading-dot enum shorthand used by
   build-style result/config flows is covered by
   `parse_shorthand_enum_variant_expr_and_pattern`.
+- Public examples now have executable CLI typecheck coverage through
+  `public_examples_typecheck_through_cli` and
+  `public_project_build_graph_typechecks_through_cli`, so the README/tutorial
+  examples and the canonical project build graph cannot drift back to removed
+  syntax without failing integration.
 - A constrained `build.zen` lowering boundary now maps parsed build scripts into
   `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_and_test_graph`
   covers the checked-in project executable and test targets,

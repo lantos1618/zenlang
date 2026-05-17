@@ -22,7 +22,7 @@ scale = (p: Point, factor: f64) Point {
     Point { x: p.x * factor, y: p.y * factor }
 }
 
-to_string = (p: Point) StringLiteral {
+to_string = (p: Point) StaticString {
     "(${p.x}, ${p.y})"
 }
 

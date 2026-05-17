@@ -2337,6 +2337,12 @@ and do not assume Phase 4 is ready without evidence.
   execution,
   covered by
   `cargo test --test integration build_command_multi_target_build_zen_rejects_undeclared_host_effects`.
+- Public examples now typecheck through the CLI instead of relying only on
+  README path checks, covered by
+  `cargo test --test integration public_examples_typecheck_through_cli` and
+  `cargo test --test integration public_project_build_graph_typechecks_through_cli`.
+  The project example includes an explicit `test.zen` target so
+  `examples/project/build.zen` validates every advertised source.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and
