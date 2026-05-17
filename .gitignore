@@ -68,6 +68,7 @@ test_*
 
 # Large files and artifacts
 *.jsonl
+*.vsix
 .agent/claude_output.jsonl
 agent/claude_output.jsonl
 
