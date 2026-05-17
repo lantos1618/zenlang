@@ -20,6 +20,17 @@ impl TypeChecker {
                         .map(|info| info.type_params.len())
                         .unwrap_or(0);
                     let found = param.constraint_type_args.len();
+                    if expected == 0 && found > 0 {
+                        self.diagnostics.push(Diagnostic::error(
+                            "E5002",
+                            format!(
+                                "non-generic behavior `{}` does not accept type arguments",
+                                bound
+                            ),
+                            param.span,
+                        ));
+                        continue;
+                    }
                     if expected != found {
                         self.diagnostics.push(Diagnostic::error(
                             "E6012",

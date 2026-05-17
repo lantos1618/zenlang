@@ -331,6 +331,39 @@ PrettyJson.extends(Json)
 }
 
 #[test]
+fn behavior_extends_nongeneric_parent_type_args_are_error() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json<i32>)
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("non-generic behavior extends parent with type arguments should fail");
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic behavior `Json` does not accept type arguments")),
+        "expected non-generic behavior extends parent type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("generic behavior `Json` expects 0")),
+        "non-generic behavior extends parent should not use generic arity wording, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_extends_conflicting_method_signature_is_error() {
     let program = parse_program(
         r#"

@@ -128,6 +128,39 @@ Point.implements(Json) {
 }
 
 #[test]
+fn behavior_impl_nongeneric_behavior_type_args_are_error() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) str { "point" }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("non-generic behavior impl with type arguments should fail");
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic behavior `Json` does not accept type arguments")),
+        "expected non-generic behavior impl type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("generic behavior `Json` expects 0")),
+        "non-generic behavior impl should not use generic arity wording, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_impl_generic_behavior_with_type_args_passes_requires() {
     let program = parse_program(
         r#"
@@ -232,6 +265,37 @@ Point.requires(Json<i32, str>)
             .message
             .contains("generic behavior `Json` expects 1 type arguments, found 2")),
         "expected generic behavior requires arity diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn behavior_requires_nongeneric_behavior_type_args_are_error() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.requires(Json<i32>)
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("non-generic behavior requires with type arguments should fail");
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic behavior `Json` does not accept type arguments")),
+        "expected non-generic behavior requires type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("generic behavior `Json` expects 0")),
+        "non-generic behavior requires should not use generic arity wording, got {errors:?}"
     );
 }
 

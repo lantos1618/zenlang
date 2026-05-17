@@ -456,6 +456,18 @@ impl TypeChecker {
             return None;
         };
 
+        if info.type_params.is_empty() && !type_args.is_empty() {
+            self.diagnostics.push(Diagnostic::error(
+                "E5002",
+                format!(
+                    "non-generic behavior `{}` does not accept type arguments",
+                    behavior
+                ),
+                span,
+            ));
+            return None;
+        }
+
         if info.type_params.len() != type_args.len() {
             self.diagnostics.push(Diagnostic::error(
                 "E5001",

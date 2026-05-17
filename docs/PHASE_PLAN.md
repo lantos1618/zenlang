@@ -130,6 +130,12 @@ checked-in docs, tests, and commits only.
   receive type arguments, including
   `nongeneric_struct_annotation_type_args_are_error` and
   `nongeneric_enum_annotation_type_args_are_error`.
+- Generic diagnostics now cover non-generic behavior references that receive
+  type arguments across impls, requires, extends, and generic bounds, including
+  `behavior_impl_nongeneric_behavior_type_args_are_error`,
+  `behavior_requires_nongeneric_behavior_type_args_are_error`,
+  `behavior_extends_nongeneric_parent_type_args_are_error`, and
+  `generic_bound_nongeneric_behavior_type_args_are_error`.
 - Generic diagnostics now cover receiver-vs-argument inference conflicts for
   two-parameter `Result<T, E>` enum methods.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
