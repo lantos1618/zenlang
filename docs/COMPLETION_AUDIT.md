@@ -2554,6 +2554,8 @@ and do not assume Phase 4 is ready without evidence.
   before execution or emission through
   `build_zen_commands_reject_package_fields` and
   `build_zen_commands_reject_link_fields`.
+  They also reject dynamic target additions before execution or emission
+  through `build_zen_commands_reject_dynamic_target_adds`.
 - `emit-json build-graph` rejects self-dependencies through the advertised
   graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_self_target_dependencies`.
