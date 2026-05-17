@@ -123,6 +123,7 @@ fn source_ast_no_longer_has_return_expression_nodes() {
 fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
     for path in [
         "stdlib/build.zen",
+        "stdlib/collections/char.zen",
         "stdlib/compiler.zen",
         "stdlib/concurrency/sync/barrier.zen",
         "stdlib/ffi.zen",
