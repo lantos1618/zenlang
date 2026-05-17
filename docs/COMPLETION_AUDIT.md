@@ -2753,6 +2753,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/error/file_table.rs`, preserving the public `zen::error::FileTable`
   API while keeping `src/error.rs` focused on spans, diagnostics, and compile
   error conversion.
+- Pattern checking now keeps enum and bool match validation in
+  `src/typechecker/patterns/match_validation.rs`, preserving exhaustiveness,
+  redundancy, and payload-shape diagnostics while keeping pattern binding and
+  lowering smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
