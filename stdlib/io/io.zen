@@ -43,19 +43,19 @@ eprintln = (message: String) void {
 // Use this when you need to avoid libc entirely
 sys_write = (msg: StaticString, len: i64) i64 {
     msg_ptr = compiler.ptr_to_int(msg)
-    return compiler.syscall3(1, 1, msg_ptr, len)
+    compiler.syscall3(1, 1, msg_ptr, len)
 }
 
 // Write to stderr using raw syscall
 sys_ewrite = (msg: StaticString, len: i64) i64 {
     msg_ptr = compiler.ptr_to_int(msg)
-    return compiler.syscall3(1, 2, msg_ptr, len)
+    compiler.syscall3(1, 2, msg_ptr, len)
 }
 
 // Raw syscall write to any file descriptor
 sys_write_raw = (fd: i64, buf: RawPtr<u8>, count: i64) i64 {
     buf_addr = compiler.ptr_to_int(buf)
-    return compiler.syscall3(1, fd, buf_addr, count)
+    compiler.syscall3(1, fd, buf_addr, count)
 }
 
 // =============================================================================
@@ -64,10 +64,10 @@ sys_write_raw = (fd: i64, buf: RawPtr<u8>, count: i64) i64 {
 
 // Read line from stdin (not yet implemented)
 read_line = () Result<String, String> {
-    return Result.Err("Not implemented")
+    Result.Err("Not implemented")
 }
 
 // Read with prompt (not yet implemented)
 read_input = (prompt: String) Result<String, String> {
-    return Result.Err("Not implemented")
+    Result.Err("Not implemented")
 }

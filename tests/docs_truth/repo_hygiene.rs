@@ -128,6 +128,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/fs.zen",
         "stdlib/io/eventfd.zen",
         "stdlib/io/inotify.zen",
+        "stdlib/io/io.zen",
         "stdlib/io/mux/epoll.zen",
         "stdlib/io/mux/poll.zen",
         "stdlib/io/net/pipe.zen",
