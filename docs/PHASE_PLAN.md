@@ -2518,6 +2518,9 @@ checked-in docs, tests, and commits only.
   calls and UFC calls, keeping inference, explicit type arguments, substituted
   signature checks, bounds, and monomorphization consistent across Phase 5
   function-call syntax.
+- Generic receiver base detection now reuses the shared generic concrete-name
+  matcher used by monomorphization, keeping method lookup and specialization
+  from drifting on mangled generic type names.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while

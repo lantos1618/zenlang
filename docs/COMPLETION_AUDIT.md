@@ -2709,6 +2709,10 @@ and do not assume Phase 4 is ready without evidence.
   UFC calls, preserving generic function diagnostics, generic UFC fixture
   coverage, and generated-C specialization coverage while reducing duplicate
   Phase 5 specialization logic.
+- Generic receiver base detection now uses the same generic concrete-name
+  matcher as monomorphization, preserving generic method/generated-C
+  specialization coverage while removing a hand-rolled mangled-name prefix
+  check from method lookup.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the

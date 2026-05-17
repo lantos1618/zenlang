@@ -17,6 +17,7 @@ use crate::error::{Diagnostic, Span};
 
 use super::closures::collect_captures;
 use super::monomorphize_inference::InferenceConflict;
+use super::monomorphize_types::concrete_name_matches_generic;
 use super::{BehaviorBound, FuncInfo, TypeChecker};
 
 impl TypeChecker {
