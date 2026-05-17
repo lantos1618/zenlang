@@ -15,7 +15,15 @@ impl TypeChecker {
         }
 
         let tasks = Self::collect_ast_declaration_validation_tasks(decls);
-        self.validate_behavior_association_tasks(&tasks.behavior_associations, symbols);
+        self.validate_ast_declaration_semantics_from_tasks(&tasks, symbols);
+    }
+
+    pub(super) fn validate_ast_declaration_semantics_from_tasks(
+        &mut self,
+        tasks: &AstDeclarationValidationTasks<'_>,
+        symbols: Option<&SymbolTable>,
+    ) {
+        self.validate_behavior_association_tasks(tasks, symbols);
         self.validate_ast_type_reference_tasks(&tasks.type_references);
         self.validate_ast_struct_field_default_tasks(&tasks.struct_field_defaults);
     }
