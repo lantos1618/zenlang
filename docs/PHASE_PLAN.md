@@ -2153,7 +2153,9 @@ checked-in docs, tests, and commits only.
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
   graph-only library exports before emission through
-  `emit_command_build_zen_rejects_missing_graph_only_library_source`.
+  `emit_command_build_zen_rejects_missing_graph_only_library_source`, while
+  `emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`
+  keeps multi-executable ambiguity ahead of per-executable source checks.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and

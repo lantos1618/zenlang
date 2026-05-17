@@ -35,16 +35,36 @@ impl BuildGraphExecutionKind {
 }
 
 pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
-    let mut targets = collect_executable_build_targets(path_str);
-    if targets.len() != 1 {
+    let graph = super::load_build_graph(path_str);
+    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
+    let build_path = Path::new(path_str);
+    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
+    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
+    let ordered_targets = match graph.targets_in_dependency_order() {
+        Ok(targets) => targets,
+        Err(err) => {
+            eprintln!("build graph error: {}", err);
+            process::exit(1);
+        }
+    };
+    let executable_targets: Vec<_> = ordered_targets
+        .into_iter()
+        .filter(|target| {
+            matches!(
+                target.kind(),
+                zen::build_graph::BuildTargetKind::Executable { .. }
+            )
+        })
+        .collect();
+    if executable_targets.len() != 1 {
         eprintln!(
             "build graph C emission supports exactly one target, found {}",
-            targets.len()
+            executable_targets.len()
         );
         process::exit(1);
     }
 
-    targets.pop().expect("one target")
+    executable_build_target(base_dir, executable_targets[0]).expect("one executable target")
 }
 
 pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
