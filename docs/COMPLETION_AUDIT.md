@@ -2423,6 +2423,10 @@ and do not assume Phase 4 is ready without evidence.
   reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280
   lines while preserving coverage through
   `cargo test --lib resolver_import_metadata`.
+- Module-system tests now keep module-graph loading cases in
+  `src/module_system/tests/graph_loading.rs`, reducing
+  `src/module_system/tests.rs` from 503 to 333 lines while preserving coverage
+  through `cargo test --lib module_system::tests`.
 
 ## Unresolved Gaps
 

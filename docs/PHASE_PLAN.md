@@ -270,6 +270,9 @@ checked-in docs, tests, and commits only.
   focused submodule, dropping
   `src/typechecker/tests/resolver_import_metadata.rs` below the cleanup
   threshold while preserving import/module resolver metadata coverage.
+- Module-system tests now keep module-graph loading cases in a focused
+  submodule, dropping `src/module_system/tests.rs` below the cleanup threshold
+  while preserving module graph/import coverage.
 - Parser behavior declaration and impl-block parsing now live in a dedicated
   parser helper module, keeping behavior signatures and association syntax out
   of the broad top-level declaration dispatcher.
