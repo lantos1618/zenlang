@@ -479,6 +479,10 @@ checked-in docs, tests, and commits only.
 - Legacy `build-graph build.zen` host-effect tests now keep declared file-read
   fallback accept/reject cases in a focused child module, leaving env-effect
   ordering and unrelated test skip coverage in the parent module.
+- Build graph unit tests now keep target metadata validation and gated
+  package/link target rejection coverage in a focused child module, leaving the
+  root build graph test file for shared helpers and positive lowering smoke
+  tests.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
