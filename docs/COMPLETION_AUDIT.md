@@ -3047,6 +3047,10 @@ and do not assume Phase 4 is ready without evidence.
   malformed enum-method arity and follow-up suppression checks while keeping
   the parent method type-argument module focused on direct method and
   non-generic callable cases.
+- Build graph host-effect fallback recognition now keeps `Ok`/`Err` result
+  variant spelling in `HostEffectResultVariant`, preserving the existing
+  `.Err`, wildcard, and identifier fallback behavior while removing the raw
+  string comparison from semantic lowering logic.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

@@ -2774,6 +2774,9 @@ checked-in docs, tests, and commits only.
   `tests/generic_diagnostics/method_type_args/enum_methods.rs`, leaving the
   parent method type-argument module focused on direct method and non-generic
   callable cases.
+- Build graph host-effect fallback recognition now uses enum-backed
+  `Ok`/`Err` result variant spelling instead of comparing raw variant strings,
+  covered by `build_graph::lowering_tests::host_effect_result_variant_owns_source_spelling`.
 
 ## Current Phase
 
