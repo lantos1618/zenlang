@@ -125,6 +125,7 @@ fn central_stdlib_core_modules_do_not_use_removed_return_keyword() {
         "stdlib/core/option.zen",
         "stdlib/core/result.zen",
         "stdlib/core/propagate.zen",
+        "stdlib/core/buffer.zen",
     ] {
         let source = read(path);
         assert!(
