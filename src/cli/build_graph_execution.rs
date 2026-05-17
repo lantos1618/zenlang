@@ -145,7 +145,7 @@ fn validate_executed_dependency_targets(
             eprintln!(
                 "build graph target `{}` depends on gated {} target `{}`",
                 target.name(),
-                build_target_kind_name(dependency_target.kind()),
+                dependency_target.kind(),
                 dependency_target.name()
             );
             process::exit(1);
@@ -199,14 +199,6 @@ fn validate_non_executed_target_sources(
             process::exit(1);
         });
         super::graph_frontend(source_path);
-    }
-}
-
-fn build_target_kind_name(kind: &zen::build_graph::BuildTargetKind) -> &'static str {
-    match kind {
-        zen::build_graph::BuildTargetKind::Executable { .. } => "executable",
-        zen::build_graph::BuildTargetKind::Test { .. } => "test",
-        zen::build_graph::BuildTargetKind::Library { .. } => "library",
     }
 }
 

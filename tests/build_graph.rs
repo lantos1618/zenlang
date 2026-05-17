@@ -23,6 +23,32 @@ fn executable_target(name: &str, sources: &[&str]) -> BuildTargetInput {
 }
 
 #[test]
+fn build_target_kind_owns_diagnostic_spelling() {
+    assert_eq!(
+        BuildTargetKind::Executable {
+            root_source_file: "src/main.zen".to_string(),
+            out_dir: "build".to_string(),
+        }
+        .to_string(),
+        "executable"
+    );
+    assert_eq!(
+        BuildTargetKind::Test {
+            root_source_file: "tests/main.zen".to_string(),
+        }
+        .to_string(),
+        "test"
+    );
+    assert_eq!(
+        BuildTargetKind::Library {
+            exports: vec!["src/lib.zen".to_string()],
+        }
+        .to_string(),
+        "library"
+    );
+}
+
+#[test]
 fn deterministic_build_graph_creates_one_executable_target() {
     let first = BuildGraph::from_input(BuildGraphInput {
         targets: vec![executable_target(
