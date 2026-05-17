@@ -2346,6 +2346,8 @@ and do not assume Phase 4 is ready without evidence.
   Runnable public examples also compile through `zen build`, covered by
   `cargo test --test integration public_runnable_examples_compile_through_cli`,
   so public tutorial files cannot drift into typecheck-only codegen gaps.
+  They also execute as compiled binaries, covered by
+  `cargo test --test integration public_runnable_examples_execute_through_cli`.
 - Normal `zen check build.zen` validates the constrained deterministic graph
   without compiling targets, covered by
   `cargo test --test integration check_command_validates_build_zen_graph`, and
