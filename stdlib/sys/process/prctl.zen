@@ -68,8 +68,9 @@ ARCH_GET_GS = 4100    // 0x1004
 // Generic prctl call
 prctl = (option: i32, arg2: i64, arg3: i64, arg4: i64, arg5: i64) Result<i64, i32> {
     result = compiler.syscall5(SYS_PRCTL, option, arg2, arg3, arg4, arg5)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(result) }
 }
 
 // ============================================================================
@@ -80,16 +81,18 @@ prctl = (option: i32, arg2: i64, arg3: i64, arg4: i64, arg5: i64) Result<i64, i3
 // Visible in /proc/self/comm and tools like top/htop
 set_thread_name = (name_ptr: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_SET_NAME, name_ptr)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get the name of the current thread
 // Buffer must be at least 16 bytes
 get_thread_name = (buf_ptr: i64) Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_GET_NAME, buf_ptr)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -99,16 +102,18 @@ get_thread_name = (buf_ptr: i64) Result<(), i32> {
 // Set signal to receive when parent process dies
 set_parent_death_signal = (sig: i32) Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_SET_PDEATHSIG, sig)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get the current parent death signal
 get_parent_death_signal = () Result<i32, i32> {
     sig: i32 = 0
     result = compiler.syscall2(SYS_PRCTL, PR_GET_PDEATHSIG, compiler.ptr_to_int(&sig.ref()))
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(sig)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(sig) }
 }
 
 // ============================================================================
@@ -122,15 +127,17 @@ SUID_DUMP_ROOT = 2
 // Set whether process can be dumped
 set_dumpable = (value: i32) Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_SET_DUMPABLE, value)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get dumpable state
 get_dumpable = () Result<i32, i32> {
     result = compiler.syscall1(SYS_PRCTL, PR_GET_DUMPABLE)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // ============================================================================
@@ -140,15 +147,17 @@ get_dumpable = () Result<i32, i32> {
 // Prevent gaining new privileges (for sandboxing)
 set_no_new_privs = () Result<(), i32> {
     result = compiler.syscall5(SYS_PRCTL, PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Check if no_new_privs is set
 get_no_new_privs = () Result<bool, i32> {
     result = compiler.syscall5(SYS_PRCTL, PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(result != 0)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(result != 0) }
 }
 
 // ============================================================================
@@ -159,15 +168,17 @@ get_no_new_privs = () Result<bool, i32> {
 // Higher values allow kernel to batch timer wakeups
 set_timer_slack = (slack_ns: u64) Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_SET_TIMERSLACK, slack_ns)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get current timer slack
 get_timer_slack = () Result<u64, i32> {
     result = compiler.syscall5(SYS_PRCTL, PR_GET_TIMERSLACK, 0, 0, 0, 0)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, u64))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, u64)) }
 }
 
 // ============================================================================
@@ -179,16 +190,18 @@ get_timer_slack = () Result<u64, i32> {
 set_child_subreaper = (enabled: bool) Result<(), i32> {
     val = enabled ? { 1 } : { 0 }
     result = compiler.syscall2(SYS_PRCTL, PR_SET_CHILD_SUBREAPER, val)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Check if this process is a child subreaper
 get_child_subreaper = () Result<bool, i32> {
     flag: i32 = 0
     result = compiler.syscall2(SYS_PRCTL, PR_GET_CHILD_SUBREAPER, compiler.ptr_to_int(&flag.ref()))
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(flag != 0)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(flag != 0) }
 }
 
 // ============================================================================
@@ -202,16 +215,18 @@ SECCOMP_MODE_FILTER = 2
 // Get seccomp mode
 get_seccomp = () Result<i32, i32> {
     result = compiler.syscall1(SYS_PRCTL, PR_GET_SECCOMP)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
-// Enable strict seccomp mode (only read/write/exit/sigreturn allowed)
+// Enable strict seccomp mode (only read/write/exit/sigret syscall allowed)
 // WARNING: This is irreversible!
 set_seccomp_strict = () Result<(), i32> {
     result = compiler.syscall2(SYS_PRCTL, PR_SET_SECCOMP, SECCOMP_MODE_STRICT)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -221,29 +236,33 @@ set_seccomp_strict = () Result<(), i32> {
 // Set FS base register (for TLS)
 arch_set_fs = (addr: u64) Result<(), i32> {
     result = compiler.syscall2(SYS_ARCH_PRCTL, ARCH_SET_FS, addr)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get FS base register
 arch_get_fs = () Result<u64, i32> {
     addr: u64 = 0
     result = compiler.syscall2(SYS_ARCH_PRCTL, ARCH_GET_FS, compiler.ptr_to_int(&addr.ref()))
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(addr)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(addr) }
 }
 
 // Set GS base register
 arch_set_gs = (addr: u64) Result<(), i32> {
     result = compiler.syscall2(SYS_ARCH_PRCTL, ARCH_SET_GS, addr)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get GS base register
 arch_get_gs = () Result<u64, i32> {
     addr: u64 = 0
     result = compiler.syscall2(SYS_ARCH_PRCTL, ARCH_GET_GS, compiler.ptr_to_int(&addr.ref()))
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(addr)
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(addr) }
 }
