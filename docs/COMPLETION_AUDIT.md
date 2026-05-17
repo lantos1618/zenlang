@@ -1262,9 +1262,9 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata`.
   AST import seeding now has a named helper pass, removing the residual mixed
   declaration collection loop.
-  Test-facing resolver replay task views now delegate to the same bundled
-  resolver declaration metadata collector as production replay instead of
-  running separate declaration scans, covered by
+  Test-facing resolver replay task views now use focused slice collectors
+  instead of collecting the full resolver declaration metadata bundle before
+  discarding unrelated task lists, covered by
   `cargo test resolver_type_declaration_metadata_tasks_collect_only_type_work`,
   `cargo test resolver_callable_declaration_metadata_tasks_collect_callable_work`,
   `cargo test resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls`,

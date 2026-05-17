@@ -92,7 +92,11 @@ impl TypeChecker {
     pub(super) fn collect_resolver_type_declaration_metadata_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverTypeDeclarationMetadataTask<'_>> {
-        Self::collect_resolver_declaration_metadata_tasks(decls).types
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_type_metadata_task(decl, &mut tasks);
+        }
+        tasks
     }
 
     pub(super) fn push_resolver_type_replay_tasks<'a>(
@@ -127,10 +131,38 @@ impl TypeChecker {
     }
 
     #[cfg(test)]
+    fn push_resolver_type_metadata_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverTypeDeclarationMetadataTask<'a>>,
+    ) -> bool {
+        match decl {
+            Declaration::Struct {
+                name, fields, span, ..
+            } => {
+                tasks.push(ResolverTypeDeclarationMetadataTask::Struct {
+                    name,
+                    fields,
+                    span: *span,
+                });
+                true
+            }
+            Declaration::Enum { name, span, .. } => {
+                tasks.push(ResolverTypeDeclarationMetadataTask::Enum { name, span: *span });
+                true
+            }
+            _ => false,
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn collect_resolver_behavior_declaration_metadata_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverBehaviorDeclarationMetadataTask<'_>> {
-        Self::collect_resolver_declaration_metadata_tasks(decls).behaviors
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_behavior_metadata_task(decl, &mut tasks);
+        }
+        tasks
     }
 
     pub(super) fn push_resolver_behavior_replay_tasks<'a>(
@@ -152,6 +184,22 @@ impl TypeChecker {
             type_reference_tasks.push(ResolverTypeReferenceValidationTask::Behavior {
                 name,
                 methods,
+                span: *span,
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    #[cfg(test)]
+    fn push_resolver_behavior_metadata_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverBehaviorDeclarationMetadataTask<'a>>,
+    ) -> bool {
+        if let Declaration::Behavior { name, span, .. } = decl {
+            tasks.push(ResolverBehaviorDeclarationMetadataTask {
+                name: name.as_str(),
                 span: *span,
             });
             true
@@ -183,9 +231,11 @@ impl TypeChecker {
     pub(super) fn collect_resolver_behavior_impl_block_declaration_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverBehaviorImplBlockDeclarationTask<'_>> {
-        Self::collect_resolver_declaration_metadata_tasks(decls)
-            .behavior_associations
-            .impls
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_behavior_impl_block_declaration_task(decl, &mut tasks);
+        }
+        tasks
     }
 
     pub(super) fn push_behavior_impl_block_declaration_task<'a>(
@@ -218,7 +268,11 @@ impl TypeChecker {
     pub(super) fn collect_resolver_callable_declaration_metadata_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverCallableDeclarationMetadataTask<'_>> {
-        Self::collect_resolver_declaration_metadata_tasks(decls).callable
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_callable_metadata_task(decl, &mut tasks);
+        }
+        tasks
     }
 
     pub(super) fn push_resolver_callable_replay_tasks<'a>(
@@ -276,10 +330,51 @@ impl TypeChecker {
     }
 
     #[cfg(test)]
+    fn push_resolver_callable_metadata_task<'a>(
+        decl: &'a Declaration,
+        tasks: &mut Vec<ResolverCallableDeclarationMetadataTask<'a>>,
+    ) -> bool {
+        match decl {
+            Declaration::Function { name, span, .. } => {
+                tasks.push(ResolverCallableDeclarationMetadataTask::Function { name, span: *span });
+                true
+            }
+            Declaration::Method {
+                type_name,
+                method_name,
+                span,
+                ..
+            } => {
+                tasks.push(ResolverCallableDeclarationMetadataTask::Method {
+                    type_name,
+                    method_name,
+                    span: *span,
+                });
+                true
+            }
+            Declaration::ImplBlock {
+                type_name,
+                behavior: None,
+                methods,
+                ..
+            } => {
+                tasks
+                    .push(ResolverCallableDeclarationMetadataTask::TypeImpl { type_name, methods });
+                true
+            }
+            _ => false,
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn collect_resolver_type_reference_validation_tasks(
         decls: &[Declaration],
     ) -> Vec<ResolverTypeReferenceValidationTask<'_>> {
-        Self::collect_resolver_declaration_metadata_tasks(decls).type_references
+        let mut tasks = Vec::new();
+        for decl in decls {
+            Self::push_resolver_type_reference_validation_task(decl, &mut tasks);
+        }
+        tasks
     }
 
     pub(super) fn push_resolver_type_reference_validation_task<'a>(
