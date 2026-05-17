@@ -2618,6 +2618,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/generic_behaviors/extends/diagnostics.rs`, keeping
   overlap, cycle, duplicate parent, generic arity, nongeneric type-argument,
   and signature-mismatch coverage separate from positive inheritance cases.
+- Resolver expected-symbol leaf builder tests now live in
+  `src/typechecker/tests/resolver_validation/expected_symbols/leaf_symbols.rs`,
+  keeping import, module, local, behavior-edge, and behavior-association
+  expectation builders separate from value, type, field, and variant builders.
 
 ## Current Phase
 
