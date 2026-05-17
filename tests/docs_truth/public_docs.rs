@@ -128,6 +128,7 @@ fn public_language_docs_and_examples_do_not_teach_return_keyword() {
         "examples/project/math_utils.zen",
         "examples/project/build.zen",
         "examples/unified_allocator_demo.zen",
+        "tests/nested_struct_field_access.zen",
     ] {
         let contents = read(path);
         assert!(

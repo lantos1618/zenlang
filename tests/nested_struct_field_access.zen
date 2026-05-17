@@ -14,7 +14,7 @@ Rectangle: {
 rect_area = (r: Rectangle) f64 {
     width: f64 = r.bottom_right.x - r.top_left.x
     height: f64 = r.bottom_right.y - r.top_left.y
-    return width * height
+    width * height
 }
 
 main = () void {
