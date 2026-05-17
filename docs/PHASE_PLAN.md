@@ -2181,6 +2181,9 @@ checked-in docs, tests, and commits only.
 - Prefix loop syntax now accepts `loop((l) { ... })` with enum-backed
   `done`/`next` control actions, including nested outer-loop exits and UFC
   `done(l)` / `next(l)` forms, with fixture and docs coverage.
+- Repo hygiene now guards loop-control parser dispatch against raw `done`/`next`
+  spelling checks, so parser suffix handling must continue to use
+  `LoopControlAction` parsing.
 - Type declaration suffix parsing now uses enum-backed `impl`/`implements`/
   `requires`/`extends` spellings, keeping parser dispatch and diagnostics off
   ad hoc string comparisons. Coverage:

@@ -138,6 +138,34 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
 }
 
 #[test]
+fn parser_loop_control_calls_use_owned_action_enum() {
+    for path in [
+        "src/parser/expressions.rs",
+        "src/parser/expressions/suffixes.rs",
+    ] {
+        let source = read(path);
+        for forbidden in [
+            r#"name.as_str() == "done""#,
+            r#"name.as_str() == "next""#,
+            r#"match name.as_str()"#,
+            r#""done" => Expression::LoopControl"#,
+            r#""next" => Expression::LoopControl"#,
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} should parse loop control calls through LoopControlAction, not raw spelling checks: {forbidden}"
+            );
+        }
+    }
+
+    let suffixes = read("src/parser/expressions/suffixes.rs");
+    assert!(
+        suffixes.contains("name.parse::<LoopControlAction>()"),
+        "parser loop-control suffix handling should parse through LoopControlAction"
+    );
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");
