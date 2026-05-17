@@ -137,7 +137,7 @@ impl BuildGraph {
 
         let mut lowering = BuildProgramLowering::default();
         lowering.collect_expr(build_body);
-        Self::from_input(lowering.into_input())
+        Self::from_input(lowering.into_input()?)
     }
 }
 
@@ -146,15 +146,19 @@ struct BuildProgramLowering {
     targets: Vec<BuildTargetInput>,
     declared_host_effects: Vec<HostEffect>,
     used_host_effects: Vec<HostEffect>,
+    error: Option<BuildGraphError>,
 }
 
 impl BuildProgramLowering {
-    fn into_input(self) -> BuildGraphInput {
-        BuildGraphInput {
+    fn into_input(self) -> Result<BuildGraphInput, BuildGraphError> {
+        if let Some(error) = self.error {
+            return Err(error);
+        }
+        Ok(BuildGraphInput {
             targets: self.targets,
             declared_host_effects: self.declared_host_effects,
             used_host_effects: self.used_host_effects,
-        }
+        })
     }
 
     fn collect_expr(&mut self, expr: &Expression) {
@@ -164,8 +168,14 @@ impl BuildProgramLowering {
         if let Some(effect) = declared_host_effect(expr) {
             self.declared_host_effects.push(effect);
         }
-        if let Some(target) = build_target_from_builder_add(expr) {
-            self.targets.push(target);
+        match build_target_from_builder_add(expr) {
+            Ok(Some(target)) => self.targets.push(target),
+            Ok(None) => {}
+            Err(error) => {
+                if self.error.is_none() {
+                    self.error = Some(error);
+                }
+            }
         }
 
         match expr {
@@ -292,7 +302,9 @@ impl BuildProgramLowering {
     }
 }
 
-fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> {
+fn build_target_from_builder_add(
+    expr: &Expression,
+) -> Result<Option<BuildTargetInput>, BuildGraphError> {
     let Expression::MethodCall {
         receiver,
         method,
@@ -300,7 +312,7 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
         ..
     } = expr
     else {
-        return None;
+        return Ok(None);
     };
     if method != BuildTargetDslIdent::Add.as_str()
         || !matches!(
@@ -308,19 +320,25 @@ fn build_target_from_builder_add(expr: &Expression) -> Option<BuildTargetInput> 
             Expression::Identifier { name, .. } if name == BuildTargetDslIdent::Builder.as_str()
         )
     {
-        return None;
+        return Ok(None);
     }
     let [arg] = args.as_slice() else {
-        return None;
+        return Ok(None);
     };
     let Expression::StructLiteral { name, fields, .. } = arg else {
-        return None;
+        return Ok(None);
     };
-    match name.parse::<BuildTargetDslKind>().ok()? {
-        BuildTargetDslKind::Executable => executable_target_from_fields(fields),
-        BuildTargetDslKind::Test => test_target_from_fields(fields),
-        BuildTargetDslKind::Library => library_target_from_fields(fields),
-    }
+    let target = match name.parse::<BuildTargetDslKind>() {
+        Ok(BuildTargetDslKind::Executable) => executable_target_from_fields(fields),
+        Ok(BuildTargetDslKind::Test) => test_target_from_fields(fields),
+        Ok(BuildTargetDslKind::Library) => library_target_from_fields(fields),
+        Err(()) => {
+            return Err(BuildGraphError::UnsupportedBuildScript(format!(
+                "unsupported build target kind `{name}`; supported target kinds are `Executable`, `Test`, and `Library`"
+            )));
+        }
+    };
+    Ok(target)
 }
 
 fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
