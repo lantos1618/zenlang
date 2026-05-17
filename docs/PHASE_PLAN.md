@@ -2551,6 +2551,9 @@ checked-in docs, tests, and commits only.
   `src/typechecker/resolver_validation_support/expected_local_traversal.rs`,
   separate from the expected-local entry points while preserving resolver local
   replay coverage.
+- Lexer whitespace and comment skipping now lives in `src/lexer/whitespace.rs`,
+  separate from token dispatch, while preserving newline significance and
+  string interpolation comment handling.
 
 ## Current Phase
 
