@@ -54,6 +54,11 @@ checked-in docs, tests, and commits only.
   `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`,
   proving `Result<Option<T>, str>` return specialization through an imported
   public method without undefined generated C calls.
+- Imported generic `Result<T, E>` enum methods now cover multiple concrete
+  instantiations from the importing module through
+  `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`,
+  preserving `Result_unwrap_or_i32_str` and `Result_unwrap_or_bool_str`
+  call/definition pairs without unspecialized `Result_T` symbols.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
   method signature handoff drift before method bodies are checked.

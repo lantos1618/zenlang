@@ -95,6 +95,14 @@ and do not assume Phase 4 is ready without evidence.
   and `integration::generated_c_call_definition_scan_reports_missing_generated_calls`,
   proving `Result<Option<T>, str>` specialization does not leave undefined
   generated C calls.
+- Imported generic `Result<T, E>` enum methods now cover multiple concrete
+  instantiations in the importing module through
+  `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`,
+  `integration::test_multi_file_generic_result_enum_multi_specialization_imports`,
+  and `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
+  proving both `Result_unwrap_or_i32_str` and `Result_unwrap_or_bool_str`
+  resolve to emitted definitions exactly once without unspecialized `Result_T`
+  symbols.
   Imported public generic non-behavior `Type.impl` method templates that use
   source-module imported generic types and methods are covered by
   `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and
