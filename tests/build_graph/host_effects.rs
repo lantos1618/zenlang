@@ -91,6 +91,28 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_rejects_env_read_without_fallback() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD") ?
+        | .Ok(value) { value }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("build.zen env read without fallback should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "undeclared host effect: read env `ZEN_STD`"
+    );
+}
+
+#[test]
 fn build_program_lowering_accepts_declared_file_reads() {
     let program = parse_program(
         r#"
@@ -173,6 +195,28 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
     let err = BuildGraph::from_build_program(&program)
         .expect_err("undeclared build.zen file read should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "undeclared host effect: read file `build.targets`"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_file_read_without_fallback() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("build.zen file read without fallback should fail");
 
     assert_eq!(
         err.to_string(),

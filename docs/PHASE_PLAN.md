@@ -2316,6 +2316,9 @@ checked-in docs, tests, and commits only.
   `build_program_lowering_accepts_declared_env_reads`, and declared
   `b.os.read_file("...")` effects, covered by
   `build_program_lowering_accepts_declared_file_reads`, while
+  `build_program_lowering_rejects_env_read_without_fallback` and
+  `build_program_lowering_rejects_file_read_without_fallback` keep `?`
+  host-effect reads without fallback arms rejected during lowering, and
   `build_program_lowering_rejects_undeclared_file_reads` keeps undeclared file
   reads rejected before graph promotion.
 - `emit-json build-graph <build.zen>` now exposes the constrained graph-emission
@@ -2330,7 +2333,9 @@ checked-in docs, tests, and commits only.
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`
   cover negative host-effect paths through the advertised compiler command.
   `emit_json_build_graph_outputs_declared_env_read_effects` covers the
-  matching positive declared environment-read effect JSON.
+  matching positive declared environment-read effect JSON, while
+  `emit_json_build_graph_rejects_env_read_without_fallback` covers missing
+  fallback arms before graph JSON is emitted.
   `emit_json_build_graph_outputs_declared_file_read_effects`,
   `emit_json_build_graph_outputs_wildcard_fallback_declared_file_read_effects`,
   and
