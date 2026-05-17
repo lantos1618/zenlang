@@ -2588,8 +2588,13 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal test
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
-  while undeclared file reads reject before test execution through
-  `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  and multi-target test graph execution keeps the same declared file-read
+  fallback behavior through
+  `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  Undeclared file reads reject before test execution through
+  `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before multi-target test execution through
+  `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before test execution
   through
   `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
@@ -2744,11 +2749,14 @@ checked-in docs, tests, and commits only.
 - `zen test build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
   the matching undeclared file-read and missing-fallback rejections before test
-  execution. Coverage:
+  execution. Multi-target test graph execution also has the matching declared
+  and undeclared file-read pair. Coverage:
   `test_command_build_zen_accepts_declared_file_read_effects`,
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
