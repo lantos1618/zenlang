@@ -1995,6 +1995,8 @@ and do not assume Phase 4 is ready without evidence.
   replaying generic-bound validation and type registration, covered by
   `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
   `cargo test generic_struct_constructor_without_type_args_is_error`,
+  `cargo test nongeneric_struct_constructor_type_args_are_error`,
+  `cargo test nongeneric_enum_constructor_type_args_are_error`,
   `cargo test generic_enum_type_arg_arity_is_error`,
   `cargo test generic_enum_constructor_without_type_args_is_error`, and
   `cargo test check_program_with_symbols_uses_resolver_type_metadata_for_type_refs`.
@@ -2096,6 +2098,8 @@ and do not assume Phase 4 is ready without evidence.
   before replaying generic-bound validation and type registration, covered by
   `cargo test ast_type_declaration_tasks_collect_structs_and_enums`,
   `cargo test generic_struct_constructor_without_type_args_is_error`,
+  `cargo test nongeneric_struct_constructor_type_args_are_error`,
+  `cargo test nongeneric_enum_constructor_type_args_are_error`,
   `cargo test generic_enum_type_arg_arity_is_error`, and
   `cargo test generic_enum_constructor_without_type_args_is_error`.
 - Behavior declaration collection now uses a shared behavior-task push helper

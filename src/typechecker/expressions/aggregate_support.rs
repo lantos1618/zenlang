@@ -75,6 +75,29 @@ impl TypeChecker {
         let struct_info = self.structs.get(name).cloned();
         let type_arg_count = struct_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+        if !type_args.is_empty() && type_arg_count == Some(0) {
+            self.diagnostics.push(Diagnostic::error(
+                "E5002",
+                format!(
+                    "non-generic struct `{}` does not accept type arguments",
+                    name
+                ),
+                span,
+            ));
+        } else if let Some(expected) = type_arg_count.filter(|expected| {
+            !type_args.is_empty() && *expected > 0 && *expected != type_args.len()
+        }) {
+            self.diagnostics.push(Diagnostic::error(
+                "E5001",
+                format!(
+                    "generic struct `{}` expects {} type arguments, found {}",
+                    name,
+                    expected,
+                    type_args.len()
+                ),
+                span,
+            ));
+        }
 
         let (type_name, ty, field_defs) = if type_args.is_empty() {
             let ty = if let Some(expected) = type_arg_count.filter(|expected| *expected > 0) {
@@ -105,11 +128,19 @@ impl TypeChecker {
             (name.to_string(), ty, field_defs)
         } else {
             let type_name = self.mangle_generic_type_name(name, type_args);
-            let ty = self.resolve_type(&AstType::Generic {
-                name: name.to_string(),
-                type_args: type_args.to_vec(),
-            });
-            let field_defs = self.specialize_generic_struct(name, type_args, span);
+            let ty = if type_args_valid {
+                self.resolve_type(&AstType::Generic {
+                    name: name.to_string(),
+                    type_args: type_args.to_vec(),
+                })
+            } else {
+                Type::Unknown
+            };
+            let field_defs = if type_args_valid {
+                self.specialize_generic_struct(name, type_args, span)
+            } else {
+                std::collections::HashMap::new()
+            };
             (type_name, ty, field_defs)
         };
         let mut typed_fields = Vec::new();
@@ -240,6 +271,29 @@ impl TypeChecker {
         let enum_info = self.enums.get(enum_name).cloned();
         let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+        if !type_args.is_empty() && type_arg_count == Some(0) {
+            self.diagnostics.push(Diagnostic::error(
+                "E5002",
+                format!(
+                    "non-generic enum `{}` does not accept type arguments",
+                    enum_name
+                ),
+                span,
+            ));
+        } else if let Some(expected) = type_arg_count.filter(|expected| {
+            !type_args.is_empty() && *expected > 0 && *expected != type_args.len()
+        }) {
+            self.diagnostics.push(Diagnostic::error(
+                "E5001",
+                format!(
+                    "generic enum `{}` expects {} type arguments, found {}",
+                    enum_name,
+                    expected,
+                    type_args.len()
+                ),
+                span,
+            ));
+        }
 
         let (type_name, ty, variant_defs) = if type_args.is_empty() {
             let ty = self.resolve_type(&AstType::Named(enum_name.to_string()));
@@ -271,11 +325,19 @@ impl TypeChecker {
             (enum_name.to_string(), ty, variant_defs)
         } else {
             let type_name = self.mangle_generic_type_name(enum_name, type_args);
-            let ty = self.resolve_type(&AstType::Generic {
-                name: enum_name.to_string(),
-                type_args: type_args.to_vec(),
-            });
-            let variant_defs = self.specialize_generic_enum(enum_name, type_args, span);
+            let ty = if type_args_valid {
+                self.resolve_type(&AstType::Generic {
+                    name: enum_name.to_string(),
+                    type_args: type_args.to_vec(),
+                })
+            } else {
+                Type::Unknown
+            };
+            let variant_defs = if type_args_valid {
+                self.specialize_generic_enum(enum_name, type_args, span)
+            } else {
+                std::collections::HashMap::new()
+            };
             (type_name, ty, variant_defs)
         };
         if self.enums.contains_key(enum_name) && type_args_valid {
@@ -330,7 +392,7 @@ impl TypeChecker {
                     ));
                 }
             }
-        } else {
+        } else if !self.enums.contains_key(enum_name) {
             self.diagnostics.push(Diagnostic::error(
                 "E3064",
                 format!("undefined enum `{}`", enum_name),

@@ -259,6 +259,35 @@ main = () i32 {
 }
 
 #[test]
+fn nongeneric_struct_constructor_type_args_are_error() {
+    let errors = typecheck_errors(
+        r#"
+Point: {
+    x: i32
+}
+
+main = () i32 {
+    point = Point<i32> { x: 1 }
+    point.x
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic struct `Point` does not accept type arguments")),
+        "expected non-generic struct constructor type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("field `x` for struct `Point`")),
+        "malformed non-generic struct constructor should not also report field mismatch, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_enum_type_arg_arity_is_error() {
     let errors = typecheck_errors(
         r#"
@@ -313,6 +342,35 @@ main = () i32 {
             .iter()
             .all(|d| !d.message.contains("payload for enum variant")),
         "malformed generic enum constructor should not also report payload mismatch, got {errors:?}"
+    );
+}
+
+#[test]
+fn nongeneric_enum_constructor_type_args_are_error() {
+    let errors = typecheck_errors(
+        r#"
+Status:
+    Ready,
+    Done(i32)
+
+main = () i32 {
+    value = Status<i32>.Done(1)
+    0
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic enum `Status` does not accept type arguments")),
+        "expected non-generic enum constructor type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("payload for enum variant")),
+        "malformed non-generic enum constructor should not also report payload mismatch, got {errors:?}"
     );
 }
 
