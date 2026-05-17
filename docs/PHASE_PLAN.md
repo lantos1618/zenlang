@@ -2727,6 +2727,11 @@ checked-in docs, tests, and commits only.
   method/worklist specialization coverage in
   `tests/integration/generic_specializations/method_worklist_generated_c.rs`,
   leaving the parent integration module focused on cross-fixture uniqueness.
+- Multifile generic specialization generated-C assertions now keep imported
+  enum dependency coverage in
+  `tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs`
+  and imported method/worklist dependency coverage in
+  `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`.
 
 ## Current Phase
 

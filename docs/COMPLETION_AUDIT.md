@@ -2993,6 +2993,13 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/generic_specializations/method_worklist_generated_c.rs`,
   preserving undefined-call and unspecialized-symbol checks while keeping the
   parent integration module focused on cross-fixture uniqueness.
+- Multifile generic specialization generated-C assertions now keep imported
+  enum dependency coverage in
+  `tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs`
+  and imported method/worklist dependency coverage in
+  `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`,
+  preserving imported undefined-call and unspecialized-symbol checks while
+  keeping the multifile generated-C module focused on submodule wiring.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
