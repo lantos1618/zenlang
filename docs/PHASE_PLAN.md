@@ -485,6 +485,9 @@ checked-in docs, tests, and commits only.
 - Direct `zen build.zen` host-effect tests now keep declared file-read fallback
   accept/reject cases in a focused child module, leaving env-effect ordering and
   unrelated test skip coverage in the parent integration module.
+- Emit-command build graph host-effect tests now keep declared file-read
+  fallback accept/reject cases in a focused child module, leaving env-effect
+  ordering and unrelated test skip coverage in the parent integration module.
 - Build graph unit tests now keep target metadata validation and gated
   package/link target rejection coverage in a focused child module, leaving the
   root build graph test file for shared helpers and positive lowering smoke
