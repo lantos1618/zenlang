@@ -2301,6 +2301,10 @@ checked-in docs, tests, and commits only.
   `public_runnable_examples_execute_through_cli`, proving the advertised
   examples are not only typechecked and compiled but also valid native
   programs.
+- The canonical project build graph now builds, runs its executable target, and
+  runs its test target from a temp copy through
+  `public_project_build_graph_builds_and_tests_through_cli`, keeping the
+  advertised multi-file project example aligned with CLI graph execution.
 - A constrained `build.zen` lowering boundary now maps parsed build scripts into
   `BuildGraph` without enabling CLI execution. `parsed_project_build_zen_lowers_to_executable_and_test_graph`
   covers the checked-in project executable and test targets,
