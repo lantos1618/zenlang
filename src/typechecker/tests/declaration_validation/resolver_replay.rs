@@ -235,3 +235,66 @@ Point.implements(Json) {
     assert_eq!(tasks[0].behavior, "Json");
     assert_eq!(tasks[0].methods.len(), 1);
 }
+
+#[test]
+fn resolver_declaration_semantic_bundle_replays_validation_passes() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 = true }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (self: Point) str { "point" }
+}
+
+Point.requires(Json)
+
+main = (value: Point) i32 { 1 }
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    let tasks = TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
+    let mut stale_declarations = program.declarations.clone();
+    if let Declaration::Requires { behavior, .. } = &mut stale_declarations[3] {
+        *behavior = "MissingBehavior".to_string();
+    }
+    if let Declaration::Function { params, .. } = &mut stale_declarations[4] {
+        params[0].ty = AstType::Named("MissingType".to_string());
+    }
+    let mut checker = TypeChecker::new();
+    checker.with_resolver_backed_collection(|checker| {
+        checker.collect_declarations(&stale_declarations)
+    });
+    checker.collect_resolver_declaration_metadata(&symbols, &tasks);
+
+    checker.validate_resolver_declaration_semantics_from_tasks(&tasks, Some(&symbols));
+
+    assert!(
+        checker
+            .diagnostics()
+            .iter()
+            .all(|d| !d.message.contains("MissingBehavior")),
+        "resolver task bundle should not validate stale AST behavior refs, got {:?}",
+        checker.diagnostics()
+    );
+    assert!(
+        checker
+            .diagnostics()
+            .iter()
+            .all(|d| !d.message.contains("MissingType")),
+        "resolver task bundle should not validate stale AST type refs, got {:?}",
+        checker.diagnostics()
+    );
+    assert!(
+        checker.diagnostics().iter().any(|d| d
+            .message
+            .contains("field `x` default expects `i32`, found `bool`")),
+        "expected field default diagnostics, got {:?}",
+        checker.diagnostics()
+    );
+}

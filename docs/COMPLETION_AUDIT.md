@@ -2613,6 +2613,10 @@ and do not assume Phase 4 is ready without evidence.
 - AST declaration semantic validation now replays its full validation task
   bundle through one helper, covered by
   `cargo test --lib ast_declaration_semantic_bundle_replays_validation_passes`.
+- Resolver-backed declaration semantic validation now replays behavior
+  associations, resolver-owned type-reference checks, and resolver struct-field
+  defaults through one task-bundle helper, covered by
+  `cargo test --lib resolver_declaration_semantic_bundle_replays_validation_passes`.
 - Resolver validation replay tests now keep association-list replay coverage in
   `src/typechecker/tests/resolver_validation/replay_tasks/association_lists.rs`
   and declaration-task collector coverage in

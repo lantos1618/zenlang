@@ -2100,6 +2100,10 @@ checked-in docs, tests, and commits only.
   declaration pass before replaying the existing validation order.
 - AST declaration semantic validation now replays that full validation task
   bundle through one helper instead of unpacking sub-slices at the entrypoint.
+- Resolver-backed declaration semantic validation now replays behavior
+  associations, resolver-owned type-reference checks, and resolver struct-field
+  defaults through one task-bundle helper, covered by
+  `cargo test --lib resolver_declaration_semantic_bundle_replays_validation_passes`.
 - Resolver validation replay tests now keep association-list replay cases and
   declaration-task collector cases in focused submodules, leaving the parent
   replay test module as a small index.
