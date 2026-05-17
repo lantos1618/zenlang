@@ -146,12 +146,17 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
 #[test]
 fn root_smoke_fixtures_do_not_use_removed_return_keyword() {
     for path in [
+        "tests/test_arena_async.zen",
+        "tests/test_gpa_trait.zen",
+        "tests/test_heap_sync.zen",
         "tests/test_io_import.zen",
         "tests/test_minimal.zen",
         "tests/test_nested_import.zen",
         "tests/test_no_import.zen",
+        "tests/test_panic.zen",
         "tests/test_raw_alloc.zen",
         "tests/test_simple_allocator.zen",
+        "tests/test_unified_allocator.zen",
     ] {
         let source = read(path);
         assert!(

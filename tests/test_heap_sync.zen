@@ -31,5 +31,5 @@ main = () i32 {
     io.println("Wait returned: ${wait_result}")
 
     io.println("HeapSync test passed!")
-    return 0
+    0
 }
