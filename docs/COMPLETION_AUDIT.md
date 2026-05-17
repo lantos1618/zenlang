@@ -2725,6 +2725,9 @@ and do not assume Phase 4 is ready without evidence.
   declared deterministic fallbacks for `b.os.env(...)` and
   `b.os.read_file(...)`, covered by build-graph lowering tests and executable
   `zen build build.zen` positive/negative fixtures.
+- Build graph host-effect lowering also treats identifier fallback match arms
+  as declared deterministic fallbacks, covered by env/file lowering tests and
+  an executable `zen build build.zen` file-read fixture.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
