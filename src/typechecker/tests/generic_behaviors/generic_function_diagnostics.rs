@@ -134,3 +134,39 @@ main = () i32 {
         "expected generic behavior bound arity diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_bound_nongeneric_behavior_type_args_are_error() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    to_json: (Self) str
+}
+
+encode<T: Json<i32>> = (value: T) str {
+    "encoded"
+}
+
+main = () i32 {
+    0
+}
+"#,
+    );
+
+    let mut tc = TypeChecker::new();
+    let errors = tc
+        .check_program(&program)
+        .expect_err("non-generic behavior bound with type arguments should fail");
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("non-generic behavior `Json` does not accept type arguments")),
+        "expected non-generic behavior bound type-argument diagnostic, got {errors:?}"
+    );
+    assert!(
+        errors
+            .iter()
+            .all(|d| !d.message.contains("generic behavior `Json` expects 0")),
+        "non-generic behavior bound should not use generic arity wording, got {errors:?}"
+    );
+}
