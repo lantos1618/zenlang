@@ -64,20 +64,6 @@ impl CEmitter {
                 self.emit_match(scrutinee, arms, kind, None);
                 String::new()
             }
-            TypedExprKind::Return(val) => match val {
-                Some(v) if self.current_defers.is_empty() => {
-                    format!("return {};", self.emit_expr_inline(v))
-                }
-                None if self.current_defers.is_empty() => "return;".into(),
-                Some(v) => {
-                    self.emit_return_with_current_defers(Some(v));
-                    String::new()
-                }
-                None => {
-                    self.emit_return_with_current_defers(None);
-                    String::new()
-                }
-            },
             TypedExprKind::Break => "break;".into(),
             TypedExprKind::Continue => "continue;".into(),
             TypedExprKind::LoopControl { action, label } => {
@@ -95,33 +81,6 @@ impl CEmitter {
                 } else {
                     format!("{};", inline)
                 }
-            }
-        }
-    }
-
-    fn emit_return_with_current_defers(&mut self, value: Option<&TypedExpression>) {
-        match value {
-            Some(expr) => {
-                let tmp = self.fresh_tmp();
-                let ty = self.c_type(&expr.ty);
-                let value = self.emit_expr_inline(expr);
-                self.line(&format!("{} {} = {};", ty, tmp, value));
-                self.emit_current_defers();
-                self.line(&format!("return {};", tmp));
-            }
-            None => {
-                self.emit_current_defers();
-                self.line("return;");
-            }
-        }
-    }
-
-    fn emit_current_defers(&mut self) {
-        let defers = self.current_defers.clone();
-        for defer_expr in &defers {
-            let s = self.emit_expr_to_stmt(defer_expr);
-            if !s.is_empty() {
-                self.line(&s);
             }
         }
     }
@@ -291,17 +250,6 @@ impl CEmitter {
                 self.dedent();
                 self.line("}");
                 tmp
-            }
-
-            TypedExprKind::Return(val) => {
-                // Shouldn't appear as inline expression, but handle it
-                match val {
-                    Some(v) => {
-                        let ve = self.emit_expr_inline(v);
-                        format!("({{ return {}; 0; }})", ve)
-                    }
-                    None => "(({ return; 0; }))".into(),
-                }
             }
 
             TypedExprKind::Match {

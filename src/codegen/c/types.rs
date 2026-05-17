@@ -242,10 +242,6 @@ impl CEmitter {
                     let tmp = self.fresh_tmp();
                     let ty = self.c_type(&func.return_type);
                     match &expr.kind {
-                        TypedExprKind::Return(Some(v)) => {
-                            let val = self.emit_expr_inline(v);
-                            self.line(&format!("{} {} = {};", ty, tmp, val));
-                        }
                         TypedExprKind::Match {
                             scrutinee,
                             arms,
@@ -268,14 +264,7 @@ impl CEmitter {
                     }
                     self.line(&format!("return {};", tmp));
                 } else {
-                    // No defers: original behavior
                     match &expr.kind {
-                        TypedExprKind::Return(_) => {
-                            let s = self.emit_expr_to_stmt(expr);
-                            if !s.is_empty() {
-                                self.line(&s);
-                            }
-                        }
                         TypedExprKind::Match {
                             scrutinee,
                             arms,

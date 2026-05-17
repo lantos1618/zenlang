@@ -80,9 +80,6 @@ pub(super) fn collect_captures(
         TypedExprKind::Block(block) => {
             collect_captures_block(block, params, outer_vars, captures, seen);
         }
-        TypedExprKind::Return(Some(v)) => {
-            collect_captures(v, params, outer_vars, captures, seen);
-        }
         TypedExprKind::StringInterpolation { parts } => {
             for part in parts {
                 if let TypedStringPart::Expr(e) = part {

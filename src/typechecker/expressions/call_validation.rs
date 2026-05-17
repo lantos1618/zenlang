@@ -335,7 +335,6 @@ impl TypeChecker {
 
     pub(super) fn expr_definitely_returns(&self, expr: &TypedExpression) -> bool {
         match &expr.kind {
-            TypedExprKind::Return(_) => true,
             TypedExprKind::Block(block) => self.block_definitely_returns(block),
             TypedExprKind::Match { arms, .. } => {
                 !arms.is_empty()

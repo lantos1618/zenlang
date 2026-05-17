@@ -70,6 +70,30 @@ fn production_rust_files_stay_below_cleanup_threshold() {
 }
 
 #[test]
+fn source_ast_no_longer_has_return_expression_nodes() {
+    for path in [
+        "src/ast/expressions.rs",
+        "src/ast/typed.rs",
+        "src/typechecker/expressions.rs",
+        "src/typechecker/expressions/simple_forms.rs",
+        "src/codegen/c/emit.rs",
+        "src/codegen/c/types.rs",
+    ] {
+        let source = read(path);
+        for forbidden in [
+            "Expression::Return",
+            "TypedExprKind::Return",
+            "check_return_expr",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} still contains dead return-expression support: {forbidden}"
+            );
+        }
+    }
+}
+
+#[test]
 fn ci_and_release_only_advertise_existing_targets() {
     let ci = read(".github/workflows/ci.yml");
     let release = read(".github/workflows/release.yml");
