@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn readme_is_language_first_and_links_status_docs() {
+fn readme_is_language_first_and_links_reference_docs() {
     let readme = read("README.md");
 
     for stale_claim in [
@@ -16,6 +16,10 @@ fn readme_is_language_first_and_links_status_docs() {
         "work-in-progress systems language compiler",
         "Current Baseline",
         "Repository Layout",
+        "Current implementation status",
+        "status",
+        "gates",
+        "audit details live",
         "cargo fmt --check",
         "cargo clippy -- -D warnings",
         "cargo test --lib",
@@ -84,6 +88,37 @@ fn examples_index_uses_canonical_tutorial_and_project_paths() {
 }
 
 #[test]
+fn examples_directory_contains_only_canonical_public_examples() {
+    let examples_dir = repo_root().join("examples");
+    let mut actual = std::fs::read_dir(&examples_dir)
+        .expect("examples directory should exist")
+        .map(|entry| {
+            entry
+                .expect("examples entry should be readable")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect::<Vec<_>>();
+    actual.sort();
+
+    assert_eq!(
+        actual,
+        [
+            "01_hello_world.zen",
+            "02_variables_and_types.zen",
+            "03_pattern_matching.zen",
+            "04_structs_and_methods.zen",
+            "05_loops.zen",
+            "06_error_handling.zen",
+            "README.md",
+            "project",
+        ],
+        "examples/ should contain only canonical public examples"
+    );
+}
+
+#[test]
 fn learn_zen_guide_covers_core_tour_and_gated_previews() {
     let guide = read("docs/learn_zen_in_y_minutes.md");
 
@@ -123,11 +158,9 @@ fn public_language_docs_and_examples_do_not_teach_return_keyword() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
-        "examples/ffi_demo.zen",
         "examples/project/main.zen",
         "examples/project/math_utils.zen",
         "examples/project/build.zen",
-        "examples/unified_allocator_demo.zen",
         "tests/nested_struct_field_access.zen",
     ] {
         let contents = read(path);

@@ -74,13 +74,10 @@ Zen code is meant to read from the outside in:
 - methods attach behavior to a type with `Type.method`;
 - generic constraints use behavior bounds such as `T: Display`.
 
-## Learn
+## Reference
 
 - [Learn Zen In Y Minutes](docs/learn_zen_in_y_minutes.md)
 - [Examples](examples/README.md)
 - [V1 language contract](docs/V1_SPEC.md)
 - [Phase plan](docs/PHASE_PLAN.md)
 - [Completion audit](docs/COMPLETION_AUDIT.md)
-
-The README is intentionally about the language. Current implementation status,
-gates, and audit details live in the docs linked above.
