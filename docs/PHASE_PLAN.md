@@ -2089,7 +2089,10 @@ checked-in docs, tests, and commits only.
   declaration pass before replaying the existing validation order.
 - AST pre-collection validation now builds `Self`-context and behavior-extends
   validation tasks in one declaration pass before replaying the existing
-  pre-collection validation order.
+  validation order.
+- AST declaration collection now replays the full collection task bundle from
+  one helper instead of fanning out sub-slices at the entrypoint, preserving
+  behavior/type/callable/impl/import collection order.
 - AST declaration collection now carries pre-collection validation tasks in
   the same declaration task bundle, so behavior declarations are collected and
   pre-collection validations are replayed without a second declaration scan.

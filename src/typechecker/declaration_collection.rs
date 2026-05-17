@@ -5,6 +5,13 @@ impl TypeChecker {
 
     pub(super) fn collect_declarations(&mut self, decls: &[Declaration]) {
         let tasks = Self::collect_ast_declaration_collection_tasks(decls);
+        self.collect_ast_declarations_from_tasks(&tasks);
+    }
+
+    pub(super) fn collect_ast_declarations_from_tasks(
+        &mut self,
+        tasks: &AstDeclarationCollectionTasks<'_>,
+    ) {
         self.collect_behavior_declarations_from_tasks(&tasks.behaviors);
         self.validate_ast_precollection_tasks(&tasks.precollection_validations);
         if !self.resolver_backed_collection {

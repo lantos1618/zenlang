@@ -153,6 +153,37 @@ make = () Point { Point { x: 1 } }
 }
 
 #[test]
+fn ast_declaration_collection_bundle_replays_collection_passes() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+make = () Point { Point { x: 1 } }
+
+Point.get = (self: Point) i32 { self.x }
+
+Point.impl = {
+    x_value = (self: Point) i32 { self.x }
+}
+"#,
+    );
+    let tasks = TypeChecker::collect_ast_declaration_collection_tasks(&program.declarations);
+    let mut checker = TypeChecker::new();
+
+    checker.collect_ast_declarations_from_tasks(&tasks);
+
+    assert!(checker.structs.contains_key("Point"));
+    assert!(checker.behaviors.contains_key("Json"));
+    assert!(checker.functions.contains_key("make"));
+    assert!(checker.methods.contains_key("Point.get"));
+    assert!(checker.methods.contains_key("Point.x_value"));
+}
+
+#[test]
 fn check_program_rejects_unknown_type_references() {
     let program = parse_program(
         r#"
