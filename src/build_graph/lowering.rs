@@ -200,7 +200,7 @@ fn declared_host_effect(expr: &Expression) -> Option<HostEffect> {
 
 fn host_effect_arm_declares_fallback(pattern: &crate::ast::Pattern) -> bool {
     match pattern {
-        crate::ast::Pattern::Wildcard { .. } => true,
+        crate::ast::Pattern::Wildcard { .. } | crate::ast::Pattern::Identifier { .. } => true,
         crate::ast::Pattern::Enum { variant, .. } => variant == "Err",
         _ => false,
     }
