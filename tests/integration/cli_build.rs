@@ -32,3 +32,5 @@ mod graph_validation_test_command_validation;
 mod legacy_graph_command;
 #[path = "cli_build/legacy_graph_command_host_effects.rs"]
 mod legacy_graph_command_host_effects;
+#[path = "cli_build/legacy_graph_command_validation.rs"]
+mod legacy_graph_command_validation;
