@@ -1997,6 +1997,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test generic_struct_constructor_without_type_args_is_error`,
   `cargo test nongeneric_struct_constructor_type_args_are_error`,
   `cargo test nongeneric_enum_constructor_type_args_are_error`,
+  `cargo test nongeneric_struct_annotation_type_args_are_error`,
+  `cargo test nongeneric_enum_annotation_type_args_are_error`,
   `cargo test generic_enum_type_arg_arity_is_error`,
   `cargo test generic_enum_constructor_without_type_args_is_error`, and
   `cargo test check_program_with_symbols_uses_resolver_type_metadata_for_type_refs`.
@@ -2100,6 +2102,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test generic_struct_constructor_without_type_args_is_error`,
   `cargo test nongeneric_struct_constructor_type_args_are_error`,
   `cargo test nongeneric_enum_constructor_type_args_are_error`,
+  `cargo test nongeneric_struct_annotation_type_args_are_error`,
+  `cargo test nongeneric_enum_annotation_type_args_are_error`,
   `cargo test generic_enum_type_arg_arity_is_error`, and
   `cargo test generic_enum_constructor_without_type_args_is_error`.
 - Behavior declaration collection now uses a shared behavior-task push helper
