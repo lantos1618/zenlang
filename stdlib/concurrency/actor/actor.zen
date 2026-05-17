@@ -42,25 +42,25 @@ ActorRef<M>: {
 // Send a message (blocking if mailbox is full)
 ActorRef.send = (self: ActorRef<M>, msg: M) Result<(), ChannelError> {
     mailbox: MutPtr<Channel<M>> = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
-    return mailbox.send(msg)
+    mailbox.send(msg)
 }
 
 // Non-blocking send
 ActorRef.try_send = (self: ActorRef<M>, msg: M) Result<(), ChannelError> {
     mailbox: MutPtr<Channel<M>> = cast(compiler.int_to_ptr(self.mailbox), MutPtr<Channel<M>>)
-    return mailbox.try_send(msg)
+    mailbox.try_send(msg)
 }
 
 // Check if actor is alive
 ActorRef.is_alive = (self: ActorRef<M>) bool {
     state_ptr: Ptr<Atomic<i32>> = cast(compiler.int_to_ptr(self.state), Ptr<Atomic<i32>>)
     state = state_ptr.load()
-    return state == ACTOR_RUNNING
+    state == ACTOR_RUNNING
 }
 
 // Get actor ID
 ActorRef.id = (self: ActorRef<M>) u64 {
-    return self.id
+    self.id
 }
 
 // ============================================================================
@@ -75,7 +75,7 @@ ActorContext<M>: {
 }
 
 ActorContext.self = (self: Ptr<ActorContext<M>>) ActorRef<M> {
-    return self.val.self_ref
+    self.val.self_ref
 }
 
 ActorContext.stop = (self: MutPtr<ActorContext<M>>) void {
@@ -116,12 +116,12 @@ Actor<M, B>: {
 actor_id_counter: Atomic<i64> = Atomic<i64>.new(1)
 
 next_actor_id = () u64 {
-    return cast(actor_id_counter.fetch_add(1), u64)
+    cast(actor_id_counter.fetch_add(1), u64)
 }
 
 // Create a new actor (does not start it)
 Actor.new = (behavior: B, mailbox_size: usize, allocator: Allocator) Actor<M, B> {
-    return Actor<M, B> {
+    Actor<M, B> {
         id: next_actor_id(),
         state: Atomic<i32>.new(ACTOR_CREATED),
         mailbox: Channel.new(mailbox_size, allocator),
@@ -132,7 +132,7 @@ Actor.new = (behavior: B, mailbox_size: usize, allocator: Allocator) Actor<M, B>
 
 // Get a reference to this actor for message sending
 Actor.ref = (self: Ptr<Actor<M, B>>) ActorRef<M> {
-    return ActorRef<M> {
+    ActorRef<M> {
         id: self.val.id,
         mailbox: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.mailbox.ref())),
         state: compiler.ptr_to_int(compiler.raw_ptr_cast(&self.val.state.ref()))
@@ -191,7 +191,7 @@ Actor.stop = (self: MutPtr<Actor<M, B>>) void {
 
 // Check if actor is running
 Actor.is_running = (self: Ptr<Actor<M, B>>) bool {
-    return self.val.state.load() == ACTOR_RUNNING
+    self.val.state.load() == ACTOR_RUNNING
 }
 
 // Free actor resources
