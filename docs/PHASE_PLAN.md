@@ -2399,6 +2399,10 @@ checked-in docs, tests, and commits only.
   preserves deterministic host-effect validation before graph-only library
   typechecking. `build_graph_command_accepts_library_dependencies` covers
   executable dependencies on validated library source targets, while
+  `build_graph_command_rejects_unknown_target_dependencies`,
+  `build_graph_command_rejects_self_target_dependencies`, and
+  `build_graph_command_rejects_cyclic_target_dependencies` cover legacy
+  build-graph dependency-shape rejection before execution starts, and
   `build_graph_command_rejects_gated_test_dependencies` covers rejected
   executable dependencies on gated test targets, and
   `build_graph_command_rejects_missing_root_source` covers a target execution

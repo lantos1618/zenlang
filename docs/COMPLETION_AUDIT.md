@@ -2599,6 +2599,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_library_dependencies`,
   and
   `cargo test --test integration test_command_build_zen_accepts_library_dependencies`.
+  Legacy build graph execution rejects unknown, self, and cyclic target
+  dependencies before execution through
+  `cargo test --test integration build_graph_command_rejects_unknown_target_dependencies`,
+  `cargo test --test integration build_graph_command_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration build_graph_command_rejects_cyclic_target_dependencies`.
   Cross-mode execution gating is also covered by
   `cargo test --test integration build_command_build_zen_rejects_gated_test_dependencies`,
   `cargo test --test integration build_graph_command_rejects_gated_test_dependencies`,
