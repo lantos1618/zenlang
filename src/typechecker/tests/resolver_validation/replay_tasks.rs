@@ -135,6 +135,59 @@ Point.requires(Json<str>)
 }
 
 #[test]
+fn resolver_behavior_association_list_tasks_select_from_declaration_bundle() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Pretty<T>: behavior {
+    pretty: (Self) str
+}
+
+Pretty.extends(Json<T>)
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { "point" }
+}
+
+Point.requires(Json<str>)
+"#,
+    );
+    let symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+
+    let declaration_tasks =
+        TypeChecker::collect_resolver_validation_replay_declaration_tasks(&program, &symbols);
+    let association_tasks =
+        TypeChecker::collect_resolver_behavior_association_list_tasks_from_declaration_tasks(
+            &declaration_tasks,
+        );
+
+    assert_eq!(association_tasks.type_associations.len(), 1);
+    assert_eq!(association_tasks.type_associations[0].name, "Point");
+    assert_eq!(
+        association_tasks.type_associations[0].impl_edges[0].display,
+        "Json<str>"
+    );
+    assert_eq!(
+        association_tasks.type_associations[0].required_edges[0].display,
+        "Json<str>"
+    );
+    assert_eq!(association_tasks.behavior_parents.len(), 2);
+    let pretty_task = association_tasks
+        .behavior_parents
+        .iter()
+        .find(|task| task.name == "Pretty")
+        .expect("Pretty parent association task");
+    assert_eq!(pretty_task.parent_edges[0].display, "Json<T>");
+}
+
+#[test]
 fn resolver_type_reference_validation_tasks_collect_only_type_reference_work() {
     let program = parse_program(
         r#"
