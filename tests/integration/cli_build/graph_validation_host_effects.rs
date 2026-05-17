@@ -40,18 +40,43 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn check_command_build_zen_accepts_declared_env_read_with_fallback() {
+    assert_check_command_accepts_declared_env_read_fallback(
+        r#"| .Err { "~/.zen/std" }"#,
+        "check_command_build_zen_accepts_declared_env_read_with_fallback",
+    );
+}
+
+#[test]
+fn check_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
+    assert_check_command_accepts_declared_env_read_fallback(
+        r#"| _ { "~/.zen/std" }"#,
+        "check_command_build_zen_accepts_wildcard_fallback_declared_env_read",
+    );
+}
+
+#[test]
+fn check_command_build_zen_accepts_identifier_fallback_declared_env_read() {
+    assert_check_command_accepts_declared_env_read_fallback(
+        r#"| err { "~/.zen/std" }"#,
+        "check_command_build_zen_accepts_identifier_fallback_declared_env_read",
+    );
+}
+
+fn assert_check_command_accepts_declared_env_read_fallback(fallback_arm: &str, case_name: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(path) { path }
-        | .Err { "~/.zen/std" }
-    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+        | .Ok(path) {{ path }}
+        {fallback_arm}
+    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -72,13 +97,13 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen check build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen check build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
         String::from_utf8_lossy(&output.stdout).contains("1 build targets"),
-        "expected build graph check summary, stdout={}",
+        "{case_name}: expected build graph check summary, stdout={}",
         String::from_utf8_lossy(&output.stdout)
     );
 }
