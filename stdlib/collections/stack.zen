@@ -20,7 +20,7 @@ Stack<T>: {
 
 // Create new empty stack
 Stack<T>.new = (allocator: Allocator) Stack<T> {
-    return Stack<T> {
+    Stack<T> {
         data: Ptr<T>.none(),
         len: 0,
         capacity: 0,
@@ -31,14 +31,14 @@ Stack<T>.new = (allocator: Allocator) Stack<T> {
 // Create stack with initial capacity
 Stack<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) Stack<T> {
     initial_capacity == 0 ?
-        | true { return Stack<T>.new(allocator) }
+        | true { Stack<T>.new(allocator) }
         | false {
             item_size = compiler.sizeof<T>()
             total_size = initial_capacity * item_size
             raw_ptr = allocator.allocate(total_size)
             data = Ptr<T>.from_addr(raw_ptr)
 
-            return Stack<T> {
+            Stack<T> {
                 data: data,
                 len: 0,
                 capacity: initial_capacity,
@@ -53,22 +53,22 @@ Stack<T>.with_capacity = (allocator: Allocator, initial_capacity: usize) Stack<T
 
 // Get current size
 Stack<T>.len = (self: Stack<T>) usize {
-    return self.len
+    self.len
 }
 
 // Alias for len
 Stack<T>.size = (self: Stack<T>) usize {
-    return self.len
+    self.len
 }
 
 // Get allocated capacity
 Stack<T>.capacity = (self: Stack<T>) usize {
-    return self.capacity
+    self.capacity
 }
 
 // Check if empty
 Stack<T>.is_empty = (self: Stack<T>) bool {
-    return self.len == 0
+    self.len == 0
 }
 
 // ============================================================================
@@ -78,7 +78,7 @@ Stack<T>.is_empty = (self: Stack<T>) bool {
 // Peek at top element without removing
 Stack<T>.peek = (self: Stack<T>) Option<T> {
     self.len == 0 ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             top_index = self.len - 1
             elem_ptr = self.data.at(top_index)
@@ -86,25 +86,25 @@ Stack<T>.peek = (self: Stack<T>) Option<T> {
                 | Some(_) {
                     addr = elem_ptr.addr()
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
 // Get element at index from bottom (0 = bottom, len-1 = top)
 Stack<T>.get = (self: Stack<T>, index: usize) Option<T> {
     index >= self.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             elem_ptr = self.data.at(index)
             elem_ptr ?
                 | Some(_) {
                     addr = elem_ptr.addr()
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
@@ -154,7 +154,7 @@ Stack<T>.push = (self: MutPtr<Stack<T>>, elem: T) void {
 // Pop element from top of stack
 Stack<T>.pop = (self: MutPtr<Stack<T>>) Option<T> {
     self.val.len == 0 ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             top_index = self.val.len - 1
             elem_ptr = self.val.data.at(top_index)
@@ -163,9 +163,9 @@ Stack<T>.pop = (self: MutPtr<Stack<T>>) Option<T> {
                     addr = elem_ptr.addr()
                     value = compiler.load<T>(addr)
                     self.val.len = self.val.len - 1
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
@@ -220,7 +220,7 @@ StackIterator<T>: {
 
 // Create an iterator over the stack (bottom to top)
 Stack<T>.iter = (self: Stack<T>) StackIterator<T> {
-    return StackIterator<T> {
+    StackIterator<T> {
         data: self.data,
         index: 0,
         len: self.len
@@ -230,7 +230,7 @@ Stack<T>.iter = (self: Stack<T>) StackIterator<T> {
 // Get next element from iterator
 StackIterator<T>.next = (self: MutPtr<StackIterator<T>>) Option<T> {
     self.val.index >= self.val.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             elem_ptr = self.val.data.at(self.val.index)
             self.val.index = self.val.index + 1
@@ -238,15 +238,15 @@ StackIterator<T>.next = (self: MutPtr<StackIterator<T>>) Option<T> {
                 | Some(_) {
                     addr = elem_ptr.addr()
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
 // Check if iterator has more elements
 StackIterator<T>.has_next = (self: StackIterator<T>) bool {
-    return self.index < self.len
+    self.index < self.len
 }
 
 // Reverse iterator - iterates from top to bottom
@@ -258,7 +258,7 @@ StackReverseIterator<T>: {
 
 // Create a reverse iterator over the stack (top to bottom)
 Stack<T>.iter_reverse = (self: Stack<T>) StackReverseIterator<T> {
-    return StackReverseIterator<T> {
+    StackReverseIterator<T> {
         data: self.data,
         index: self.len - 1,
         len: self.len
@@ -268,7 +268,7 @@ Stack<T>.iter_reverse = (self: Stack<T>) StackReverseIterator<T> {
 // Get next element from reverse iterator
 StackReverseIterator<T>.next = (self: MutPtr<StackReverseIterator<T>>) Option<T> {
     self.val.index < 0 ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             elem_ptr = self.val.data.at(self.val.index)
             self.val.index = self.val.index - 1
@@ -276,13 +276,13 @@ StackReverseIterator<T>.next = (self: MutPtr<StackReverseIterator<T>>) Option<T>
                 | Some(_) {
                     addr = elem_ptr.addr()
                     value = compiler.load<T>(addr)
-                    return Option.Some(value)
+                    Option.Some(value)
                 }
-                | None { return Option.None }
+                | None { Option.None }
         }
 }
 
 // Check if reverse iterator has more elements
 StackReverseIterator<T>.has_next = (self: StackReverseIterator<T>) bool {
-    return self.index >= 0
+    self.index >= 0
 }
