@@ -10,12 +10,12 @@ Result<T, E>:
 
 // Create Ok variant
 ok<T, E> = (value: T) Result<T, E> {
-    return Result.Ok(value)
+    Result.Ok(value)
 }
 
 // Create Err variant
 err<T, E> = (error: E) Result<T, E> {
-    return Result.Err(error)
+    Result.Err(error)
 }
 
 // Check if Result is Ok

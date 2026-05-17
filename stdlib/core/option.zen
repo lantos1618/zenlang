@@ -10,12 +10,12 @@ Option<T>:
 
 // Create Some variant
 some<T> = (value: T) Option<T> {
-    return Option.Some(value)
+    Option.Some(value)
 }
 
 // Create None variant
 none<T> = () Option<T> {
-    return Option.None
+    Option.None
 }
 
 // Check if option has value
