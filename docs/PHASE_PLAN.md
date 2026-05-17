@@ -324,6 +324,9 @@ checked-in docs, tests, and commits only.
 - Build-command integration tests now keep ordinary single-file build
   diagnostics, `build.zen` graph validation, and `build.zen` host-effect
   ordering in focused modules instead of one oversized command test file.
+- `zen test build.zen` integration coverage now keeps test-target execution,
+  deterministic host-effect rejection, and graph validation failures in
+  focused modules instead of one oversized test-command file.
 - Resolver symbol-table behavior edge recording now lives in a focused helper,
   keeping symbol definition and lookup separate from association mutation.
 - Typechecker resolver callable signature restoration now lives in a focused

@@ -2292,6 +2292,10 @@ and do not assume Phase 4 is ready without evidence.
   `build.zen` graph validation, and `build.zen` host-effect ordering in
   focused modules, with the split guarded by the same full integration suite
   and focused filters for the moved validation and host-effect cases.
+- `zen test build.zen` integration coverage now keeps execution/order tests,
+  host-effect rejection, and graph validation failures in focused modules,
+  with focused filters for moved execution, host-effect, and validation cases
+  plus the full integration suite preserving behavior.
 - Build graph validation rejects unresolved target dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
   and

@@ -20,5 +20,9 @@ mod frontend_json;
 mod graph_validation;
 #[path = "cli_build/graph_validation_test_command.rs"]
 mod graph_validation_test_command;
+#[path = "cli_build/graph_validation_test_command_host_effects.rs"]
+mod graph_validation_test_command_host_effects;
+#[path = "cli_build/graph_validation_test_command_validation.rs"]
+mod graph_validation_test_command_validation;
 #[path = "cli_build/legacy_graph_command.rs"]
 mod legacy_graph_command;
