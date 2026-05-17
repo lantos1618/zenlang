@@ -237,6 +237,26 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
 }
 
+#[test]
+fn build_command_build_zen_rejects_dynamic_target_adds_before_execution() {
+    assert_build_command_rejects_target_metadata(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    enabled = true
+    enabled ?
+        | true {
+            b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
+        }
+        | false {
+            b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+        }
+    .Ok(b.config())
+}
+"#,
+        "build targets must be added in the deterministic build graph body",
+    );
+}
+
 fn assert_build_command_rejects_target_metadata(build_source: &str, expected_diagnostic: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(tmp.path().join("build.zen"), build_source).expect("write build.zen");
