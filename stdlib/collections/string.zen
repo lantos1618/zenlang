@@ -23,7 +23,7 @@ String.new = (allocator: Allocator) String {
     raw_ptr = allocator.allocate(initial_capacity)
     data = Ptr<u8>.from_addr(raw_ptr)
 
-    return String {
+    String {
         data: data,
         len: 0,
         capacity: initial_capacity,
@@ -37,17 +37,17 @@ String.new = (allocator: Allocator) String {
 
 // Get string length
 String.len = (self: String) usize {
-    return self.len
+    self.len
 }
 
 // Get string capacity
 String.capacity = (self: String) usize {
-    return self.capacity
+    self.capacity
 }
 
 // Check if empty
 String.is_empty = (self: String) bool {
-    return self.len == 0
+    self.len == 0
 }
 
 // ============================================================================
@@ -80,12 +80,12 @@ String.push = (self: MutPtr<String>, byte: u8) void {
 // Get byte at index
 String.at = (self: String, index: usize) u8 {
     index >= self.len ?
-    | true { return 0 }
+    | true { 0 }
     | false {
         raw_addr = self.data.addr()
         offset_i64 = index
         addr = compiler.gep(raw_addr, offset_i64)
-        return compiler.load<u8>(addr)
+        compiler.load<u8>(addr)
     }
 }
 
@@ -157,7 +157,7 @@ String.clone = (self: String, allocator: Allocator) String {
         }
     })
 
-    return result
+    result
 }
 
 // ============================================================================
@@ -166,7 +166,7 @@ String.clone = (self: String, allocator: Allocator) String {
 
 // Create string from raw pointer and length (takes ownership of memory)
 String.from_ptr = (ptr: i64, len: usize, allocator: Allocator) String {
-    return String {
+    String {
         data: Ptr<u8>.from_addr(ptr),
         len: len,
         capacity: len,
@@ -188,7 +188,7 @@ String.from = (literal: StaticString, allocator: Allocator) String {
     literal_ptr = compiler.static_string_ptr(literal)
     compiler.memcpy(raw_ptr, literal_ptr, len)
 
-    return String {
+    String {
         data: Ptr<u8>.from_addr(raw_ptr),
         len: len,
         capacity: capacity,
@@ -211,7 +211,7 @@ StringIterator: {
 
 // Create an iterator over the string bytes
 String.iter = (self: String) StringIterator {
-    return StringIterator {
+    StringIterator {
         data: self.data,
         index: 0,
         len: self.len
@@ -220,38 +220,38 @@ String.iter = (self: String) StringIterator {
 
 // Alias for iter() - iterate over characters (bytes for ASCII)
 String.bytes = (self: String) StringIterator {
-    return self.iter()
+    self.iter()
 }
 
 // Get next byte from iterator
 StringIterator.next = (self: MutPtr<StringIterator>) Option<u8> {
     self.val.index >= self.val.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             raw_addr = self.val.data.addr()
             offset_i64 = self.val.index
             addr = compiler.gep(raw_addr, offset_i64)
             byte = compiler.load<u8>(addr)
             self.val.index = self.val.index + 1
-            return Option.Some(byte)
+            Option.Some(byte)
         }
 }
 
 // Check if iterator has more bytes
 StringIterator.has_next = (self: StringIterator) bool {
-    return self.index < self.len
+    self.index < self.len
 }
 
 // Peek at next byte without consuming
 StringIterator.peek = (self: StringIterator) Option<u8> {
     self.index >= self.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             raw_addr = self.data.addr()
             offset_i64 = self.index
             addr = compiler.gep(raw_addr, offset_i64)
             byte = compiler.load<u8>(addr)
-            return Option.Some(byte)
+            Option.Some(byte)
         }
 }
 
@@ -265,7 +265,7 @@ StringIterator.skip = (self: MutPtr<StringIterator>, n: usize) void {
 
 // Get remaining count
 StringIterator.remaining = (self: StringIterator) usize {
-    return self.len - self.index
+    self.len - self.index
 }
 
 // ============================================================================
@@ -275,64 +275,53 @@ StringIterator.remaining = (self: StringIterator) usize {
 // Compare two strings for equality
 String.equals = (self: String, other: String) bool {
     self.len != other.len ?
-        | true { return false }
+        | true { false }
+        | false { string_equals_from(self, other, 0) }
+}
+
+string_equals_from = (left: String, right: String, index: usize) bool {
+    index >= left.len ?
+        | true { true }
         | false {
-            // Compare byte by byte
-            i = 0
-            loop(() {
-                i >= self.len ?
-                    | true { return true }
-                    | false {
-                        a = self.at(i)
-                        b = other.at(i)
-                        a != b ?
-                            | true { return false }
-                            | false { i = i + 1 }
-                    }
-            })
-            return true
+            left.at(index) != right.at(index) ?
+                | true { false }
+                | false { string_equals_from(left, right, index + 1) }
         }
 }
 
 // Check if string starts with prefix
 String.starts_with = (self: String, prefix: String) bool {
     prefix.len > self.len ?
-        | true { return false }
+        | true { false }
+        | false { string_starts_with_from(self, prefix, 0) }
+}
+
+string_starts_with_from = (self: String, prefix: String, index: usize) bool {
+    index >= prefix.len ?
+        | true { true }
         | false {
-            i = 0
-            loop(() {
-                i >= prefix.len ?
-                    | true { return true }
-                    | false {
-                        a = self.at(i)
-                        b = prefix.at(i)
-                        a != b ?
-                            | true { return false }
-                            | false { i = i + 1 }
-                    }
-            })
-            return true
+            self.at(index) != prefix.at(index) ?
+                | true { false }
+                | false { string_starts_with_from(self, prefix, index + 1) }
         }
 }
 
 // Check if string ends with suffix
 String.ends_with = (self: String, suffix: String) bool {
     suffix.len > self.len ?
-        | true { return false }
+        | true { false }
         | false {
             offset = self.len - suffix.len
-            i = 0
-            loop(() {
-                i >= suffix.len ?
-                    | true { return true }
-                    | false {
-                        a = self.at(offset + i)
-                        b = suffix.at(i)
-                        a != b ?
-                            | true { return false }
-                            | false { i = i + 1 }
-                    }
-            })
-            return true
+            string_ends_with_from(self, suffix, offset, 0)
+        }
+}
+
+string_ends_with_from = (self: String, suffix: String, offset: usize, index: usize) bool {
+    index >= suffix.len ?
+        | true { true }
+        | false {
+            self.at(offset + index) != suffix.at(index) ?
+                | true { false }
+                | false { string_ends_with_from(self, suffix, offset, index + 1) }
         }
 }
