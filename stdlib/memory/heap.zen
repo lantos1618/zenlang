@@ -33,7 +33,7 @@ HeapSync: {
 // ============================================================================
 
 heap_sync_allocate = (ctx: RawPtr<u8>, size: usize) RawPtr<u8> {
-    return compiler.raw_allocate(size)
+    compiler.raw_allocate(size)
 }
 
 heap_sync_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
@@ -41,11 +41,11 @@ heap_sync_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
 }
 
 heap_sync_reallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
-    return compiler.raw_reallocate(ptr, old_size, new_size)
+    compiler.raw_reallocate(ptr, old_size, new_size)
 }
 
 heap_sync_mode = (ctx: RawPtr<u8>) ExecutionMode {
-    return ExecutionMode.Sync
+    ExecutionMode.Sync
 }
 
 heap_sync_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
@@ -56,7 +56,7 @@ heap_sync_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize
         { compiler.syscall4(17, fd, buf_i64, len, offset) }
     callback(user_data, result)
     zero: i64 = 0
-    return zero
+    zero
 }
 
 heap_sync_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
@@ -67,15 +67,15 @@ heap_sync_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usiz
         { compiler.syscall4(18, fd, buf_i64, len, offset) }
     callback(user_data, result)
     zero: i64 = 0
-    return zero
+    zero
 }
 
 heap_sync_poll = (ctx: RawPtr<u8>) i32 {
-    return 0  // No-op for sync - operations complete immediately
+    0  // No-op for sync - operations complete immediately
 }
 
 heap_sync_wait = (ctx: RawPtr<u8>) i32 {
-    return 0  // No-op for sync - nothing to wait for
+    0  // No-op for sync - nothing to wait for
 }
 
 // ============================================================================
@@ -93,8 +93,8 @@ Heap.sync = () Allocator {
     // Initialize the placeholder field
     compiler.store<i32>(ctx, 0)
 
-    // Build and return Allocator with function pointers
-    return Allocator {
+    // Build Allocator with function pointers
+    Allocator {
         ctx: ctx,
         allocate_fn: heap_sync_allocate,
         deallocate_fn: heap_sync_deallocate,
@@ -113,5 +113,5 @@ Heap.sync = () Allocator {
 
 // Default allocator for most use cases
 default_allocator = () Allocator {
-    return Heap.sync()
+    Heap.sync()
 }
