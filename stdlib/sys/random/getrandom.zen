@@ -9,37 +9,38 @@ GRND_NONBLOCK = 1
 GRND_RANDOM = 2
 
 RandomError: { code: i32 }
-RandomError.from_errno = (errno: i64) RandomError { return RandomError { code: cast(0 - errno, i32) } }
+RandomError.from_errno = (errno: i64) RandomError { RandomError { code: cast(0 - errno, i32) } }
 
 // Get random bytes from kernel
 getrandom = (buf: Ptr<u8>, len: usize, flags: u32) Result<usize, RandomError> {
     result = compiler.syscall3(SYS_GETRANDOM, compiler.ptr_to_int(buf), len, flags)
-    result < 0 ? { return Result.Err(RandomError.from_errno(result)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(RandomError.from_errno(result)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Get random u64
 random_u64 = () Result<u64, RandomError> {
     value: u64 = 0
     getrandom(compiler.raw_ptr_cast(&value.ref()), 8, 0).raise()
-    return Result.Ok(value)
+    Result.Ok(value)
 }
 
 // Get random u32
 random_u32 = () Result<u32, RandomError> {
     value: u32 = 0
     getrandom(compiler.raw_ptr_cast(&value.ref()), 4, 0).raise()
-    return Result.Ok(value)
+    Result.Ok(value)
 }
 
 // Get random in range [0, max)
 random_range = (max: u64) Result<u64, RandomError> {
     value = random_u64().raise()
-    return Result.Ok(value % max)
+    Result.Ok(value % max)
 }
 
 // Fill buffer with random bytes
 fill_random = (buf: Ptr<u8>, len: usize) Result<(), RandomError> {
     getrandom(buf, len, 0).raise()
-    return Result.Ok(())
+    Result.Ok(())
 }
