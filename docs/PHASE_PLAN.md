@@ -2736,6 +2736,10 @@ checked-in docs, tests, and commits only.
   coverage in `tests/generic_diagnostics/inference_conflicts/methods.rs`,
   leaving `tests/generic_diagnostics/inference_conflicts.rs` focused on
   generic function inference conflicts.
+- Generic call-site bound diagnostics now keep method, receiver, Result enum,
+  and UFC bound-failure coverage in
+  `tests/generic_diagnostics/call_site_bounds/methods.rs`, leaving the parent
+  call-site bound module focused on generic function bound failures.
 
 ## Current Phase
 
