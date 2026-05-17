@@ -14,6 +14,8 @@ mod diagnostics;
 mod direct_build_graph_execution;
 #[path = "cli_build/emit_direct.rs"]
 mod emit_direct;
+#[path = "cli_build/emit_direct_host_effects.rs"]
+mod emit_direct_host_effects;
 #[path = "cli_build/frontend_json.rs"]
 mod frontend_json;
 #[path = "cli_build/graph_validation.rs"]

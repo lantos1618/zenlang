@@ -2411,6 +2411,11 @@ and do not assume Phase 4 is ready without evidence.
   It also rejects multi-executable ambiguity before graph-only library
   typechecking, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`.
+- Single-target `zen emit build.zen` accepts declared deterministic file-read
+  effects and rejects undeclared file reads before C emission, covered by
+  `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects`
+  and
+  `cargo test --test integration emit_command_build_zen_rejects_undeclared_file_read_effects`.
 - Dependency-ordered build execution still stops before execution when graph
   lowering detects undeclared host effects, covered by
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_dependency_execution`.
