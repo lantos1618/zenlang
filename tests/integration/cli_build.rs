@@ -40,3 +40,5 @@ mod legacy_graph_command_host_effects;
 mod legacy_graph_command_validation;
 #[path = "cli_build/library_execution_gates.rs"]
 mod library_execution_gates;
+#[path = "cli_build/unsupported_targets.rs"]
+mod unsupported_targets;

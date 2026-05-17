@@ -2175,6 +2175,19 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_unsupported_package_targets` and
   `emit_json_build_graph_rejects_unsupported_link_targets` cover targeted
   package/link target rejection through the CLI graph-emission path.
+  The same package/link target gate is covered before execution or emission by
+  `build_command_build_zen_rejects_unsupported_package_targets`,
+  `build_command_build_zen_rejects_unsupported_link_targets`,
+  `direct_file_command_build_zen_rejects_unsupported_package_targets`,
+  `direct_file_command_build_zen_rejects_unsupported_link_targets`,
+  `check_command_build_zen_rejects_unsupported_package_targets`,
+  `check_command_build_zen_rejects_unsupported_link_targets`,
+  `test_command_build_zen_rejects_unsupported_package_targets`,
+  `test_command_build_zen_rejects_unsupported_link_targets`,
+  `emit_command_build_zen_rejects_unsupported_package_targets`,
+  `emit_command_build_zen_rejects_unsupported_link_targets`,
+  `build_graph_command_rejects_unsupported_package_targets`, and
+  `build_graph_command_rejects_unsupported_link_targets`.
 - `build-graph <build.zen>` now consumes the deterministic graph for executable
   targets without widening the accepted `build.zen` subset.
   `build_graph_command_compiles_single_executable_target` covers the
