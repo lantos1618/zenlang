@@ -2600,12 +2600,13 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
 - `zen check build.zen` accepts declared deterministic file-read effects through
   `.Err`, wildcard, and identifier fallback arms, and rejects undeclared file
-  reads before source validation, covered by
+  reads plus missing fallback arms before source validation, covered by
   `cargo test --test integration check_command_build_zen_accepts_declared_file_read_effects`,
   `cargo test --test integration check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `cargo test --test integration check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `cargo test --test integration check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`,
   and
-  `cargo test --test integration check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
+  `cargo test --test integration check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`.
   Declared deterministic env reads with fallbacks are accepted on the same
   validation path through
   `cargo test --test integration check_command_build_zen_accepts_declared_env_read_with_fallback`.
@@ -2620,6 +2621,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_file_read_effects`.
+  Missing fallback arms on deterministic file reads also reject before C
+  emission, covered by
+  `cargo test --test integration emit_command_build_zen_rejects_file_read_without_fallback`.
   Declared deterministic env reads with fallbacks are accepted on the same emit
   path through
   `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_fallback`.

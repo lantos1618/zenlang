@@ -2464,6 +2464,9 @@ checked-in docs, tests, and commits only.
   and `check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   while undeclared file reads reject before source validation through
   `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`.
+  File reads with `?` but no fallback arm also reject before source validation
+  through
+  `check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`.
   Library-only graphs remain valid on this non-executing path through
   `check_command_build_zen_accepts_library_only_graph_validation`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
@@ -2530,6 +2533,8 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before C emission through
   `emit_command_build_zen_rejects_undeclared_file_read_effects`.
+  File reads with `?` but no fallback arm also reject before C emission through
+  `emit_command_build_zen_rejects_file_read_without_fallback`.
 - Library-only build graphs remain non-executable across build, direct,
   legacy, emit, and test execution entrypoints through
   `build_command_build_zen_rejects_library_only_graph_execution`,
@@ -2625,11 +2630,13 @@ checked-in docs, tests, and commits only.
   and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
-  the matching undeclared file-read rejection before C emission. Coverage:
+  the matching undeclared file-read and missing-fallback rejections before C
+  emission. Coverage:
   `emit_command_build_zen_accepts_declared_file_read_effects`,
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
-  and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
+  `emit_command_build_zen_rejects_undeclared_file_read_effects`, and
+  `emit_command_build_zen_rejects_file_read_without_fallback`.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
   keeping the matching undeclared file-read rejection before graph execution.
