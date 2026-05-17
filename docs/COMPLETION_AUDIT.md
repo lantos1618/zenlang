@@ -2401,7 +2401,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_command_build_zen_accepts_valid_graph_only_library_sources`,
   `cargo test --test integration build_command_build_zen_rejects_graph_only_library_type_errors`,
   `cargo test --test integration build_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`,
+  `cargo test --test integration test_command_build_zen_accepts_valid_graph_only_library_sources`,
   `cargo test --test integration test_command_build_zen_rejects_graph_only_library_type_errors`,
+  `cargo test --test integration test_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`,
+  `cargo test --test integration emit_command_build_zen_accepts_valid_graph_only_library_sources`,
   and
   `cargo test --test integration emit_command_build_zen_rejects_graph_only_library_type_errors`.
 - `zen check build.zen` typechecks graph target sources after deterministic
