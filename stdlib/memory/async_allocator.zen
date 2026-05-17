@@ -21,7 +21,7 @@ OP_PENDING: i32 = 0
 OP_COMPLETE: i32 = 1
 
 async_op_new = (id: u64, user_data: u64, callback: CompletionFn) AsyncOp {
-    return AsyncOp {
+    AsyncOp {
         id: id,
         user_data: user_data,
         callback: callback,
@@ -30,13 +30,13 @@ async_op_new = (id: u64, user_data: u64, callback: CompletionFn) AsyncOp {
 }
 
 async_op_is_pending = (op: AsyncOp) bool {
-    return op.status == OP_PENDING
+    op.status == OP_PENDING
 }
 
 async_op_is_complete = (op: AsyncOp) bool {
-    return op.status == OP_COMPLETE
+    op.status == OP_COMPLETE
 }
 
 async_op_is_error = (op: AsyncOp) bool {
-    return op.status < 0
+    op.status < 0
 }

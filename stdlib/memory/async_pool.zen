@@ -9,7 +9,7 @@ AsyncPool: {
 }
 
 AsyncPool.new = () AsyncPool {
-    return AsyncPool { fd: -1 }
+    AsyncPool { fd: -1 }
 }
 
 AsyncPool.poll = (self: MutPtr<AsyncPool>) void {
