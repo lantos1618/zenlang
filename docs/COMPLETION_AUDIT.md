@@ -311,6 +311,10 @@ and do not assume Phase 4 is ready without evidence.
   test dependency rejection coverage into
   `tests/integration/cli_build/build_command_validation/gated_dependencies.rs`,
   leaving executable-target and skipped-source checks in the parent module.
+- `zen check build.zen` host-effect integration tests now split declared
+  file-read fallback accept/reject coverage into
+  `tests/integration/cli_build/graph_validation_host_effects/file_reads.rs`,
+  leaving env-effect ordering coverage in the parent module.
 - Direct `zen build.zen` validation tests now split direct and transitive gated
   test dependency rejection coverage into
   `tests/integration/cli_build/direct_build_graph_validation/gated_dependencies.rs`,
