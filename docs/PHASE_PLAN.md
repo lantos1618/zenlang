@@ -2238,6 +2238,10 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`
   keep multi-executable ambiguity ahead of per-executable and graph-only
   library source checks.
+  Declared deterministic file-read effects are accepted through
+  `emit_command_build_zen_accepts_declared_file_read_effects`, while
+  undeclared file reads reject before C emission through
+  `emit_command_build_zen_rejects_undeclared_file_read_effects`.
 - Direct `zen build.zen` now aliases the same constrained deterministic graph
   build path as `zen build build.zen`, covered by
   `direct_file_command_build_zen_routes_through_deterministic_graph`, and
