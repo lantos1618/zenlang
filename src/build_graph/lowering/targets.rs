@@ -32,15 +32,15 @@ pub(super) fn build_target_from_builder_add(
     let target = match name.parse::<BuildTargetDslKind>() {
         Ok(kind @ BuildTargetDslKind::Executable) => {
             validate_target_fields(kind, fields)?;
-            executable_target_from_fields(fields)
+            Some(executable_target_from_fields(kind, fields)?)
         }
         Ok(kind @ BuildTargetDslKind::Test) => {
             validate_target_fields(kind, fields)?;
-            test_target_from_fields(fields)
+            Some(test_target_from_fields(kind, fields)?)
         }
         Ok(kind @ BuildTargetDslKind::Library) => {
             validate_target_fields(kind, fields)?;
-            library_target_from_fields(fields)
+            Some(library_target_from_fields(kind, fields)?)
         }
         Err(()) => {
             return Err(BuildGraphError::UnsupportedBuildScript(format!(
@@ -110,16 +110,24 @@ fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
     }
 }
 
-fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let target_name = string_field(fields, BuildTargetField::Name)?;
-    let root_source_file = string_field(fields, BuildTargetField::Main)
-        .or_else(|| string_field(fields, BuildTargetField::RootSourceFile))?;
-    let out_dir = string_field(fields, BuildTargetField::OutDir)?;
+fn executable_target_from_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<BuildTargetInput, BuildGraphError> {
+    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
+    let root_source_file = required_one_of_string_fields(
+        kind,
+        fields,
+        &[BuildTargetField::Main, BuildTargetField::RootSourceFile],
+    )?;
+    let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
     let dependencies =
-        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
-    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
+        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
+            .unwrap_or_default();
+    let features =
+        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
 
-    Some(BuildTargetInput {
+    Ok(BuildTargetInput {
         name: target_name,
         kind: BuildTargetKind::Executable {
             root_source_file: root_source_file.clone(),
@@ -131,16 +139,24 @@ fn executable_target_from_fields(fields: &[(String, Expression)]) -> Option<Buil
     })
 }
 
-fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let root_source_file = string_field(fields, BuildTargetField::Root)
-        .or_else(|| string_field(fields, BuildTargetField::RootSourceFile))?;
-    let target_name = string_field(fields, BuildTargetField::Name)
+fn test_target_from_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<BuildTargetInput, BuildGraphError> {
+    let root_source_file = required_one_of_string_fields(
+        kind,
+        fields,
+        &[BuildTargetField::Root, BuildTargetField::RootSourceFile],
+    )?;
+    let target_name = optional_string_field(kind, fields, BuildTargetField::Name)?
         .unwrap_or_else(|| target_name_from_root(&root_source_file));
     let dependencies =
-        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
-    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
+        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
+            .unwrap_or_default();
+    let features =
+        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
 
-    Some(BuildTargetInput {
+    Ok(BuildTargetInput {
         name: target_name,
         kind: BuildTargetKind::Test {
             root_source_file: root_source_file.clone(),
@@ -151,17 +167,25 @@ fn test_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTarge
     })
 }
 
-fn library_target_from_fields(fields: &[(String, Expression)]) -> Option<BuildTargetInput> {
-    let target_name = string_field(fields, BuildTargetField::Name)?;
-    let exports = string_array_field(fields, BuildTargetField::Exports)?;
+fn library_target_from_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<BuildTargetInput, BuildGraphError> {
+    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
+    let exports = required_string_array_field(kind, fields, BuildTargetField::Exports)?;
     let dependencies =
-        string_array_field(fields, BuildTargetField::Dependencies).unwrap_or_default();
-    let features = string_array_field(fields, BuildTargetField::Features).unwrap_or_default();
+        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
+            .unwrap_or_default();
+    let features =
+        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
     if exports.is_empty() {
-        return None;
+        return Err(BuildGraphError::UnsupportedBuildScript(format!(
+            "field `{}` in `{kind}` build target must contain at least one source",
+            BuildTargetField::Exports
+        )));
     }
 
-    Some(BuildTargetInput {
+    Ok(BuildTargetInput {
         name: target_name,
         kind: BuildTargetKind::Library {
             exports: exports.clone(),
@@ -181,32 +205,102 @@ fn target_name_from_root(root: &str) -> String {
         .to_string()
 }
 
-fn string_field(fields: &[(String, Expression)], field_name: BuildTargetField) -> Option<String> {
-    fields.iter().find_map(|(name, value)| {
-        (name == field_name.as_str()).then(|| match value {
-            Expression::StringLiteral { value, .. } => Some(value.clone()),
-            _ => None,
-        })?
+fn required_string_field(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    field: BuildTargetField,
+) -> Result<String, BuildGraphError> {
+    optional_string_field(kind, fields, field)?.ok_or_else(|| {
+        BuildGraphError::UnsupportedBuildScript(format!(
+            "missing required field `{field}` in `{kind}` build target"
+        ))
     })
 }
 
-fn string_array_field(
+fn required_one_of_string_fields(
+    kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
-    field_name: BuildTargetField,
-) -> Option<Vec<String>> {
-    fields.iter().find_map(|(name, value)| {
-        if name != field_name.as_str() {
-            return None;
+    options: &[BuildTargetField],
+) -> Result<String, BuildGraphError> {
+    for field in options {
+        if let Some(value) = optional_string_field(kind, fields, *field)? {
+            return Ok(value);
         }
-        let Expression::ArrayLiteral { elements, .. } = value else {
-            return None;
-        };
-        elements
-            .iter()
-            .map(|element| match element {
-                Expression::StringLiteral { value, .. } => Some(value.clone()),
-                _ => None,
-            })
-            .collect()
+    }
+    let names = options
+        .iter()
+        .map(|field| format!("`{field}`"))
+        .collect::<Vec<_>>();
+    let Some((last, rest)) = names.split_last() else {
+        return Err(BuildGraphError::UnsupportedBuildScript(format!(
+            "missing required source field in `{kind}` build target"
+        )));
+    };
+    let display = if rest.is_empty() {
+        last.clone()
+    } else {
+        format!("{} or {last}", rest.join(", "))
+    };
+    Err(BuildGraphError::UnsupportedBuildScript(format!(
+        "missing required field {display} in `{kind}` build target"
+    )))
+}
+
+fn optional_string_field(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    field: BuildTargetField,
+) -> Result<Option<String>, BuildGraphError> {
+    let Some(value) = field_value(fields, field) else {
+        return Ok(None);
+    };
+    match value {
+        Expression::StringLiteral { value, .. } => Ok(Some(value.clone())),
+        _ => Err(BuildGraphError::UnsupportedBuildScript(format!(
+            "field `{field}` in `{kind}` build target must be a string"
+        ))),
+    }
+}
+
+fn required_string_array_field(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    field: BuildTargetField,
+) -> Result<Vec<String>, BuildGraphError> {
+    optional_string_array_field(kind, fields, field)?.ok_or_else(|| {
+        BuildGraphError::UnsupportedBuildScript(format!(
+            "missing required field `{field}` in `{kind}` build target"
+        ))
     })
+}
+
+fn optional_string_array_field(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    field: BuildTargetField,
+) -> Result<Option<Vec<String>>, BuildGraphError> {
+    let Some(value) = field_value(fields, field) else {
+        return Ok(None);
+    };
+    let Expression::ArrayLiteral { elements, .. } = value else {
+        return Err(BuildGraphError::UnsupportedBuildScript(format!(
+            "field `{field}` in `{kind}` build target must be an array of strings"
+        )));
+    };
+    let mut values = Vec::with_capacity(elements.len());
+    for element in elements {
+        let Expression::StringLiteral { value, .. } = element else {
+            return Err(BuildGraphError::UnsupportedBuildScript(format!(
+                "field `{field}` in `{kind}` build target must be an array of strings"
+            )));
+        };
+        values.push(value.clone());
+    }
+    Ok(Some(values))
+}
+
+fn field_value(fields: &[(String, Expression)], field: BuildTargetField) -> Option<&Expression> {
+    fields
+        .iter()
+        .find_map(|(name, value)| (name == field.as_str()).then_some(value))
 }
