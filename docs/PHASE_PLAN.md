@@ -467,6 +467,9 @@ checked-in docs, tests, and commits only.
 - Check-command build graph validation tests now keep host-effect ordering and
   declared-effect cases in a focused integration module, separating them from
   target source and library graph validation cases.
+- Check-command build graph host-effect tests now keep declared file-read
+  fallback accept/reject cases in a focused child module, leaving env-effect
+  ordering coverage in the parent integration module.
 - Build-command host-effect tests now keep declared file-read fallback accept
   and reject cases in a focused child module, leaving env-effect and
   ordering-before-execution cases in the parent integration module.

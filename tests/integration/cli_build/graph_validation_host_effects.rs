@@ -1,5 +1,8 @@
 use std::process::Command;
 
+#[path = "graph_validation_host_effects/file_reads.rs"]
+mod file_reads;
+
 #[test]
 fn check_command_build_zen_rejects_undeclared_host_effects() {
     let tmp = tempfile::tempdir().expect("create temp dir");
@@ -77,115 +80,6 @@ main = () i32 {
         String::from_utf8_lossy(&output.stdout).contains("1 build targets"),
         "expected build graph check summary, stdout={}",
         String::from_utf8_lossy(&output.stdout)
-    );
-}
-
-#[test]
-fn check_command_build_zen_accepts_declared_file_read_effects() {
-    assert_check_command_accepts_declared_file_read_effect(
-        r#"| .Err { "default" }"#,
-        "check_command_build_zen_accepts_declared_file_read_effects",
-    );
-}
-
-#[test]
-fn check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects() {
-    assert_check_command_accepts_declared_file_read_effect(
-        r#"| _ { "default" }"#,
-        "check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects",
-    );
-}
-
-#[test]
-fn check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects() {
-    assert_check_command_accepts_declared_file_read_effect(
-        r#"| err { "default" }"#,
-        "check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects",
-    );
-}
-
-fn assert_check_command_accepts_declared_file_read_effect(fallback_arm: &str, case_name: &str) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    manifest = b.os.read_file("build.targets") ?
-        | .Ok(contents) {{ contents }}
-        {fallback_arm}
-    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    )
-    .expect("write build.zen");
-    std::fs::write(tmp.path().join("build.targets"), "myapp\n").expect("write manifest");
-    std::fs::write(
-        tmp.path().join("main.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write main.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen check build.zen");
-
-    assert!(
-        output.status.success(),
-        "{case_name}: zen check build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("1 build targets"),
-        "expected build graph check summary, stdout={}",
-        String::from_utf8_lossy(&output.stdout)
-    );
-}
-
-#[test]
-fn check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    manifest = b.os.read_file("build.targets")
-    b.add(Executable { name: "myapp", main: "missing.zen", out_dir: "build/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen check build.zen");
-
-    assert!(
-        !output.status.success(),
-        "zen check build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("undeclared host effect: read file `build.targets`"),
-        "expected undeclared file read diagnostic, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("source not found"),
-        "host-effect validation should run before source validation, stderr={stderr}"
     );
 }
 
