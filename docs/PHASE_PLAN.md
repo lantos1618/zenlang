@@ -2572,6 +2572,10 @@ checked-in docs, tests, and commits only.
 - CLI build, test, direct-file, and legacy build-graph execution commands now
   live in `src/cli/execution_commands.rs`, keeping command execution separate
   from root CLI dispatch while preserving graph execution behavior.
+- CLI check and emit command bodies now live in
+  `src/cli/check_emit_commands.rs`, keeping validation/emission entrypoints
+  separate from root argument dispatch while preserving check and C emission
+  behavior.
 
 ## Current Phase
 
