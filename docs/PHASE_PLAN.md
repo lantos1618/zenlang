@@ -2281,6 +2281,10 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_multiple_executable_targets`, and rejects
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
+  selected executable dependencies before emission through
+  `emit_command_build_zen_rejects_gated_library_dependencies` and
+  `emit_command_build_zen_rejects_gated_test_dependencies`, preserving gated
+  library/test execution boundaries on the emit path. It validates
   graph-only library exports before emission through
   `emit_command_build_zen_rejects_missing_graph_only_library_source`,
   accepts valid graph-only library exports through
@@ -2365,9 +2369,9 @@ graph targets, `zen test build.zen` executes multiple test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
 graph and typechecks target sources without compiling them, `zen emit build.zen`
 emits target C for a single executable graph target, and build/test/emit
-validate and typecheck graph-only library target sources while build/test
-execution rejects dependencies on gated library targets and library execution
-remains gated. Legacy generic JSON emitters reject
+validate and typecheck graph-only library target sources while build/test/emit
+execution rejects dependencies on gated non-selected target kinds and library
+execution remains gated. Legacy generic JSON emitters reject
 `build.zen` and point to
 `emit-json build-graph`.
 
