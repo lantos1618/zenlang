@@ -163,6 +163,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/sys/process/process.zen",
         "stdlib/sys/random/getrandom.zen",
         "stdlib/sys/random/prng.zen",
+        "stdlib/sys/seccomp.zen",
         "stdlib/memory/allocator.zen",
         "stdlib/memory/arena.zen",
         "stdlib/memory/async_allocator.zen",
