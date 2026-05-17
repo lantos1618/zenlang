@@ -16,6 +16,11 @@ pub(super) struct BuildGraphTestTarget {
     pub(super) out_dir: PathBuf,
 }
 
+struct BuildGraphExecutionContext {
+    graph: zen::build_graph::BuildGraph,
+    base_dir: PathBuf,
+}
+
 #[derive(Clone, Copy)]
 enum BuildGraphExecutionKind {
     Executable,
@@ -35,17 +40,8 @@ impl BuildGraphExecutionKind {
 }
 
 pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
-    let graph = super::load_build_graph(path_str);
-    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
-    let build_path = Path::new(path_str);
-    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    let ordered_targets = match graph.targets_in_dependency_order() {
-        Ok(targets) => targets,
-        Err(err) => {
-            eprintln!("build graph error: {}", err);
-            process::exit(1);
-        }
-    };
+    let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
+    let ordered_targets = dependency_ordered_targets(&context.graph);
     let executable_targets: Vec<_> = ordered_targets
         .into_iter()
         .filter(|target| {
@@ -63,26 +59,26 @@ pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecut
         process::exit(1);
     }
 
-    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
-    executable_build_target(base_dir, executable_targets[0]).expect("one executable target")
+    validate_non_executed_target_sources(
+        &context.base_dir,
+        &context.graph,
+        BuildGraphExecutionKind::Executable,
+    );
+    executable_build_target(&context.base_dir, executable_targets[0])
+        .expect("one executable target")
 }
 
 pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
-    let graph = super::load_build_graph(path_str);
-    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Test);
-    let build_path = Path::new(path_str);
-    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Test);
-    let ordered_targets = match graph.targets_in_dependency_order() {
-        Ok(targets) => targets,
-        Err(err) => {
-            eprintln!("build graph error: {}", err);
-            process::exit(1);
-        }
-    };
+    let context = load_execution_context(path_str, BuildGraphExecutionKind::Test);
+    validate_non_executed_target_sources(
+        &context.base_dir,
+        &context.graph,
+        BuildGraphExecutionKind::Test,
+    );
+    let ordered_targets = dependency_ordered_targets(&context.graph);
     let targets: Vec<_> = ordered_targets
         .into_iter()
-        .filter_map(|target| test_build_target(base_dir, target))
+        .filter_map(|target| test_build_target(&context.base_dir, target))
         .collect();
     if targets.is_empty() {
         eprintln!("build graph test execution requires at least one test target");
@@ -101,23 +97,43 @@ pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutab
 }
 
 fn collect_executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
+    let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
+    validate_non_executed_target_sources(
+        &context.base_dir,
+        &context.graph,
+        BuildGraphExecutionKind::Executable,
+    );
+    dependency_ordered_targets(&context.graph)
+        .into_iter()
+        .filter_map(|target| executable_build_target(&context.base_dir, target))
+        .collect()
+}
+
+fn load_execution_context(
+    path_str: &str,
+    execution_kind: BuildGraphExecutionKind,
+) -> BuildGraphExecutionContext {
     let graph = super::load_build_graph(path_str);
-    validate_executed_dependency_targets(&graph, BuildGraphExecutionKind::Executable);
     let build_path = Path::new(path_str);
-    let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
-    validate_non_executed_target_sources(base_dir, &graph, BuildGraphExecutionKind::Executable);
-    let ordered_targets = match graph.targets_in_dependency_order() {
+    let base_dir = build_path
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+    validate_executed_dependency_targets(&graph, execution_kind);
+
+    BuildGraphExecutionContext { graph, base_dir }
+}
+
+fn dependency_ordered_targets(
+    graph: &zen::build_graph::BuildGraph,
+) -> Vec<&zen::build_graph::BuildTarget> {
+    match graph.targets_in_dependency_order() {
         Ok(targets) => targets,
         Err(err) => {
             eprintln!("build graph error: {}", err);
             process::exit(1);
         }
-    };
-    let targets: Vec<_> = ordered_targets
-        .into_iter()
-        .filter_map(|target| executable_build_target(base_dir, target))
-        .collect();
-    targets
+    }
 }
 
 fn validate_executed_dependency_targets(
