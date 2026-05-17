@@ -2595,6 +2595,9 @@ checked-in docs, tests, and commits only.
 - Build graph dependency validation tests now live in
   `tests/build_graph/dependencies.rs`, keeping dependency ordering and
   rejection coverage separate from target lowering and host-effect coverage.
+- Generic call-site, closure, and cast annotation diagnostics now live in
+  `tests/generic_diagnostics/call_site_annotations.rs`, keeping expression
+  annotation coverage separate from declaration and local annotation cases.
 
 ## Current Phase
 
