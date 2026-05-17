@@ -3413,8 +3413,9 @@ and do not assume Phase 4 is ready without evidence.
   unknown executable target fields before creating outputs. Coverage:
   `build_zen_commands_reject_unknown_target_fields`.
 - The stdlib build DSL, compiler/FFI bridges, filesystem and memory facades,
-  and core `Option`, `Result`, propagation, byte-buffer, iterator, pointer,
-  and slice helpers no longer use the removed `return` keyword, guarded by
+  testing facade, and core `Option`, `Result`, propagation, byte-buffer,
+  iterator, pointer, and slice helpers no longer use the removed `return`
+  keyword, guarded by
   `promoted_stdlib_modules_do_not_use_removed_return_keyword`, establishing
   the first small stdlib cleanup gate before broader stdlib compilation is
   promoted.
