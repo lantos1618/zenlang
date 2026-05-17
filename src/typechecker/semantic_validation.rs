@@ -7,8 +7,8 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         if self.resolver_backed_collection {
-            let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
-            self.validate_resolver_declaration_semantics_from_tasks(&tasks, symbols);
+            let tasks = Self::collect_resolver_declaration_semantic_validation_tasks(decls);
+            self.validate_resolver_declaration_semantics_from_semantic_tasks(&tasks, symbols);
             return;
         }
 
@@ -34,6 +34,16 @@ impl TypeChecker {
         self.validate_behavior_association_tasks(tasks, symbols);
         self.validate_resolver_type_reference_tasks(tasks, symbols);
         self.validate_resolver_struct_field_default_tasks(tasks, symbols);
+    }
+
+    pub(super) fn validate_resolver_declaration_semantics_from_semantic_tasks(
+        &mut self,
+        tasks: &ResolverDeclarationSemanticValidationTasks<'_>,
+        symbols: Option<&SymbolTable>,
+    ) {
+        self.validate_behavior_association_tasks(tasks, symbols);
+        self.validate_resolver_type_reference_task_list(&tasks.type_references, symbols);
+        self.validate_resolver_struct_field_default_task_list(&tasks.struct_defaults, symbols);
     }
 
     pub(super) fn collect_ast_declaration_validation_tasks(
@@ -270,6 +280,16 @@ impl TypeChecker {
             if let ResolverTypeDeclarationMetadataTask::Struct { name, span, .. } = task {
                 self.validate_resolver_struct_field_defaults(symbols, name, *span);
             }
+        }
+    }
+
+    fn validate_resolver_struct_field_default_task_list(
+        &mut self,
+        tasks: &[ResolverStructFieldDefaultValidationTask<'_>],
+        symbols: Option<&SymbolTable>,
+    ) {
+        for task in tasks {
+            self.validate_resolver_struct_field_defaults(symbols, task.name, task.span);
         }
     }
 

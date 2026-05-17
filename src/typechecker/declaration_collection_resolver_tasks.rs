@@ -12,6 +12,7 @@ impl TypeChecker {
         tasks
     }
 
+    #[cfg(test)]
     pub(super) fn collect_resolver_declaration_metadata_tasks(
         decls: &[Declaration],
     ) -> ResolverDeclarationMetadataTasks<'_> {
@@ -281,7 +282,7 @@ impl TypeChecker {
         Self::collect_resolver_declaration_metadata_tasks(decls).type_references
     }
 
-    fn push_resolver_type_reference_validation_task<'a>(
+    pub(super) fn push_resolver_type_reference_validation_task<'a>(
         decl: &'a Declaration,
         tasks: &mut Vec<ResolverTypeReferenceValidationTask<'a>>,
     ) {

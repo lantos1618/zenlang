@@ -57,6 +57,11 @@ enum ResolverTypeDeclarationMetadataTask<'a> {
     },
 }
 
+struct ResolverStructFieldDefaultValidationTask<'a> {
+    name: &'a str,
+    span: Span,
+}
+
 enum AstTypeDeclarationTask<'a> {
     Struct {
         name: &'a str,
@@ -260,7 +265,22 @@ struct ResolverDeclarationMetadataTasks<'a> {
     type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
 }
 
+#[derive(Default)]
+struct ResolverDeclarationSemanticValidationTasks<'a> {
+    behavior_associations: BehaviorAssociationValidationTasks<'a>,
+    type_references: Vec<ResolverTypeReferenceValidationTask<'a>>,
+    struct_defaults: Vec<ResolverStructFieldDefaultValidationTask<'a>>,
+}
+
 impl<'a> BehaviorAssociationValidationTaskSource<'a> for ResolverDeclarationMetadataTasks<'a> {
+    fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
+        &self.behavior_associations
+    }
+}
+
+impl<'a> BehaviorAssociationValidationTaskSource<'a>
+    for ResolverDeclarationSemanticValidationTasks<'a>
+{
     fn behavior_association_tasks(&self) -> &BehaviorAssociationValidationTasks<'a> {
         &self.behavior_associations
     }

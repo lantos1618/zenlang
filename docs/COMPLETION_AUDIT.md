@@ -2617,6 +2617,12 @@ and do not assume Phase 4 is ready without evidence.
   associations, resolver-owned type-reference checks, and resolver struct-field
   defaults through one task-bundle helper, covered by
   `cargo test --lib resolver_declaration_semantic_bundle_replays_validation_passes`.
+- Resolver-backed standalone semantic validation now builds a dedicated
+  semantic task bundle without carrying unused callable or behavior metadata,
+  covered by
+  `cargo test --lib resolver_declaration_semantic_tasks_collect_only_semantic_work`
+  and
+  `cargo test --lib resolver_declaration_semantic_bundle_replays_dedicated_semantic_tasks`.
 - Resolver-backed declaration collection now replays resolver metadata
   restoration, behavior-impl metadata restoration, semantic validation,
   behavior-ref cleanup, and final type behavior refresh through one
