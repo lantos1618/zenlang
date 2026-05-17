@@ -2663,6 +2663,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`.
   Env reads with `?` but no fallback arm reject before C emission through
   `emit_command_build_zen_rejects_env_read_without_fallback`.
+  Emit graphs with unselected test and library targets reject env reads
+  lacking a fallback arm before unselected target source validation through
+  `emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`.
   Declared deterministic file-read effects are accepted through
   `emit_command_build_zen_accepts_declared_file_read_effects`, while
   undeclared file reads reject before C emission through
@@ -2796,6 +2799,7 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects`, and

@@ -2779,6 +2779,9 @@ and do not assume Phase 4 is ready without evidence.
   Missing fallback arms on deterministic env reads reject before C emission
   through
   `cargo test --test integration emit_command_build_zen_rejects_env_read_without_fallback`.
+  Emit graphs with unselected test and library targets reject env reads
+  lacking a fallback arm before unselected target source validation through
+  `cargo test --test integration emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`.
 - Single-target `zen emit build.zen` accepts selected executable dependencies
   on validated library source targets and rejects gated test dependencies
   before C emission, covered by
@@ -3065,6 +3068,7 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
