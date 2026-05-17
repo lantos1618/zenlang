@@ -126,6 +126,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/compiler.zen",
         "stdlib/ffi.zen",
         "stdlib/fs.zen",
+        "stdlib/io/signal.zen",
         "stdlib/io/timerfd.zen",
         "stdlib/testing.zen",
         "stdlib/time.zen",
