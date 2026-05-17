@@ -2554,6 +2554,13 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   and `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+- `zen emit build.zen` now has executable graph fixtures for `.Err`,
+  wildcard, and identifier fallback arms on declared file reads, while keeping
+  the matching undeclared file-read rejection before C emission. Coverage:
+  `emit_command_build_zen_accepts_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping
   `src/typechecker/expressions.rs` focused on expression dispatch while
