@@ -283,6 +283,11 @@ and do not assume Phase 4 is ready without evidence.
   declared-effect tests into
   `tests/integration/cli_build/graph_validation_host_effects.rs`, leaving
   target source and library graph validation in the root graph-validation file.
+- Build-command host-effect integration tests now split declared file-read
+  fallback accept/reject coverage into
+  `tests/integration/cli_build/build_command_host_effects/file_reads.rs`,
+  leaving env-effect and ordering-before-execution coverage in the parent
+  module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.

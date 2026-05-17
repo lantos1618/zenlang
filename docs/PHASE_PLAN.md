@@ -467,6 +467,9 @@ checked-in docs, tests, and commits only.
 - Check-command build graph validation tests now keep host-effect ordering and
   declared-effect cases in a focused integration module, separating them from
   target source and library graph validation cases.
+- Build-command host-effect tests now keep declared file-read fallback accept
+  and reject cases in a focused child module, leaving env-effect and
+  ordering-before-execution cases in the parent integration module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
