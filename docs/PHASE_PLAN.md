@@ -2799,6 +2799,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/legacy_graph_command_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate
   from executable-target, gated-dependency, and missing-root validation checks.
+- `zen test build.zen` graph-only library validation tests now live in
+  `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
+  keeping missing source, valid source, and library typecheck coverage separate
+  from test-target, gated-dependency, and skipped-source validation checks.
 - Imported behavior inheritance frontend diagnostics now live in
   `tests/integration/frontend_diagnostics/behavior_extends.rs`, keeping
   direct, imported-parent, and transitive parent-method diagnostics separate
