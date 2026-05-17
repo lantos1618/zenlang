@@ -2346,6 +2346,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_package_targets`
   and
   `cargo test --test build_graph build_program_lowering_rejects_unsupported_link_targets`.
+- Build graph lowering rejects recognized-but-gated `packages` and `link`
+  target fields with targeted diagnostics instead of silently dropping them,
+  covered by
+  `build_program_lowering_rejects_gated_package_fields` and
+  `build_program_lowering_rejects_gated_link_fields`.
 - Build graph lowering accepts declared deterministic env-read effects before
   graph promotion, covered by
   `cargo test --test build_graph build_program_lowering_accepts_declared_env_reads`.
@@ -2399,6 +2404,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_rejects_unsupported_link_targets`,
   `build_graph_command_rejects_unsupported_package_targets`, and
   `build_graph_command_rejects_unsupported_link_targets`.
+  The same entrypoints now reject gated package/link fields before execution or
+  emission through `build_zen_commands_reject_package_fields` and
+  `build_zen_commands_reject_link_fields`.
 - `emit-json build-graph` rejects self-dependencies through the advertised
   graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_self_target_dependencies`.
