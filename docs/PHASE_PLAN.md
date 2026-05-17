@@ -2500,6 +2500,9 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_accepts_declared_env_read_with_fallback`,
   `build_command_build_zen_accepts_wildcard_fallback_declared_env_read`, and
   `build_command_build_zen_accepts_identifier_fallback_declared_env_read`.
+  Multi-target executable graph execution keeps the same declared env-read
+  fallback behavior through
+  `build_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before execution through
   `build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal build
@@ -2750,7 +2753,7 @@ checked-in docs, tests, and commits only.
   `zen build build.zen` positive/negative fixtures.
 - Build graph host-effect lowering also treats identifier fallback match arms
   as declared deterministic fallbacks, covered by env/file lowering tests and
-  an executable `zen build build.zen` file-read fixture.
+  executable `zen build build.zen` env-read and file-read fixtures.
 - `zen test build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, while keeping
   the matching undeclared file-read and missing-fallback rejections before test
