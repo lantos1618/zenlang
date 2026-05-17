@@ -105,6 +105,24 @@ fn parse_cast_expr() {
 }
 
 #[test]
+fn parse_range_expr() {
+    let prog = parse_ok("f = () i32 {\n    1..=3\n}");
+    let Declaration::Function { body, .. } = &prog.declarations[0] else {
+        panic!("expected Function");
+    };
+    let Expression::Block {
+        expr: Some(expr), ..
+    } = body
+    else {
+        panic!("expected block final expression");
+    };
+    let Expression::Range { inclusive, .. } = expr.as_ref() else {
+        panic!("expected range expression, got {expr:?}");
+    };
+    assert!(*inclusive);
+}
+
+#[test]
 fn parse_loop_expr() {
     let prog = parse_ok(
         r#"f = () void {

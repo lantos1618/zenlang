@@ -2752,6 +2752,12 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph lowering target extraction now lives in
   `src/build_graph/lowering/targets.rs`, preserving deterministic target
   lowering coverage while keeping build-script expression traversal smaller.
+- Range expressions now produce an explicit gated typechecker diagnostic,
+  covered by parser and typechecker tests
+  `parser::tests::expressions::parse_range_expr` and
+  `typechecker::tests::core_semantics::literals::range_expression_is_rejected_until_range_type_exists`,
+  so parser-accepted range syntax no longer succeeds with an unknown typed
+  placeholder before range semantics exist.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type

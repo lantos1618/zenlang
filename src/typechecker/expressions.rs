@@ -205,17 +205,16 @@ impl TypeChecker {
                 })
             }
 
-            // TODO: implement Range type
             Expression::Range {
                 start, end, span, ..
             } => {
-                let _typed_start = self.check_expr(start)?;
-                let _typed_end = self.check_expr(end)?;
-                Ok(TypedExpression {
-                    kind: TypedExprKind::Error,
-                    ty: Type::Unknown,
-                    span: *span,
-                })
+                self.check_expr(start)?;
+                self.check_expr(end)?;
+                Err(Diagnostic::error(
+                    "E3053",
+                    "range expressions are not implemented; range typing remains gated",
+                    *span,
+                ))
             }
 
             // TODO: implement char literal type
