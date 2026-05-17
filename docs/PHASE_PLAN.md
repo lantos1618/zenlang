@@ -3084,7 +3084,7 @@ checked-in docs, tests, and commits only.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
-- The stdlib build DSL, compiler/FFI bridges, environment, filesystem, math, random, time, and memory facades,
+- The stdlib build DSL, compiler/FFI bridges, environment, filesystem, IO, math, random, time, and memory facades,
   testing facade, memory allocator wrappers plus arena, async, heap, and mmap helpers, and
   core `Option`, `Result`, propagation, byte-buffer, iterator, pointer, and
   slice helpers no longer use the removed `return` keyword, guarded by
