@@ -2685,9 +2685,14 @@ checked-in docs, tests, and commits only.
   Env reads with `?` but no fallback arm reject before execution through
   `direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through
-  `direct_file_command_build_zen_accepts_declared_file_read_effects`, while
-  undeclared file reads reject before execution through
-  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`.
+  `direct_file_command_build_zen_accepts_declared_file_read_effects`, and
+  multi-target executable graph execution keeps the same declared file-read
+  fallback behavior through
+  `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  Undeclared file reads reject before execution through
+  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before multi-target execution through
+  `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before execution through
   `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Build script lowering collects multiple executable targets deterministically,
@@ -2757,11 +2762,14 @@ checked-in docs, tests, and commits only.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
   keeping the matching undeclared file-read and missing-fallback rejections
-  before graph execution.
+  before graph execution. Multi-target executable graph execution also has the
+  matching declared and undeclared file-read pair.
   Coverage: `direct_file_command_build_zen_accepts_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Expression function checking now lives in
   `src/typechecker/expressions/function_checking.rs`, keeping

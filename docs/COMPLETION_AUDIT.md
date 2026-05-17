@@ -2774,6 +2774,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
   and
   `cargo test --test integration direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  Multi-target executable graph execution now has the matching positive and
+  negative file-read coverage through
+  `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`
+  and
+  `cargo test --test integration direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   Declared deterministic env reads with `.Err`, wildcard, and identifier
   fallback arms are accepted on the same direct execution path through
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_env_read_with_fallback`,
@@ -3024,11 +3029,14 @@ and do not assume Phase 4 is ready without evidence.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
   keeping the matching undeclared file-read and missing-fallback rejections
-  before graph execution.
+  before graph execution. Multi-target executable graph execution also has the
+  matching declared and undeclared file-read pair.
   Coverage: `direct_file_command_build_zen_accepts_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
+  `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
