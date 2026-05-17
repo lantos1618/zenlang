@@ -2756,6 +2756,10 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph lowering target extraction now lives in
   `src/build_graph/lowering/targets.rs`, preserving deterministic target
   lowering coverage while keeping build-script expression traversal smaller.
+- Build graph dependency validation tests now live in
+  `tests/build_graph/dependencies.rs`, preserving unknown, self, cyclic, and
+  dependency-order coverage while keeping the parent build-graph test target
+  focused on target lowering and graph shape.
 - Range expressions now produce an explicit gated typechecker diagnostic,
   covered by parser and typechecker tests
   `parser::tests::expressions::parse_range_expr` and

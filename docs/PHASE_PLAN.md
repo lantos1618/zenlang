@@ -2592,6 +2592,9 @@ checked-in docs, tests, and commits only.
 - Lexer numeric literal and range-token tests now live in
   `src/lexer/tests/number_literals.rs`, keeping numeric lexing coverage
   separate from punctuation, whitespace, and example-token tests.
+- Build graph dependency validation tests now live in
+  `tests/build_graph/dependencies.rs`, keeping dependency ordering and
+  rejection coverage separate from target lowering and host-effect coverage.
 
 ## Current Phase
 
