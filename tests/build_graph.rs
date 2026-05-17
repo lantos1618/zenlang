@@ -246,6 +246,55 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_rejects_duplicate_target_fields() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        name: "tool",
+        main: "app.zen",
+        out_dir: "build/app/",
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("duplicate build target fields should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "duplicate field `name` in `Executable` build target"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_unknown_target_fields() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        output_dir: "build/app/",
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("unknown build target fields should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "unknown field `output_dir` in `Executable` build target"
+    );
+}
+
+#[test]
 fn build_program_lowering_rejects_unsupported_package_targets() {
     assert_build_program_lowering_rejects_unsupported_target_kind("Package");
 }

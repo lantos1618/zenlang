@@ -31,6 +31,16 @@ fn build_target_field_owns_source_spelling() {
     assert_eq!(BuildTargetField::Dependencies.as_str(), "dependencies");
     assert_eq!(BuildTargetField::Features.as_str(), "features");
     assert_eq!(BuildTargetField::Exports.as_str(), "exports");
+    assert_eq!(BuildTargetField::Packages.as_str(), "packages");
+    assert_eq!(BuildTargetField::Link.as_str(), "link");
+    assert_eq!("name".parse(), Ok(BuildTargetField::Name));
+    assert_eq!(
+        "root_source_file".parse(),
+        Ok(BuildTargetField::RootSourceFile)
+    );
+    assert_eq!("packages".parse(), Ok(BuildTargetField::Packages));
+    assert_eq!("link".parse(), Ok(BuildTargetField::Link));
+    assert!("output_dir".parse::<BuildTargetField>().is_err());
     assert_eq!(
         BuildTargetField::RootSourceFile.to_string(),
         "root_source_file"
