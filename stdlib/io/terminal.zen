@@ -20,13 +20,15 @@ Terminal.size = (buf: ByteBuffer) TermSize {
     addr = buf.addr()
     // TIOCGWINSZ = 0x5413
     result = compiler.syscall3(16, 1, 0x5413, addr)
-    result < 0 ? {
-        return TermSize { rows: 24, cols: 80 }
-    }
-    // winsize struct: { unsigned short ws_row, ws_col, ws_xpixel, ws_ypixel }
-    rows = cast(buf.get(0), i32) + cast(buf.get(1), i32) * 256
-    cols = cast(buf.get(2), i32) + cast(buf.get(3), i32) * 256
-    return TermSize { rows: rows, cols: cols }
+    result < 0 ?
+        | true { TermSize { rows: 24, cols: 80 } }
+        | false {
+            // winsize struct: { unsigned short ws_row, ws_col, ws_xpixel, ws_ypixel }
+            rows = cast(buf.get(0), i32) + cast(buf.get(1), i32) * 256
+            cols = cast(buf.get(2), i32) + cast(buf.get(3), i32) * 256
+
+            TermSize { rows: rows, cols: cols }
+        }
 }
 
 // ============================================================================
@@ -61,7 +63,7 @@ Terminal.raw_mode = (alloc: Allocator) TermState {
     // TCSETS = 0x5402
     compiler.syscall3(16, 0, 0x5402, new_addr)
 
-    return TermState { old_termios: old_buf, new_termios: new_buf }
+    TermState { old_termios: old_buf, new_termios: new_buf }
 }
 
 // Restore original terminal settings
@@ -131,7 +133,7 @@ Terminal.move_to = (buf: ByteBuffer, row: i32, col: i32) void {
 Terminal.read_key = (buf: ByteBuffer) i32 {
     addr = buf.addr()
     compiler.syscall3(0, 0, addr, 1)
-    return cast(buf.get(0), i32)
+    cast(buf.get(0), i32)
 }
 
 // Poll for key (non-blocking) - returns 0 if no key
@@ -147,8 +149,9 @@ Terminal.poll_key = (buf: ByteBuffer) i32 {
     // Restore flags
     compiler.syscall3(72, 0, 4, flags)
 
-    n > 0 ? { return cast(buf.get(0), i32) }
-    return 0
+    n > 0 ?
+        | true { cast(buf.get(0), i32) }
+        | false { 0 }
 }
 
 // ============================================================================
