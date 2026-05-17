@@ -45,6 +45,29 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_accepts_wildcard_fallback_declared_env_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    std_path = b.os.env("ZEN_STD") ?
+        | .Ok(value) { value }
+        | _ { "default" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+    let json = graph.canonical_json().expect("build graph json");
+
+    assert!(
+        json.contains(r#""kind":"read_env","value":"ZEN_STD""#),
+        "expected wildcard fallback to declare read-env host effect, json={json}"
+    );
+}
+
+#[test]
 fn build_program_lowering_accepts_declared_file_reads() {
     let program = parse_program(
         r#"
@@ -64,6 +87,29 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     assert!(
         json.contains(r#""kind":"read_file","value":"build.targets""#),
         "expected read-file host effect in graph json, json={json}"
+    );
+}
+
+#[test]
+fn build_program_lowering_accepts_wildcard_fallback_declared_file_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+        | _ { "default" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+    let json = graph.canonical_json().expect("build graph json");
+
+    assert!(
+        json.contains(r#""kind":"read_file","value":"build.targets""#),
+        "expected wildcard fallback to declare read-file host effect, json={json}"
     );
 }
 

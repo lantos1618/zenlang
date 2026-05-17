@@ -2721,6 +2721,10 @@ and do not assume Phase 4 is ready without evidence.
   return-expression nodes behind. Final expressions remain the function result
   path, and `repo_hygiene::source_ast_no_longer_has_return_expression_nodes`
   guards the cleanup.
+- Build graph host-effect lowering now treats wildcard fallback match arms as
+  declared deterministic fallbacks for `b.os.env(...)` and
+  `b.os.read_file(...)`, covered by build-graph lowering tests and executable
+  `zen build build.zen` positive/negative fixtures.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
