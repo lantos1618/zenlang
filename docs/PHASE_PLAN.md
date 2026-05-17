@@ -327,6 +327,9 @@ checked-in docs, tests, and commits only.
 - `zen test build.zen` integration coverage now keeps test-target execution,
   deterministic host-effect rejection, and graph validation failures in
   focused modules instead of one oversized test-command file.
+- Direct `zen build.zen` integration coverage now keeps executable graph
+  execution, deterministic host-effect rejection, and graph validation failures
+  in focused modules instead of one oversized direct-command test file.
 - Legacy `build-graph <build.zen>` integration coverage now keeps executable
   graph execution, deterministic host-effect rejection, and graph validation
   failures in focused modules instead of one threshold-adjacent command test
@@ -2273,6 +2276,13 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_rejects_gated_test_dependencies`,
   rejects graph-only library exports with missing sources through
   `direct_file_command_build_zen_rejects_missing_graph_only_library_source`,
+  accepts valid graph-only library exports through
+  `direct_file_command_build_zen_accepts_valid_graph_only_library_sources`,
+  typechecks graph-only library exports before execution through
+  `direct_file_command_build_zen_rejects_graph_only_library_type_errors`,
+  preserves host-effect validation before graph-only library typechecking
+  through
+  `direct_file_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`,
   rejects test-only graphs before execution starts through
   `direct_file_command_build_zen_rejects_graph_without_executable_targets`,
   and rejects undeclared host effects for single-target and multi-target graphs
