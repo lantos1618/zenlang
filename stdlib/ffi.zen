@@ -29,13 +29,13 @@ CLibrary: {
 // Returns library handle or null on failure
 // Use dlerror() via compiler.dlerror() for error messages
 load_library_raw = (path: String) RawPtr<u8> {
-    return compiler.load_library(path)
+    compiler.load_library(path)
 }
 
 // Get symbol from library (low-level)
 // Returns symbol pointer or null if not found
 get_symbol_raw = (handle: RawPtr<u8>, symbol: String) RawPtr<u8> {
-    return compiler.get_symbol(handle, symbol)
+    compiler.get_symbol(handle, symbol)
 }
 
 // Unload library (low-level)
@@ -47,33 +47,33 @@ unload_library_raw = (handle: RawPtr<u8>) void {
 // LIBRARY LOADING (Wrapped)
 // =============================================================================
 
-// Load a C library and return a CLibrary wrapper
+// Load a C library into a CLibrary wrapper
 // Returns CLibrary with null handle on failure
 load_library = (path: String) CLibrary {
     handle = compiler.load_library(path)
-    return CLibrary { handle: handle }
+    CLibrary { handle: handle }
 }
 
 // Get function pointer from library
 // Returns CFuncPtr with null ptr on failure
 get_function = (lib: CLibrary, symbol: String) CFuncPtr {
     fn_ptr = compiler.get_symbol(lib.handle, symbol)
-    return CFuncPtr { ptr: fn_ptr }
+    CFuncPtr { ptr: fn_ptr }
 }
 
 // Get raw symbol pointer from library
 get_symbol = (lib: CLibrary, symbol: String) RawPtr<u8> {
-    return compiler.get_symbol(lib.handle, symbol)
+    compiler.get_symbol(lib.handle, symbol)
 }
 
 // Check if library was loaded successfully
 is_loaded = (lib: CLibrary) bool {
-    return compiler.ptr_to_int(lib.handle) != 0
+    compiler.ptr_to_int(lib.handle) != 0
 }
 
 // Check if function pointer is valid
 is_valid = (func: CFuncPtr) bool {
-    return compiler.ptr_to_int(func.ptr) != 0
+    compiler.ptr_to_int(func.ptr) != 0
 }
 
 // Unload library
