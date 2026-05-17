@@ -103,6 +103,9 @@ and do not assume Phase 4 is ready without evidence.
   proving both `Result_unwrap_or_i32_str` and `Result_unwrap_or_bool_str`
   resolve to emitted definitions exactly once without unspecialized `Result_T`
   symbols.
+- Loop-control parser dispatch now has repo hygiene coverage through
+  `repo_hygiene::parser_loop_control_calls_use_owned_action_enum`, guarding the
+  `LoopControlAction` parsing path against raw `done`/`next` spelling checks.
   Imported public generic non-behavior `Type.impl` method templates that use
   source-module imported generic types and methods are covered by
   `tests/zen/multi_file_type_impl_imported_type_dependency/main.zen` and
