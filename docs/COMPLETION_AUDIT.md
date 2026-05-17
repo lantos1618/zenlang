@@ -2374,6 +2374,11 @@ and do not assume Phase 4 is ready without evidence.
   root CLI module below the 500-line cleanup threshold while preserving
   command diagnostic coverage through
   `cargo test --test integration cli_build::diagnostics`.
+- Resolver behavior-ref metadata validation now lives in
+  `src/typechecker/resolver_validation/metadata_behavior_refs.rs`, reducing
+  `metadata_types.rs` to type, field, variant, and behavior-method metadata
+  checks while preserving parent/impl/requires edge coverage through
+  `cargo test --lib resolver_validation::behavior_refs`.
 
 ## Unresolved Gaps
 

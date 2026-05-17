@@ -2203,6 +2203,9 @@ checked-in docs, tests, and commits only.
 - CLI diagnostic rendering now lives in `src/cli/diagnostics.rs`, keeping the
   root `src/cli.rs` module focused on command dispatch and execution while
   preserving the existing CLI diagnostic integration tests.
+- Resolver behavior-ref metadata validation now lives in
+  `src/typechecker/resolver_validation/metadata_behavior_refs.rs`, keeping
+  typed metadata validation separate from parent/impl/requires edge checks.
 
 ## Current Phase
 
