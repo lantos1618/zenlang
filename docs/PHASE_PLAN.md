@@ -297,6 +297,9 @@ checked-in docs, tests, and commits only.
   coverage separate.
 - Lexer unit tests now live beside the lexer implementation in a dedicated test
   module, keeping the public lexer API and character-span helpers compact.
+- Lexer string literal and interpolation tests now live in a focused child
+  module, keeping the parent lexer test module centered on token categories and
+  syntax smoke coverage.
 - Parser block, closure, and argument-list helpers now live in a dedicated
   parser module, keeping atom parsing focused on prefix expression dispatch.
 - Typechecker monomorphization template dependency install/restore now lives in
