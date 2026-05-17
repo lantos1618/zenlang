@@ -20,7 +20,7 @@ is_alphanumeric = (c: u8) bool {
     is_digit(c) || is_alpha(c)
 }
 
-// Check if whitespace (space, tab, newline, carriage return)
+// Check if whitespace (space, tab, newline, CR)
 is_whitespace = (c: u8) bool {
     c == 32 || c == 9 || c == 10 || c == 13
 }
@@ -75,35 +75,35 @@ is_punctuation = (c: u8) bool {
 // Convert to uppercase (returns same if not lowercase)
 to_uppercase = (c: u8) u8 {
     is_lowercase(c) ?
-        | true { return c - 32 }
-        | false { return c }
+        | true { c - 32 }
+        | false { c }
 }
 
 // Convert to lowercase (returns same if not uppercase)
 to_lowercase = (c: u8) u8 {
     is_uppercase(c) ?
-        | true { return c + 32 }
-        | false { return c }
+        | true { c + 32 }
+        | false { c }
 }
 
 // Convert digit char to integer value (returns -1 if not digit)
 digit_to_int = (c: u8) i32 {
     is_digit(c) ?
-        | true { return cast(c - 48, i32) }
-        | false { return -1 }
+        | true { cast(c - 48, i32) }
+        | false { -1 }
 }
 
 // Convert hex digit to integer value (returns -1 if not hex)
 hex_to_int = (c: u8) i32 {
     is_digit(c) ?
-        | true { return cast(c - 48, i32) }
+        | true { cast(c - 48, i32) }
         | false {
             c >= 65 && c <= 70 ?
-                | true { return cast(c - 55, i32) }  // A=10, B=11, etc.
+                | true { cast(c - 55, i32) }  // A=10, B=11, etc.
                 | false {
                     c >= 97 && c <= 102 ?
-                        | true { return cast(c - 87, i32) }  // a=10, b=11, etc.
-                        | false { return -1 }
+                        | true { cast(c - 87, i32) }  // a=10, b=11, etc.
+                        | false { -1 }
             }
     }
 }
