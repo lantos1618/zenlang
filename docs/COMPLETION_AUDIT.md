@@ -2874,6 +2874,11 @@ and do not assume Phase 4 is ready without evidence.
   missing generic type arguments, nongeneric type arguments, inherited method
   conflict, and implementation signature mismatch coverage while keeping
   positive inheritance cases focused.
+- Resolver expected-symbol leaf builder tests now live in
+  `src/typechecker/tests/resolver_validation/expected_symbols/leaf_symbols.rs`,
+  preserving import, module, local, behavior-edge, and behavior-association
+  expectation coverage while keeping value, type, field, and variant
+  expectation builders focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
