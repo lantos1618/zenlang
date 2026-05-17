@@ -293,6 +293,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/direct_build_graph_validation/graph_only_libraries.rs`,
   leaving executable target and gated test dependency validation in the parent
   module.
+- Test-command build graph host-effect integration tests now split declared
+  file-read fallback accept/reject coverage into
+  `tests/integration/cli_build/graph_validation_test_command_host_effects/file_reads.rs`,
+  leaving env-effect ordering and unrelated executable skip coverage in the
+  parent module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
