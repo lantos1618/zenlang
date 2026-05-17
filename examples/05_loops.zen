@@ -54,15 +54,15 @@ fibonacci = (n: i32) i32 {
         }
 }
 
-// Collection loop
-sum_array = (arr: [i32; 5]) i32 {
+// Counted accumulation loop
+sum_to = (limit: i32) i32 {
     total ::= 0
-    i ::= 0
+    i ::= 1
     loop((l) {
-        i >= 5 ?
+        i > limit ?
             | true { l.done() }
             | false {
-                total = total + arr[i]
+                total = total + i
                 i = i + 1
                 l.next()
             }
@@ -123,8 +123,7 @@ main = () i32 {
             }
     })
 
-    numbers = [10, 20, 30, 40, 50]
-    io.println("Sum: ${sum_array(numbers)}")
+    io.println("Sum 1..5: ${sum_to(5)}")
     io.println("Nested stop count: ${nested_stop()}")
     io.println("UFC count: ${count_with_ufc(3)}")
 
