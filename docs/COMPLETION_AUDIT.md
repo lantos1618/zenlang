@@ -3355,6 +3355,11 @@ and do not assume Phase 4 is ready without evidence.
   `build_command_build_zen_rejects_invalid_target_field_types`, plus
   `direct_file_command_build_zen_rejects_missing_required_target_fields` and
   `direct_file_command_build_zen_rejects_invalid_target_field_types`.
+- Declared env-effect no-fallback rejection tests now live in
+  `tests/integration/cli_build/declared_env_effects/rejections.rs`, preserving
+  build, direct-file, legacy build-graph, check, emit, and test command
+  diagnostics while keeping positive declared-env effect fixtures in the
+  parent module.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
