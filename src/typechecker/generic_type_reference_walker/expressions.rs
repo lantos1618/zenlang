@@ -158,7 +158,6 @@ impl TypeChecker {
             | Expression::FloatLiteral { .. }
             | Expression::StringLiteral { .. }
             | Expression::BoolLiteral { .. }
-            | Expression::CharLiteral { .. }
             | Expression::Identifier { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }

@@ -160,7 +160,6 @@ impl BuildProgramLowering {
             | Expression::FloatLiteral { .. }
             | Expression::StringLiteral { .. }
             | Expression::BoolLiteral { .. }
-            | Expression::CharLiteral { .. }
             | Expression::Identifier { .. }
             | Expression::LoopControl { .. }
             | Expression::Break { .. }

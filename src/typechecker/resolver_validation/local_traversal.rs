@@ -205,7 +205,6 @@ impl TypeChecker {
             | Expression::FloatLiteral { .. }
             | Expression::StringLiteral { .. }
             | Expression::BoolLiteral { .. }
-            | Expression::CharLiteral { .. }
             | Expression::Break { .. }
             | Expression::Continue { .. }
             | Expression::LoopControl { .. }

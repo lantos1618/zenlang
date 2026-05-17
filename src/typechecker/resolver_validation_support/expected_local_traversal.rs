@@ -122,7 +122,6 @@ fn expected_resolver_expr_locals(
         | Expression::FloatLiteral { .. }
         | Expression::StringLiteral { .. }
         | Expression::BoolLiteral { .. }
-        | Expression::CharLiteral { .. }
         | Expression::Break { .. }
         | Expression::Continue { .. }
         | Expression::LoopControl { .. }

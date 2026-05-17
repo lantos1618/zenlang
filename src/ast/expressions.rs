@@ -160,10 +160,6 @@ pub enum Expression {
         value: bool,
         span: Span,
     },
-    CharLiteral {
-        value: char,
-        span: Span,
-    },
 
     // ─── Identifiers / Names ─────────────────────────────────────────
     Identifier {
@@ -334,7 +330,6 @@ impl Expression {
             | Expression::FloatLiteral { span, .. }
             | Expression::StringLiteral { span, .. }
             | Expression::BoolLiteral { span, .. }
-            | Expression::CharLiteral { span, .. }
             | Expression::Identifier { span, .. }
             | Expression::BinaryOp { span, .. }
             | Expression::UnaryOp { span, .. }

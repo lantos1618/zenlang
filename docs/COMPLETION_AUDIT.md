@@ -2844,6 +2844,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::core_semantics::literals::range_expression_is_rejected_until_range_type_exists`,
   so parser-accepted range syntax no longer succeeds with an unknown typed
   placeholder before range semantics exist.
+- Dead char-literal AST support has been removed because no lexer/parser
+  surface produces it. The cleanup removes the stale typechecker `Unknown`
+  fallback and is guarded by
+  `repo_hygiene::source_ast_does_not_carry_dead_char_literal_nodes`.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
