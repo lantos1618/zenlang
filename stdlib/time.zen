@@ -17,57 +17,57 @@ TimeError: { code: i32, message: StaticString }
 
 TimeError.from_errno = (errno: i64) TimeError {
     code = cast(0 - errno, i32)
-    return TimeError { code: code, message: "Time error" }
+    TimeError { code: code, message: "Time error" }
 }
 
 // Timespec structure (matches kernel layout)
 Timespec: { sec: i64, nsec: i64 }
 
 Timespec.from_secs = (secs: i64) Timespec {
-    return Timespec { sec: secs, nsec: 0 }
+    Timespec { sec: secs, nsec: 0 }
 }
 
 Timespec.from_millis = (ms: i64) Timespec {
-    return Timespec { sec: ms / 1000, nsec: (ms % 1000) * 1000000 }
+    Timespec { sec: ms / 1000, nsec: (ms % 1000) * 1000000 }
 }
 
 Timespec.from_nanos = (ns: i64) Timespec {
-    return Timespec { sec: ns / 1000000000, nsec: ns % 1000000000 }
+    Timespec { sec: ns / 1000000000, nsec: ns % 1000000000 }
 }
 
 Timespec.to_nanos = (self: Timespec) i64 {
-    return self.sec * 1000000000 + self.nsec
+    self.sec * 1000000000 + self.nsec
 }
 
 Timespec.to_millis = (self: Timespec) i64 {
-    return self.sec * 1000 + self.nsec / 1000000
+    self.sec * 1000 + self.nsec / 1000000
 }
 
 // Duration type for time intervals
 Duration: { nanos: i64 }
 
 Duration.from_secs = (secs: i64) Duration {
-    return Duration { nanos: secs * 1000000000 }
+    Duration { nanos: secs * 1000000000 }
 }
 
 Duration.from_millis = (ms: i64) Duration {
-    return Duration { nanos: ms * 1000000 }
+    Duration { nanos: ms * 1000000 }
 }
 
 Duration.from_micros = (us: i64) Duration {
-    return Duration { nanos: us * 1000 }
+    Duration { nanos: us * 1000 }
 }
 
 Duration.from_nanos = (ns: i64) Duration {
-    return Duration { nanos: ns }
+    Duration { nanos: ns }
 }
 
 Duration.as_secs = (self: Duration) i64 {
-    return self.nanos / 1000000000
+    self.nanos / 1000000000
 }
 
 Duration.as_millis = (self: Duration) i64 {
-    return self.nanos / 1000000
+    self.nanos / 1000000
 }
 
 // Instant for measuring elapsed time
@@ -76,38 +76,41 @@ Instant: { nanos: i64 }
 Instant.now = () Result<Instant, TimeError> {
     ts = Timespec { sec: 0, nsec: 0 }
     result = compiler.syscall2(SYS_CLOCK_GETTIME, CLOCK_MONOTONIC, compiler.ptr_to_int(&ts.ref()))
-    result < 0 ? { return Result.Err(TimeError.from_errno(result)) }
-    return Result.Ok(Instant { nanos: ts.to_nanos() })
+    result < 0 ?
+        | true { Result.Err(TimeError.from_errno(result)) }
+        | false { Result.Ok(Instant { nanos: ts.to_nanos() }) }
 }
 
 Instant.elapsed = (self: Instant) Result<Duration, TimeError> {
     now = Instant.now().raise()
-    return Result.Ok(Duration { nanos: now.nanos - self.nanos })
+    Result.Ok(Duration { nanos: now.nanos - self.nanos })
 }
 
 // Get current time
 clock_gettime = (clock_id: i32) Result<Timespec, TimeError> {
     ts = Timespec { sec: 0, nsec: 0 }
     result = compiler.syscall2(SYS_CLOCK_GETTIME, clock_id, compiler.ptr_to_int(&ts.ref()))
-    result < 0 ? { return Result.Err(TimeError.from_errno(result)) }
-    return Result.Ok(ts)
+    result < 0 ?
+        | true { Result.Err(TimeError.from_errno(result)) }
+        | false { Result.Ok(ts) }
 }
 
 // Sleep for duration
 sleep = (duration: Duration) Result<(), TimeError> {
     ts = Timespec.from_nanos(duration.nanos)
     result = compiler.syscall2(SYS_NANOSLEEP, compiler.ptr_to_int(&ts.ref()), 0)
-    result < 0 ? { return Result.Err(TimeError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(TimeError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 // Sleep for milliseconds
 sleep_ms = (ms: i64) Result<(), TimeError> {
-    return sleep(Duration.from_millis(ms))
+    sleep(Duration.from_millis(ms))
 }
 
 // Get monotonic time in nanoseconds
 monotonic_nanos = () Result<i64, TimeError> {
     ts = clock_gettime(CLOCK_MONOTONIC).raise()
-    return Result.Ok(ts.to_nanos())
+    Result.Ok(ts.to_nanos())
 }

@@ -127,6 +127,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/ffi.zen",
         "stdlib/fs.zen",
         "stdlib/testing.zen",
+        "stdlib/time.zen",
         "stdlib/memory/allocator.zen",
         "stdlib/memory/arena.zen",
         "stdlib/memory/async_allocator.zen",
