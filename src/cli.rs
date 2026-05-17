@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -109,6 +110,7 @@ fn cmd_check(path_str: &str) {
         let build_path = Path::new(path_str);
         let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
         validate_build_graph_sources(base_dir, &graph);
+        check_build_graph_sources(base_dir, &graph);
         println!("  {} build targets — ok", graph.targets().len());
         return;
     }
@@ -119,6 +121,23 @@ fn cmd_check(path_str: &str) {
         typed.functions.len(),
         typed.types.len()
     );
+}
+
+fn check_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
+    let mut source_paths = BTreeSet::new();
+    for target in graph.targets() {
+        for source in target.sources() {
+            source_paths.insert(base_dir.join(source));
+        }
+    }
+
+    for source_path in source_paths {
+        let source_path = source_path.to_str().unwrap_or_else(|| {
+            eprintln!("error: non-utf8 source path: {}", source_path.display());
+            process::exit(1);
+        });
+        graph_frontend(source_path);
+    }
 }
 
 fn load_module_graph(path_str: &str) -> (zen::module_system::ResolvedModuleGraph, FileTable) {

@@ -2356,6 +2356,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_rejects_missing_graph_only_library_source`,
   and
   `cargo test --test integration emit_command_build_zen_rejects_missing_graph_only_library_source`.
+- `zen check build.zen` typechecks graph target sources after deterministic
+  graph/source validation and before reporting the graph summary, covered by
+  `cargo test --test integration check_command_build_zen_typechecks_target_sources`.
+  Undeclared host effects still reject before target source typechecking,
+  covered by
+  `cargo test --test integration check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
 - Single-target `zen emit build.zen` rejects multi-executable ambiguity before
   per-executable source validation, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`.
@@ -2401,13 +2407,13 @@ and do not assume Phase 4 is ready without evidence.
   graph emission, multi-executable target execution for normal
   `zen build build.zen` and direct `zen build.zen`, dependency-ordered
   executable target execution for normal `zen build build.zen`, normal
-  `zen test build.zen` test-target execution, normal `zen check build.zen`,
-  test and library target graph lowering/emission, and single-target normal
-  `zen emit build.zen`, while build/test execution rejects dependencies on
-  gated library targets and legacy generic `emit-json` build.zen modes have a
-  targeted rejection. Library execution, package/link semantics, and other
-  broader graph semantics still need explicit deterministic semantics before
-  promotion.
+  `zen test build.zen` test-target execution, normal `zen check build.zen`
+  graph/source validation plus target source typechecking, test and library
+  target graph lowering/emission, and single-target normal `zen emit build.zen`,
+  while build/test execution rejects dependencies on gated library targets and
+  legacy generic `emit-json` build.zen modes have a targeted rejection. Library
+  execution, package/link semantics, and other broader graph semantics still
+  need explicit deterministic semantics before promotion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
