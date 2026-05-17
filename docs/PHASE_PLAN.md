@@ -2546,6 +2546,11 @@ checked-in docs, tests, and commits only.
   `src/typechecker/resolver_validation_support/expected_type_parameters.rs`,
   separate from expected symbol-shape constructors while preserving resolver
   metadata descriptor tests.
+- Resolver validation support now keeps expected local expression, statement,
+  and pattern traversal in
+  `src/typechecker/resolver_validation_support/expected_local_traversal.rs`,
+  separate from the expected-local entry points while preserving resolver local
+  replay coverage.
 
 ## Current Phase
 
