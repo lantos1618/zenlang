@@ -2913,6 +2913,11 @@ and do not assume Phase 4 is ready without evidence.
   top-level expression, closure, struct field default, and behavior default
   local coverage while keeping parameter and variable local metadata tests
   focused.
+- Resolver-restored generic `Type.impl` method template tests now live in
+  `src/typechecker/tests/resolver_collection/function_method_templates/type_impl_generic_methods/generic_templates.rs`,
+  preserving template name, bound, return, parameter count, and mutability
+  restoration coverage while keeping plain `Type.impl` method metadata tests
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

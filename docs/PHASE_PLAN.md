@@ -2651,6 +2651,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_locals/body_locals.rs`, keeping pattern,
   top-level expression, closure, struct field default, and behavior default
   local coverage separate from parameter and variable local metadata tests.
+- Resolver-restored generic `Type.impl` method template tests now live in
+  `src/typechecker/tests/resolver_collection/function_method_templates/type_impl_generic_methods/generic_templates.rs`,
+  keeping template name, bound, return, parameter count, and mutability
+  restoration coverage separate from plain `Type.impl` method metadata tests.
 
 ## Current Phase
 
