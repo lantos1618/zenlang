@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
-use crate::resolver::Resolver;
+use crate::resolver::{Namespace, Resolver, SymbolTable};
 
 use super::{ImportBinding, ModuleId, ModuleSystem, ResolvedModule, ResolvedModuleGraph};
 
@@ -167,45 +167,119 @@ impl ModuleSystem {
         bindings: &mut Vec<ImportBinding>,
     ) -> Result<(), Vec<CompileError>> {
         for name in names {
-            let mut found_private = false;
-            let mut found_public = false;
-
-            for decl in &dep_module.program.declarations {
-                if decl.name() == Some(name.as_str()) {
-                    if decl.is_public() {
-                        found_public = true;
-                    } else {
-                        found_private = true;
-                    }
+            match exported_module_symbol(&dep_module.symbols, name) {
+                ExportedModuleSymbol::Public => {
+                    bindings.push(ImportBinding {
+                        local_name: name.clone(),
+                        source_module: dep_module.info.id,
+                        source_symbol: name.clone(),
+                        span: import_span,
+                    });
+                }
+                ExportedModuleSymbol::Private => {
+                    return Err(vec![CompileError::Resolution(
+                        format!(
+                            "symbol '{}' in module '{}' is not exported",
+                            name, module_name
+                        ),
+                        Some(import_span),
+                    )]);
+                }
+                ExportedModuleSymbol::Missing => {
+                    return Err(vec![CompileError::Resolution(
+                        format!("module '{}' does not export '{}'", module_name, name),
+                        Some(import_span),
+                    )]);
                 }
             }
-
-            if found_public {
-                bindings.push(ImportBinding {
-                    local_name: name.clone(),
-                    source_module: dep_module.info.id,
-                    source_symbol: name.clone(),
-                    span: import_span,
-                });
-                continue;
-            }
-
-            if found_private {
-                return Err(vec![CompileError::Resolution(
-                    format!(
-                        "symbol '{}' in module '{}' is not exported",
-                        name, module_name
-                    ),
-                    Some(import_span),
-                )]);
-            }
-
-            return Err(vec![CompileError::Resolution(
-                format!("module '{}' does not export '{}'", module_name, name),
-                Some(import_span),
-            )]);
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExportedModuleSymbol {
+    Public,
+    Private,
+    Missing,
+}
+
+fn exported_module_symbol(symbols: &SymbolTable, name: &str) -> ExportedModuleSymbol {
+    let mut found_private = false;
+
+    for namespace in [Namespace::Value, Namespace::Type, Namespace::Behavior] {
+        let Some(symbol) = symbols.lookup(namespace, name) else {
+            continue;
+        };
+        if symbol.is_public {
+            return ExportedModuleSymbol::Public;
+        }
+        found_private = true;
+    }
+
+    if found_private {
+        ExportedModuleSymbol::Private
+    } else {
+        ExportedModuleSymbol::Missing
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{lexer, parser};
+
+    fn resolve_symbols(source: &str) -> SymbolTable {
+        let tokens = lexer::tokenize(source, 0).expect("lex source");
+        let program = parser::parse(tokens, 0).expect("parse source");
+        Resolver::new()
+            .resolve_program(&program)
+            .expect("resolve source")
+    }
+
+    #[test]
+    fn exported_module_symbol_reads_resolver_public_visibility() {
+        let symbols = resolve_symbols(
+            r#"
+hidden = () i32 { 1 }
+pub Model: { value: i32 }
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+        );
+
+        assert_eq!(
+            exported_module_symbol(&symbols, "hidden"),
+            ExportedModuleSymbol::Private
+        );
+        assert_eq!(
+            exported_module_symbol(&symbols, "Model"),
+            ExportedModuleSymbol::Public
+        );
+        assert_eq!(
+            exported_module_symbol(&symbols, "Json"),
+            ExportedModuleSymbol::Public
+        );
+        assert_eq!(
+            exported_module_symbol(&symbols, "Missing"),
+            ExportedModuleSymbol::Missing
+        );
+    }
+
+    #[test]
+    fn exported_module_symbol_accepts_public_symbol_over_private_symbol_in_other_namespace() {
+        let symbols = resolve_symbols(
+            r#"
+Name = () i32 { 1 }
+pub Name: { value: i32 }
+"#,
+        );
+
+        assert_eq!(
+            exported_module_symbol(&symbols, "Name"),
+            ExportedModuleSymbol::Public
+        );
     }
 }

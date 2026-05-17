@@ -782,6 +782,10 @@ and do not assume Phase 4 is ready without evidence.
   validating imported binding symbols.
 - The non-merging module graph records resolver `SymbolTable` data per module
   and rejects resolver diagnostics from loaded dependency modules.
+- Module-graph import binding validation now reads dependency resolver symbols
+  for exported values, types, and behaviors instead of re-scanning dependency
+  AST declarations, covered by
+  `module_system::graph_loading::tests::exported_module_symbol_reads_resolver_public_visibility`.
 - Typechecker setup has an opt-in module-graph entrypoint that validates entry
   resolver symbols and seeds imported signatures from graph-owned
   `ImportBinding`s without merging imported declarations into the entry AST.
