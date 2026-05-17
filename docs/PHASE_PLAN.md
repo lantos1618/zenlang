@@ -340,6 +340,9 @@ checked-in docs, tests, and commits only.
 - Generic type reference validation now keeps expression and statement walking
   in a focused child module, leaving generic type argument arity and bound
   checks smaller.
+- Expression checking now keeps identifier, block, return, cast, interpolation,
+  defer, and closure forms in a focused child module, leaving the root
+  expression checker closer to dispatch.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
