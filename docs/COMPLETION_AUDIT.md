@@ -2749,6 +2749,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/resolver_validation_support/absence_symbol_descriptors.rs`,
   preserving absence diagnostics while keeping field and variant descriptors
   smaller.
+- Error reporting now keeps `FileTable` and `FileId` source storage in
+  `src/error/file_table.rs`, preserving the public `zen::error::FileTable`
+  API while keeping `src/error.rs` focused on spans, diagnostics, and compile
+  error conversion.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

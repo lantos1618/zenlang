@@ -332,6 +332,9 @@ checked-in docs, tests, and commits only.
 - Resolver absence validation now keeps behavior, mutability, and source
   descriptor tables in a focused support include, separate from field and
   variant descriptor tables.
+- Error reporting now keeps `FileTable` source storage in a focused child
+  module, leaving `error.rs` centered on spans, diagnostics, and compile error
+  conversion.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
