@@ -2849,6 +2849,10 @@ and do not assume Phase 4 is ready without evidence.
   non-generic functions, covered by
   `builtin_function_explicit_type_args_are_error`, so
   `@builtin.panic<i32>(...)` cannot silently discard malformed type arguments.
+- Generic callable behavior-bound diagnostics now live in
+  `tests/generic_diagnostics/call_site_bounds.rs`, preserving function,
+  method, receiver, Result method, unknown bound method, and UFC bound-failure
+  coverage while keeping aggregate and annotation bound diagnostics focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
