@@ -2760,6 +2760,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/build_graph/dependencies.rs`, preserving unknown, self, cyclic, and
   dependency-order coverage while keeping the parent build-graph test target
   focused on target lowering and graph shape.
+- Generic call-site, closure, and cast annotation diagnostics now live in
+  `tests/generic_diagnostics/call_site_annotations.rs`, preserving malformed
+  function/method type-argument annotation and cast/closure annotation coverage
+  while keeping declaration/local annotation diagnostics focused.
 - Range expressions now produce an explicit gated typechecker diagnostic,
   covered by parser and typechecker tests
   `parser::tests::expressions::parse_range_expr` and
