@@ -2695,6 +2695,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/frontend_diagnostics/behavior_extends.rs`, keeping
   direct, imported-parent, and transitive parent-method diagnostics separate
   from frontend helper and generic arity diagnostics.
+- Generic explicit arity follow-up suppression diagnostics now live in
+  `tests/generic_diagnostics/method_type_args/arity_followups.rs`, keeping
+  function and method inference/argument follow-up checks separate from direct
+  method type-argument diagnostics.
 
 ## Current Phase
 
