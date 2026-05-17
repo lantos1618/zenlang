@@ -392,6 +392,9 @@ checked-in docs, tests, and commits only.
   so resolver-backed semantic validation replays dedicated behavior, type-ref,
   and struct-default task lists instead of treating metadata tasks as a
   semantic-validation bundle.
+- Resolver replay declaration-validation tests now keep semantic-bundle replay
+  coverage in a focused submodule, preserving the file-size guard while keeping
+  metadata replay helper tests separate from semantic replay coverage.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a

@@ -266,6 +266,9 @@ and do not assume Phase 4 is ready without evidence.
   beside AST collection and resolver metadata tasks in the same declaration
   pass, and resolver-backed semantic validation consumes that dedicated
   semantic task bundle instead of replaying from metadata tasks.
+- Resolver replay declaration-validation tests now split semantic-bundle
+  coverage into a focused submodule, keeping the anti-slop file-size guard
+  below threshold while preserving the resolver replay coverage.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
