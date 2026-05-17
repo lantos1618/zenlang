@@ -307,6 +307,10 @@ and do not assume Phase 4 is ready without evidence.
   package/link target rejection coverage into
   `tests/build_graph/target_metadata.rs`, leaving the root build graph test
   file for shared helpers and positive lowering smoke tests.
+- `zen build build.zen` validation tests now split direct and transitive gated
+  test dependency rejection coverage into
+  `tests/integration/cli_build/build_command_validation/gated_dependencies.rs`,
+  leaving executable-target and skipped-source checks in the parent module.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
