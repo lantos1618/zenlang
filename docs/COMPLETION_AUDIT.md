@@ -3378,6 +3378,13 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_rejects_duplicate_target_fields`,
   `emit_command_build_zen_rejects_missing_required_target_fields`, and
   `emit_command_build_zen_rejects_invalid_target_field_types`.
+- Normal `zen check build.zen` target metadata extraction now has `Library`
+  target diagnostics for duplicate fields, missing required `exports`, invalid
+  `exports` field types, and empty export lists. Coverage:
+  `check_command_build_zen_rejects_duplicate_library_target_fields`,
+  `check_command_build_zen_rejects_missing_library_exports`,
+  `check_command_build_zen_rejects_invalid_library_exports_type`, and
+  `check_command_build_zen_rejects_empty_library_exports`.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown executable target fields before creating outputs. Coverage:
   `build_zen_commands_reject_unknown_target_fields`.
