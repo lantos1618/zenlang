@@ -2350,6 +2350,11 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_rejects_undeclared_host_effects`
   and
   `cargo test --test integration build_graph_command_multi_target_rejects_undeclared_host_effects`.
+  Declared deterministic file-read effects are accepted and undeclared file
+  reads reject before execution, covered by
+  `cargo test --test integration build_graph_command_accepts_declared_file_read_effects`
+  and
+  `cargo test --test integration build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
   Graph-only library export source validation before execution is covered by
   `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`.
   Test-only graphs are rejected before execution starts, covered by
