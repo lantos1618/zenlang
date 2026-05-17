@@ -2602,11 +2602,15 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_declared_file_read_effects`,
   `cargo test --test integration build_graph_command_accepts_wildcard_fallback_declared_file_read_effects`,
   `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
+  `cargo test --test integration build_graph_command_accepts_declared_file_read_effects_for_multiple_targets`,
   and
   `cargo test --test integration build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
   Missing fallback arms on deterministic file reads also reject before
   execution, covered by
   `cargo test --test integration build_graph_command_rejects_file_read_without_fallback_before_execution`.
+  Multi-target executable graphs with file reads lacking a fallback arm reject
+  before execution through
+  `cargo test --test integration build_graph_command_multi_target_rejects_file_read_without_fallback_before_execution`.
   Graph-only library export source validation and typechecking before
   execution are covered by
   `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`,
