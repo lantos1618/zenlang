@@ -2478,6 +2478,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/import_visibility.rs` from 500 to 161 lines while
   preserving coverage through
   `cargo test --test integration import_visibility`.
+- Legacy build-graph integration tests now keep graph validation cases in
+  `tests/integration/cli_build/legacy_graph_command_validation.rs`, reducing
+  `tests/integration/cli_build/legacy_graph_command.rs` from 492 to 255 lines
+  while preserving coverage through
+  `cargo test --test integration build_graph_command`.
 - Resolver import metadata tests now keep module-symbol metadata cases in
   `src/typechecker/tests/resolver_import_metadata/module_metadata.rs`,
   reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280

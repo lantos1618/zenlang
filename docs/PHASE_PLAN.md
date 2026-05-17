@@ -327,6 +327,10 @@ checked-in docs, tests, and commits only.
 - `zen test build.zen` integration coverage now keeps test-target execution,
   deterministic host-effect rejection, and graph validation failures in
   focused modules instead of one oversized test-command file.
+- Legacy `build-graph <build.zen>` integration coverage now keeps executable
+  graph execution, deterministic host-effect rejection, and graph validation
+  failures in focused modules instead of one threshold-adjacent command test
+  file.
 - Import-visibility integration coverage now keeps transitive dependency and
   private imported-method cases in focused modules, dropping
   `tests/integration/import_visibility.rs` below the cleanup threshold while
