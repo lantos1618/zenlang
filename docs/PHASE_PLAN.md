@@ -2579,6 +2579,9 @@ checked-in docs, tests, and commits only.
 - CLI build graph target structs and graph-target conversion helpers now live
   in `src/cli/build_graph_targets.rs`, keeping target data construction
   separate from graph execution ordering and validation.
+- CLI build graph source existence and typechecking helpers now live in
+  `src/cli/build_graph_sources.rs`, keeping source validation separate from
+  execution target ordering and dependency gating.
 
 ## Current Phase
 

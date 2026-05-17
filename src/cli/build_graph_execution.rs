@@ -1,9 +1,10 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process;
 
 use super::{
-    executable_build_target, test_build_target, BuildGraphExecutableTarget, BuildGraphTestTarget,
+    executable_build_target, test_build_target, validate_non_executed_target_sources,
+    BuildGraphExecutableTarget, BuildGraphTestTarget,
 };
 
 struct BuildGraphExecutionContext {
@@ -12,13 +13,13 @@ struct BuildGraphExecutionContext {
 }
 
 #[derive(Clone, Copy)]
-enum BuildGraphExecutionKind {
+pub(super) enum BuildGraphExecutionKind {
     Executable,
     Test,
 }
 
 impl BuildGraphExecutionKind {
-    fn includes(self, kind: &zen::build_graph::BuildTargetKind) -> bool {
+    pub(super) fn includes(self, kind: &zen::build_graph::BuildTargetKind) -> bool {
         matches!(
             (self, kind),
             (
@@ -161,71 +162,5 @@ fn validate_executed_dependency_targets(
             );
             process::exit(1);
         }
-    }
-}
-
-pub(super) fn validate_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
-    for target in graph.targets() {
-        for source in target.sources() {
-            if !base_dir.join(source).exists() {
-                eprintln!(
-                    "build graph target `{}` source not found: {}",
-                    target.name(),
-                    source
-                );
-                process::exit(1);
-            }
-        }
-    }
-}
-
-pub(super) fn check_build_graph_sources(base_dir: &Path, graph: &zen::build_graph::BuildGraph) {
-    let mut source_paths = BTreeSet::new();
-    for target in graph.targets() {
-        for source in target.sources() {
-            source_paths.insert(base_dir.join(source));
-        }
-    }
-
-    for source_path in source_paths {
-        let source_path = source_path.to_str().unwrap_or_else(|| {
-            eprintln!("error: non-utf8 source path: {}", source_path.display());
-            process::exit(1);
-        });
-        super::graph_frontend(source_path);
-    }
-}
-
-fn validate_non_executed_target_sources(
-    base_dir: &Path,
-    graph: &zen::build_graph::BuildGraph,
-    execution_kind: BuildGraphExecutionKind,
-) {
-    let mut checked_sources = BTreeSet::new();
-    for target in graph
-        .targets()
-        .iter()
-        .filter(|target| !execution_kind.includes(target.kind()))
-    {
-        for source in target.sources() {
-            let source_path = base_dir.join(source);
-            if !source_path.exists() {
-                eprintln!(
-                    "build graph target `{}` source not found: {}",
-                    target.name(),
-                    source
-                );
-                process::exit(1);
-            }
-            checked_sources.insert(source_path);
-        }
-    }
-
-    for source_path in checked_sources {
-        let source_path = source_path.to_str().unwrap_or_else(|| {
-            eprintln!("error: non-utf8 source path: {}", source_path.display());
-            process::exit(1);
-        });
-        super::graph_frontend(source_path);
     }
 }

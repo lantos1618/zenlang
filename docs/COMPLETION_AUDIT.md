@@ -2746,6 +2746,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI build graph target structs and graph-target conversion helpers now live
   in `src/cli/build_graph_targets.rs`, preserving executable/test target
   behavior while keeping graph execution ordering and validation smaller.
+- CLI build graph source existence and typechecking helpers now live in
+  `src/cli/build_graph_sources.rs`, preserving source validation behavior while
+  keeping graph execution ordering and dependency gating smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
