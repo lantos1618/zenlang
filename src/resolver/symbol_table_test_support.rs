@@ -3,6 +3,17 @@ use crate::ast::AstType;
 
 impl SymbolTable {
     #[cfg(test)]
+    fn find_symbol_mut_for_test(
+        &mut self,
+        namespace: Namespace,
+        name: &str,
+    ) -> Option<&mut Symbol> {
+        self.symbols
+            .iter_mut()
+            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
+    }
+
+    #[cfg(test)]
     pub(crate) fn remove_for_test(&mut self, namespace: Namespace, name: &str) {
         self.symbols
             .retain(|symbol| symbol.namespace != namespace || symbol.name != name);
@@ -28,11 +39,7 @@ impl SymbolTable {
         name: &str,
         is_public: bool,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.is_public = is_public;
         }
     }
@@ -44,22 +51,14 @@ impl SymbolTable {
         name: &str,
         import_source: Option<String>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.import_source = import_source;
         }
     }
 
     #[cfg(test)]
     pub(crate) fn set_local_mutability_for_test(&mut self, name: &str, is_mutable: Option<bool>) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == Namespace::Local && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(Namespace::Local, name) {
             symbol.is_mutable = is_mutable;
         }
     }
@@ -87,11 +86,7 @@ impl SymbolTable {
         name: &str,
         is_mutable: Option<bool>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.is_mutable = is_mutable;
         }
     }
@@ -103,11 +98,7 @@ impl SymbolTable {
         name: &str,
         parameter_count: Option<usize>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.parameter_count = parameter_count;
         }
     }
@@ -119,11 +110,7 @@ impl SymbolTable {
         name: &str,
         parameter_type_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.parameter_type_names = parameter_type_names;
         }
     }
@@ -135,11 +122,7 @@ impl SymbolTable {
         name: &str,
         parameter_types: Option<Vec<AstType>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.parameter_types = parameter_types;
         }
     }
@@ -151,11 +134,7 @@ impl SymbolTable {
         name: &str,
         parameter_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.parameter_names = parameter_names;
         }
     }
@@ -167,11 +146,7 @@ impl SymbolTable {
         name: &str,
         return_type_name: Option<String>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.return_type_name = return_type_name;
         }
     }
@@ -183,11 +158,7 @@ impl SymbolTable {
         name: &str,
         return_type: Option<AstType>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.return_type = return_type;
         }
     }
@@ -199,11 +170,7 @@ impl SymbolTable {
         name: &str,
         type_parameter_count: Option<usize>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.type_parameter_count = type_parameter_count;
         }
     }
@@ -215,11 +182,7 @@ impl SymbolTable {
         name: &str,
         type_parameter_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.type_parameter_names = type_parameter_names;
         }
     }
@@ -231,11 +194,7 @@ impl SymbolTable {
         name: &str,
         type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.type_parameter_bounds = type_parameter_bounds;
         }
     }
@@ -247,11 +206,7 @@ impl SymbolTable {
         name: &str,
         type_parameter_bound_refs: Option<Vec<TypeParameterBoundRefMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.type_parameter_bound_refs = type_parameter_bound_refs;
         }
     }
@@ -263,11 +218,7 @@ impl SymbolTable {
         name: &str,
         behavior_method_signatures: Option<Vec<MethodSignatureMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_method_signatures = behavior_method_signatures;
         }
     }
@@ -279,11 +230,7 @@ impl SymbolTable {
         name: &str,
         behavior_method_types: Option<Vec<BehaviorMethodTypeMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_method_types = behavior_method_types;
         }
     }
@@ -295,11 +242,7 @@ impl SymbolTable {
         name: &str,
         behavior_parent_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_parent_names = behavior_parent_names;
         }
     }
@@ -311,11 +254,7 @@ impl SymbolTable {
         name: &str,
         behavior_parent_refs: Option<Vec<BehaviorRefMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_parent_refs = behavior_parent_refs;
         }
     }
@@ -327,11 +266,7 @@ impl SymbolTable {
         name: &str,
         behavior_impl_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_impl_names = behavior_impl_names;
         }
     }
@@ -343,11 +278,7 @@ impl SymbolTable {
         name: &str,
         behavior_impl_refs: Option<Vec<BehaviorRefMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_impl_refs = behavior_impl_refs;
         }
     }
@@ -359,11 +290,7 @@ impl SymbolTable {
         name: &str,
         behavior_required_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_required_names = behavior_required_names;
         }
     }
@@ -375,11 +302,7 @@ impl SymbolTable {
         name: &str,
         behavior_required_refs: Option<Vec<BehaviorRefMetadata>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.behavior_required_refs = behavior_required_refs;
         }
     }
@@ -391,11 +314,7 @@ impl SymbolTable {
         name: &str,
         field_count: Option<usize>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.field_count = field_count;
         }
     }
@@ -407,11 +326,7 @@ impl SymbolTable {
         name: &str,
         field_type_names: Option<Vec<(String, String)>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.field_type_names = field_type_names;
         }
     }
@@ -423,11 +338,7 @@ impl SymbolTable {
         name: &str,
         field_types: Option<Vec<(String, AstType)>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.field_types = field_types;
         }
     }
@@ -439,11 +350,7 @@ impl SymbolTable {
         name: &str,
         variant_names: Option<Vec<String>>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.variant_names = variant_names;
         }
     }
@@ -455,11 +362,7 @@ impl SymbolTable {
         name: &str,
         variant_owner_name: Option<String>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.variant_owner_name = variant_owner_name;
         }
     }
@@ -471,11 +374,7 @@ impl SymbolTable {
         name: &str,
         variant_payload_count: Option<usize>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.variant_payload_count = variant_payload_count;
         }
     }
@@ -487,11 +386,7 @@ impl SymbolTable {
         name: &str,
         variant_payload_type_name: Option<String>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.variant_payload_type_name = variant_payload_type_name;
         }
     }
@@ -503,11 +398,7 @@ impl SymbolTable {
         name: &str,
         variant_payload_type: Option<AstType>,
     ) {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == namespace && symbol.name == name)
-        {
+        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.variant_payload_type = variant_payload_type;
         }
     }

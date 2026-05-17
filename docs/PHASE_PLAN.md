@@ -258,6 +258,10 @@ checked-in docs, tests, and commits only.
 - Resolver absent-metadata entry and diagnostic helpers now live in dedicated
   resolver validation support files, keeping shared absence diagnostics
   separate from per-symbol absence descriptor code tables.
+- Resolver symbol-table test support now shares one test-only symbol lookup
+  helper across metadata setters, dropping
+  `src/resolver/symbol_table_test_support.rs` below the cleanup threshold while
+  preserving resolver-backed metadata and Phase 2 resolver coverage.
 - Parser behavior declaration and impl-block parsing now live in a dedicated
   parser helper module, keeping behavior signatures and association syntax out
   of the broad top-level declaration dispatcher.
