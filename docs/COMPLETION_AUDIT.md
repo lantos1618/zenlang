@@ -2927,6 +2927,11 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/tests/resolver_validation/expected_symbols/composite_symbols.rs`,
   preserving behavior, struct, enum, and variant symbol metadata coverage while
   keeping primitive expected metadata and leaf symbol builders focused.
+- Resolver behavior parent diagnostics now live in
+  `src/typechecker/tests/resolver_collection/behavior_parents/diagnostics.rs`,
+  preserving restored missing-method, inherited conflict, and cycle diagnostics
+  while keeping behavior parent metadata restoration and default synthesis tests
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
