@@ -9,7 +9,7 @@ Rng: {
 
 // Create new RNG with seed
 rng_new = (seed: i64) Rng {
-    return Rng {
+    Rng {
         state: seed
     }
 }
@@ -18,48 +18,48 @@ rng_new = (seed: i64) Rng {
 // rng_next = (state * 1103515245 + 12345) % 2^31
 rng_next = (rng: MutPtr<Rng>) i64 {
     rng.val.state = (rng.val.state * 1103515245 + 12345) % 2147483647
-    return rng.val.state
+    rng.val.state
 }
 
 // Get random i32
 rng_next_i32 = (rng: MutPtr<Rng>) i32 {
-    return cast(rng_next(rng), i32)
+    cast(rng_next(rng), i32)
 }
 
 // Get random i64
 rng_next_i64 = (rng: MutPtr<Rng>) i64 {
-    return rng_next(rng)
+    rng_next(rng)
 }
 
 // Get random u32
 rng_next_u32 = (rng: MutPtr<Rng>) u32 {
-    return cast(rng_next(rng), u32)
+    cast(rng_next(rng), u32)
 }
 
 // Get random u64
 rng_next_u64 = (rng: MutPtr<Rng>) u64 {
-    return cast(rng_next(rng), u64)
+    cast(rng_next(rng), u64)
 }
 
 // Get random float between 0 and 1
 rng_next_f64 = (rng: MutPtr<Rng>) f64 {
     val = cast(rng_next(rng), f64)
     // Normalize to 0.0 - 1.0
-    return val / 2147483647.0
+    val / 2147483647.0
 }
 
 // Get random in range [0, max)
 rng_next_bounded = (rng: MutPtr<Rng>, max: i64) i64 {
     max <= 0 ?
-    | true { return 0 }
-    | false { }
+    | true { 0 }
+    | false {
+        val ::= rng_next(rng)
+        val < 0 ?
+        | true { val = 0 - val }
+        | false { }
 
-    val ::= rng_next(rng)
-    val < 0 ?
-    | true { val = 0 - val }
-    | false { }
-
-    return val % max
+        val % max
+    }
 }
 
 // Create a default-seeded RNG
@@ -67,19 +67,19 @@ rng_next_bounded = (rng: MutPtr<Rng>, max: i64) i64 {
 // Calling random() repeatedly returns the SAME value since it
 // creates a new RNG with the same seed each time.
 default_rng = () Rng {
-    return rng_new(12345)
+    rng_new(12345)
 }
 
 // Get a single random value (creates new RNG each call - same seed!)
 // WARNING: Returns same value every call. Use rng_new() + rng_next() for sequences.
 random = () i64 {
     rng ::= default_rng()
-    return rng_next(rng.mut_ref())
+    rng_next(rng.mut_ref())
 }
 
 // Get a single random value in range (creates new RNG each call - same seed!)
 // WARNING: Returns same value every call. Use rng_new() + rng_next_bounded() for sequences.
 random_bounded = (max: i64) i64 {
     rng ::= default_rng()
-    return rng_next_bounded(rng.mut_ref(), max)
+    rng_next_bounded(rng.mut_ref(), max)
 }
