@@ -2558,6 +2558,12 @@ checked-in docs, tests, and commits only.
   Coverage includes
   `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
   `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
+- Direct `zen build.zen`, legacy `zen build-graph build.zen`, and
+  `zen emit build.zen` now have matching coverage for rejecting transitive gated
+  test dependencies pulled through graph-only libraries. Coverage includes
+  `direct_file_command_build_zen_rejects_transitive_gated_test_dependencies`,
+  `build_graph_command_rejects_transitive_gated_test_dependencies`, and
+  `emit_command_build_zen_rejects_transitive_gated_test_dependencies`.
 - Build/test graph execution now skips unrelated gated target source validation
   while preserving graph-only library validation and deterministic host-effect
   ordering. Coverage includes
