@@ -2356,6 +2356,21 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_json_build_graph_rejects_unsupported_package_targets`
   and
   `cargo test --test integration emit_json_build_graph_rejects_unsupported_link_targets`.
+  Normal build, direct build.zen execution, check, test, emit, and legacy
+  build-graph entrypoints now have the same unsupported package/link gate
+  coverage before execution or emission through
+  `build_command_build_zen_rejects_unsupported_package_targets`,
+  `build_command_build_zen_rejects_unsupported_link_targets`,
+  `direct_file_command_build_zen_rejects_unsupported_package_targets`,
+  `direct_file_command_build_zen_rejects_unsupported_link_targets`,
+  `check_command_build_zen_rejects_unsupported_package_targets`,
+  `check_command_build_zen_rejects_unsupported_link_targets`,
+  `test_command_build_zen_rejects_unsupported_package_targets`,
+  `test_command_build_zen_rejects_unsupported_link_targets`,
+  `emit_command_build_zen_rejects_unsupported_package_targets`,
+  `emit_command_build_zen_rejects_unsupported_link_targets`,
+  `build_graph_command_rejects_unsupported_package_targets`, and
+  `build_graph_command_rejects_unsupported_link_targets`.
 - `emit-json build-graph` rejects self-dependencies through the advertised
   graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_self_target_dependencies`.
