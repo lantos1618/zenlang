@@ -107,7 +107,7 @@ SocketError.from_errno = (errno: i64) SocketError {
         -115 => "Operation in progress"
         _ => "Socket error"
     }
-    return SocketError { code: code, message: msg }
+    SocketError { code: code, message: msg }
 }
 
 // ============================================================================
@@ -128,19 +128,19 @@ Ipv4Addr: {
 Ipv4Addr.new = (a: u8, b: u8, c: u8, d: u8) Ipv4Addr {
     // Pack bytes into u32 (network byte order - big endian)
     packed = ((cast(a, u32)) << 24) | ((cast(b, u32)) << 16) | ((cast(c, u32)) << 8) | (cast(d, u32))
-    return Ipv4Addr { addr: packed }
+    Ipv4Addr { addr: packed }
 }
 
 Ipv4Addr.localhost = () Ipv4Addr {
-    return Ipv4Addr.new(127, 0, 0, 1)
+    Ipv4Addr.new(127, 0, 0, 1)
 }
 
 Ipv4Addr.any = () Ipv4Addr {
-    return Ipv4Addr { addr: 0 }
+    Ipv4Addr { addr: 0 }
 }
 
 Ipv4Addr.broadcast = () Ipv4Addr {
-    return Ipv4Addr { addr: 0xFFFFFFFF }
+    Ipv4Addr { addr: 0xFFFFFFFF }
 }
 
 // ============================================================================
@@ -159,7 +159,7 @@ SocketAddrV4.new = (ip: Ipv4Addr, port: u16) SocketAddrV4 {
     port_be = compiler.bswap16(port)
     // Convert addr to network byte order
     addr_be = compiler.bswap32(ip.addr)
-    return SocketAddrV4 {
+    SocketAddrV4 {
         family: cast(AF_INET, u16),
         port: port_be,
         addr: addr_be,
@@ -172,55 +172,55 @@ SocketAddrV4.new = (ip: Ipv4Addr, port: u16) SocketAddrV4 {
 // ============================================================================
 
 sys_socket = (domain: i32, type_: i32, protocol: i32) i64 {
-    return compiler.syscall3(SYS_SOCKET, domain, type_, protocol)
+    compiler.syscall3(SYS_SOCKET, domain, type_, protocol)
 }
 
 sys_bind = (sockfd: i32, addr_ptr: i64, addr_len: i32) i64 {
-    return compiler.syscall3(SYS_BIND, sockfd, addr_ptr, addr_len)
+    compiler.syscall3(SYS_BIND, sockfd, addr_ptr, addr_len)
 }
 
 sys_listen = (sockfd: i32, backlog: i32) i64 {
-    return compiler.syscall2(SYS_LISTEN, sockfd, backlog)
+    compiler.syscall2(SYS_LISTEN, sockfd, backlog)
 }
 
 sys_accept = (sockfd: i32, addr_ptr: i64, addr_len_ptr: i64) i64 {
-    return compiler.syscall3(SYS_ACCEPT, sockfd, addr_ptr, addr_len_ptr)
+    compiler.syscall3(SYS_ACCEPT, sockfd, addr_ptr, addr_len_ptr)
 }
 
 sys_connect = (sockfd: i32, addr_ptr: i64, addr_len: i32) i64 {
-    return compiler.syscall3(SYS_CONNECT, sockfd, addr_ptr, addr_len)
+    compiler.syscall3(SYS_CONNECT, sockfd, addr_ptr, addr_len)
 }
 
 sys_send = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32) i64 {
-    return compiler.syscall4(SYS_SENDTO, sockfd, buf_ptr, len, flags)
+    compiler.syscall4(SYS_SENDTO, sockfd, buf_ptr, len, flags)
 }
 
 sys_recv = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32) i64 {
-    return compiler.syscall4(SYS_RECVFROM, sockfd, buf_ptr, len, flags)
+    compiler.syscall4(SYS_RECVFROM, sockfd, buf_ptr, len, flags)
 }
 
 sys_sendto = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32, dest_addr: i64, addr_len: i32) i64 {
-    return compiler.syscall6(SYS_SENDTO, sockfd, buf_ptr, len, flags, dest_addr, addr_len)
+    compiler.syscall6(SYS_SENDTO, sockfd, buf_ptr, len, flags, dest_addr, addr_len)
 }
 
 sys_recvfrom = (sockfd: i32, buf_ptr: i64, len: i64, flags: i32, src_addr: i64, addr_len_ptr: i64) i64 {
-    return compiler.syscall6(SYS_RECVFROM, sockfd, buf_ptr, len, flags, src_addr, addr_len_ptr)
+    compiler.syscall6(SYS_RECVFROM, sockfd, buf_ptr, len, flags, src_addr, addr_len_ptr)
 }
 
 sys_shutdown = (sockfd: i32, how: i32) i64 {
-    return compiler.syscall2(SYS_SHUTDOWN, sockfd, how)
+    compiler.syscall2(SYS_SHUTDOWN, sockfd, how)
 }
 
 sys_close = (fd: i32) i64 {
-    return compiler.syscall1(SYS_CLOSE, fd)
+    compiler.syscall1(SYS_CLOSE, fd)
 }
 
 sys_setsockopt = (sockfd: i32, level: i32, optname: i32, optval_ptr: i64, optlen: i32) i64 {
-    return compiler.syscall5(SYS_SETSOCKOPT, sockfd, level, optname, optval_ptr, optlen)
+    compiler.syscall5(SYS_SETSOCKOPT, sockfd, level, optname, optval_ptr, optlen)
 }
 
 sys_getsockopt = (sockfd: i32, level: i32, optname: i32, optval_ptr: i64, optlen_ptr: i64) i64 {
-    return compiler.syscall5(SYS_GETSOCKOPT, sockfd, level, optname, optval_ptr, optlen_ptr)
+    compiler.syscall5(SYS_GETSOCKOPT, sockfd, level, optname, optval_ptr, optlen_ptr)
 }
 
 // ============================================================================
@@ -234,41 +234,39 @@ TcpListener: {
 TcpListener.bind = (addr: SocketAddrV4) Result<TcpListener, SocketError> {
     // Create socket
     fd = sys_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-    fd < 0 ? {
-        return Result.Err(SocketError.from_errno(fd))
-    }
+    fd < 0 ?
+        | true { Result.Err(SocketError.from_errno(fd)) }
+        | false {
+            // Set SO_REUSEADDR
+            opt_val = 1
+            opt_ptr = compiler.ptr_to_int(&opt_val.ref())
+            sys_setsockopt(cast(fd, i32), SOL_SOCKET, SO_REUSEADDR, opt_ptr, 4)
 
-    // Set SO_REUSEADDR
-    opt_val = 1
-    opt_ptr = compiler.ptr_to_int(&opt_val.ref())
-    sys_setsockopt(cast(fd, i32), SOL_SOCKET, SO_REUSEADDR, opt_ptr, 4)
-
-    // Bind to address
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_bind(cast(fd, i32), addr_ptr, 16)  // sizeof(sockaddr_in) = 16
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        return Result.Err(SocketError.from_errno(result))
-    }
-
-    return Result.Ok(TcpListener { fd: cast(fd, i32) })
+            // Bind to address
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
+            result = sys_bind(cast(fd, i32), addr_ptr, 16)  // sizeof(sockaddr_in) = 16
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    Result.Err(SocketError.from_errno(result))
+                }
+                | false { Result.Ok(TcpListener { fd: cast(fd, i32) }) }
+        }
 }
 
 TcpListener.listen = (self: MutPtr<TcpListener>, backlog: i32) Result<(), SocketError> {
     result = sys_listen(self.val.fd, backlog)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 TcpListener.accept = (self: MutPtr<TcpListener>) Result<TcpStream, SocketError> {
     // Accept without getting peer address (pass null)
     client_fd = sys_accept(self.val.fd, 0, 0)
-    client_fd < 0 ? {
-        return Result.Err(SocketError.from_errno(client_fd))
-    }
-    return Result.Ok(TcpStream { fd: cast(client_fd, i32) })
+    client_fd < 0 ?
+        | true { Result.Err(SocketError.from_errno(client_fd)) }
+        | false { Result.Ok(TcpStream { fd: cast(client_fd, i32) }) }
 }
 
 TcpListener.close = (self: MutPtr<TcpListener>) void {
@@ -286,58 +284,59 @@ TcpStream: {
 TcpStream.connect = (addr: SocketAddrV4) Result<TcpStream, SocketError> {
     // Create socket
     fd = sys_socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
-    fd < 0 ? {
-        return Result.Err(SocketError.from_errno(fd))
-    }
-
-    // Connect to address
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_connect(cast(fd, i32), addr_ptr, 16)
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        return Result.Err(SocketError.from_errno(result))
-    }
-
-    return Result.Ok(TcpStream { fd: cast(fd, i32) })
+    fd < 0 ?
+        | true { Result.Err(SocketError.from_errno(fd)) }
+        | false {
+            // Connect to address
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
+            result = sys_connect(cast(fd, i32), addr_ptr, 16)
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    Result.Err(SocketError.from_errno(result))
+                }
+                | false { Result.Ok(TcpStream { fd: cast(fd, i32) }) }
+        }
 }
 
 TcpStream.read = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<i64, SocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     result = sys_recv(self.val.fd, buf_ptr, len, 0)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 TcpStream.write = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<i64, SocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     result = sys_send(self.val.fd, buf_ptr, len, MSG_NOSIGNAL)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 TcpStream.write_all = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<(), SocketError> {
-    written :: i64 = 0
-    written < len ? {
-        buf_offset = compiler.raw_ptr_offset(buf, written)
-        result = self.write(buf_offset, len - written)
-        result ? {
-            | Ok(n) { written = written + n }
-            | Err(e) { return Result.Err(e) }
+    self.write_all_from(buf, len, 0)
+}
+
+TcpStream.write_all_from = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64, written: i64) Result<(), SocketError> {
+    written < len ?
+        | true {
+            buf_offset = compiler.raw_ptr_offset(buf, written)
+            result = self.write(buf_offset, len - written)
+            result ? {
+                | Ok(n) { self.write_all_from(buf, len, written + n) }
+                | Err(e) { Result.Err(e) }
+            }
         }
-    }
-    return Result.Ok(())
+        | false { Result.Ok(()) }
 }
 
 TcpStream.shutdown = (self: MutPtr<TcpStream>, how: i32) Result<(), SocketError> {
     result = sys_shutdown(self.val.fd, how)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 TcpStream.close = (self: MutPtr<TcpStream>) void {
@@ -348,10 +347,9 @@ TcpStream.set_nodelay = (self: MutPtr<TcpStream>, nodelay: bool) Result<(), Sock
     opt_val = nodelay ? { 1 } : { 0 }
     opt_ptr = compiler.ptr_to_int(&opt_val.ref())
     result = sys_setsockopt(self.val.fd, SOL_TCP, TCP_NODELAY, opt_ptr, 4)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 // ============================================================================
@@ -365,49 +363,46 @@ UdpSocket: {
 UdpSocket.bind = (addr: SocketAddrV4) Result<UdpSocket, SocketError> {
     // Create socket
     fd = sys_socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-    fd < 0 ? {
-        return Result.Err(SocketError.from_errno(fd))
-    }
-
-    // Bind to address
-    addr_ptr = compiler.ptr_to_int(&addr.ref())
-    result = sys_bind(cast(fd, i32), addr_ptr, 16)
-    result < 0 ? {
-        sys_close(cast(fd, i32))
-        return Result.Err(SocketError.from_errno(result))
-    }
-
-    return Result.Ok(UdpSocket { fd: cast(fd, i32) })
+    fd < 0 ?
+        | true { Result.Err(SocketError.from_errno(fd)) }
+        | false {
+            // Bind to address
+            addr_ptr = compiler.ptr_to_int(&addr.ref())
+            result = sys_bind(cast(fd, i32), addr_ptr, 16)
+            result < 0 ?
+                | true {
+                    sys_close(cast(fd, i32))
+                    Result.Err(SocketError.from_errno(result))
+                }
+                | false { Result.Ok(UdpSocket { fd: cast(fd, i32) }) }
+        }
 }
 
 UdpSocket.send_to = (self: MutPtr<UdpSocket>, buf: Ptr<u8>, len: i64, dest: SocketAddrV4) Result<i64, SocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     dest_ptr = compiler.ptr_to_int(&dest.ref())
     result = sys_sendto(self.val.fd, buf_ptr, len, 0, dest_ptr, 16)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UdpSocket.recv_from = (self: MutPtr<UdpSocket>, buf: Ptr<u8>, len: i64) Result<i64, SocketError> {
     buf_ptr = compiler.ptr_to_int(buf)
     // Receive without getting source address
     result = sys_recvfrom(self.val.fd, buf_ptr, len, 0, 0, 0)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(result)
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(result) }
 }
 
 UdpSocket.set_broadcast = (self: MutPtr<UdpSocket>, broadcast: bool) Result<(), SocketError> {
     opt_val = broadcast ? { 1 } : { 0 }
     opt_ptr = compiler.ptr_to_int(&opt_val.ref())
     result = sys_setsockopt(self.val.fd, SOL_SOCKET, SO_BROADCAST, opt_ptr, 4)
-    result < 0 ? {
-        return Result.Err(SocketError.from_errno(result))
-    }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(SocketError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 UdpSocket.close = (self: MutPtr<UdpSocket>) void {
