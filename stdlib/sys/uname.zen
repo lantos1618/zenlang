@@ -8,30 +8,30 @@
 SysError: { code: i32 }
 
 SysError.from_errno = (errno: i64) SysError {
-    return SysError { code: cast(0 - errno, i32) }
+    SysError { code: cast(0 - errno, i32) }
 }
 
 // Get user ID
 getuid = () u32 {
-    return cast(compiler.syscall0(SYS_GETUID), u32)
+    cast(compiler.syscall0(SYS_GETUID), u32)
 }
 
 // Get group ID
 getgid = () u32 {
-    return cast(compiler.syscall0(SYS_GETGID), u32)
+    cast(compiler.syscall0(SYS_GETGID), u32)
 }
 
 // Get effective user ID
 geteuid = () u32 {
-    return cast(compiler.syscall0(SYS_GETEUID), u32)
+    cast(compiler.syscall0(SYS_GETEUID), u32)
 }
 
 // Get effective group ID
 getegid = () u32 {
-    return cast(compiler.syscall0(SYS_GETEGID), u32)
+    cast(compiler.syscall0(SYS_GETEGID), u32)
 }
 
 // Check if running as root
 is_root = () bool {
-    return geteuid() == 0
+    geteuid() == 0
 }
