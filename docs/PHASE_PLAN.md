@@ -483,6 +483,10 @@ checked-in docs, tests, and commits only.
   package/link target rejection coverage in a focused child module, leaving the
   root build graph test file for shared helpers and positive lowering smoke
   tests.
+- `zen build build.zen` validation tests now keep direct and transitive gated
+  test dependency rejection coverage in a focused child module, leaving the
+  parent build command validation file for executable-target and skipped-source
+  checks.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
