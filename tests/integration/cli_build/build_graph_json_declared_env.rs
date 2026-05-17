@@ -2,19 +2,47 @@ use std::process::Command;
 
 #[test]
 fn emit_json_build_graph_outputs_declared_env_read_effects() {
+    assert_emit_json_build_graph_outputs_declared_env_read_effect(
+        r#"| .Err { "default" }"#,
+        "emit_json_build_graph_outputs_declared_env_read_effects",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_outputs_wildcard_fallback_declared_env_read_effects() {
+    assert_emit_json_build_graph_outputs_declared_env_read_effect(
+        r#"| _ { "default" }"#,
+        "emit_json_build_graph_outputs_wildcard_fallback_declared_env_read_effects",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_outputs_identifier_fallback_declared_env_read_effects() {
+    assert_emit_json_build_graph_outputs_declared_env_read_effect(
+        r#"| err { "default" }"#,
+        "emit_json_build_graph_outputs_identifier_fallback_declared_env_read_effects",
+    );
+}
+
+fn assert_emit_json_build_graph_outputs_declared_env_read_effect(
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let build_path = tmp.path().join("build.zen");
     std::fs::write(
         &build_path,
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
 
@@ -25,7 +53,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
     assert!(
         output.status.success(),
-        "emit-json build-graph failed: stdout={}, stderr={}",
+        "{case_name}: emit-json build-graph failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

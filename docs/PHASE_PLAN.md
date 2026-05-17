@@ -2332,8 +2332,12 @@ checked-in docs, tests, and commits only.
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`
   cover negative host-effect paths through the advertised compiler command.
-  `emit_json_build_graph_outputs_declared_env_read_effects` covers the
-  matching positive declared environment-read effect JSON, while
+  `emit_json_build_graph_outputs_declared_env_read_effects`,
+  `emit_json_build_graph_outputs_wildcard_fallback_declared_env_read_effects`,
+  and
+  `emit_json_build_graph_outputs_identifier_fallback_declared_env_read_effects`
+  cover `.Err`, wildcard, and identifier fallback arms for matching positive
+  declared environment-read effect JSON, while
   `emit_json_build_graph_rejects_env_read_without_fallback` covers missing
   fallback arms before graph JSON is emitted.
   `emit_json_build_graph_outputs_declared_file_read_effects`,
