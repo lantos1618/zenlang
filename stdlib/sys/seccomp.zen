@@ -134,39 +134,44 @@ PR_GET_NO_NEW_PRIVS = 39
 // Core Functions
 // ============================================================================
 
-// Enable strict mode (only read, write, _exit, sigreturn allowed)
+// Enable strict mode with only read, write, _exit, and signal-frame exit permitted
 seccomp_strict = () Result<(), i32> {
     result = compiler.syscall3(SYS_PRCTL, PR_SET_SECCOMP, SECCOMP_MODE_STRICT, 0)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Set no_new_privs (required before seccomp filter without CAP_SYS_ADMIN)
 set_no_new_privs = () Result<(), i32> {
     result = compiler.syscall4(SYS_PRCTL, PR_SET_NO_NEW_PRIVS, 1, 0, 0)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Check if no_new_privs is set
 get_no_new_privs = () Result<bool, i32> {
     result = compiler.syscall4(SYS_PRCTL, PR_GET_NO_NEW_PRIVS, 0, 0, 0)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(result != 0)
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(result != 0) }
 }
 
 // Install BPF filter
 seccomp_filter = (prog_ptr: i64, flags: u32) Result<(), i32> {
     result = compiler.syscall3(SYS_SECCOMP, SECCOMP_SET_MODE_FILTER, flags, prog_ptr)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(()) }
 }
 
 // Get current seccomp mode
 seccomp_mode = () Result<i32, i32> {
     result = compiler.syscall3(SYS_PRCTL, PR_GET_SECCOMP, 0, 0)
-    result < 0 ? { return Result.Err(cast(result, i32)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(cast(result, i32)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 // ============================================================================
@@ -175,7 +180,7 @@ seccomp_mode = () Result<i32, i32> {
 
 // Load syscall number
 bpf_load_syscall_nr = () BpfInsn {
-    return BpfInsn {
+    BpfInsn {
         code: cast(BPF_LD | BPF_W | BPF_ABS, u16),
         jt: 0,
         jf: 0,
@@ -185,7 +190,7 @@ bpf_load_syscall_nr = () BpfInsn {
 
 // Load architecture
 bpf_load_arch = () BpfInsn {
-    return BpfInsn {
+    BpfInsn {
         code: cast(BPF_LD | BPF_W | BPF_ABS, u16),
         jt: 0,
         jf: 0,
@@ -195,7 +200,7 @@ bpf_load_arch = () BpfInsn {
 
 // Jump if equal
 bpf_jeq = (value: u32, jt: u8, jf: u8) BpfInsn {
-    return BpfInsn {
+    BpfInsn {
         code: cast(BPF_JMP | BPF_JEQ | BPF_K, u16),
         jt: jt,
         jf: jf,
@@ -205,7 +210,7 @@ bpf_jeq = (value: u32, jt: u8, jf: u8) BpfInsn {
 
 // Return action
 bpf_ret = (action: u32) BpfInsn {
-    return BpfInsn {
+    BpfInsn {
         code: cast(BPF_RET | BPF_K, u16),
         jt: 0,
         jf: 0,
@@ -262,7 +267,7 @@ build_allowlist = (syscalls: i64, count: usize, filter_buf: i64) BpfProg {
     compiler.store<BpfInsn>(compiler.int_to_ptr(filter_buf + cast(pos * 8, i64)), bpf_ret(SECCOMP_RET_ALLOW))
     pos = pos + 1
 
-    return BpfProg {
+    BpfProg {
         len: cast(pos, u16),
         filter: filter_buf
     }
