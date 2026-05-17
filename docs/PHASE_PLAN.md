@@ -2140,7 +2140,12 @@ checked-in docs, tests, and commits only.
   unresolved target dependency rejection,
   `build_program_lowering_rejects_unsupported_package_targets` and
   `build_program_lowering_rejects_unsupported_link_targets` keep package/link
-  target semantics gated with targeted diagnostics, and
+  target semantics gated with targeted diagnostics.
+  `build_target_dsl_kind_owns_source_spelling` keeps accepted build target
+  source spellings and the supported-target diagnostic list owned by the DSL
+  kind enum, and `build_target_kind_owns_diagnostic_spelling` keeps runtime
+  target-kind diagnostic spellings owned by the build graph target kind enum,
+  avoiding duplicated magic strings in semantic/CLI logic.
   `build_program_lowering_rejects_undeclared_env_reads` keeps undeclared host
   effects rejected during lowering. The constrained deterministic-effect
   surface also recognizes declared `b.os.read_file("...")` effects, covered by
