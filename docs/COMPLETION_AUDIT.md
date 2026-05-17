@@ -2750,6 +2750,9 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver declaration validation dispatch now lives in
   `src/resolver/declaration_validation.rs`, preserving resolver Phase 2
   coverage while keeping `src/resolver.rs` focused on top-level orchestration.
+- Resolver symbol-table definition builders now live in
+  `src/resolver/symbol_table/definitions.rs`, preserving resolver Phase 2
+  coverage while separating lookup methods from symbol construction.
 - Resolver declaration replay-kind helpers now live in
   `src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs`,
   preserving type, behavior, impl, callable, and type-reference replay task

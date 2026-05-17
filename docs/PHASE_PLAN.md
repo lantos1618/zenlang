@@ -272,6 +272,9 @@ checked-in docs, tests, and commits only.
 - Resolver declaration validation dispatch now lives in a dedicated resolver
   helper module, keeping declaration-type, behavior-edge, and local-expression
   validation separate from the root resolver orchestration.
+- Resolver symbol-table definition builders now live in a dedicated resolver
+  helper include, keeping lookup methods in the parent symbol-table module and
+  behavior edge recording in its focused helper.
 - Resolver type-reference validation now lives in a dedicated resolver helper
   module, keeping parameter, type-parameter, and known-symbol checks separate
   from declaration and expression traversal.
