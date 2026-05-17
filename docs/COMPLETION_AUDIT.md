@@ -2355,8 +2355,13 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_declared_file_read_effects`
   and
   `cargo test --test integration build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
-  Graph-only library export source validation before execution is covered by
-  `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`.
+  Graph-only library export source validation and typechecking before
+  execution are covered by
+  `cargo test --test integration build_graph_command_rejects_missing_graph_only_library_source`,
+  `cargo test --test integration build_graph_command_accepts_valid_graph_only_library_sources`,
+  `cargo test --test integration build_graph_command_rejects_graph_only_library_type_errors`,
+  and
+  `cargo test --test integration build_graph_command_rejects_undeclared_host_effects_before_library_typechecking`.
   Test-only graphs are rejected before execution starts, covered by
   `cargo test --test integration build_graph_command_rejects_graph_without_executable_targets`.
 - Executable build graph targets now execute dependencies before dependents,

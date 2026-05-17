@@ -2145,7 +2145,14 @@ checked-in docs, tests, and commits only.
   `build_graph_command_rejects_graph_without_executable_targets` covers
   test-only graph rejection before execution starts,
   `build_graph_command_rejects_missing_graph_only_library_source` covers
-  graph-only library export validation before execution starts, and
+  graph-only library export validation before execution starts,
+  `build_graph_command_accepts_valid_graph_only_library_sources` covers valid
+  graph-only library source validation before executable target execution,
+  `build_graph_command_rejects_graph_only_library_type_errors` covers
+  graph-only library typechecking before execution starts, and
+  `build_graph_command_rejects_undeclared_host_effects_before_library_typechecking`
+  preserves deterministic host-effect validation before graph-only library
+  typechecking, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
   Declared deterministic file-read effects are accepted through
