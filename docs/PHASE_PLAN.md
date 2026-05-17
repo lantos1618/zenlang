@@ -2144,6 +2144,10 @@ checked-in docs, tests, and commits only.
   graph-only library export validation before execution starts, and
   `build_graph_command_rejects_missing_root_source` covers a target execution
   failure before normal `zen build build.zen` is ungated.
+  Declared deterministic file-read effects are accepted through
+  `build_graph_command_accepts_declared_file_read_effects`, while undeclared
+  file reads reject before execution through
+  `build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
 - Normal `zen build build.zen` now routes through the same constrained
   deterministic graph pipeline used by `build-graph <build.zen>`, covered by
   `build_command_routes_build_zen_through_deterministic_graph`. The normal
