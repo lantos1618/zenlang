@@ -2647,6 +2647,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata.rs`,
   keeping extra impl/required name and ref mismatch coverage separate from
   absent or wrong generic behavior association metadata tests.
+- Resolver body/default local validation tests now live in
+  `src/typechecker/tests/resolver_locals/body_locals.rs`, keeping pattern,
+  top-level expression, closure, struct field default, and behavior default
+  local coverage separate from parameter and variable local metadata tests.
 
 ## Current Phase
 

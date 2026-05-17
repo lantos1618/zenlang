@@ -2908,6 +2908,11 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata.rs`,
   preserving extra impl/required name and ref mismatch coverage while keeping
   absent or wrong generic behavior association metadata tests focused.
+- Resolver body/default local validation tests now live in
+  `src/typechecker/tests/resolver_locals/body_locals.rs`, preserving pattern,
+  top-level expression, closure, struct field default, and behavior default
+  local coverage while keeping parameter and variable local metadata tests
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
