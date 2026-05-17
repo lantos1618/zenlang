@@ -327,6 +327,9 @@ checked-in docs, tests, and commits only.
 - `zen test build.zen` integration coverage now keeps test-target execution,
   deterministic host-effect rejection, and graph validation failures in
   focused modules instead of one oversized test-command file.
+- `zen emit build.zen` integration coverage now keeps single-target C emission,
+  deterministic host-effect rejection, and graph validation failures in
+  focused modules instead of one broad emit-command test file.
 - Direct `zen build.zen` integration coverage now keeps executable graph
   execution, deterministic host-effect rejection, and graph validation failures
   in focused modules instead of one oversized direct-command test file.
@@ -2252,9 +2255,15 @@ checked-in docs, tests, and commits only.
   undeclared host effects through
   `emit_command_build_zen_rejects_undeclared_host_effects`. It validates
   graph-only library exports before emission through
-  `emit_command_build_zen_rejects_missing_graph_only_library_source` and
+  `emit_command_build_zen_rejects_missing_graph_only_library_source`,
+  accepts valid graph-only library exports through
+  `emit_command_build_zen_accepts_valid_graph_only_library_sources`, and
   typechecks them before emission through
-  `emit_command_build_zen_rejects_graph_only_library_type_errors`, while
+  `emit_command_build_zen_rejects_graph_only_library_type_errors`. It also
+  preserves host-effect validation before graph-only library typechecking
+  through
+  `emit_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`,
+  while
   `emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`
   and
   `emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking`

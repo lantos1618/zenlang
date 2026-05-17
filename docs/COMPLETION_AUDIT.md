@@ -2426,6 +2426,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects`
   and
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_file_read_effects`.
+- Single-target `zen emit build.zen` validates and typechecks graph-only
+  library exports before emission, covered by
+  `cargo test --test integration emit_command_build_zen_accepts_valid_graph_only_library_sources`,
+  `cargo test --test integration emit_command_build_zen_rejects_graph_only_library_type_errors`,
+  and
+  `cargo test --test integration emit_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
 - Direct `zen build.zen` accepts declared deterministic file-read effects and
   rejects undeclared file reads before execution, covered by
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`
@@ -2494,6 +2500,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/direct_build_graph_execution.rs` from 417 to
   198 lines while preserving coverage through
   `cargo test --test integration direct_file_command_build_zen`.
+- Emit build.zen integration tests now keep graph validation cases in
+  `tests/integration/cli_build/emit_direct_validation.rs`, reducing
+  `tests/integration/cli_build/emit_direct.rs` from 377 to 47 lines while
+  preserving coverage through
+  `cargo test --test integration emit_command_build_zen`.
 - Resolver import metadata tests now keep module-symbol metadata cases in
   `src/typechecker/tests/resolver_import_metadata/module_metadata.rs`,
   reducing `src/typechecker/tests/resolver_import_metadata.rs` from 506 to 280
