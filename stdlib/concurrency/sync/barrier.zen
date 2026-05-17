@@ -24,7 +24,7 @@ Barrier: {
 
 // Create a barrier for n threads
 Barrier.new = (n: i32) Barrier {
-    return Barrier { expected: n, count: n, generation: 0 }
+    Barrier { expected: n, count: n, generation: 0 }
 }
 
 // Wait at the barrier until all threads arrive
@@ -35,30 +35,31 @@ Barrier.wait = (self: MutPtr<Barrier>) bool {
     // Decrement count
     remaining = cast(compiler.atomic_sub(compiler.raw_ptr_cast(&self.val.count.ref()), 1), i32) - 1
 
-    remaining == 0 ? {
-        // Last thread to arrive - reset and wake all
-        compiler.atomic_store(compiler.raw_ptr_cast(&self.val.count.ref()), self.val.expected)
-        compiler.atomic_add(compiler.raw_ptr_cast(&self.val.generation.ref()), 1)
-        futex_wake_all(&self.val.generation.ref())
-        return true  // Leader
-    }
-
-    // Wait for generation to change
-    current_gen = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.generation.ref())), i32)
-    current_gen == gen ? {
-        futex_wait(&self.val.generation.ref(), gen)
-    }
-
-    return false  // Follower
+    remaining == 0 ?
+        | true {
+            // Last thread to arrive - reset and wake all
+            compiler.atomic_store(compiler.raw_ptr_cast(&self.val.count.ref()), self.val.expected)
+            compiler.atomic_add(compiler.raw_ptr_cast(&self.val.generation.ref()), 1)
+            futex_wake_all(&self.val.generation.ref())
+            true
+        }
+        | false {
+            // Wait for generation to change
+            current_gen = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.generation.ref())), i32)
+            current_gen == gen ? {
+                futex_wait(&self.val.generation.ref(), gen)
+            }
+            false
+        }
 }
 
 // Get the number of threads this barrier expects
 Barrier.party_count = (self: Ptr<Barrier>) i32 {
-    return self.val.expected
+    self.val.expected
 }
 
 // Check if barrier is waiting (not all threads arrived)
 Barrier.is_waiting = (self: Ptr<Barrier>) bool {
     count = cast(compiler.atomic_load(compiler.raw_ptr_cast(&self.val.count.ref())), i32)
-    return count < self.val.expected && count > 0
+    count < self.val.expected && count > 0
 }
