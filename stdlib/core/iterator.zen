@@ -16,12 +16,12 @@ Range: {
 
 // Create a range from start to end (exclusive)
 Range.new = (start: i64, end: i64) Range {
-    return Range { current: start, end: end, step: 1 }
+    Range { current: start, end: end, step: 1 }
 }
 
 // Create a range with custom step
 Range.with_step = (start: i64, end: i64, step: i64) Range {
-    return Range { current: start, end: end, step: step }
+    Range { current: start, end: end, step: step }
 }
 
 // Get next value from range
@@ -30,29 +30,29 @@ Range.next = (self: MutPtr<Range>) Option<i64> {
         | true {
             value = self.val.current
             self.val.current = self.val.current + self.val.step
-            return Option.Some(value)
+            Option.Some(value)
         }
-        | false { return Option.None }
+        | false { Option.None }
 }
 
 // Check if range has more elements
 Range.has_next = (self: Range) bool {
-    return self.current < self.end
+    self.current < self.end
 }
 
 // Count remaining elements in range
 Range.count = (self: Range) i64 {
     self.end > self.current ?
-        | true { return (self.end - self.current) / self.step }
-        | false { return 0 }
+        | true { (self.end - self.current) / self.step }
+        | false { 0 }
 }
 
 // Convenience function: create a range from 0 to n
 range = (n: i64) Range {
-    return Range.new(0, n)
+    Range.new(0, n)
 }
 
 // Convenience function: create a range with step
 range_step = (start: i64, end: i64, step: i64) Range {
-    return Range.with_step(start, end, step)
+    Range.with_step(start, end, step)
 }
