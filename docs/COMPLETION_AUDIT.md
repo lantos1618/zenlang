@@ -262,6 +262,10 @@ and do not assume Phase 4 is ready without evidence.
   and behavior metadata tasks in one declaration dispatch, then replays the
   same callable/type/behavior restoration order as before, shrinking duplicate
   resolver-backed declaration walks without changing restoration ordering.
+- Declaration collection replay now records resolver semantic validation tasks
+  beside AST collection and resolver metadata tasks in the same declaration
+  pass, and resolver-backed semantic validation consumes that dedicated
+  semantic task bundle instead of replaying from metadata tasks.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.

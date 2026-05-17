@@ -198,14 +198,6 @@ impl TypeChecker {
         self.validate_generic_expr_type_references(body, &scoped);
     }
 
-    pub(super) fn validate_resolver_type_reference_tasks(
-        &mut self,
-        tasks: &ResolverDeclarationMetadataTasks<'_>,
-        symbols: Option<&SymbolTable>,
-    ) {
-        self.validate_resolver_type_reference_task_list(&tasks.type_references, symbols);
-    }
-
     pub(super) fn validate_resolver_type_reference_task_list(
         &mut self,
         tasks: &[ResolverTypeReferenceValidationTask<'_>],

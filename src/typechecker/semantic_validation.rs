@@ -26,16 +26,6 @@ impl TypeChecker {
         self.validate_ast_struct_field_default_tasks(&tasks.struct_field_defaults);
     }
 
-    pub(super) fn validate_resolver_declaration_semantics_from_tasks(
-        &mut self,
-        tasks: &ResolverDeclarationMetadataTasks<'_>,
-        symbols: Option<&SymbolTable>,
-    ) {
-        self.validate_behavior_association_tasks(tasks, symbols);
-        self.validate_resolver_type_reference_tasks(tasks, symbols);
-        self.validate_resolver_struct_field_default_tasks(tasks, symbols);
-    }
-
     pub(super) fn validate_resolver_declaration_semantics_from_semantic_tasks(
         &mut self,
         tasks: &ResolverDeclarationSemanticValidationTasks<'_>,
@@ -267,18 +257,6 @@ impl TypeChecker {
         for (field_name, expected) in &info.fields {
             if let Some(default) = info.field_defaults.get(field_name) {
                 self.validate_struct_field_default(field_name, expected, default);
-            }
-        }
-    }
-
-    pub(super) fn validate_resolver_struct_field_default_tasks(
-        &mut self,
-        tasks: &ResolverDeclarationMetadataTasks<'_>,
-        symbols: Option<&SymbolTable>,
-    ) {
-        for task in &tasks.types {
-            if let ResolverTypeDeclarationMetadataTask::Struct { name, span, .. } = task {
-                self.validate_resolver_struct_field_defaults(symbols, name, *span);
             }
         }
     }

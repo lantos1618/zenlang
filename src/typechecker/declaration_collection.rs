@@ -42,7 +42,11 @@ impl TypeChecker {
         self.with_resolver_backed_collection(|checker| {
             checker.collect_ast_declarations_from_tasks(&tasks.ast);
         });
-        self.collect_resolver_declarations_from_tasks(&tasks.resolver, symbols);
+        self.collect_resolver_declarations_from_tasks(
+            &tasks.resolver,
+            &tasks.resolver_semantics,
+            symbols,
+        );
     }
 
     pub(super) fn collect_resolver_declaration_metadata(

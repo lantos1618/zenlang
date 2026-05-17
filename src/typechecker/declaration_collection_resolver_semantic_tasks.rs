@@ -11,7 +11,7 @@ impl TypeChecker {
         tasks
     }
 
-    fn push_resolver_declaration_semantic_validation_tasks<'a>(
+    pub(super) fn push_resolver_declaration_semantic_validation_tasks<'a>(
         decl: &'a Declaration,
         tasks: &mut ResolverDeclarationSemanticValidationTasks<'a>,
     ) {

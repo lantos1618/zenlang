@@ -100,6 +100,7 @@ struct AstDeclarationCollectionTasks<'a> {
 struct DeclarationCollectionReplayTasks<'a> {
     ast: AstDeclarationCollectionTasks<'a>,
     resolver: ResolverDeclarationMetadataTasks<'a>,
+    resolver_semantics: ResolverDeclarationSemanticValidationTasks<'a>,
 }
 
 struct AstStructFieldDefaultValidationTask<'a> {
