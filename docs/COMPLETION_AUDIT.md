@@ -2524,6 +2524,9 @@ and do not assume Phase 4 is ready without evidence.
 - `emit-json build-graph` rejects unresolved target dependencies through the
   advertised graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_unknown_target_dependencies`.
+- `emit-json build-graph` rejects dynamic target additions before emitting graph
+  JSON, covered by
+  `cargo test --test integration emit_json_build_graph_rejects_dynamic_target_adds`.
 - `emit-json build-graph` rejects unsupported package/link targets through the
   advertised graph-emission path, covered by
   `cargo test --test integration emit_json_build_graph_rejects_unsupported_package_targets`

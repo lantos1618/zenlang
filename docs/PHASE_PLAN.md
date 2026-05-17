@@ -2380,6 +2380,8 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_self_target_dependencies` covers
   self-dependency rejection there. `emit_json_build_graph_rejects_cyclic_target_dependencies`
   covers dependency-cycle rejection on that graph-emission path.
+  `emit_json_build_graph_rejects_dynamic_target_adds` covers dynamic target
+  creation rejection before any graph JSON is emitted.
   `emit_json_build_graph_rejects_unsupported_package_targets` and
   `emit_json_build_graph_rejects_unsupported_link_targets` cover targeted
   package/link target rejection through the CLI graph-emission path.
