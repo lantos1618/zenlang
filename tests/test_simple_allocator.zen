@@ -7,5 +7,5 @@ main = () i32 {
     io.println("Creating allocator...")
     alloc = Heap.sync()
     io.println("Done!")
-    return 0
+    0
 }
