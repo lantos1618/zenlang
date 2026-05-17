@@ -2369,13 +2369,14 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` and direct `zen build.zen` execute multiple executable
 graph targets, `zen test build.zen` executes multiple test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
-graph and typechecks target sources without compiling them, `zen emit build.zen`
-emits target C for a single executable graph target, and build/test/emit
-validate and typecheck graph-only library target sources while build/test/emit
-execution rejects dependencies on gated non-selected target kinds and library
-execution remains gated. Legacy generic JSON emitters reject
-`build.zen` and point to
-`emit-json build-graph`.
+  graph and typechecks target sources without compiling them, `zen emit build.zen`
+  emits target C for a single executable graph target, and build/test/emit
+  validate and typecheck graph-only library target sources while build/test/emit
+  execution rejects dependencies on gated non-selected target kinds and library
+  execution remains explicitly gated by library-only graph rejection coverage.
+  Legacy generic JSON emitters reject
+  `build.zen` and point to
+  `emit-json build-graph`.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.

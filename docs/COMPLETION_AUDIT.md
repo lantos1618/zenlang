@@ -2458,6 +2458,14 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_rejects_graph_only_library_type_errors`,
   and
   `cargo test --test integration emit_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
+- Library-only build graphs remain non-executable across the current execution
+  entrypoints, covered by
+  `cargo test --test integration build_command_build_zen_rejects_library_only_graph_execution`,
+  `cargo test --test integration direct_file_command_build_zen_rejects_library_only_graph_execution`,
+  `cargo test --test integration build_graph_command_rejects_library_only_graph_execution`,
+  `cargo test --test integration emit_command_build_zen_rejects_library_only_graph_execution`,
+  and
+  `cargo test --test integration test_command_build_zen_rejects_library_only_graph_execution`.
 - Direct `zen build.zen` accepts declared deterministic file-read effects and
   rejects undeclared file reads before execution, covered by
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects`
