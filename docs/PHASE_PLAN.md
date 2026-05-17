@@ -2582,6 +2582,10 @@ checked-in docs, tests, and commits only.
 - CLI build graph source existence and typechecking helpers now live in
   `src/cli/build_graph_sources.rs`, keeping source validation separate from
   execution target ordering and dependency gating.
+- Build graph lowering target extraction now lives in
+  `src/build_graph/lowering/targets.rs`, keeping `b.add(...)` target
+  recognition and field extraction separate from build-script expression
+  traversal.
 
 ## Current Phase
 
