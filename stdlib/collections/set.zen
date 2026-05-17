@@ -19,7 +19,7 @@ Set<T>: {
 
 // Create new empty set
 Set<T>.new = (allocator: Allocator) Set<T> {
-    return Set<T> {
+    Set<T> {
         data: DynVec<T>.new(allocator),
         allocator: allocator
     }
@@ -27,7 +27,7 @@ Set<T>.new = (allocator: Allocator) Set<T> {
 
 // Create set with initial capacity
 Set<T>.with_capacity = (allocator: Allocator, capacity: usize) Set<T> {
-    return Set<T> {
+    Set<T> {
         data: DynVec<T>.with_capacity(allocator, capacity),
         allocator: allocator
     }
@@ -39,12 +39,12 @@ Set<T>.with_capacity = (allocator: Allocator, capacity: usize) Set<T> {
 
 // Get set size
 Set<T>.len = (self: Set<T>) usize {
-    return self.data.len()
+    self.data.len()
 }
 
 // Check if empty
 Set<T>.is_empty = (self: Set<T>) bool {
-    return self.data.is_empty()
+    self.data.is_empty()
 }
 
 // ============================================================================
@@ -53,7 +53,7 @@ Set<T>.is_empty = (self: Set<T>) bool {
 
 // Check if element exists at index (bounds check)
 Set<T>.contains_index = (self: Set<T>, index: usize) bool {
-    return index < self.data.len()
+    index < self.data.len()
 }
 
 // Helper: check if element exists starting from index
@@ -66,17 +66,17 @@ Set<T>.contains_from = (self: Set<T>, elem: T, i: usize) bool {
             current ?
                 | Some(val) {
                     val == elem ?
-                        | true { return true }
-                        | false { return self.contains_from(elem, i + 1) }
+                        | true { true }
+                        | false { self.contains_from(elem, i + 1) }
                 }
-                | None { return self.contains_from(elem, i + 1) }
+                | None { self.contains_from(elem, i + 1) }
         }
-        | false { return false }
+        | false { false }
 }
 
 // Check if element exists in set (linear scan with equality check)
 Set<T>.contains = (self: Set<T>, elem: T) bool {
-    return self.contains_from(elem, 0)
+    self.contains_from(elem, 0)
 }
 
 // Insert element (checks for duplicates to maintain uniqueness)
@@ -131,18 +131,18 @@ Set<T>.remove_from = (self: MutPtr<Set<T>>, elem: T, i: usize) bool {
                         | true {
                             // Found it, remove at this index
                             self.remove_at(i)
-                            return true
+                            true
                         }
-                        | false { return self.remove_from(elem, i + 1) }
+                        | false { self.remove_from(elem, i + 1) }
                 }
-                | None { return self.remove_from(elem, i + 1) }
+                | None { self.remove_from(elem, i + 1) }
         }
-        | false { return false }
+        | false { false }
 }
 
 // Remove element by value (finds and removes first occurrence)
 Set<T>.remove = (self: MutPtr<Set<T>>, elem: T) bool {
-    return self.remove_from(elem, 0)
+    self.remove_from(elem, 0)
 }
 
 // Clear set
@@ -172,7 +172,7 @@ SetIterator<T>: {
 
 // Create an iterator over the set
 Set<T>.iter = (self: Set<T>) SetIterator<T> {
-    return SetIterator<T> {
+    SetIterator<T> {
         data: self.data,
         index: 0,
         len: self.data.len()
@@ -182,15 +182,15 @@ Set<T>.iter = (self: Set<T>) SetIterator<T> {
 // Get next element from iterator
 SetIterator<T>.next = (self: MutPtr<SetIterator<T>>) Option<T> {
     self.val.index >= self.val.len ?
-        | true { return Option.None }
+        | true { Option.None }
         | false {
             elem_opt = self.val.data.get(self.val.index)
             self.val.index = self.val.index + 1
-            return elem_opt
+            elem_opt
         }
 }
 
 // Check if iterator has more elements
 SetIterator<T>.has_next = (self: SetIterator<T>) bool {
-    return self.index < self.len
+    self.index < self.len
 }
