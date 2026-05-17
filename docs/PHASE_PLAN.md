@@ -2447,8 +2447,13 @@ checked-in docs, tests, and commits only.
   `build_graph_command_accepts_declared_env_read_with_fallback`,
   `build_graph_command_accepts_wildcard_fallback_declared_env_read`, and
   `build_graph_command_accepts_identifier_fallback_declared_env_read`.
+  Multi-target executable graphs preserve the same declared env-read behavior
+  through `build_graph_command_accepts_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before execution through
   `build_graph_command_rejects_env_read_without_fallback_before_execution`.
+  Multi-target executable graphs with env reads lacking a fallback arm reject
+  before execution through
+  `build_graph_command_multi_target_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through `.Err`,
   wildcard, and identifier fallback arms, covered by
   `build_graph_command_accepts_declared_file_read_effects`,
