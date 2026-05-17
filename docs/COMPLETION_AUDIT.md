@@ -2384,6 +2384,13 @@ and do not assume Phase 4 is ready without evidence.
   `call_support.rs` to direct function-call handling while preserving generic
   method and UFC coverage through `cargo test --lib generic_method` and the
   `single_file_fixtures::test_generic_method*` integration filters.
+- Expression function checking now lives in
+  `src/typechecker/expressions/function_checking.rs`, reducing
+  `expressions.rs` below the 500-line cleanup threshold while preserving
+  return/fallthrough and defer behavior through
+  `cargo test --lib return_type_mismatch_error`,
+  `cargo test --lib non_void_function_without_return_is_error`, and
+  `cargo test --test integration runtime_fixtures::test_defer_early_return`.
 
 ## Unresolved Gaps
 
