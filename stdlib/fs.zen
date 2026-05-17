@@ -8,5 +8,5 @@
 
 // Convenience: create a directory with default permissions (0755)
 create_dir = (path: i64) Result<(), i32> {
-    return mkdir_default(path)
+    mkdir_default(path)
 }
