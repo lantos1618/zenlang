@@ -2522,6 +2522,9 @@ checked-in docs, tests, and commits only.
   and multi-target executable graph execution keeps the same declared file-read
   fallback behavior through
   `build_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  File reads with `?` but no fallback arm reject before multi-target execution
+  through
+  `build_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
   Undeclared file reads reject before target execution through
   `build_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
   and before multi-target execution through
