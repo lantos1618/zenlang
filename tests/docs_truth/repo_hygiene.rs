@@ -86,8 +86,12 @@ fn ci_and_release_only_advertise_existing_targets() {
     assert!(ci.contains("cargo test --lib"));
     assert!(ci.contains("cargo test --tests"));
     assert!(
-        ci.contains("types: [opened, reopened, ready_for_review]"),
-        "CI pull_request triggers must avoid synchronize spam while still running when PRs leave draft"
+        ci.contains("types: [reopened, ready_for_review]"),
+        "CI pull_request triggers must avoid draft-open and synchronize spam while still running when PRs leave draft"
+    );
+    assert!(
+        !ci.contains("types: [opened") && !ci.contains(", opened") && !ci.contains("- opened"),
+        "CI workflow should not create skipped runs for draft PR creation"
     );
     assert!(
         !ci.contains("synchronize"),
