@@ -2639,6 +2639,10 @@ checked-in docs, tests, and commits only.
   keeping method name, return, parameter, order, and count restoration coverage
   separate from incomplete-metadata and default-method behavior collection
   tests.
+- Resolver behavior-association replay helper tests now live in
+  `src/typechecker/tests/resolver_validation/replay_tasks/association_lists/association_validation.rs`,
+  keeping extends, requires, combined association collection, and validation
+  replay coverage separate from resolver replay bundle aggregation tests.
 
 ## Current Phase
 

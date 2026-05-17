@@ -2899,6 +2899,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving method name, return, parameter, order, and count restoration
   coverage while keeping incomplete-metadata and default-method behavior
   collection tests focused.
+- Resolver behavior-association replay helper tests now live in
+  `src/typechecker/tests/resolver_validation/replay_tasks/association_lists/association_validation.rs`,
+  preserving extends, requires, combined association collection, and validation
+  replay coverage while keeping resolver replay bundle aggregation tests
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
