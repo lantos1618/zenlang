@@ -2766,6 +2766,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/expressions/simple_forms.rs`, preserving core semantic,
   single-file fixture, and generic diagnostic coverage while leaving the root
   expression checker closer to dispatch.
+- C codegen now keeps runtime and stdlib stand-in helper emission in
+  `src/codegen/c/types/runtime_helpers.rs`, preserving codegen unit coverage
+  and runtime fixture execution while leaving C type/program/function emission
+  smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

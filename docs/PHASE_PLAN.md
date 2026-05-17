@@ -343,6 +343,8 @@ checked-in docs, tests, and commits only.
 - Expression checking now keeps identifier, block, return, cast, interpolation,
   defer, and closure forms in a focused child module, leaving the root
   expression checker closer to dispatch.
+- C codegen now keeps runtime and stdlib stand-in helper emission in a focused
+  child module, leaving C type/program/function emission smaller.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
