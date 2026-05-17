@@ -130,6 +130,55 @@ main = () i32 {
 }
 
 #[test]
+fn imported_generic_function_explicit_type_arg_arity_is_error() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let helpers_path = tmp.path().join("helpers.zen");
+    std::fs::write(
+        &helpers_path,
+        r#"
+pub take_second<T, U> = (value: U) U {
+    value
+}
+"#,
+    )
+    .expect("write helpers module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ take_second } = helpers
+
+main = () i32 {
+    take_second<i32>(1)
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported generic function arity errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("generic function `take_second` expects 2 type arguments, found 1"),
+        "expected imported generic function arity diagnostic, panic={message}"
+    );
+    assert!(
+        !message.contains("cannot infer type argument"),
+        "imported generic function arity failure should not also report inference, panic={message}"
+    );
+    assert!(
+        !message.contains("argument 1"),
+        "imported generic function arity failure should not also report argument mismatch, panic={message}"
+    );
+}
+
+#[test]
 fn imported_behavior_extends_requires_parent_methods() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let traits_path = tmp.path().join("traits.zen");
