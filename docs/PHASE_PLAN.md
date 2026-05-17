@@ -2552,6 +2552,12 @@ checked-in docs, tests, and commits only.
   with shared dependency ordering and existing non-executed source-validation
   ordering preserved, covered by `cargo test --test integration
   library_execution_gates`.
+- Build graph execution dependency gates now walk reachable dependencies, so a
+  graph-only library cannot transitively pull in a gated test target during
+  `zen build build.zen` or a gated executable target during `zen test build.zen`.
+  Coverage includes
+  `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
+  `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
 - CLI C emission and binary compilation helpers now live in
   `src/cli/compile.rs`, keeping the root CLI module focused on command
   dispatch, graph loading, and frontend diagnostics while preserving existing

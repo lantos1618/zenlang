@@ -2674,6 +2674,13 @@ and do not assume Phase 4 is ready without evidence.
   with shared dependency ordering and existing non-executed source-validation
   ordering preserved, covered by `cargo test --test integration
   library_execution_gates`.
+- Build graph execution dependency gates now validate reachable dependencies,
+  not only direct dependencies from executed targets. Graph-only libraries can
+  still be source/typechecked dependencies, but they cannot transitively pull in
+  gated test targets during build execution or gated executable targets during
+  test execution. Coverage includes
+  `build_command_build_zen_rejects_transitive_gated_test_dependencies` and
+  `test_command_build_zen_rejects_transitive_gated_executable_dependencies`.
 
 ## Unresolved Gaps
 
@@ -2690,9 +2697,9 @@ and do not assume Phase 4 is ready without evidence.
   graph-only library source validation and typechecking before build/test/emit
   execution, test and library target graph lowering/emission, single-target
   normal `zen emit build.zen`, validated library source dependencies for
-  build/test/emit graph execution, gated executable/test dependency rejection
-  for selected target kinds, library-only graph execution rejection, and
-  targeted rejection for legacy generic `emit-json build.zen` modes. Library
+  build/test/emit graph execution, direct and transitive gated executable/test
+  dependency rejection for selected target kinds, library-only graph execution
+  rejection, and targeted rejection for legacy generic `emit-json build.zen` modes. Library
   execution, package/link semantics, and other broader graph semantics still
   need explicit deterministic semantics before promotion.
 - CLI compile helpers are now split into `src/cli/compile.rs`; this is an

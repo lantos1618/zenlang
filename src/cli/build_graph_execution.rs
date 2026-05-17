@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -137,30 +137,55 @@ fn validate_executed_dependency_targets(
         .map(|target| (target.name(), target))
         .collect();
 
+    let mut validated_targets = HashSet::new();
     for target in graph
         .targets()
         .iter()
         .filter(|target| execution_kind.includes(target.kind()))
     {
-        for dependency in target.dependencies() {
-            let Some(dependency_target) = targets_by_name.get(dependency.as_str()) else {
-                continue;
-            };
-            if execution_kind.includes(dependency_target.kind())
-                || matches!(
-                    dependency_target.kind(),
-                    zen::build_graph::BuildTargetKind::Library { .. }
-                )
-            {
-                continue;
-            }
-            eprintln!(
-                "build graph target `{}` depends on gated {} target `{}`",
-                target.name(),
+        validate_reachable_dependency_targets(
+            target,
+            &targets_by_name,
+            execution_kind,
+            &mut validated_targets,
+        );
+    }
+}
+
+fn validate_reachable_dependency_targets(
+    target: &zen::build_graph::BuildTarget,
+    targets_by_name: &HashMap<&str, &zen::build_graph::BuildTarget>,
+    execution_kind: BuildGraphExecutionKind,
+    validated_targets: &mut HashSet<String>,
+) {
+    if !validated_targets.insert(target.name().to_string()) {
+        return;
+    }
+
+    for dependency in target.dependencies() {
+        let Some(dependency_target) = targets_by_name.get(dependency.as_str()) else {
+            continue;
+        };
+        if execution_kind.includes(dependency_target.kind())
+            || matches!(
                 dependency_target.kind(),
-                dependency_target.name()
+                zen::build_graph::BuildTargetKind::Library { .. }
+            )
+        {
+            validate_reachable_dependency_targets(
+                dependency_target,
+                targets_by_name,
+                execution_kind,
+                validated_targets,
             );
-            process::exit(1);
+            continue;
         }
+        eprintln!(
+            "build graph target `{}` depends on gated {} target `{}`",
+            target.name(),
+            dependency_target.kind(),
+            dependency_target.name()
+        );
+        process::exit(1);
     }
 }
