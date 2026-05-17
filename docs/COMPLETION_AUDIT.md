@@ -2868,6 +2868,12 @@ and do not assume Phase 4 is ready without evidence.
   preserving inherited default method synthesis and generic default return
   substitution coverage while keeping parent restoration, duplicate, conflict,
   and cycle diagnostics focused.
+- Generic behavior inheritance diagnostics now live in
+  `src/typechecker/tests/generic_behaviors/extends/diagnostics.rs`,
+  preserving parent/child overlap, inheritance cycle, duplicate parent,
+  missing generic type arguments, nongeneric type arguments, inherited method
+  conflict, and implementation signature mismatch coverage while keeping
+  positive inheritance cases focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
