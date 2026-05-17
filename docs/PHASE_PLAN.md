@@ -2430,7 +2430,11 @@ checked-in docs, tests, and commits only.
   `build_graph_orders_targets_before_dependents` and
   `build_command_build_zen_compiles_executable_dependencies_first`, and reject
   dependencies on validated library source targets through
-  `build_command_build_zen_accepts_library_dependencies`. They still reject
+  `build_command_build_zen_accepts_library_dependencies`. They reject unknown,
+  self, and cyclic target dependencies before execution through
+  `build_command_build_zen_rejects_unknown_target_dependencies`,
+  `build_command_build_zen_rejects_self_target_dependencies`, and
+  `build_command_build_zen_rejects_cyclic_target_dependencies`. They still reject
   executable-target dependencies on gated test targets through
   `build_command_build_zen_rejects_gated_test_dependencies`. They reject
   graph-only library exports with missing sources through

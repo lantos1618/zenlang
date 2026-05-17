@@ -2566,6 +2566,12 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test build_graph build_graph_orders_targets_before_dependents`
   and
   `cargo test --test integration build_command_build_zen_compiles_executable_dependencies_first`.
+- Normal build graph execution rejects unknown, self, and cyclic target
+  dependencies before execution, covered by
+  `cargo test --test integration build_command_build_zen_rejects_unknown_target_dependencies`,
+  `cargo test --test integration build_command_build_zen_rejects_self_target_dependencies`,
+  and
+  `cargo test --test integration build_command_build_zen_rejects_cyclic_target_dependencies`.
 - Normal build graph execution accepts declared deterministic file-read effects
   and rejects undeclared file reads before target execution, covered by
   `cargo test --test integration build_command_build_zen_accepts_declared_file_read_effects`
