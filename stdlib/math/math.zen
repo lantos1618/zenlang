@@ -9,15 +9,15 @@ E = 2.71828182845904523536
 // Absolute value (generic)
 abs<T> = (n: T) T {
     n < 0 ?
-        | true { return -n }
-        | false { return n }
+        | true { -n }
+        | false { n }
 }
 
 // Factorial (u32 -> u64 to avoid overflow)
 factorial = (n: u32) u64 {
     n == 0 ?
-        | true { return 1 }
-        | false { return cast(n, u64) * factorial(n - 1) }
+        | true { 1 }
+        | false { cast(n, u64) * factorial(n - 1) }
 }
 
 // Check if even
@@ -33,25 +33,25 @@ is_odd = (n: i32) bool {
 // Max of two values (generic)
 max<T> = (a: T, b: T) T {
     a > b ?
-        | true { return a }
-        | false { return b }
+        | true { a }
+        | false { b }
 }
 
 // Min of two values (generic)
 min<T> = (a: T, b: T) T {
     a < b ?
-        | true { return a }
-        | false { return b }
+        | true { a }
+        | false { b }
 }
 
 // Clamp value to range
 clamp = (n: i32, low: i32, high: i32) i32 {
     n < low ?
-        | true { return low }
+        | true { low }
         | false {
             n > high ?
-                | true { return high }
-                | false { return n }
+                | true { high }
+                | false { n }
         }
 }
 
