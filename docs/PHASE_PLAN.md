@@ -335,6 +335,8 @@ checked-in docs, tests, and commits only.
 - Error reporting now keeps `FileTable` source storage in a focused child
   module, leaving `error.rs` centered on spans, diagnostics, and compile error
   conversion.
+- Pattern checking now keeps enum and bool match validation in a focused child
+  module, leaving core pattern binding and lowering helpers smaller.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
