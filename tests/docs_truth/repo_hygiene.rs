@@ -154,6 +154,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/io/eventfd.zen",
         "stdlib/io/files/copy.zen",
         "stdlib/io/files/dir.zen",
+        "stdlib/io/files/splice.zen",
         "stdlib/io/inotify.zen",
         "stdlib/io/io.zen",
         "stdlib/io/mux/epoll.zen",

@@ -37,13 +37,14 @@ splice = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usize, flags:
         len,
         flags
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Splice from current position (no offset tracking)
 splice_simple = (fd_in: i32, fd_out: i32, len: usize, flags: u32) Result<usize, i32> {
-    return splice(fd_in, 0, fd_out, 0, len, flags)
+    splice(fd_in, 0, fd_out, 0, len, flags)
 }
 
 // ============================================================================
@@ -58,8 +59,9 @@ splice_simple = (fd_in: i32, fd_out: i32, len: usize, flags: u32) Result<usize, 
 
 tee = (fd_in: i32, fd_out: i32, len: usize, flags: u32) Result<usize, i32> {
     result = compiler.syscall4(SYS_TEE, fd_in, fd_out, len, flags)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // ============================================================================
@@ -76,8 +78,9 @@ IoVec: {
 
 vmsplice = (fd: i32, iov: i64, nr_segs: usize, flags: u32) Result<usize, i32> {
     result = compiler.syscall4(SYS_VMSPLICE, fd, iov, nr_segs, flags)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Simple single-buffer vmsplice
@@ -90,7 +93,7 @@ vmsplice_buf = (fd: i32, buf: i64, len: usize, flags: u32) Result<usize, i32> {
     result = vmsplice(fd, compiler.ptr_to_int(iov_ptr), 1, flags)
 
     compiler.raw_deallocate(iov_ptr, 16)
-    return result
+    result
 }
 
 // ============================================================================
@@ -102,13 +105,14 @@ vmsplice_buf = (fd: i32, buf: i64, len: usize, flags: u32) Result<usize, i32> {
 sendfile = (out_fd: i32, in_fd: i32, offset: i64, count: usize) Result<usize, i32> {
     // offset is a pointer to the offset (or 0 to use current position)
     result = compiler.syscall4(SYS_SENDFILE, out_fd, in_fd, offset, count)
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // Send file from current position
 sendfile_simple = (out_fd: i32, in_fd: i32, count: usize) Result<usize, i32> {
-    return sendfile(out_fd, in_fd, 0, count)
+    sendfile(out_fd, in_fd, 0, count)
 }
 
 // ============================================================================
@@ -127,8 +131,9 @@ copy_file_range = (fd_in: i32, off_in: i64, fd_out: i32, off_out: i64, len: usiz
         len,
         flags
     )
-    result < 0 ? { return Result.Err(cast(0 - result, i32)) }
-    return Result.Ok(cast(result, usize))
+    result < 0 ?
+        | true { Result.Err(cast(0 - result, i32)) }
+        | false { Result.Ok(cast(result, usize)) }
 }
 
 // ============================================================================
@@ -150,16 +155,18 @@ Pipe.new = () Result<Pipe, i32> {
     fds_ptr = compiler.raw_allocate(8)  // Two i32s
 
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(fds_ptr), 0)
-    result < 0 ? {
-        compiler.raw_deallocate(fds_ptr, 8)
-        return Result.Err(cast(0 - result, i32))
-    }
+    result < 0 ?
+        | true {
+            compiler.raw_deallocate(fds_ptr, 8)
+            Result.Err(cast(0 - result, i32))
+        }
+        | false {
+            read_fd = compiler.load<i32>(fds_ptr)
+            write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
 
-    read_fd = compiler.load<i32>(fds_ptr)
-    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
-
-    compiler.raw_deallocate(fds_ptr, 8)
-    return Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+            compiler.raw_deallocate(fds_ptr, 8)
+            Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+        }
 }
 
 // Create pipe with flags
@@ -167,16 +174,18 @@ Pipe.with_flags = (flags: i32) Result<Pipe, i32> {
     fds_ptr = compiler.raw_allocate(8)
 
     result = compiler.syscall2(SYS_PIPE2, compiler.ptr_to_int(fds_ptr), flags)
-    result < 0 ? {
-        compiler.raw_deallocate(fds_ptr, 8)
-        return Result.Err(cast(0 - result, i32))
-    }
+    result < 0 ?
+        | true {
+            compiler.raw_deallocate(fds_ptr, 8)
+            Result.Err(cast(0 - result, i32))
+        }
+        | false {
+            read_fd = compiler.load<i32>(fds_ptr)
+            write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
 
-    read_fd = compiler.load<i32>(fds_ptr)
-    write_fd = compiler.load<i32>(compiler.gep(fds_ptr, 4))
-
-    compiler.raw_deallocate(fds_ptr, 8)
-    return Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+            compiler.raw_deallocate(fds_ptr, 8)
+            Result.Ok(Pipe { read_fd: read_fd, write_fd: write_fd })
+        }
 }
 
 // Close both ends
@@ -207,19 +216,19 @@ SpliceStream: {
 SpliceStream.new = () Result<SpliceStream, i32> {
     pipe_result = Pipe.new()
     pipe_result ? {
-        | Ok(p) { return Result.Ok(SpliceStream { pipe: p }) }
-        | Err(e) { return Result.Err(e) }
+        | Ok(p) { Result.Ok(SpliceStream { pipe: p }) }
+        | Err(e) { Result.Err(e) }
     }
 }
 
 // Read from fd into stream (fd -> pipe)
 SpliceStream.read_from = (self: MutPtr<SpliceStream>, fd: i32, len: usize) Result<usize, i32> {
-    return splice_simple(fd, self.val.pipe.write_fd, len, SPLICE_F_MOVE)
+    splice_simple(fd, self.val.pipe.write_fd, len, SPLICE_F_MOVE)
 }
 
 // Write from stream to fd (pipe -> fd)
 SpliceStream.write_to = (self: MutPtr<SpliceStream>, fd: i32, len: usize) Result<usize, i32> {
-    return splice_simple(self.val.pipe.read_fd, fd, len, SPLICE_F_MOVE)
+    splice_simple(self.val.pipe.read_fd, fd, len, SPLICE_F_MOVE)
 }
 
 // Transfer data between two fds via the pipe
@@ -227,11 +236,8 @@ SpliceStream.transfer = (self: MutPtr<SpliceStream>, in_fd: i32, out_fd: i32, le
     // Read into pipe
     read_result = self.read_from(in_fd, len)
     read_result ? {
-        | Err(e) { return Result.Err(e) }
-        | Ok(n) {
-            // Write from pipe
-            return self.write_to(out_fd, n)
-        }
+        | Err(e) { Result.Err(e) }
+        | Ok(n) { self.write_to(out_fd, n) }
     }
 }
 
