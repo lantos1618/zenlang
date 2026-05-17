@@ -3005,6 +3005,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving direct, receiver-derived, Result enum, function-type, array,
   raw-pointer, and slice conflict checks while keeping the parent inference
   conflict module focused on generic function inference conflicts.
+- Generic call-site bound diagnostics now keep method, receiver, Result enum,
+  and UFC bound-failure coverage in
+  `tests/generic_diagnostics/call_site_bounds/methods.rs`, preserving the
+  no-followup-body-error checks while keeping the parent call-site bound module
+  focused on generic function bound failures.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
