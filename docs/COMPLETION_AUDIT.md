@@ -279,6 +279,10 @@ and do not assume Phase 4 is ready without evidence.
   dependency cases into
   `tests/integration/generic_specializations/multifile_generated_c.rs`,
   preserving generated-call coverage while reducing the root integration file.
+- Check-command build graph validation now splits host-effect ordering and
+  declared-effect tests into
+  `tests/integration/cli_build/graph_validation_host_effects.rs`, leaving
+  target source and library graph validation in the root graph-validation file.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.

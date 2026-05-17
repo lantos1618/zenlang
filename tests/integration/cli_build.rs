@@ -32,6 +32,8 @@ mod emit_direct_validation;
 mod frontend_json;
 #[path = "cli_build/graph_validation.rs"]
 mod graph_validation;
+#[path = "cli_build/graph_validation_host_effects.rs"]
+mod graph_validation_host_effects;
 #[path = "cli_build/graph_validation_test_command.rs"]
 mod graph_validation_test_command;
 #[path = "cli_build/graph_validation_test_command_host_effects.rs"]

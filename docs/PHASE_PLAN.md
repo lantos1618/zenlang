@@ -403,6 +403,9 @@ checked-in docs, tests, and commits only.
 - Generic specialization generated-C assertions now keep multi-file import and
   dependency cases in a focused integration module, separating them from
   single-file generic specialization emission assertions.
+- Check-command build graph validation tests now keep host-effect ordering and
+  declared-effect cases in a focused integration module, separating them from
+  target source and library graph validation cases.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a
