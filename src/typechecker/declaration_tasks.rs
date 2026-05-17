@@ -91,6 +91,12 @@ struct AstDeclarationCollectionTasks<'a> {
     precollection_validations: AstPrecollectionValidationTasks<'a>,
 }
 
+#[derive(Default)]
+struct DeclarationCollectionReplayTasks<'a> {
+    ast: AstDeclarationCollectionTasks<'a>,
+    resolver: ResolverDeclarationMetadataTasks<'a>,
+}
+
 struct AstStructFieldDefaultValidationTask<'a> {
     type_params: &'a [ast::TypeParam],
     fields: &'a [StructField],
@@ -315,4 +321,3 @@ struct DefaultBehaviorMethod {
     body: Expression,
     span: Span,
 }
-

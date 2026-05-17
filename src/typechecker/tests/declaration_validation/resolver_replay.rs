@@ -366,3 +366,40 @@ main = (value: Point) i32 { 1 }
         checker.diagnostics()
     );
 }
+
+#[test]
+fn declaration_collection_replay_bundle_collects_ast_and_resolver_tasks_together() {
+    let program = parse_program(
+        r#"
+{ io } = std
+
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) str
+}
+
+Point.implements(Json) {
+    encode = (self: Point) str { "point" }
+}
+
+Point.requires(Json)
+
+main = () i32 { 1 }
+"#,
+    );
+
+    let tasks = TypeChecker::collect_declaration_collection_replay_tasks(&program.declarations);
+
+    assert_eq!(tasks.ast.imports.len(), 1);
+    assert_eq!(tasks.ast.types.len(), 1);
+    assert_eq!(tasks.ast.behaviors.len(), 1);
+    assert_eq!(tasks.ast.callable.len(), 1);
+    assert_eq!(tasks.ast.impl_blocks.len(), 1);
+    assert_eq!(tasks.resolver.types.len(), 1);
+    assert_eq!(tasks.resolver.behaviors.len(), 1);
+    assert_eq!(tasks.resolver.callable.len(), 1);
+    assert_eq!(tasks.resolver.behavior_associations.impls.len(), 1);
+    assert_eq!(tasks.resolver.behavior_associations.requires.len(), 1);
+    assert_eq!(tasks.resolver.type_references.len(), 4);
+}

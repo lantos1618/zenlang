@@ -27,22 +27,7 @@ impl TypeChecker {
     ) -> AstDeclarationCollectionTasks<'_> {
         let mut tasks = AstDeclarationCollectionTasks::default();
         for decl in decls {
-            Self::push_behavior_declaration_task(decl, &mut tasks.behaviors);
-            Self::push_ast_type_declaration_task(decl, &mut tasks.types);
-            Self::push_callable_declaration_task(decl, &mut tasks.callable);
-            Self::push_impl_block_declaration_task(decl, &mut tasks.impl_blocks);
-            Self::push_ast_import_declaration_task(decl, &mut tasks.imports);
-            Self::push_self_type_context_validation_task(
-                decl,
-                &mut tasks.precollection_validations.self_type_contexts,
-            );
-            Self::push_behavior_extends_replay_task(
-                decl,
-                &mut tasks
-                    .precollection_validations
-                    .behavior_associations
-                    .extends,
-            );
+            Self::push_ast_declaration_collection_tasks(decl, &mut tasks);
         }
         tasks
     }
@@ -52,10 +37,12 @@ impl TypeChecker {
         decls: &[Declaration],
         symbols: &SymbolTable,
     ) {
-        self.with_resolver_backed_collection(|checker| checker.collect_declarations(decls));
+        let tasks = Self::collect_declaration_collection_replay_tasks(decls);
 
-        let tasks = Self::collect_resolver_declaration_metadata_tasks(decls);
-        self.collect_resolver_declarations_from_tasks(&tasks, symbols);
+        self.with_resolver_backed_collection(|checker| {
+            checker.collect_ast_declarations_from_tasks(&tasks.ast);
+        });
+        self.collect_resolver_declarations_from_tasks(&tasks.resolver, symbols);
     }
 
     pub(super) fn collect_resolver_declaration_metadata(
