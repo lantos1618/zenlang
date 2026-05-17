@@ -124,6 +124,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
     for path in [
         "stdlib/build.zen",
         "stdlib/compiler.zen",
+        "stdlib/concurrency/sync/barrier.zen",
         "stdlib/ffi.zen",
         "stdlib/fs.zen",
         "stdlib/io/eventfd.zen",
