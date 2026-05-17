@@ -3080,6 +3080,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving missing source, valid source, and library typecheck coverage while
   keeping test-target, gated-dependency, and skipped-source validation checks
   focused.
+- Build-graph JSON validation tests now live in
+  `tests/integration/cli_build/build_graph_json/validation.rs`, preserving
+  target field, dependency, unsupported target, and gated package/link
+  diagnostics while keeping successful graph JSON shape fixtures focused.
 - Imported behavior inheritance frontend diagnostics now live in
   `tests/integration/frontend_diagnostics/behavior_extends.rs`, preserving
   direct, imported-parent, and transitive parent-method diagnostics while
