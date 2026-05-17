@@ -21,6 +21,32 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn emit_json_build_graph_rejects_unknown_test_target_fields() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Test { name: "unit", root: "test.zen", out_dir: "build/tests/" })
+    .Ok(b.config())
+}
+"#,
+        "unknown field `out_dir` in `Test` build target",
+    );
+}
+
+#[test]
+fn emit_json_build_graph_rejects_unknown_library_target_fields() {
+    assert_emit_json_build_graph_error_contains(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["src/lib.zen"], output_dir: "build/lib/" })
+    .Ok(b.config())
+}
+"#,
+        "unknown field `output_dir` in `Library` build target",
+    );
+}
+
+#[test]
 fn emit_json_build_graph_rejects_missing_required_target_fields() {
     assert_emit_json_build_graph_error_contains(
         r#"
