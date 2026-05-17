@@ -12,6 +12,10 @@ fn build_target_dsl_kind_owns_source_spelling() {
     assert_eq!(BuildTargetDslKind::Executable.to_string(), "Executable");
     assert_eq!(BuildTargetDslKind::Test.to_string(), "Test");
     assert_eq!(BuildTargetDslKind::Library.to_string(), "Library");
+    assert_eq!(
+        BuildTargetDslKind::supported_display_list(),
+        "`Executable`, `Test`, and `Library`"
+    );
 }
 
 #[test]
