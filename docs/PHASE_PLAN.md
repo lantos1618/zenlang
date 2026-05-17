@@ -2134,13 +2134,18 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen check build.zen` validates the same constrained deterministic
   graph without compiling targets, covered by
-  `check_command_validates_build_zen_graph`. It rejects missing executable,
-  test, and library sources through
+  `check_command_validates_build_zen_graph`. It typechecks graph target
+  sources without compiling them through
+  `check_command_build_zen_typechecks_target_sources`. It rejects missing
+  executable, test, and library sources through
   `check_command_build_zen_rejects_missing_executable_source`,
   `check_command_build_zen_rejects_missing_test_source`, and
   `check_command_build_zen_rejects_missing_library_source`, and rejects
   undeclared host effects before source validation through
   `check_command_build_zen_rejects_undeclared_host_effects_before_source_validation`.
+  It also rejects undeclared host effects before target source typechecking
+  through
+  `check_command_build_zen_rejects_undeclared_host_effects_before_target_typechecking`.
   The single-target host-effect rejection remains covered by
   `check_command_build_zen_rejects_undeclared_host_effects`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
@@ -2223,9 +2228,10 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
 `zen build build.zen` and direct `zen build.zen` execute multiple executable
 graph targets, `zen test build.zen` executes multiple test graph targets,
 `zen check build.zen` validates executable, test, and library targets in the
-graph, `zen emit build.zen` emits target C for a single executable graph target,
-and build/test execution rejects dependencies on gated library targets while
-library execution remains gated. Legacy generic JSON emitters reject
+graph and typechecks target sources without compiling them, `zen emit build.zen`
+emits target C for a single executable graph target, and build/test execution
+rejects dependencies on gated library targets while library execution remains
+gated. Legacy generic JSON emitters reject
 `build.zen` and point to
 `emit-json build-graph`.
 
