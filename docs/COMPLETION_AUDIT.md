@@ -2582,6 +2582,12 @@ and do not assume Phase 4 is ready without evidence.
   reducing `src/typechecker/tests/resolver_validation/replay_tasks.rs` from 525
   lines to a module index while preserving coverage through
   `cargo test --lib resolver_validation::replay_tasks`.
+- Build graph lowering now keeps build.zen DSL target kinds, field names, and
+  builder method names in `src/build_graph/lowering/dsl.rs`, reducing
+  `src/build_graph/lowering.rs` from 515 to 384 lines while preserving lowering
+  behavior. `production_rust_files_stay_below_cleanup_threshold` guards
+  selected production files against growing back past the 500-line cleanup
+  threshold.
 
 ## Unresolved Gaps
 
