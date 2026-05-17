@@ -2774,6 +2774,10 @@ and do not assume Phase 4 is ready without evidence.
   functions, covered by
   `module_function_explicit_type_args_are_error`, so `io.println<i32>(...)`
   cannot silently discard malformed type arguments.
+- Typechecker method-call support now keeps module-qualified import call
+  checking in `src/typechecker/expressions/method_call_support/module_calls.rs`,
+  preserving module-call diagnostics and multi-file fixture coverage while
+  keeping generic receiver/method/UFC resolution separate.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

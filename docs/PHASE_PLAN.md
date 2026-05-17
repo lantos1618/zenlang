@@ -161,6 +161,9 @@ checked-in docs, tests, and commits only.
 - Generic diagnostics now reject explicit type arguments on non-generic
   module-qualified calls such as `io.println<i32>(...)`, so import/module call
   syntax no longer silently drops malformed type arguments.
+- Typechecker method-call support now keeps module-qualified import calls in a
+  focused child module, keeping generic receiver/method/UFC resolution
+  separate from import dispatch and module-call diagnostics.
 - Generic enum method specialization coverage now includes an imported
   `Result<T, E>` fixture with generated-C assertions for the concrete method.
 - Resolver-backed callable type-reference validation now shares the collected
