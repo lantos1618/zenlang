@@ -2705,6 +2705,10 @@ and do not assume Phase 4 is ready without evidence.
   methods and concrete generic receiver base methods, preserving existing
   generic method diagnostics and generated-C worklist coverage while reducing
   duplicate Phase 5 specialization logic.
+- Generic function-call checking now shares one helper for direct calls and
+  UFC calls, preserving generic function diagnostics, generic UFC fixture
+  coverage, and generated-C specialization coverage while reducing duplicate
+  Phase 5 specialization logic.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the

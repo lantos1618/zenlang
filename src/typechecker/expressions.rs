@@ -17,7 +17,7 @@ use crate::error::{Diagnostic, Span};
 
 use super::closures::collect_captures;
 use super::monomorphize_inference::InferenceConflict;
-use super::{BehaviorBound, TypeChecker};
+use super::{BehaviorBound, FuncInfo, TypeChecker};
 
 impl TypeChecker {
     pub(crate) fn check_expr(&mut self, expr: &Expression) -> Result<TypedExpression, Diagnostic> {

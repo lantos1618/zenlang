@@ -24,63 +24,7 @@ impl TypeChecker {
         let (resolved_name, ret_type) = if let Some(info) = self.functions.get(&full_name).cloned()
         {
             if !info.type_params.is_empty() {
-                let (subs, explicit_type_args_valid) = if type_args.is_empty() {
-                    let arg_types: Vec<Type> = typed_args.iter().map(|a| a.ty.clone()).collect();
-                    let (subs, conflicts) = self.infer_type_args_with_conflicts(
-                        &info.type_params,
-                        &info.params,
-                        &arg_types,
-                    );
-                    let inferred_type_args_valid =
-                        self.report_inference_conflicts("function", &full_name, conflicts, span);
-                    (subs, inferred_type_args_valid)
-                } else {
-                    self.explicit_type_arg_substitutions(
-                        "function",
-                        &full_name,
-                        &info.type_params,
-                        type_args,
-                        span,
-                    )
-                };
-                let (ret, mangled) = if explicit_type_args_valid {
-                    self.check_call_signature_with_substitutions(
-                        "function",
-                        &full_name,
-                        &info.params,
-                        &typed_args,
-                        &subs,
-                        &span,
-                    );
-                    if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
-                        let ret = self.substitute_type(&info.return_type, &subs);
-                        let mangled = self
-                            .specialize_generic_function(&full_name, &subs, span)
-                            .unwrap_or_else(|| {
-                                self.generic_function_mangled_name(
-                                    &full_name,
-                                    &info.type_params,
-                                    &subs,
-                                )
-                            });
-                        (ret, mangled)
-                    } else {
-                        (
-                            Type::Unknown,
-                            self.generic_function_mangled_name(
-                                &full_name,
-                                &info.type_params,
-                                &subs,
-                            ),
-                        )
-                    }
-                } else {
-                    (
-                        Type::Unknown,
-                        self.generic_function_mangled_name(&full_name, &info.type_params, &subs),
-                    )
-                };
-                (mangled, ret)
+                self.resolve_generic_function_call(&full_name, &info, type_args, &typed_args, span)
             } else {
                 if !type_args.is_empty() {
                     self.diagnostics.push(Diagnostic::error(
