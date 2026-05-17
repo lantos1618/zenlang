@@ -15,11 +15,11 @@ TestResult:
 
 // Convenience constructors
 pass = () TestResult {
-    return TestResult.Pass
+    TestResult.Pass
 }
 
 fail_with = (message: String) TestResult {
-    return TestResult.Fail(message)
+    TestResult.Fail(message)
 }
 
 // ============================================================================
@@ -47,7 +47,7 @@ TestSuite: {
 
 // Create a new test suite
 new_test_suite = (name: String, allocator: memory.Allocator) TestSuite {
-    return TestSuite {
+    TestSuite {
         name: name,
         tests: DynVec<TestCase>.new(allocator),
         passed: 0,
@@ -114,35 +114,35 @@ fail = (message: String) void {
 }
 
 // ============================================================================
-// Assertions (return TestResult for use in test functions)
+// Assertions (produce TestResult for use in test functions)
 // ============================================================================
 
 // Assert that a condition is true
 expect = (condition: bool, message: String) TestResult {
     condition ?
-        | true { return TestResult.Pass }
-        | false { return TestResult.Fail(message) }
+        | true { TestResult.Pass }
+        | false { TestResult.Fail(message) }
 }
 
 // Assert equality
 expect_eq<T> = (actual: T, expected: T, message: String) TestResult {
     actual == expected ?
-        | true { return TestResult.Pass }
-        | false { return TestResult.Fail(message) }
+        | true { TestResult.Pass }
+        | false { TestResult.Fail(message) }
 }
 
 // Assert inequality
 expect_ne<T> = (actual: T, expected: T, message: String) TestResult {
     actual != expected ?
-        | true { return TestResult.Pass }
-        | false { return TestResult.Fail(message) }
+        | true { TestResult.Pass }
+        | false { TestResult.Fail(message) }
 }
 
 // Assert that a condition is false
 expect_not = (condition: bool, message: String) TestResult {
     condition ?
-        | false { return TestResult.Pass }
-        | true { return TestResult.Fail(message) }
+        | false { TestResult.Pass }
+        | true { TestResult.Fail(message) }
 }
 
 // ============================================================================
