@@ -2282,6 +2282,10 @@ and do not assume Phase 4 is ready without evidence.
 - Build script lowering includes target dependency and feature metadata arrays,
   covered by
   `cargo test --test build_graph build_program_lowering_collects_target_dependencies_and_features`.
+- Build script lowering keeps accepted `build.zen` DSL spellings owned by
+  focused enums for target kinds, target fields, and builder identifiers,
+  covered by `cargo test build_target_dsl --lib` and
+  `cargo test build_target_field_owns_source_spelling --lib`.
 - Build graph validation rejects unresolved target dependencies, covered by
   `cargo test --test build_graph build_graph_rejects_unknown_target_dependencies`
   and
