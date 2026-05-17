@@ -3,5 +3,5 @@
 
 main = () i32 {
     println("Hello from io!")
-    return 0
+    0
 }

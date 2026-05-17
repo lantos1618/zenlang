@@ -12,5 +12,5 @@ main = () i32 {
     io.println("Deallocated")
 
     io.println("Success!")
-    return 0
+    0
 }

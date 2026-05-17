@@ -3418,6 +3418,9 @@ and do not assume Phase 4 is ready without evidence.
   `promoted_stdlib_modules_do_not_use_removed_return_keyword`, establishing
   the first small stdlib cleanup gate before broader stdlib compilation is
   promoted.
+- Root smoke fixtures under `tests/test_*.zen` no longer use the removed
+  `return` keyword and are guarded by
+  `root_smoke_fixtures_do_not_use_removed_return_keyword`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

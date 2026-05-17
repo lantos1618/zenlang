@@ -10,5 +10,5 @@ main = () i32 {
     alloc = GPA { id: 0 }
 
     io.println("Success!")
-    return 0
+    0
 }

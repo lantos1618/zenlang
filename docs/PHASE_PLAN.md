@@ -3090,6 +3090,9 @@ checked-in docs, tests, and commits only.
   `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the
   first stdlib compilation cleanup point stays aligned with expression-tail
   returns before broader stdlib parsing/building is promoted.
+- Root smoke fixtures under `tests/test_*.zen` now use expression-tail returns
+  instead of the removed `return` keyword, guarded by
+  `root_smoke_fixtures_do_not_use_removed_return_keyword`.
 
 ## Current Phase
 
