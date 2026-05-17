@@ -14,7 +14,7 @@ EFD_SEMAPHORE = 1
 EventfdError: { code: i32 }
 
 EventfdError.from_errno = (errno: i64) EventfdError {
-    return EventfdError { code: cast(0 - errno, i32) }
+    EventfdError { code: cast(0 - errno, i32) }
 }
 
 Eventfd: { fd: i32 }
@@ -22,41 +22,45 @@ Eventfd: { fd: i32 }
 // Create eventfd with initial value
 Eventfd.new = (initval: u32) Result<Eventfd, EventfdError> {
     result = compiler.syscall2(SYS_EVENTFD2, initval, EFD_CLOEXEC)
-    result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(Eventfd { fd: cast(result, i32) })
+    result < 0 ?
+        | true { Result.Err(EventfdError.from_errno(result)) }
+        | false { Result.Ok(Eventfd { fd: cast(result, i32) }) }
 }
 
 // Create semaphore-like eventfd
 Eventfd.semaphore = (initval: u32) Result<Eventfd, EventfdError> {
     result = compiler.syscall2(SYS_EVENTFD2, initval, EFD_CLOEXEC | EFD_SEMAPHORE)
-    result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(Eventfd { fd: cast(result, i32) })
+    result < 0 ?
+        | true { Result.Err(EventfdError.from_errno(result)) }
+        | false { Result.Ok(Eventfd { fd: cast(result, i32) }) }
 }
 
 // Read counter (blocks if 0, resets to 0 or decrements for semaphore)
 Eventfd.read = (self: MutPtr<Eventfd>) Result<u64, EventfdError> {
     value: u64 = 0
     result = compiler.syscall3(SYS_READ, self.val.fd, compiler.ptr_to_int(&value.ref()), 8)
-    result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(value)
+    result < 0 ?
+        | true { Result.Err(EventfdError.from_errno(result)) }
+        | false { Result.Ok(value) }
 }
 
 // Add to counter (wakes waiters)
 Eventfd.write = (self: MutPtr<Eventfd>, value: u64) Result<(), EventfdError> {
     result = compiler.syscall3(SYS_WRITE, self.val.fd, compiler.ptr_to_int(&value.ref()), 8)
-    result < 0 ? { return Result.Err(EventfdError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(EventfdError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 // Signal (add 1)
 Eventfd.signal = (self: MutPtr<Eventfd>) Result<(), EventfdError> {
-    return self.write(1)
+    self.write(1)
 }
 
 // Wait (read and discard)
 Eventfd.wait = (self: MutPtr<Eventfd>) Result<(), EventfdError> {
     self.read().raise()
-    return Result.Ok(())
+    Result.Ok(())
 }
 
 Eventfd.close = (self: MutPtr<Eventfd>) void {
