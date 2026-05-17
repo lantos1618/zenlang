@@ -2610,6 +2610,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_struct_enum_metadata/enum_metadata.rs`,
   keeping variant payload, visibility, owner, and generic enum metadata
   diagnostics separate from struct field metadata coverage.
+- Resolver-restored behavior parent default synthesis tests now live in
+  `src/typechecker/tests/resolver_collection/behavior_parents/default_synthesis.rs`,
+  keeping inherited default method synthesis coverage separate from parent
+  restoration, duplicate, conflict, and cycle diagnostics.
 
 ## Current Phase
 
