@@ -467,6 +467,9 @@ checked-in docs, tests, and commits only.
 - Emit-command build graph validation tests now keep target-selection
   diagnostics in a focused child module, leaving unrelated gated test source
   skip coverage in the parent module.
+- Frontend JSON integration tests now keep AST and symbol module-graph
+  serialization coverage in a focused child module, leaving typed-program and
+  diagnostics JSON checks in the parent module.
 - Generic specialization generated-C assertions now keep multi-file import and
   dependency cases in a focused integration module, separating them from
   single-file generic specialization emission assertions.
