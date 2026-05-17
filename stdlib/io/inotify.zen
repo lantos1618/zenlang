@@ -24,26 +24,29 @@ IN_MOVE_SELF = 2048
 IN_ALL_EVENTS = 4095
 
 InotifyError: { code: i32 }
-InotifyError.from_errno = (errno: i64) InotifyError { return InotifyError { code: cast(0 - errno, i32) } }
+InotifyError.from_errno = (errno: i64) InotifyError { InotifyError { code: cast(0 - errno, i32) } }
 
 Inotify: { fd: i32 }
 
 Inotify.new = () Result<Inotify, InotifyError> {
     result = compiler.syscall1(SYS_INOTIFY_INIT1, IN_CLOEXEC)
-    result < 0 ? { return Result.Err(InotifyError.from_errno(result)) }
-    return Result.Ok(Inotify { fd: cast(result, i32) })
+    result < 0 ?
+        | true { Result.Err(InotifyError.from_errno(result)) }
+        | false { Result.Ok(Inotify { fd: cast(result, i32) }) }
 }
 
 Inotify.add_watch = (self: MutPtr<Inotify>, path_ptr: i64, mask: u32) Result<i32, InotifyError> {
     result = compiler.syscall3(SYS_INOTIFY_ADD_WATCH, self.val.fd, path_ptr, mask)
-    result < 0 ? { return Result.Err(InotifyError.from_errno(result)) }
-    return Result.Ok(cast(result, i32))
+    result < 0 ?
+        | true { Result.Err(InotifyError.from_errno(result)) }
+        | false { Result.Ok(cast(result, i32)) }
 }
 
 Inotify.rm_watch = (self: MutPtr<Inotify>, wd: i32) Result<(), InotifyError> {
     result = compiler.syscall2(SYS_INOTIFY_RM_WATCH, self.val.fd, wd)
-    result < 0 ? { return Result.Err(InotifyError.from_errno(result)) }
-    return Result.Ok(())
+    result < 0 ?
+        | true { Result.Err(InotifyError.from_errno(result)) }
+        | false { Result.Ok(()) }
 }
 
 Inotify.close = (self: MutPtr<Inotify>) void { compiler.syscall1(SYS_CLOSE, self.val.fd) }
