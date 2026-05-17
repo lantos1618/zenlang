@@ -26,6 +26,8 @@ mod direct_build_graph_validation;
 mod emit_direct;
 #[path = "cli_build/emit_direct_host_effects.rs"]
 mod emit_direct_host_effects;
+#[path = "cli_build/emit_direct_library_dependencies.rs"]
+mod emit_direct_library_dependencies;
 #[path = "cli_build/emit_direct_validation.rs"]
 mod emit_direct_validation;
 #[path = "cli_build/frontend_json.rs"]

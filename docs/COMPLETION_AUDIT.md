@@ -2296,8 +2296,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_compiles_multiple_executable_targets`,
   compiles executable dependencies before dependents through
   `cargo test --test integration direct_file_command_build_zen_compiles_executable_dependencies_first`,
-  rejects dependencies on gated library and test targets through
-  `cargo test --test integration direct_file_command_build_zen_rejects_gated_library_dependencies`
+  accepts validated library source dependencies and rejects gated test
+  dependencies through
+  `cargo test --test integration direct_file_command_build_zen_accepts_library_dependencies`
   and
   `cargo test --test integration direct_file_command_build_zen_rejects_gated_test_dependencies`,
   rejects test-only graphs before execution starts through
@@ -2452,12 +2453,13 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same
   execution path through
   `cargo test --test integration build_command_build_zen_accepts_declared_env_read_with_fallback`.
-- Build/test/legacy graph execution rejects dependencies on gated library targets,
+- Build/test/legacy graph execution accepts dependencies on validated library
+  source targets,
   covered by
-  `cargo test --test integration build_command_build_zen_rejects_gated_library_dependencies`,
-  `cargo test --test integration build_graph_command_rejects_gated_library_dependencies`,
+  `cargo test --test integration build_command_build_zen_accepts_library_dependencies`,
+  `cargo test --test integration build_graph_command_accepts_library_dependencies`,
   and
-  `cargo test --test integration test_command_build_zen_rejects_gated_library_dependencies`.
+  `cargo test --test integration test_command_build_zen_accepts_library_dependencies`.
   Cross-mode execution gating is also covered by
   `cargo test --test integration build_command_build_zen_rejects_gated_test_dependencies`,
   `cargo test --test integration build_graph_command_rejects_gated_test_dependencies`,
@@ -2521,9 +2523,10 @@ and do not assume Phase 4 is ready without evidence.
   Declared deterministic env reads with fallbacks are accepted on the same emit
   path through
   `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_fallback`.
-- Single-target `zen emit build.zen` rejects selected executable dependencies
-  on gated library and test targets before C emission, covered by
-  `cargo test --test integration emit_command_build_zen_rejects_gated_library_dependencies`
+- Single-target `zen emit build.zen` accepts selected executable dependencies
+  on validated library source targets and rejects gated test dependencies
+  before C emission, covered by
+  `cargo test --test integration emit_command_build_zen_accepts_library_dependencies`
   and
   `cargo test --test integration emit_command_build_zen_rejects_gated_test_dependencies`.
 - Single-target `zen emit build.zen` validates and typechecks graph-only
@@ -2686,8 +2689,9 @@ and do not assume Phase 4 is ready without evidence.
   typechecking, library-only graph validation on the non-executing check path,
   graph-only library source validation and typechecking before build/test/emit
   execution, test and library target graph lowering/emission, single-target
-  normal `zen emit build.zen`, gated dependency rejection for selected
-  build/test/emit target kinds, library-only graph execution rejection, and
+  normal `zen emit build.zen`, validated library source dependencies for
+  build/test/emit graph execution, gated executable/test dependency rejection
+  for selected target kinds, library-only graph execution rejection, and
   targeted rejection for legacy generic `emit-json build.zen` modes. Library
   execution, package/link semantics, and other broader graph semantics still
   need explicit deterministic semantics before promotion.
