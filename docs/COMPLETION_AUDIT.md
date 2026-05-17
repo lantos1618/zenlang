@@ -2879,6 +2879,11 @@ and do not assume Phase 4 is ready without evidence.
   preserving import, module, local, behavior-edge, and behavior-association
   expectation coverage while keeping value, type, field, and variant
   expectation builders focused.
+- Resolver-backed enum type metadata collection tests now live in
+  `src/typechecker/tests/resolver_collection/type_metadata/enum_metadata.rs`,
+  preserving enum payload/name restoration, stale AST enum rejection, and
+  restored-name cleanup coverage while keeping struct field/default validation
+  focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
