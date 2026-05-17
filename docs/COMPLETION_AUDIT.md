@@ -2725,6 +2725,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/typechecker/generic_type_validation/resolver_type_references.rs`,
   preserving resolver-restored callable/type metadata validation while keeping
   AST-owned type-reference validation separate.
+- Parser expression suffix and aggregate literal parsing now lives in
+  `src/parser/expressions/suffixes.rs`, preserving method/field access,
+  struct literals, enum variants, and loop-control call parsing while keeping
+  Pratt precedence dispatch separate.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
