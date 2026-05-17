@@ -106,12 +106,15 @@ impl TypeChecker {
                 name.to_string()
             };
             if let Some(info) = self.methods.get(&full_name).cloned() {
+                self.reject_direct_module_call_type_args("method", &full_name, type_args, span);
                 self.check_call_signature("method", &full_name, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             } else if let Some(info) = self.functions.get(&mangled).cloned() {
+                self.reject_direct_module_call_type_args("function", &full_name, type_args, span);
                 self.check_call_signature("function", &mangled, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             } else {
+                self.reject_direct_module_call_type_args("function", &full_name, type_args, span);
                 let m = module.as_deref().unwrap_or("");
                 self.diagnostics.push(Diagnostic::warning(
                     "W3041",
@@ -137,5 +140,26 @@ impl TypeChecker {
             ty: ret_type,
             span,
         })
+    }
+
+    fn reject_direct_module_call_type_args(
+        &mut self,
+        kind: &str,
+        name: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) {
+        if type_args.is_empty() {
+            return;
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E5001",
+            format!(
+                "non-generic {} `{}` does not accept type arguments",
+                kind, name
+            ),
+            span,
+        ));
     }
 }
