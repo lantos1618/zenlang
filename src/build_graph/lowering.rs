@@ -32,6 +32,7 @@ enum BuildTargetDslIdent {
 }
 
 impl BuildTargetDslKind {
+    const ALL: [Self; 3] = [Self::Executable, Self::Test, Self::Library];
     const EXECUTABLE: &'static str = "Executable";
     const TEST: &'static str = "Test";
     const LIBRARY: &'static str = "Library";
@@ -42,6 +43,20 @@ impl BuildTargetDslKind {
             Self::Test => Self::TEST,
             Self::Library => Self::LIBRARY,
         }
+    }
+
+    fn supported_display_list() -> String {
+        let names = Self::ALL
+            .iter()
+            .map(|kind| format!("`{kind}`"))
+            .collect::<Vec<_>>();
+        let Some((last, rest)) = names.split_last() else {
+            return String::new();
+        };
+        if rest.is_empty() {
+            return last.clone();
+        }
+        format!("{}, and {last}", rest.join(", "))
     }
 }
 
@@ -334,7 +349,8 @@ fn build_target_from_builder_add(
         Ok(BuildTargetDslKind::Library) => library_target_from_fields(fields),
         Err(()) => {
             return Err(BuildGraphError::UnsupportedBuildScript(format!(
-                "unsupported build target kind `{name}`; supported target kinds are `Executable`, `Test`, and `Library`"
+                "unsupported build target kind `{name}`; supported target kinds are {}",
+                BuildTargetDslKind::supported_display_list()
             )));
         }
     };
