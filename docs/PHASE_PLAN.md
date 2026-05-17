@@ -2707,6 +2707,10 @@ checked-in docs, tests, and commits only.
   `src/codegen/c/tests/type_mapping.rs`, keeping primitive, string, pointer,
   named, and function-pointer type mapping coverage separate from program
   generation and helper emission tests.
+- C codegen helper tests now live in
+  `src/codegen/c/tests/helpers.rs`, keeping identifier escaping, literal
+  formatting, temporary naming, and simple statement emission coverage separate
+  from whole-program generation tests.
 
 ## Current Phase
 
