@@ -3,6 +3,7 @@ use std::process;
 
 mod build_graph_execution;
 mod build_graph_loading;
+mod build_graph_targets;
 mod check_emit_commands;
 mod compile;
 mod diagnostics;
@@ -16,6 +17,9 @@ use build_graph_execution::{
     test_build_targets, validate_build_graph_sources,
 };
 use build_graph_loading::load_build_graph;
+use build_graph_targets::{
+    executable_build_target, test_build_target, BuildGraphExecutableTarget, BuildGraphTestTarget,
+};
 use check_emit_commands::{cmd_check, cmd_emit};
 use compile::{compile_file_to_binary, compile_file_to_c_source, typed_program_to_c_source};
 use diagnostics::{print_diagnostic, print_errors};

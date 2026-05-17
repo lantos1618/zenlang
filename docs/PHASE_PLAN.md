@@ -2576,6 +2576,9 @@ checked-in docs, tests, and commits only.
   `src/cli/check_emit_commands.rs`, keeping validation/emission entrypoints
   separate from root argument dispatch while preserving check and C emission
   behavior.
+- CLI build graph target structs and graph-target conversion helpers now live
+  in `src/cli/build_graph_targets.rs`, keeping target data construction
+  separate from graph execution ordering and validation.
 
 ## Current Phase
 

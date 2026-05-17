@@ -2743,6 +2743,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI check and emit command bodies now live in
   `src/cli/check_emit_commands.rs`, preserving source validation and C emission
   behavior while keeping root CLI dispatch smaller.
+- CLI build graph target structs and graph-target conversion helpers now live
+  in `src/cli/build_graph_targets.rs`, preserving executable/test target
+  behavior while keeping graph execution ordering and validation smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type
