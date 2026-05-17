@@ -397,6 +397,9 @@ checked-in docs, tests, and commits only.
   metadata replay helper tests separate from semantic replay coverage.
 - CLI usage rendering now lives in a focused helper module, keeping the command
   dispatcher away from the file-size guard without changing command behavior.
+- Build-graph JSON integration tests now keep host-effect JSON coverage in a
+  focused module, separating effect determinism cases from target metadata and
+  dependency JSON assertions.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis. Impl-block declaration collection now also uses a

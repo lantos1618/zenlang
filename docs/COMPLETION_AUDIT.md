@@ -272,6 +272,9 @@ and do not assume Phase 4 is ready without evidence.
 - CLI usage rendering now lives in `src/cli/usage.rs`, reducing the command
   dispatcher file size while preserving the existing usage text and command
   behavior.
+- Build-graph JSON integration tests now split host-effect JSON coverage into
+  `tests/integration/cli_build/build_graph_json_host_effects.rs`, keeping target
+  metadata/dependency JSON tests separate from effect determinism tests.
 - Resolver-backed behavior impl metadata now builds restored impl-block tasks
   once and reuses them for both impl method signature restoration and omitted
   default-method synthesis, preserving the signature-before-defaults ordering.
