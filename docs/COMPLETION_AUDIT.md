@@ -2653,6 +2653,9 @@ and do not assume Phase 4 is ready without evidence.
   Missing fallback arms on deterministic env reads reject before execution
   through
   `cargo test --test integration build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
+  Multi-target executable graph execution keeps that rejection before target
+  execution through
+  `cargo test --test integration build_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Build/test/legacy graph execution accepts dependencies on validated library
   source targets,
   covered by
