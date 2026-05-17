@@ -2622,6 +2622,10 @@ checked-in docs, tests, and commits only.
   `src/typechecker/tests/resolver_validation/expected_symbols/leaf_symbols.rs`,
   keeping import, module, local, behavior-edge, and behavior-association
   expectation builders separate from value, type, field, and variant builders.
+- Resolver-backed enum type metadata collection tests now live in
+  `src/typechecker/tests/resolver_collection/type_metadata/enum_metadata.rs`,
+  keeping enum payload/name restoration and incomplete-variant metadata
+  coverage separate from struct field and default validation coverage.
 
 ## Current Phase
 
