@@ -130,6 +130,7 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         "stdlib/time.zen",
         "stdlib/math/math.zen",
         "stdlib/sys/env.zen",
+        "stdlib/sys/random/getrandom.zen",
         "stdlib/memory/allocator.zen",
         "stdlib/memory/arena.zen",
         "stdlib/memory/async_allocator.zen",
