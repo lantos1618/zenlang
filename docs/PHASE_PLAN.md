@@ -3098,6 +3098,10 @@ checked-in docs, tests, and commits only.
   `emit_json_build_graph_rejects_missing_library_exports`,
   `emit_json_build_graph_rejects_invalid_library_exports_type`, and
   `emit_json_build_graph_rejects_empty_library_exports`.
+- `emit-json build-graph <build.zen>` now also rejects ordinary unknown
+  `Test` and `Library` target fields before graph emission, covered by
+  `emit_json_build_graph_rejects_unknown_test_target_fields` and
+  `emit_json_build_graph_rejects_unknown_library_target_fields`.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
