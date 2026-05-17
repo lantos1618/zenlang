@@ -2923,6 +2923,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving rejected type, enum, behavior, parent, impl, and requires metadata
   on value symbols while keeping value signature and generic metadata
   validation focused.
+- Resolver expected composite symbol builder tests now live in
+  `src/typechecker/tests/resolver_validation/expected_symbols/composite_symbols.rs`,
+  preserving behavior, struct, enum, and variant symbol metadata coverage while
+  keeping primitive expected metadata and leaf symbol builders focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
