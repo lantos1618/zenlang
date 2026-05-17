@@ -122,18 +122,43 @@ fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
 
 #[test]
 fn test_command_build_zen_accepts_declared_env_read_with_fallback() {
+    assert_test_command_accepts_declared_env_read(
+        r#"| .Err { "default" }"#,
+        "test_command_build_zen_accepts_declared_env_read_with_fallback",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
+    assert_test_command_accepts_declared_env_read(
+        r#"| _ { "default" }"#,
+        "test_command_build_zen_accepts_wildcard_fallback_declared_env_read",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_identifier_fallback_declared_env_read() {
+    assert_test_command_accepts_declared_env_read(
+        r#"| err { "default" }"#,
+        "test_command_build_zen_accepts_identifier_fallback_declared_env_read",
+    );
+}
+
+fn assert_test_command_accepts_declared_env_read(fallback_arm: &str, case_name: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Test { name: "unit", root: "test.zen" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Test {{ name: "unit", root: "test.zen" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -154,7 +179,7 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen test build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

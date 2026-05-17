@@ -2520,9 +2520,11 @@ checked-in docs, tests, and commits only.
   preserves host-effect validation before graph-only library typechecking
   through
   `test_command_build_zen_rejects_undeclared_host_effects_before_library_typechecking`.
-  Declared deterministic env reads with fallbacks are accepted on the normal
-  test path through
-  `test_command_build_zen_accepts_declared_env_read_with_fallback`.
+  Declared deterministic env reads with `.Err`, wildcard, and identifier
+  fallback arms are accepted on the normal test path through
+  `test_command_build_zen_accepts_declared_env_read_with_fallback`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_env_read`, and
+  `test_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Env reads with `?` but no fallback arm reject before test execution through
   `test_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal test
