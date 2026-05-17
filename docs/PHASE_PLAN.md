@@ -317,6 +317,9 @@ checked-in docs, tests, and commits only.
 - Parser expression suffix and aggregate literal parsing now lives in a focused
   child module, keeping Pratt precedence dispatch separate from postfix
   expression forms.
+- Resolver validation support now keeps collected type-info and generic
+  template constructors in a focused include, separate from method-key and AST
+  type traversal helpers.
 - Generic diagnostic integration coverage now keeps nested/function/container
   annotation arity tests in a focused module, separate from direct generic
   call, method, local, and declaration annotation arity cases.
