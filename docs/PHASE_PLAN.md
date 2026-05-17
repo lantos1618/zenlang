@@ -3084,9 +3084,9 @@ checked-in docs, tests, and commits only.
 - All executing/checking `build.zen` command entrypoints now reject ordinary
   unknown target fields before outputs are created, covered by
   `build_zen_commands_reject_unknown_target_fields`.
-- The stdlib build DSL, compiler/FFI bridges, filesystem facade, and core
-  `Option`, `Result`, propagation, byte-buffer, iterator, pointer, and slice
-  helpers no longer use the removed `return` keyword, guarded by
+- The stdlib build DSL, compiler/FFI bridges, filesystem and memory facades,
+  and core `Option`, `Result`, propagation, byte-buffer, iterator, pointer,
+  and slice helpers no longer use the removed `return` keyword, guarded by
   `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the
   first stdlib compilation cleanup point stays aligned with expression-tail
   returns before broader stdlib parsing/building is promoted.

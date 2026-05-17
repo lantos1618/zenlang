@@ -4,7 +4,7 @@
 { Allocator, ExecutionMode, CompletionFn } = @std.memory.allocator
 { Heap, HeapSync } = @std.memory.heap
 
-// Convenience function: returns a default blocking heap allocator
+// Convenience function: produces a default blocking heap allocator
 get_default_allocator = () Allocator {
-    return Heap.sync()
+    Heap.sync()
 }
