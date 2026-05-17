@@ -16,14 +16,14 @@ ByteBuffer: {
 // Create a byte buffer (static method)
 ByteBuffer.new = (allocator: Allocator, buf_size: usize) ByteBuffer {
     buf_ptr = allocator.allocate(buf_size)
-    return ByteBuffer { ptr: buf_ptr, size: buf_size }
+    ByteBuffer { ptr: buf_ptr, size: buf_size }
 }
 
 // Create a zeroed byte buffer (static method)
 ByteBuffer.zeroed = (allocator: Allocator, buf_size: usize) ByteBuffer {
     buf_ptr = allocator.allocate(buf_size)
     compiler.memset(buf_ptr, 0, buf_size)
-    return ByteBuffer { ptr: buf_ptr, size: buf_size }
+    ByteBuffer { ptr: buf_ptr, size: buf_size }
 }
 
 // Free a byte buffer
@@ -33,18 +33,18 @@ ByteBuffer.free = (self: ByteBuffer, allocator: Allocator) void {
 
 // Get raw pointer
 ByteBuffer.ptr = (self: ByteBuffer) RawPtr<u8> {
-    return self.ptr
+    self.ptr
 }
 
 // Get address as i64 (for syscalls)
 ByteBuffer.addr = (self: ByteBuffer) i64 {
-    return compiler.ptr_to_int(self.ptr)
+    compiler.ptr_to_int(self.ptr)
 }
 
 // Read byte at offset
 ByteBuffer.get = (self: ByteBuffer, offset: usize) u8 {
     buf_src = compiler.gep(self.ptr, cast(offset, i64))
-    return compiler.load<u8>(buf_src)
+    compiler.load<u8>(buf_src)
 }
 
 // Write byte at offset
@@ -56,7 +56,7 @@ ByteBuffer.set = (self: ByteBuffer, offset: usize, value: u8) void {
 // Read i64 at offset
 ByteBuffer.get_i64 = (self: ByteBuffer, offset: usize) i64 {
     buf_src = compiler.gep(self.ptr, cast(offset, i64))
-    return compiler.load<i64>(buf_src)
+    compiler.load<i64>(buf_src)
 }
 
 // Write i64 at offset
@@ -68,7 +68,7 @@ ByteBuffer.set_i64 = (self: ByteBuffer, offset: usize, value: i64) void {
 // Read u32 at offset
 ByteBuffer.get_u32 = (self: ByteBuffer, offset: usize) u32 {
     buf_src = compiler.gep(self.ptr, cast(offset, i64))
-    return compiler.load<u32>(buf_src)
+    compiler.load<u32>(buf_src)
 }
 
 // Write u32 at offset
