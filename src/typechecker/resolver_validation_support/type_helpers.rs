@@ -292,6 +292,44 @@ fn method_signature_key(type_name: &str, method_name: &str) -> String {
     format!("{type_name}.{method_name}")
 }
 
+fn behavior_impl_method_signature_key(
+    type_name: &str,
+    method_name: &str,
+    behavior: Option<&str>,
+    behavior_type_args: &[AstType],
+) -> String {
+    let key = method_signature_key(type_name, method_name);
+    let Some(behavior) = behavior else {
+        return key;
+    };
+    if behavior_type_args.is_empty() {
+        return key;
+    }
+
+    format!(
+        "{}__{}",
+        key,
+        behavior_ref_symbol_suffix(behavior, behavior_type_args)
+    )
+}
+
+fn behavior_ref_symbol_suffix(behavior: &str, type_args: &[AstType]) -> String {
+    let mut parts = vec![symbol_key_part(behavior)];
+    parts.extend(
+        type_args
+            .iter()
+            .map(AstType::display_name)
+            .map(|name| symbol_key_part(&name)),
+    );
+    parts.join("_")
+}
+
+fn symbol_key_part(name: &str) -> String {
+    name.chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '_' })
+        .collect()
+}
+
 fn method_signature_key_parts(name: &str) -> Option<(&str, &str)> {
     name.split_once('.')
 }

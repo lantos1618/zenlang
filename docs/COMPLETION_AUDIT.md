@@ -758,6 +758,11 @@ and do not assume Phase 4 is ready without evidence.
 - UFCS dispatch through substituted generic behavior bounds is covered by
   `tests/zen/behavior_json_generic_bound_ufcs.zen` plus generated-C assertions
   that reject unresolved `T_encode` calls.
+- Distinct generic behavior specializations implemented by the same concrete
+  type dispatch through behavior-specialized impl method symbols, covered by
+  `tests/zen/behavior_distinct_generic_specialization_dispatch.zen` and
+  generated-C assertions for `Point_encode__Json_str` and
+  `Point_encode__Json_i32`.
 - Imported public types carry source-module behavior impl associations and impl
   methods into graph-owned generic behavior-bound dispatch, covered by
   `tests/zen/multi_file_imported_behavior_impl/main.zen`. Private

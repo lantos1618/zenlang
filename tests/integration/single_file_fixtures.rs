@@ -171,6 +171,11 @@ fn test_behavior_json_generic_association() {
 }
 
 #[test]
+fn test_behavior_distinct_generic_specialization_dispatch() {
+    run_test("behavior_distinct_generic_specialization_dispatch");
+}
+
+#[test]
 fn test_behavior_json_generic_bound() {
     run_test("behavior_json_generic_bound");
 }

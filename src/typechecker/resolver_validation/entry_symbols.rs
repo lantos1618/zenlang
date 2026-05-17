@@ -182,9 +182,15 @@ impl TypeChecker {
                             ..
                         } = method
                         {
+                            let method_key = Self::behavior_impl_method_key(
+                                type_name,
+                                name,
+                                behavior.as_deref(),
+                                behavior_type_args,
+                            );
                             self.require_resolver_value_symbol(
                                 symbols,
-                                &Self::method_key(type_name, name),
+                                &method_key,
                                 expected_value_symbol(params, return_type, type_params, *public),
                                 *span,
                             );

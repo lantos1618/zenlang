@@ -2,8 +2,9 @@ use crate::ast::Declaration;
 use crate::error::Diagnostic;
 
 use super::metadata_helpers::{
-    resolver_behavior_method_signatures, resolver_behavior_method_types, resolver_field_types,
-    resolver_method_key, resolver_value_signature, resolver_variant_names,
+    resolver_behavior_impl_method_key, resolver_behavior_method_signatures,
+    resolver_behavior_method_types, resolver_field_types, resolver_method_key,
+    resolver_value_signature, resolver_variant_names,
 };
 use super::symbol_table::TypeLikeMembers;
 use super::{Namespace, Resolver, SymbolTable};
@@ -121,7 +122,11 @@ impl Resolver {
                 }
             }
             Declaration::ImplBlock {
-                type_name, methods, ..
+                type_name,
+                behavior,
+                behavior_type_args,
+                methods,
+                ..
             } => {
                 for method in methods {
                     if let Declaration::Function {
@@ -134,8 +139,18 @@ impl Resolver {
                         ..
                     } = method
                     {
+                        let key = if let Some(behavior) = behavior {
+                            resolver_behavior_impl_method_key(
+                                type_name,
+                                name,
+                                behavior,
+                                behavior_type_args,
+                            )
+                        } else {
+                            resolver_method_key(type_name, name)
+                        };
                         table.define_value(
-                            &resolver_method_key(type_name, name),
+                            &key,
                             *public,
                             resolver_value_signature(params, return_type, type_params),
                             *span,

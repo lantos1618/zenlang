@@ -277,8 +277,9 @@ impl TypeChecker {
                 method_signature_method_name_for_receiver(&resolver_owned_key, type_name)
                     .unwrap_or(&resolver_owned_key)
                     .to_string();
-            return Self::remove_named_queue_entry(unmatched_required, &resolver_owned_name)
-                .unwrap_or(resolver_owned_name);
+            let required_name = Self::behavior_impl_required_method_name(&resolver_owned_name);
+            return Self::remove_named_queue_entry(unmatched_required, required_name)
+                .unwrap_or_else(|| required_name.to_string());
         }
 
         if let Some(name) = Self::remove_named_queue_entry(unmatched_required, ast_name) {
@@ -345,6 +346,7 @@ impl TypeChecker {
             let resolver_owned_name =
                 method_signature_method_name_for_receiver(resolver_owned_key, type_name)
                     .unwrap_or(resolver_owned_key);
+            let resolver_owned_name = Self::behavior_impl_required_method_name(resolver_owned_name);
             if let Some(index) =
                 Self::named_queue_index(required_methods, resolver_owned_name, |required| {
                     required.name.as_str()
@@ -383,6 +385,21 @@ impl TypeChecker {
 
     pub(super) fn method_key(type_name: &str, method_name: &str) -> String {
         method_signature_key(type_name, method_name)
+    }
+
+    pub(super) fn behavior_impl_method_key(
+        type_name: &str,
+        method_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
+    ) -> String {
+        behavior_impl_method_signature_key(type_name, method_name, behavior, behavior_type_args)
+    }
+
+    pub(super) fn behavior_impl_required_method_name(method_name: &str) -> &str {
+        method_name
+            .split_once("__")
+            .map_or(method_name, |(name, _)| name)
     }
 
     pub(super) fn remove_named_queue_entry(

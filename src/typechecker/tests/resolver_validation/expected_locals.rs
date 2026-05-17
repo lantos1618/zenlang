@@ -22,6 +22,8 @@ Point.impl = {
 
     collect_expected_resolver_impl_method_symbols(
         type_name,
+        None,
+        &[],
         methods,
         &mut scope_cursor,
         &mut expected,
