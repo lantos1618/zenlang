@@ -2649,6 +2649,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_accepts_declared_env_read_with_fallback`,
   `emit_command_build_zen_accepts_wildcard_fallback_declared_env_read`, and
   `emit_command_build_zen_accepts_identifier_fallback_declared_env_read`.
+  Single-executable emit graphs with unselected test and library targets keep
+  the same declared env-read fallback behavior through
+  `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`.
   Env reads with `?` but no fallback arm reject before C emission through
   `emit_command_build_zen_rejects_env_read_without_fallback`.
   Declared deterministic file-read effects are accepted through
@@ -2776,12 +2779,14 @@ checked-in docs, tests, and commits only.
   `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
-  wildcard, and identifier fallback arms on declared file reads, while keeping
-  the matching undeclared file-read and missing-fallback rejections before C
-  emission. Coverage:
+  wildcard, and identifier fallback arms on declared file reads, plus declared
+  env reads with unselected graph targets, while keeping the matching
+  undeclared file-read and missing-fallback rejections before C emission.
+  Coverage:
   `emit_command_build_zen_accepts_declared_file_read_effects`,
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
+  `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
   `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects`, and

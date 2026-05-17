@@ -1,3 +1,5 @@
+#[path = "declared_env_effects/emit.rs"]
+mod emit;
 #[path = "declared_env_effects/rejections.rs"]
 mod rejections;
 
@@ -183,36 +185,6 @@ main = () i32 {
             bin_path.display()
         );
     }
-}
-
-#[test]
-fn emit_command_build_zen_accepts_declared_env_read_with_fallback() {
-    assert_executable_command_accepts_declared_env_read(
-        &["emit", "build.zen"],
-        r#"| .Err { "default" }"#,
-        "emit_command_build_zen_accepts_declared_env_read_with_fallback",
-        ExecutableCommandExpectation::EmitStdout,
-    );
-}
-
-#[test]
-fn emit_command_build_zen_accepts_wildcard_fallback_declared_env_read() {
-    assert_executable_command_accepts_declared_env_read(
-        &["emit", "build.zen"],
-        r#"| _ { "default" }"#,
-        "emit_command_build_zen_accepts_wildcard_fallback_declared_env_read",
-        ExecutableCommandExpectation::EmitStdout,
-    );
-}
-
-#[test]
-fn emit_command_build_zen_accepts_identifier_fallback_declared_env_read() {
-    assert_executable_command_accepts_declared_env_read(
-        &["emit", "build.zen"],
-        r#"| err { "default" }"#,
-        "emit_command_build_zen_accepts_identifier_fallback_declared_env_read",
-        ExecutableCommandExpectation::EmitStdout,
-    );
 }
 
 #[test]
