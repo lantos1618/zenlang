@@ -2720,6 +2720,9 @@ and do not assume Phase 4 is ready without evidence.
 - Lexer string literal and interpolation tests now live in
   `src/lexer/tests/string_literals.rs`, preserving literal escape and
   interpolation coverage while keeping the parent lexer test module smaller.
+- Lexer whitespace and comment skipping now lives in `src/lexer/whitespace.rs`,
+  preserving newline-token and string-interpolation comment coverage while
+  keeping token dispatch smaller.
 - `Self` expression and statement validation traversal now lives in
   `src/typechecker/self_type_validation/expressions.rs`, preserving the same
   context diagnostics while keeping declaration task collection and type

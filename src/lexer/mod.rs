@@ -1,6 +1,7 @@
 mod scan;
 mod strings;
 mod tokens;
+mod whitespace;
 
 pub use tokens::Token;
 
