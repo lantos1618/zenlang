@@ -2729,6 +2729,10 @@ and do not assume Phase 4 is ready without evidence.
   `src/parser/expressions/suffixes.rs`, preserving method/field access,
   struct literals, enum variants, and loop-control call parsing while keeping
   Pratt precedence dispatch separate.
+- Resolver validation support type-info and generic template constructors now
+  live in `src/typechecker/resolver_validation_support/type_info_constructors.rs`,
+  preserving collected metadata construction while keeping method-key and AST
+  type traversal helpers smaller.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
