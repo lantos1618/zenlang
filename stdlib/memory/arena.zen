@@ -38,7 +38,7 @@ ArenaAsync: {
 arena_async_allocate = (ctx: RawPtr<u8>, size: usize) RawPtr<u8> {
     // For now, just use raw_allocate as a placeholder
     // Real implementation would use bump allocation from arena memory
-    return compiler.raw_allocate(size)
+    compiler.raw_allocate(size)
 }
 
 arena_async_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
@@ -46,11 +46,11 @@ arena_async_deallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, size: usize) void {
 }
 
 arena_async_reallocate = (ctx: RawPtr<u8>, ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
-    return compiler.raw_reallocate(ptr, old_size, new_size)
+    compiler.raw_reallocate(ptr, old_size, new_size)
 }
 
 arena_async_mode = (ctx: RawPtr<u8>) ExecutionMode {
-    return ExecutionMode.Async
+    ExecutionMode.Async
 }
 
 arena_async_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
@@ -62,7 +62,7 @@ arena_async_schedule_read = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usi
         { compiler.syscall4(17, fd, buf_i64, len, offset) }
     callback(user_data, result)
     zero: i64 = 0
-    return zero
+    zero
 }
 
 arena_async_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: usize, offset: i64, callback: CompletionFn, user_data: u64) i64 {
@@ -74,15 +74,15 @@ arena_async_schedule_write = (ctx: RawPtr<u8>, fd: i32, buf: RawPtr<u8>, len: us
         { compiler.syscall4(18, fd, buf_i64, len, offset) }
     callback(user_data, result)
     zero: i64 = 0
-    return zero
+    zero
 }
 
 arena_async_poll = (ctx: RawPtr<u8>) i32 {
-    return 0  // Placeholder - real impl would poll io_uring
+    0  // Placeholder - real impl would poll io_uring
 }
 
 arena_async_wait = (ctx: RawPtr<u8>) i32 {
-    return 0  // Placeholder - real impl would wait on io_uring
+    0  // Placeholder - real impl would wait on io_uring
 }
 
 // ============================================================================
@@ -98,8 +98,8 @@ Arena.async = () Allocator {
     ctx = compiler.raw_allocate(4)
     compiler.store<i32>(ctx, 1)  // mode = async
 
-    // Build and return Allocator with function pointers
-    return Allocator {
+    // Build Allocator with function pointers
+    Allocator {
         ctx: ctx,
         allocate_fn: arena_async_allocate,
         deallocate_fn: arena_async_deallocate,
