@@ -52,10 +52,16 @@ impl Parser {
                         let (method_name, _method_span) = self.expect_identifier()?;
                         self.skip_newlines();
 
-                        if matches!(method_name.as_str(), "implements" | "requires" | "extends") {
+                        if let Ok(keyword) = method_name.parse::<TypeDeclarationKeyword>() {
+                            if matches!(keyword, TypeDeclarationKeyword::Impl) {
+                                return Err(CompileError::Syntax(
+                                    "generic impl blocks are not implemented".to_string(),
+                                    Some(self.peek_span()),
+                                ));
+                            }
                             return Err(CompileError::Syntax(
                                 format!(
-                                    "gated v1 feature '{method_name}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
+                                    "gated v1 feature '{keyword}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
                                 ),
                                 Some(self.peek_span()),
                             ));
@@ -106,21 +112,19 @@ impl Parser {
                 let (method_name, _method_span) = self.expect_identifier()?;
                 self.skip_newlines();
 
-                if method_name == "implements" {
-                    return self.parse_behavior_impl_block(name, name_span);
-                }
-
-                if method_name == "requires" {
-                    return self.parse_behavior_requires(name, name_span);
-                }
-
-                if method_name == "extends" {
-                    return self.parse_behavior_extends(name, name_span);
-                }
-
-                // Type.impl = { methods }
-                if method_name == "impl" {
-                    return self.parse_impl_block(name, name_span);
+                if let Ok(keyword) = method_name.parse::<TypeDeclarationKeyword>() {
+                    return match keyword {
+                        TypeDeclarationKeyword::Impl => self.parse_impl_block(name, name_span),
+                        TypeDeclarationKeyword::Implements => {
+                            self.parse_behavior_impl_block(name, name_span)
+                        }
+                        TypeDeclarationKeyword::Requires => {
+                            self.parse_behavior_requires(name, name_span)
+                        }
+                        TypeDeclarationKeyword::Extends => {
+                            self.parse_behavior_extends(name, name_span)
+                        }
+                    };
                 }
 
                 // Type.method<T> = (params) ret { body }
