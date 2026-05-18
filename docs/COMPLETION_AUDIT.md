@@ -3856,6 +3856,11 @@ and do not assume Phase 4 is ready without evidence.
   inherited behavior dispatch, imported behavior association fixtures, and hard
   diagnostics. The broader generated/fallback association solver remains gated
   in the Feature Matrix.
+- `zen emit-json` usage diagnostics now list the full checked, deterministic,
+  and gated JSON/YAML mode surface: `ast`, `symbols`, `typed`, `diagnostics`,
+  `build-graph`, `hir`, `mir`, and `target-yaml`. This is covered by
+  `emit_json_usage_lists_supported_and_gated_modes`, preserving the IR-boundary
+  gate in user-facing CLI errors.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
