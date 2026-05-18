@@ -1,0 +1,457 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "Point.encode__Json_Point",
+        "params": [
+          {
+            "name": "value",
+            "ty": {
+              "Struct": {
+                "name": "Point",
+                "fields": [
+                  [
+                    "x",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 127,
+              "end": 139
+            }
+          }
+        ],
+        "return_type": {
+          "Struct": {
+            "name": "Point",
+            "fields": [
+              [
+                "x",
+                "I32"
+              ]
+            ]
+          }
+        },
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Variable": "value"
+            },
+            "ty": {
+              "Struct": {
+                "name": "Point",
+                "fields": [
+                  [
+                    "x",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 157,
+              "end": 162
+            }
+          },
+          "ty": {
+            "Struct": {
+              "name": "Point",
+              "fields": [
+                [
+                  "x",
+                  "I32"
+                ]
+              ]
+            }
+          },
+          "span": {
+            "file_id": 0,
+            "start": 147,
+            "end": 168
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 117,
+          "end": 168
+        }
+      },
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "point",
+                  "ty": {
+                    "Struct": {
+                      "name": "Point",
+                      "fields": [
+                        [
+                          "x",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "StructLiteral": {
+                        "type_name": "Point",
+                        "fields": [
+                          [
+                            "x",
+                            {
+                              "kind": {
+                                "IntLiteral": 1
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 269,
+                                "end": 270
+                              }
+                            }
+                          ]
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Struct": {
+                        "name": "Point",
+                        "fields": [
+                          [
+                            "x",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 258,
+                      "end": 272
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 250,
+                "end": 272
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "encoded",
+                  "ty": {
+                    "Struct": {
+                      "name": "Point",
+                      "fields": [
+                        [
+                          "x",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "encode_Point",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "point"
+                            },
+                            "ty": {
+                              "Struct": {
+                                "name": "Point",
+                                "fields": [
+                                  [
+                                    "x",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 294,
+                              "end": 299
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Struct": {
+                        "name": "Point",
+                        "fields": [
+                          [
+                            "x",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 287,
+                      "end": 300
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 277,
+                "end": 300
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FieldAccess": {
+                                        "object": {
+                                          "kind": {
+                                            "Variable": "encoded"
+                                          },
+                                          "ty": {
+                                            "Struct": {
+                                              "name": "Point",
+                                              "fields": [
+                                                [
+                                                  "x",
+                                                  "I32"
+                                                ]
+                                              ]
+                                            }
+                                          },
+                                          "span": {
+                                            "file_id": 0,
+                                            "start": 319,
+                                            "end": 326
+                                          }
+                                        },
+                                        "field": "x"
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 319,
+                                      "end": 328
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 317,
+                            "end": 329
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 305,
+                    "end": 331
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 305,
+                "end": 331
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 336,
+              "end": 337
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 244,
+            "end": 339
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 230,
+          "end": 339
+        }
+      },
+      {
+        "name": "encode_Point",
+        "params": [
+          {
+            "name": "value",
+            "ty": {
+              "Struct": {
+                "name": "Point",
+                "fields": [
+                  [
+                    "x",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 194,
+              "end": 202
+            }
+          }
+        ],
+        "return_type": {
+          "Struct": {
+            "name": "Point",
+            "fields": [
+              [
+                "x",
+                "I32"
+              ]
+            ]
+          }
+        },
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "FunctionCall": {
+                "function": "Point.encode__Json_Point",
+                "args": [
+                  {
+                    "kind": {
+                      "Variable": "value"
+                    },
+                    "ty": {
+                      "Struct": {
+                        "name": "Point",
+                        "fields": [
+                          [
+                            "x",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 212,
+                      "end": 217
+                    }
+                  }
+                ]
+              }
+            },
+            "ty": {
+              "Struct": {
+                "name": "Point",
+                "fields": [
+                  [
+                    "x",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 212,
+              "end": 226
+            }
+          },
+          "ty": {
+            "Struct": {
+              "name": "Point",
+              "fields": [
+                [
+                  "x",
+                  "I32"
+                ]
+              ]
+            }
+          },
+          "span": {
+            "file_id": 0,
+            "start": 206,
+            "end": 228
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 172,
+          "end": 228
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Point",
+        "kind": {
+          "Struct": {
+            "fields": [
+              [
+                "x",
+                "I32"
+              ]
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 14,
+          "end": 35
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}
