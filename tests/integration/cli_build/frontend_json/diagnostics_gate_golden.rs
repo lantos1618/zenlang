@@ -80,6 +80,21 @@ main = (value: String) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_range_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "range_gate.zen",
+        r#"
+main = () i32 {
+    1..3
+}
+"#,
+        "range gate",
+        "range gate should emit one feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_range_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",

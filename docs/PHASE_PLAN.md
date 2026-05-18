@@ -244,6 +244,10 @@ Agent UX deliverables:
   JSON gate, proving the public path reports allocator-backed dynamic text as a
   gated reserved type and points users to `StaticString` for baked literal text.
   Covered by `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden`.
+- Range expressions now have a pinned CLI diagnostics JSON gate for `1..3`,
+  proving the public path reports range typing as gated instead of exposing a
+  generic type mismatch. Covered by
+  `emit_json_diagnostics_range_gate_schema_matches_golden`.
 - Comptime type-match intrinsics now have a pinned CLI diagnostics JSON gate
   for `@builtin.type_match<T>()`, proving the public path reports a gated
   typed-metadata/derive-lowering diagnostic instead of an unknown builtin while
