@@ -29,6 +29,28 @@ comptime execution, type matching, async operations, actor syntax, package
 manifests, and `build.zen` execution beyond the constrained deterministic
 graph surface.
 
+Developer UX and Agent UX are product requirements, not polish. The v1 language
+surface should grow toward MoonBit-style toolchain integration, but the compiler
+must not advertise unsupported language-server binaries or editor features as
+implemented. The current contract is:
+
+- the checked-in VS Code extension remains a constrained editor wrapper around
+  syntax support and existing CLI commands until language-server tests exist;
+- `zen lsp` remains gated until it is backed by the same parser, resolver,
+  typechecker, build graph, and diagnostics as the CLI;
+- Agent-readable diagnostics must keep stable codes, spans, related locations,
+  suggested fixes, gated-feature metadata, and JSON output aligned with CLI and
+  editor behavior;
+- the machine-readable project graph and symbol graph surfaces must remain
+  compiler-owned outputs for modules, imports, visibility, targets,
+  dependencies, generated symbols, examples, and stdlib gates;
+- structured fix suggestions are part of the planned UX for missing match arms,
+  generic arity mistakes, removed syntax, gated features, missing imports, and
+  type mismatches;
+- quiet deterministic commands such as `zen check`, `zen test`, and
+  `zen emit-json` are required for agents and editors before broader automated
+  fix or package workflows can be promoted.
+
 ## Accepted Syntax Forms
 
 Every accepted syntax form must have a spec entry and Test Evidence before it is
@@ -306,6 +328,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Layout JSON emission | constrained | `emit_json_layout_outputs_checked_type_layouts` checks primitive, `StaticString`, and struct layout facts, `emit_json_layout_basic_schema_matches_golden` pins the checked primitive/static/dynamic string and struct field-offset schema, `emit_json_layout_outputs_compound_type_layout_entries` covers pointer, raw pointer, slice, array, and enum payload entries, `emit_json_layout_compound_schema_matches_golden` pins the checked compound layout schema, `emit_json_layout_generic_result_schema_matches_golden` pins concrete `Result<i32, StaticString>` enum size/alignment and payload offsets, `emit_json_layout_rejects_hand_authored_json_before_layout_override`; broader ABI schemas still required |
 | Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema` checks `schema_version: 0`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_backend_schema_matches_golden` pins canonical backend target JSON, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Build graph JSON emission | constrained | `emit_json_build_graph_outputs_project_build_graph` checks top-level deterministic metadata, `emit_json_build_graph_project_schema_matches_golden` pins the canonical project graph JSON schema, `emit_json_build_graph_host_effect_schema_matches_golden` pins declared/used host-effect arrays, `emit_json_build_graph_target_metadata_schema_matches_golden` pins library exports plus dependency/feature arrays, `emit_json_build_graph_outputs_library_target` covers library targets, and `emit_json_build_graph_outputs_target_dependencies_and_features` covers dependency/feature arrays; package/link semantics remain gated |
+| Developer UX and Agent UX | constrained/gated | Existing public docs and repo hygiene tests prevent unsupported `zen-lsp` claims, stale generated editor packages, and duplicate public examples. `docs/PHASE_PLAN.md` records the MoonBit-style toolchain integration target, while this spec keeps VS Code extension, `zen lsp`, agent-readable diagnostics, machine-readable project graph, structured fix suggestions, and quiet deterministic commands as explicit promotion criteria before editor/agent workflows can be advertised as implemented |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; positive allocator semantics tests still required |
