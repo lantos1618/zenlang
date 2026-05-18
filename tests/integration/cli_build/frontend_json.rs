@@ -286,42 +286,53 @@ main = () i32 {
 }
 
 #[test]
-fn emit_json_target_yaml_command_is_explicitly_gated() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "target-yaml",
-            test_dir().join("hello.zen").to_str().unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json target-yaml");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json target-yaml should be gated: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains(
-            "target YAML validation is gated until schemas and negative validation tests exist"
-        ),
-        "expected target YAML gate diagnostic, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_target_yaml_rejects_hand_authored_yaml_before_validation() {
+fn emit_json_target_yaml_validates_minimal_target_schema() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let yaml_path = tmp.path().join("target.yaml");
     std::fs::write(
         &yaml_path,
         r#"
 triple: x86_64-unknown-linux-gnu
-layout:
-  pointer_width: 64
+pointer_width: 64
+endianness: little
+abi: sysv
+"#,
+    )
+    .expect("write target yaml");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "target-yaml", yaml_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json target-yaml on YAML input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json target-yaml should validate target YAML: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("target-yaml stdout is json");
+    assert_eq!(json["format"], "zen.target.v0");
+    assert_eq!(json["semantic_status"], "validated");
+    assert_eq!(json["target"]["triple"], "x86_64-unknown-linux-gnu");
+    assert_eq!(json["target"]["pointer_width"], 64);
+    assert_eq!(json["target"]["endianness"], "little");
+    assert_eq!(json["target"]["abi"], "sysv");
+}
+
+#[test]
+fn emit_json_target_yaml_rejects_layout_overrides() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let yaml_path = tmp.path().join("target.yaml");
+    std::fs::write(
+        &yaml_path,
+        r#"
+triple: x86_64-unknown-linux-gnu
+pointer_width: 64
+endianness: little
+abi: sysv
 overrides:
   i32: i64
 "#,
@@ -335,7 +346,7 @@ overrides:
 
     assert!(
         !output.status.success(),
-        "zen emit-json target-yaml should be gated before YAML validation: stdout={}, stderr={}",
+        "zen emit-json target-yaml should reject layout overrides: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -344,17 +355,11 @@ overrides:
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stdout.trim().is_empty(),
-        "gated target-yaml should not emit schema or target JSON, stdout={stdout}"
+        "invalid target-yaml should not emit target JSON, stdout={stdout}"
     );
     assert!(
-        stderr.contains(
-            "target YAML validation is gated until schemas and negative validation tests exist"
-        ),
-        "expected target YAML gate diagnostic, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "target-yaml should reject through the IR-boundary gate, not command/path handling, stderr={stderr}"
+        stderr.contains("target YAML cannot override compiler-owned type layouts"),
+        "expected target YAML layout override diagnostic, stderr={stderr}"
     );
 }
 
