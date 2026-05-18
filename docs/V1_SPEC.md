@@ -83,7 +83,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,
-  queue, scheduler, yield, and await-like APIs.
+  queue, scheduler, yield, and await-like APIs. `@builtin.async_enqueue(...)`
+  and `@builtin.async_yield()` currently report that async task enqueue and
+  async yield are gated until Sync/Async effect checking and task lowering
+  exist.
 - `Typed allocators`: gated. v1 allocators are typed by allocated value and effect
   mode, such as `Allocator<T, Sync>` and `Allocator<T, Async>`. Sync allocation
   returns a direct checked result; async allocation returns a task/effect result.
@@ -159,7 +162,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | HIR/MIR JSON emission | gated | Schema and golden tests |
 | Target/build YAML validation | gated | Schema and negative validation tests |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
-| `Sync/Async effects` | gated | Effect checker positive/negative tests |
+| `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | Sync and async allocator tests |
 | Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
