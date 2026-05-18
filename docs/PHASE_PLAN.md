@@ -2832,12 +2832,23 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
   and
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
+  Direct build graphs with unselected test and library targets also keep
+  declared file-read fallback behavior through
+  `direct_file_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  and
+  `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`.
   Undeclared file reads reject before execution through
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before unselected target source handling through
+  `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   and before multi-target execution through
   `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before execution through
   `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  Direct build graphs with unselected test and library targets reject file
+  reads lacking a fallback arm before unselected target source handling through
+  `direct_file_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
   Multi-target executable graph execution keeps that rejection before execution
   through
   `direct_file_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
