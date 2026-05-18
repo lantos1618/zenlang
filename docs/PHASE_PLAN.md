@@ -3890,9 +3890,12 @@ Agent UX deliverables:
   Guarded by `emit_json_target_yaml_validates_minimal_target_schema`,
   `emit_json_target_yaml_validates_backend_schema`,
   `emit_json_target_yaml_validates_c_backend_flags`,
+  `emit_json_target_yaml_backend_schema_matches_golden`,
   `emit_json_target_yaml_rejects_empty_c_backend_flags`,
   `emit_json_target_yaml_rejects_layout_overrides`, and
   `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
+- Canonical backend target YAML JSON is now pinned by a golden fixture,
+  guarded by `emit_json_target_yaml_backend_schema_matches_golden`.
 - Typechecker boolean literal identifiers now parse `true` and `false` through
   `TypecheckerBoolLiteralKeyword::ALL` instead of direct spelling checks.
   Guarded by `typechecker_boolean_literals_use_owned_keyword_enum` and parser

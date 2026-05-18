@@ -4153,9 +4153,13 @@ and do not assume Phase 4 is ready without evidence.
   Covered by `emit_json_target_yaml_validates_minimal_target_schema`,
   `emit_json_target_yaml_validates_backend_schema`,
   `emit_json_target_yaml_validates_c_backend_flags`,
+  `emit_json_target_yaml_backend_schema_matches_golden`,
   `emit_json_target_yaml_rejects_empty_c_backend_flags`,
   `emit_json_target_yaml_rejects_layout_overrides`, and
   `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
+- Canonical backend target YAML JSON is now pinned by the golden fixture test
+  `emit_json_target_yaml_backend_schema_matches_golden`, reducing the IR/YAML
+  boundary backlog without treating broader backend option schemas as complete.
 - Typechecker boolean literal identifiers parse `true` and `false` through
   `TypecheckerBoolLiteralKeyword::ALL` rather than direct spelling checks.
   Covered by `typechecker_boolean_literals_use_owned_keyword_enum` and parser

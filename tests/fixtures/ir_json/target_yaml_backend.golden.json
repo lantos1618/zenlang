@@ -1,0 +1,19 @@
+{
+  "format": "zen.target.v0",
+  "schema_version": 0,
+  "semantic_status": "validated",
+  "target": {
+    "triple": "x86_64-unknown-linux-gnu",
+    "pointer_width": 64,
+    "endianness": "little",
+    "abi": "sysv",
+    "backend": {
+      "codegen": "c",
+      "c_compiler": "cc",
+      "c_flags": [
+        "-std=c11",
+        "-Wall"
+      ]
+    }
+  }
+}
