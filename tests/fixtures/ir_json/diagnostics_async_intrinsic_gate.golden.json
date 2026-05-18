@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/async_intrinsic_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E0203",
+      "message": "async task enqueue is gated until Sync/Async effect checking and task lowering are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/async_intrinsic_gate.zen",
+        "start": 22,
+        "end": 47,
+        "line": 3,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

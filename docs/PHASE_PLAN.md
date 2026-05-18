@@ -240,6 +240,11 @@ Agent UX deliverables:
   diagnostic through resolver-backed CLI diagnostics instead of falling back to
   ordinary unknown-type errors. Diagnostics JSON pins the public shape through
   `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`.
+- Async scheduler intrinsics now have a pinned CLI diagnostics JSON gate for
+  `@builtin.async_enqueue(...)`, proving the public path reports a gated
+  intrinsic instead of an unknown builtin while Sync/Async task lowering
+  remains gated. Covered by
+  `emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden`.
 - Generic diagnostics now reject explicit type arguments on non-generic
   module-qualified calls such as `io.println<i32>(...)`, so import/module call
   syntax no longer silently drops malformed type arguments.
@@ -4214,6 +4219,11 @@ Agent UX deliverables:
   covering `Allocator<i32, Sync>` as a gated reserved type surface instead of
   ordinary `unknown type symbol` resolver fallbacks while allocator semantics
   remain in the Required Test Backlog.
+- Async scheduler intrinsic gate diagnostics are now pinned at the CLI JSON
+  boundary by `emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden`,
+  covering `@builtin.async_enqueue(...)` as a gated intrinsic surface instead
+  of an ordinary unknown-builtin fallback while Sync/Async effects remain in
+  the Required Test Backlog.
 
 ## Current Phase
 
