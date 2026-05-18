@@ -103,6 +103,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   be baked program storage; interpolation must not imply allocator-backed
   `String` construction. Source-level `String` use currently reports a gated
   allocator-backed text diagnostic until dynamic string ownership is promoted.
+  Public diagnostics JSON pins both direct `String` annotations and `String`
+  nested inside generic annotations through
+  `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden` and
+  `emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden`.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,

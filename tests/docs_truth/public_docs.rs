@@ -358,6 +358,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "tests/fixtures/ir_json/diagnostics_duplicate_generic_requires.golden.json",
         "tests/fixtures/ir_json/diagnostics_duplicate_generic_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_dynamic_string_gate.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_dynamic_string_gate.golden.json",
         "tests/fixtures/ir_json/diagnostics_typed_allocator_effect_gate.golden.json",
         "tests/fixtures/ir_json/diagnostics_sync_effect_gate.golden.json",
         "tests/fixtures/ir_json/diagnostics_async_effect_gate.golden.json",

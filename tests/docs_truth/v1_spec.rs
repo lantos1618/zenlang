@@ -140,6 +140,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_sync_effect_gate_schema_matches_golden",
         "emit_json_diagnostics_async_effect_gate_schema_matches_golden",
         "emit_json_diagnostics_dynamic_string_gate_schema_matches_golden",
+        "emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden",
         "emit_json_diagnostics_actor_type_gate_schema_matches_golden",
         "emit_json_diagnostics_bare_actor_type_gate_schema_matches_golden",
         "emit_json_diagnostics_type_match_gate_schema_matches_golden",
