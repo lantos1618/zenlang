@@ -133,6 +133,7 @@ impl ModuleSystem {
             }
 
             let file_path = if root_prefix.is_some_and(|prefix| prefix.is_std()) {
+                self.reject_gated_stdlib_module(&module_path[1..], Some(span))?;
                 self.resolve_stdlib_file_path(&module_path[1..])?
                     .ok_or_else(|| {
                         vec![CompileError::Resolution(

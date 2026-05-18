@@ -144,6 +144,42 @@ fn stdlib_submodule_import_loads_through_module_system() {
 }
 
 #[test]
+fn stdlib_actor_framework_import_is_gated_before_loading_sketch() {
+    let tmp = setup_temp_dir();
+    let actor_dir = tmp.path().join("stdlib/concurrency/actor");
+    fs::create_dir_all(&actor_dir).unwrap();
+    fs::write(actor_dir.join("actor.zen"), "this is not valid zen\n").unwrap();
+
+    let main_path = tmp.path().join("main.zen");
+    fs::write(
+        &main_path,
+        "{ Actor } = @std.concurrency.actor.actor\n\nmain = () i32 { 0 }\n",
+    )
+    .unwrap();
+
+    let mut files = FileTable::new();
+    let mut ms = ModuleSystem::with_stdlib_root(tmp.path().join("stdlib"));
+
+    let errors = ms
+        .load_with_imports(&main_path, &mut files)
+        .expect_err("actor stdlib imports should be gated before parsing sketches");
+    let messages = errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        messages.contains("std actor framework modules are gated"),
+        "expected actor stdlib gate diagnostic, got {messages}"
+    );
+    assert!(
+        !messages.contains("expected") && !messages.contains("unexpected token"),
+        "actor stdlib gate should not leak parser diagnostics from sketches, got {messages}"
+    );
+}
+
+#[test]
 fn cached_module_not_reloaded() {
     let tmp = setup_temp_dir();
 
