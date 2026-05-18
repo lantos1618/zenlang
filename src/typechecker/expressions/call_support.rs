@@ -1,4 +1,5 @@
 use super::*;
+use crate::typechecker::gated_intrinsics::GatedIntrinsic;
 
 impl TypeChecker {
     pub(super) fn check_function_call_expr(
@@ -20,6 +21,21 @@ impl TypeChecker {
         } else {
             name.to_string()
         };
+
+        if module.as_deref() == Some(GatedIntrinsic::INTRINSIC_MODULE) {
+            if let Some(gated) = GatedIntrinsic::from_name(name) {
+                self.diagnostics
+                    .push(Diagnostic::error("E0203", gated.gate_message(), span));
+                return Ok(TypedExpression {
+                    kind: TypedExprKind::FunctionCall {
+                        function: full_name,
+                        args: typed_args,
+                    },
+                    ty: Type::Unknown,
+                    span,
+                });
+            }
+        }
 
         let (resolved_name, ret_type) = if let Some(info) = self.functions.get(&full_name).cloned()
         {

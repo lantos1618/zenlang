@@ -92,6 +92,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 - `Type matching`: gated. Comptime type matching operates on typed metadata for
   primitives, structs, enums, fields, variants, behaviors, allocator modes, and
   effect modes. It is separate from runtime value matching.
+  `@builtin.type_match<T>()` currently reports that comptime type matching is
+  gated until typed metadata and derive lowering exist.
 - `Behavior association`: gated. Associated operations resolve by explicit impl,
   then generated impl, then declared fallback where the spec allows it. Ambiguity
   is a hard diagnostic.
@@ -159,7 +161,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | Effect checker positive/negative tests |
 | `Typed allocators` | gated | Sync and async allocator tests |
-| Comptime type matching | gated | Type metadata and derive tests |
+| Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
 | `build.zen` check/emit/build/test/direct execution | constrained | Deterministic graph validation, test and library target graph emission, test target execution, target C emission, dependency-ordered multi-executable build tests, and legacy emit-json rejection tests |
 | Existing broad stdlib files | experimental | Must compile before promotion |
