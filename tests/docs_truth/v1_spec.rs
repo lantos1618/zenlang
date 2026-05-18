@@ -116,6 +116,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_build_graph_rejects_hand_authored_json_before_graph_override",
         "schema_version: 0",
         "emit_json_hir_outputs_checked_declaration_graph",
+        "emit_json_hir_outputs_enum_function_and_global_declarations",
         "emit_json_hir_rejects_hand_authored_json_before_ir_override",
         "emit_json_mir_outputs_checked_minimal_function_graph",
         "emit_json_mir_rejects_hand_authored_json_before_ir_override",

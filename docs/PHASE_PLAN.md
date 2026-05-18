@@ -3841,6 +3841,10 @@ Agent UX deliverables:
   `emit-json mir` now emit checked minimal function/block MIR JSON with
   `schema_version: 0`. Guarded by
   `emit_json_mir_outputs_checked_minimal_function_graph`.
+- HIR JSON declaration coverage now includes enum variant tags/payload fields,
+  function parameter and return types, and named mutable top-level globals
+  instead of anonymous top-level blocks. Guarded by
+  `emit_json_hir_outputs_enum_function_and_global_declarations`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by

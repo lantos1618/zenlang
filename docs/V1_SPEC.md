@@ -181,8 +181,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
   `zen emit-json hir <file>` emits `format: "zen.hir.v0"` with
   `schema_version: 0`, `semantic_status: "checked"`, and a declaration graph
-  for checked types, functions, and globals, covered by
-  `emit_json_hir_outputs_checked_declaration_graph`. `zen emit-json mir <file>`
+  for checked types, enum variants/payloads, function parameters/returns, and
+  globals, covered by `emit_json_hir_outputs_checked_declaration_graph` and
+  `emit_json_hir_outputs_enum_function_and_global_declarations`.
+  `zen emit-json mir <file>`
   emits `format: "zen.mir.v0"` with `schema_version: 0`,
   `semantic_status: "checked"`, and a minimal function/block/terminator graph
   over typed program bodies, covered by
@@ -254,7 +256,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Typechecked C backend for tested fixtures | implemented | `cargo test --tests` |
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
-| HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader HIR schema and golden tests still required |
+| HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_outputs_enum_function_and_global_declarations` covers enum variants/payloads, function params/returns, and globals, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; golden tests still required |
 | MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader MIR lowering, schema, and golden tests still required |
 | Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema` checks `schema_version: 0`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
