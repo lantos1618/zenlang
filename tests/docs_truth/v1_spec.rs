@@ -70,6 +70,11 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Test Evidence",
         "StaticString",
         "baked into the program",
+        "String literals as baked `StaticString`",
+        "interpolation as non-owning `StaticString` views",
+        "only literal text is guaranteed",
+        "baked program storage",
+        "interpolation must not imply allocator-backed",
         "allocator-backed `String`",
         "Planned Positive Test",
         "Planned Negative Test",
@@ -250,12 +255,24 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         .nth(1)
         .expect("V1 spec should contain required test backlog");
     assert!(
+        !spec.contains("String literals and interpolation as `StaticString`"),
+        "docs/V1_SPEC.md should not imply interpolation is baked program storage"
+    );
+    assert!(
         !backlog.contains("| `build.zen` |"),
         "docs/V1_SPEC.md should not list constrained build.zen execution as only planned backlog"
     );
     assert!(
         !backlog.contains("| AST traversal |"),
         "docs/V1_SPEC.md should not list AST traversal in the no-minimum-proof backlog after AST JSON boundary tests exist"
+    );
+    assert!(
+        !backlog.contains("| Behavior association |"),
+        "docs/V1_SPEC.md should not treat explicit behavior association proving-ground coverage as unproven backlog"
+    );
+    assert!(
+        backlog.contains("| Generated/fallback behavior association |"),
+        "docs/V1_SPEC.md should keep generated/fallback behavior association in the required backlog"
     );
     assert!(
         !spec.contains("| Strict resolver, symbol IDs, privacy | gated |"),

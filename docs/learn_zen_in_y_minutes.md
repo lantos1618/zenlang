@@ -411,8 +411,10 @@ The allocator-backed String type is dynamic: it owns memory, can grow
 or be built at runtime, and must be created through allocator-aware APIs once
 the allocator model is promoted.
 
-String interpolation embeds expressions with `${...}` and currently produces
-the tested static output shape used by the C backend fixtures.
+String interpolation embeds expressions with `${...}` and currently produces a
+`StaticString`-shaped non-owning view. Interpolated expressions are not baked
+literals, and interpolation does not implicitly construct allocator-backed
+`String`.
 
 ## Gated Preview: Sync, Async, And Allocators
 
