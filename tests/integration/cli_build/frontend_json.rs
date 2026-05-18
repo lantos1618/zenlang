@@ -1,6 +1,8 @@
 use crate::support::*;
 use std::process::Command;
 
+#[path = "frontend_json/diagnostics_golden.rs"]
+mod diagnostics_golden;
 #[path = "frontend_json/diagnostics_json.rs"]
 mod diagnostics_json;
 #[path = "frontend_json/hir_golden.rs"]
