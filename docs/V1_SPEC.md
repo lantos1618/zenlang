@@ -58,7 +58,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Field access and struct literals | implemented | `parser::tests::parse_struct_literal`, `tests/zen/nested_structs.zen` |
 | UFC-style method calls | implemented | `parser::tests::parse_ufc_chain`, `tests/zen/ufc.zen` |
 | Cast expressions `cast(value, Type)` | implemented | `parser::tests::parse_cast_expr`, `tests/zen/cast.zen` |
-| String literals as baked `StaticString`; interpolation as non-owning `StaticString` views | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen` |
+| String literals as baked `StaticString`; interpolation as non-owning `StaticString` views | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen`, `dynamic_string_type_is_rejected_as_allocator_backed_gate` |
 | Pointer and slice type syntax accepted by parser | implemented | `parser::tests::parse_pointer_types`, `parser::tests::parse_slice_type` |
 | Generic specialization for functions, structs, enums, and methods | implemented | `tests/zen/generic_identity.zen`, `tests/zen/generic_struct.zen`, `tests/zen/generic_enum_option.zen`, `tests/zen/generic_result_enum.zen`, `tests/zen/generic_method.zen`, `tests/zen/generic_method_worklist.zen`, `tests/zen/generic_method_nested_result.zen`, `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`, `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`, `integration::generic_specializations_emit_each_generated_c_definition_once`, `generic_specializations::enum_generated_c::enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::method_worklist_generated_c::method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::enum_dependencies::multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::method_worklist_dependencies::multi_file_generic_method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols` |
 | Explicit behavior association proving ground | implemented | `tests/zen/behavior_json_explicit_impl.zen`, `tests/zen/behavior_json_generic_association.zen`, `tests/zen/behavior_distinct_generic_specialization_dispatch.zen`, `tests/zen/behavior_json_generic_bound_ufcs.zen`, `tests/zen/multi_file_imported_behavior_requires/main.zen`, `tests/zen/multi_file_behavior_inheritance/main.zen`, `generic_diagnostics::behavior_impl_for_unspecialized_generic_type_is_error`, `generic_diagnostics::generic_behavior_bound_unknown_method_is_error` |
@@ -79,7 +79,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   that path is promoted. String interpolation currently returns a
   `StaticString`-shaped non-owning view, but only literal text is guaranteed to
   be baked program storage; interpolation must not imply allocator-backed
-  `String` construction.
+  `String` construction. Source-level `String` use currently reports a gated
+  allocator-backed text diagnostic until dynamic string ownership is promoted.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,
@@ -163,7 +164,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Target/build YAML validation | gated | Schema and negative validation tests |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`; effect checker positive/negative tests still required |
-| `Typed allocators` | gated | Sync and async allocator tests |
+| `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`; sync and async allocator tests still required |
 | Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
 | `build.zen` check/emit/build/test/direct execution | constrained | Deterministic graph validation, test and library target graph emission, test target execution, target C emission, dependency-ordered multi-executable build tests, and legacy emit-json rejection tests |

@@ -3627,6 +3627,11 @@ checked-in docs, tests, and commits only.
   instead of ad hoc semantic string checks, keeping `String` recognition and
   `StaticString` display spelling tied to one source. Guarded by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Source-level `String` use now rejects as an allocator-backed dynamic text gate
+  instead of being accepted as a ready type; `StaticString` remains the baked
+  literal/static storage type. Guarded by
+  `dynamic_string_type_is_rejected_as_allocator_backed_gate` and
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

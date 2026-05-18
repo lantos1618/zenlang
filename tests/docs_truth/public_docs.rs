@@ -130,6 +130,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "StaticString",
         "baked into the program",
         "allocator-backed String",
+        "source-level\n`String` annotations are gated",
         "non-owning view",
         "not baked",
         "does not implicitly construct allocator-backed",

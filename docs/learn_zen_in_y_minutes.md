@@ -409,7 +409,8 @@ or changing ownership.
 
 The allocator-backed String type is dynamic: it owns memory, can grow
 or be built at runtime, and must be created through allocator-aware APIs once
-the allocator model is promoted.
+the allocator model is promoted. Until that ownership path exists, source-level
+`String` annotations are gated; use `StaticString` for literal/static text.
 
 String interpolation embeds expressions with `${...}` and currently produces a
 `StaticString`-shaped non-owning view. Interpolated expressions are not baked
