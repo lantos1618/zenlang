@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_result_method_arity.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5001",
+      "message": "generic method `Result.unwrap_or` expects 2 type arguments, found 1",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_result_method_arity.zen",
+        "start": 231,
+        "end": 254,
+        "line": 14,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
