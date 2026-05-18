@@ -3966,6 +3966,13 @@ and do not assume Phase 4 is ready without evidence.
   now reject through the same allocator ownership/effect gate path. Covered by
   `byte_memory_intrinsics_are_rejected_as_allocator_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Raw pointer compiler intrinsics `@builtin.gep(...)`,
+  `@builtin.gep_struct(...)`, `@builtin.raw_ptr_cast(...)`,
+  `@builtin.ptr_to_int(...)`, `@builtin.int_to_ptr(...)`,
+  `@builtin.load<T>(...)`, and `@builtin.store<T>(...)` now reject as ownership,
+  provenance, memory-access, and layout gates instead of unknown/generic builtin
+  failures. Covered by `raw_pointer_intrinsics_are_rejected_as_ownership_gates`
+  and `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

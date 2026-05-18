@@ -103,6 +103,13 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   effect modes. It is separate from runtime value matching.
   `@builtin.type_match<T>()` currently reports that comptime type matching is
   gated until typed metadata and derive lowering exist.
+- `Ownership and raw pointer operations`: gated. Raw pointer offset, cast,
+  integer conversion, load, and store intrinsics are compiler-owned operations
+  that require ownership, pointer provenance, memory access, and layout
+  semantics before promotion. Until then, `@builtin.gep(...)`,
+  `@builtin.gep_struct(...)`, `@builtin.raw_ptr_cast(...)`,
+  `@builtin.ptr_to_int(...)`, `@builtin.int_to_ptr(...)`,
+  `@builtin.load<T>(...)`, and `@builtin.store<T>(...)` report ownership gates.
 - `Behavior association`: gated. Associated operations resolve by explicit impl,
   then generated impl, then declared fallback where the spec allows it. Ambiguity
   is a hard diagnostic.
@@ -171,6 +178,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; sync and async allocator tests still required |
 | Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
+| Ownership and raw pointer operations | gated | `raw_pointer_intrinsics_are_rejected_as_ownership_gates`; ownership/resource tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
 | `build.zen` check/emit/build/test/direct execution | constrained | Deterministic graph validation, test and library target graph emission, test target execution, target C emission, dependency-ordered multi-executable build tests, and legacy emit-json rejection tests |
 | Existing broad stdlib files | experimental | Must compile before promotion |
