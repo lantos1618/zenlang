@@ -1,9 +1,12 @@
 use super::*;
+use crate::error::REMOVED_INFIX_AS_CAST_MESSAGE;
+use crate::parser::keywords::ParserPrefixKeyword;
 
 mod suffixes;
 
 impl Parser {
     // ── Expressions (Pratt parser) ────────────────────────────
+    const REMOVED_AS_CAST_L_BP: u8 = 1;
 
     pub(super) fn parse_expression(&mut self) -> Result<Expression, CompileError> {
         self.parse_expr_bp(0)
@@ -155,6 +158,22 @@ impl Parser {
                 }
 
                 _ => {}
+            }
+
+            if matches!(
+                self.peek(),
+                Token::Identifier(name)
+                    if matches!(name.parse::<ParserPrefixKeyword>(), Ok(ParserPrefixKeyword::As))
+            ) {
+                if Self::REMOVED_AS_CAST_L_BP < min_bp {
+                    break;
+                }
+                self.advance();
+                self.parse_type()?;
+                return Err(CompileError::Syntax(
+                    REMOVED_INFIX_AS_CAST_MESSAGE.into(),
+                    Some(lhs.span().merge(self.prev_span())),
+                ));
             }
 
             // Infix binary operators

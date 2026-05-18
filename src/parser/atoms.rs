@@ -1,5 +1,5 @@
 use super::*;
-use crate::error::REMOVED_RETURN_KEYWORD_MESSAGE;
+use crate::error::{REMOVED_AS_CAST_MESSAGE, REMOVED_RETURN_KEYWORD_MESSAGE};
 use crate::parser::keywords::{ParserModuleRoot, ParserPrefixKeyword, ParserThisMethod};
 
 mod forms;
@@ -86,7 +86,7 @@ impl Parser {
                             Some(span),
                         )),
                         ParserPrefixKeyword::As => Err(CompileError::Syntax(
-                            "`as` cast syntax has been removed; use cast(value, Type)".into(),
+                            REMOVED_AS_CAST_MESSAGE.into(),
                             Some(span),
                         )),
                         ParserPrefixKeyword::Break => Ok(Expression::Break { span }),
