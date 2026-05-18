@@ -64,6 +64,15 @@ pub struct BuildGraph {
     used_host_effects: Vec<HostEffect>,
 }
 
+#[derive(Serialize)]
+struct BuildGraphJson<'a> {
+    format: &'static str,
+    semantic_status: &'static str,
+    targets: &'a [BuildTarget],
+    declared_host_effects: &'a [HostEffect],
+    used_host_effects: &'a [HostEffect],
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BuildTarget {
     name: String,
@@ -170,7 +179,13 @@ impl BuildGraph {
     }
 
     pub fn canonical_json(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string(self)
+        serde_json::to_string(&BuildGraphJson {
+            format: "zen.build_graph.v0",
+            semantic_status: "deterministic",
+            targets: &self.targets,
+            declared_host_effects: &self.declared_host_effects,
+            used_host_effects: &self.used_host_effects,
+        })
     }
 }
 
