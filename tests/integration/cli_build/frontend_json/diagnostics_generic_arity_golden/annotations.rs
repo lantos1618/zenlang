@@ -151,3 +151,22 @@ read = (slice: Slice<Box>) i32 {
         "tests/fixtures/ir_json/diagnostics_slice_inner_generic_annotation_missing_args.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_array_inner_generic_annotation_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "array_inner_generic_annotation_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+read = (items: [Box<i32, StaticString>; 1]) i32 {
+    0
+}
+"#,
+        "array inner generic annotation arity",
+        "array inner generic annotation arity diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_array_inner_generic_annotation_arity.golden.json",
+    );
+}
