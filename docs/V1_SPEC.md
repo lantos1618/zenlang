@@ -150,9 +150,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `Channel` remains an experimental stdlib channel sketch until promoted, so it
   is not a global actor builtin type spelling.
 - `JSON/YAML IR boundaries`: gated. JSON is the machine-readable exchange format
-  for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts, and
-  diagnostics. YAML is the human-authored format for target descriptions, ABI
-  rules, intrinsic tables, allocator templates, backend options, and build graphs.
+  for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts,
+  diagnostics, and deterministic build graphs. YAML is the human-authored
+  format for target descriptions, ABI rules, intrinsic tables, allocator
+  templates, backend options, and build graphs.
   Current JSON evidence is limited to resolved AST graph emission, resolver
   symbol table emission, checked typed program emission, and machine-readable
   diagnostics emission through `zen emit-json ast <file>`,
@@ -164,6 +165,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, and
   `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+  Hand-authored build graph JSON inputs are rejected before generic build.zen
+  path validation can stand in for the compiler-owned graph boundary, covered by
+  `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
   Real program inputs to
   `zen emit-json hir <file>` and `zen emit-json mir <file>` are rejected before
   HIR/MIR JSON emission, covered by

@@ -4105,6 +4105,10 @@ and do not assume Phase 4 is ready without evidence.
   the compiler-owned diagnostics JSON boundary before forged diagnostics can be
   treated as Zen source or accepted as compiler diagnostics. Covered by
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`.
+- Hand-authored build graph JSON inputs to `emit-json build-graph` reject at
+  the compiler-owned build graph JSON boundary before generic `build.zen` path
+  validation can stand in for deterministic graph provenance. Covered by
+  `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
 - Hand-authored JSON IR inputs to `emit-json mir` reject at the compiler-owned
   schema boundary before any forged type or layout override can be accepted.
   Covered by `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
