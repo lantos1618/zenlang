@@ -145,6 +145,8 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "method(value, args)",
         "uniform function call\nsyntax",
         "call-site\nspellings, not alternate declaration forms",
+        "## Attached Methods",
+        "Prefer direct `Type.method = ...` declarations",
         "## Blocks Produce Their Final Expression",
         "Zen does not use a `return` keyword",
         "Pattern arms are blocks",
@@ -199,6 +201,11 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "### Sync And Async Preview",
         "### Allocator Preview",
         "### Ownership Preview",
+        "Read these preview signatures literally",
+        "Sync function",
+        "Async function",
+        "Sync allocator",
+        "Async allocator",
         "Sync",
         "Async",
         "Allocator<T, Sync>",
@@ -235,6 +242,13 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         assert!(
             guide.contains(required),
             "Learn guide is missing expected tour or gated-preview text: {required}"
+        );
+    }
+
+    for stale in ["## Impl Blocks", "Type.impl =", ".impl = {", "impl blocks:"] {
+        assert!(
+            !guide.contains(stale),
+            "Learn guide should avoid teaching non-behavior impl-block syntax as the public tutorial path: {stale}"
         );
     }
 }
