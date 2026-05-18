@@ -22,7 +22,7 @@ fn root_usage_lists_supported_and_gated_emit_json_modes() {
         "emit-json build-graph <build.zen>",
         "emit-json hir <file>   Gated HIR JSON",
         "emit-json mir <file>   Gated MIR JSON",
-        "emit-json layout <file>   Gated type layout JSON",
+        "emit-json layout <file>   Emit checked type layout JSON",
         "emit-json target-yaml <file>   Gated target YAML validation",
     ] {
         assert!(

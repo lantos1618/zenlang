@@ -178,12 +178,12 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   boundary before any type or layout override can be accepted, covered by
   `emit_json_hir_rejects_hand_authored_json_before_ir_override` and
   `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
-  `zen emit-json layout <file>`
-  is an explicit gated command and rejects until ABI layout tests exist; real
-  program inputs are rejected before layout JSON emission, covered by
-  `emit_json_layout_rejects_program_before_layout_json`. Hand-authored layout
-  JSON inputs are rejected at the compiler-owned layout schema boundary before
-  any ABI override can be accepted, covered by
+  `zen emit-json layout <file>` emits checked compiler-owned layout JSON for
+  the current stable subset, including primitive sizes, baked `StaticString`,
+  and struct field offsets, covered by
+  `emit_json_layout_outputs_checked_type_layouts`. Hand-authored layout JSON
+  inputs are rejected at the compiler-owned layout schema boundary before any
+  ABI override can be accepted, covered by
   `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
   AST JSON is explicitly
   marked unchecked; symbols JSON is explicitly marked resolved;
@@ -214,8 +214,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   rejected with a diagnostic that points to `emit-json build-graph`.
 - Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is
   gated until typechecked propagation and lowering are implemented.
-- ABI: stable layouts for structs, enums, options/results, strings, slices,
-  pointers, closures, and function pointers are gated until layout tests exist.
+- ABI: stable layout JSON exists for primitives, baked `StaticString`, pointers,
+  slices, arrays, structs, and simple enums. Full options/results, closures,
+  and function pointer ABI compatibility remain gated until broader layout
+  tests exist.
 
 ## Feature Matrix
 
@@ -258,7 +260,7 @@ planned positive test and one planned negative test before implementation.
 | Type matching | `to_json<T>` derive branches on struct and enum metadata | Ambiguous or unreachable type-match arm is diagnosed |
 | Generated/fallback behavior association | Generated `Json<T>` derive fallback is used only when no explicit impl exists | Missing or ambiguous generated/fallback behavior impl is rejected |
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
-| JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
+| JSON/YAML IR boundaries | Checked layout JSON, checked MIR JSON, and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 
 Generated/fallback behavior association syntax is reserved but not implemented:
 `Type.derive(Json)` currently reports an explicit parser gate, covered by
