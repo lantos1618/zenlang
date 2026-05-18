@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/bare_actor_type_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3500",
+      "message": "`Actor` framework type is gated until std actor scheduling and mailbox semantics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/bare_actor_type_gate.zen",
+        "start": 9,
+        "end": 21,
+        "line": 2,
+        "column": 9
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
