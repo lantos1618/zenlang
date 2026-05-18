@@ -3436,6 +3436,11 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/support.rs`, preserving normal `zen build
   build.zen`, direct `zen build.zen`, and legacy `zen build-graph` coverage
   without triplicated graph setup.
+- `zen build build.zen` validation tests now keep target-selection,
+  library-dependency, host-effect ordering, and execution-scope cases in
+  focused child modules under
+  `tests/integration/cli_build/build_command_validation/`, leaving the parent
+  file as module wiring.
 
 ## Current Phase
 
