@@ -1,7 +1,8 @@
 # Learn Zen In Y Minutes
 
 Zen is a systems language built around prefix-first declarations, explicit data
-shapes, pattern matching, generics, behaviors, and predictable native output.
+shapes, pattern matching, generics, behaviors, explicit effects, and predictable
+native output.
 
 Runnable examples live in `tests/zen/` and `examples/`. Gated design previews
 are called out explicitly.
@@ -19,8 +20,10 @@ explicit call, and heap ownership has to appear in the type/API surface.
 Quick map:
 
 - declarations are prefix-first: the name appears before the operation;
+- values come from final expressions, not `return`;
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
-- loops use `loop((label) { ... })`, then `label.done()` or `label.next()`;
+- loops use one prefix form, `loop((label) { ... })`, with explicit
+  `label.done()` and `label.next()` control calls;
 - static text is `StaticString`; dynamic owned text is allocator-backed
   `String`;
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
@@ -507,13 +510,12 @@ that a type must have a behavior implementation.
 
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
 are explicit calls instead of `break` or `continue`. The spelling is
-prefix-first: call `loop`, pass a loop-control parameter, then call control
-methods on that parameter.
+prefix-first: call `loop`, pass a loop-control parameter, then choose the next
+step by calling control methods on that parameter.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
 `next` are compiler-owned loop-control operations attached to that handle, so
-they can be typechecked and lowered without hard-coded user strings leaking
-into the language model.
+they are part of the language instead of ordinary methods on a library type.
 
 ```zen
 sum_to = (limit: i32) i32 {
@@ -536,9 +538,9 @@ sum_to = (limit: i32) i32 {
 
 Loops use prefix `loop((l) { ... })` with explicit loop-control calls. The
 control parameter names the loop target: `l.done()` exits that target and
-`l.next()` continues it. These are not magic strings; the parser recognizes
-loop-control actions as compiler-owned operations. See `examples/05_loops.zen`
-for the tutorial version.
+`l.next()` continues it. The compiler recognizes these as loop-control actions,
+not user-defined method dispatch. See `examples/05_loops.zen` for the tutorial
+version.
 
 A counted loop is just state plus an explicit control decision:
 
@@ -582,7 +584,8 @@ nested = (stop: bool) i32 {
 }
 ```
 
-Loop controls are ordinary calls, so UFC form is equivalent:
+Loop controls also support UFC form, which is useful when code reads better
+with the operation first:
 
 ```zen
 single_step = (ready: bool) i32 {
@@ -601,8 +604,8 @@ single_step = (ready: bool) i32 {
 }
 ```
 
-The same rule applies in nested loops: `done(outer)` exits the outer loop, and
-`next(inner)` continues only the inner loop.
+The same target rule applies in nested loops: `done(outer)` exits the outer
+loop, and `next(inner)` continues only the inner loop.
 
 This is the complete stable loop surface:
 
@@ -612,9 +615,9 @@ This is the complete stable loop surface:
 - `done(l)` and `next(l)` are the equivalent UFC forms.
 - A nested loop can control an outer loop with `outer.done()` or `done(outer)`.
 
-Loops are expressions in the same block language as the rest of Zen, but the
-loop's purpose is control flow. Accumulated values are usually kept in explicit
-mutable bindings outside the loop and read after `done`.
+Loops are expressions in the same block language as the rest of Zen, but their
+purpose is control flow. Accumulated values are usually kept in explicit mutable
+bindings outside the loop and read after `done`.
 
 The shape to remember is:
 
@@ -733,8 +736,8 @@ main = () i32 {
 
 `StaticString` is baked into the program. It points at static storage and keeps
 its length with the value, so a literal can be passed around without allocating
-or changing ownership. Its bytes do not move, and the value does not own or
-free memory.
+or changing ownership. Its bytes live in the program image; the value is just a
+stable pointer-and-length view and does not own or free memory.
 
 The allocator-backed String type is dynamic: it owns memory, can grow, can be
 built at runtime, and must be created through allocator-aware APIs once the
@@ -752,9 +755,9 @@ That distinction is deliberate:
   type rather than accepting a literal and allocating invisibly.
 
 String interpolation embeds expressions with `${...}` and currently produces a
-`StaticString`-shaped non-owning view. Interpolated expressions are not baked
-literals, and interpolation does not implicitly construct allocator-backed
-`String`.
+`StaticString`-shaped non-owning view for the stable examples. Interpolated
+expressions are not baked literals, and interpolation does not implicitly
+construct allocator-backed `String`.
 
 ## Gated Preview: Sync, Async, And Allocators
 
