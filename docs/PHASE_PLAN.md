@@ -2532,8 +2532,17 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
   and
   `build_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
+  Build graphs with unselected test and library targets also keep declared
+  env-read fallback behavior through
+  `build_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `build_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  and
+  `build_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets`.
   Env reads with `?` but no fallback arm reject before execution through
   `build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
+  Build graphs with unselected test and library targets keep that rejection
+  before unselected target source handling through
+  `build_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`.
   Multi-target executable graph execution keeps that rejection before target
   execution through
   `build_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
