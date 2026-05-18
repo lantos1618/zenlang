@@ -98,3 +98,27 @@ main = () i32 {
         "tests/fixtures/ir_json/diagnostics_generic_enum_constructor_missing_args.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_nested_generic_instantiation_inner_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nested_generic_instantiation_inner_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+Option<T>:
+    None,
+    Some(T)
+
+main = () i32 {
+    value = Box<Option<i32, StaticString>> { value: Option<i32>.Some(1) }
+    0
+}
+"#,
+        "nested generic instantiation inner arity",
+        "nested generic instantiation inner arity diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_nested_generic_instantiation_inner_arity.golden.json",
+    );
+}

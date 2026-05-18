@@ -11,6 +11,10 @@ impl TypeChecker {
         let struct_info = self.structs.get(name).cloned();
         let type_arg_count = struct_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+        let type_arg_annotations_valid = type_args
+            .iter()
+            .all(|type_arg| self.generic_type_annotation_arities_valid(type_arg));
+        let constructor_type_args_valid = type_args_valid && type_arg_annotations_valid;
         if !type_args.is_empty() && type_arg_count == Some(0) {
             self.diagnostics.push(Diagnostic::error(
                 "E5002",
@@ -72,7 +76,7 @@ impl TypeChecker {
             } else {
                 Type::Unknown
             };
-            let field_defs = if type_args_valid {
+            let field_defs = if constructor_type_args_valid {
                 self.specialize_generic_struct(name, type_args, span)
             } else {
                 std::collections::HashMap::new()
@@ -81,7 +85,7 @@ impl TypeChecker {
         };
         let mut typed_fields = Vec::new();
         let mut provided = std::collections::HashSet::new();
-        let default_substitutions = if type_args.is_empty() || !type_args_valid {
+        let default_substitutions = if type_args.is_empty() || !constructor_type_args_valid {
             None
         } else {
             struct_info.as_ref().and_then(|info| {
@@ -123,7 +127,7 @@ impl TypeChecker {
                         typed.span,
                     ));
                 }
-            } else if struct_info.is_some() && type_args_valid {
+            } else if struct_info.is_some() && constructor_type_args_valid {
                 self.diagnostics.push(Diagnostic::error(
                     "E3035",
                     format!("unknown field `{}` for struct `{}`", field_name, name),
@@ -134,7 +138,7 @@ impl TypeChecker {
             typed_fields.push((field_name.clone(), typed));
         }
 
-        if let Some(info) = &struct_info.filter(|_| type_args_valid) {
+        if let Some(info) = &struct_info.filter(|_| constructor_type_args_valid) {
             for (field_name, _) in &info.fields {
                 if !provided.contains(field_name.as_str()) {
                     if let Some(default) = info.field_defaults.get(field_name) {
