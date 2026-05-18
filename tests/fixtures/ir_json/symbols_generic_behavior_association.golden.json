@@ -1,0 +1,277 @@
+{
+  "format": "zen.symbols.v0",
+  "semantic_status": "resolved",
+  "entry_module": 0,
+  "modules": [
+    {
+      "id": 0,
+      "package_id": 0,
+      "canonical_path": "behavior_json_generic_association.zen",
+      "symbols": [
+        {
+          "id": 0,
+          "namespace": "Module",
+          "name": "std",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 0,
+            "end": 12
+          }
+        },
+        {
+          "id": 1,
+          "namespace": "Import",
+          "name": "io",
+          "is_public": false,
+          "import_source": "std",
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 0,
+            "end": 12
+          }
+        },
+        {
+          "id": 2,
+          "namespace": "Behavior",
+          "name": "Json",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": 1,
+          "type_parameter_names": [
+            "T"
+          ],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": [
+            [
+              "encode",
+              [
+                "Self"
+              ],
+              "T"
+            ]
+          ],
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 14,
+            "end": 56
+          }
+        },
+        {
+          "id": 3,
+          "namespace": "Type",
+          "name": "Point",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": 1,
+          "field_type_names": [
+            [
+              "x",
+              "i32"
+            ]
+          ],
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": [
+            "Json<StaticString>"
+          ],
+          "behavior_required_names": [
+            "Json<StaticString>"
+          ],
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 58,
+            "end": 79
+          }
+        },
+        {
+          "id": 4,
+          "namespace": "Value",
+          "name": "Point.encode__Json_StaticString",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 1,
+          "parameter_names": [
+            "self"
+          ],
+          "parameter_type_names": [
+            "Point"
+          ],
+          "return_type_name": "StaticString",
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 124,
+            "end": 183
+          }
+        },
+        {
+          "id": 5,
+          "namespace": "Value",
+          "name": "main",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 0,
+          "parameter_names": [],
+          "parameter_type_names": [],
+          "return_type_name": "i32",
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 223,
+            "end": 304
+          }
+        },
+        {
+          "id": 6,
+          "namespace": "Local",
+          "name": "self",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 1,
+          "definition_span": {
+            "file_id": 0,
+            "start": 134,
+            "end": 145
+          }
+        },
+        {
+          "id": 7,
+          "namespace": "Local",
+          "name": "point",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 4,
+          "definition_span": {
+            "file_id": 0,
+            "start": 243,
+            "end": 265
+          }
+        }
+      ]
+    }
+  ]
+}
