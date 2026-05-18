@@ -227,6 +227,8 @@ Agent UX deliverables:
   two-parameter `Result<T, E>` enum methods.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
   without specializing failed method bodies into followup errors.
+  Diagnostics JSON pins this machine-readable shape through
+  `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`.
 - Generic diagnostics now also guard plain generic function and method
   inference conflicts against argument/return mismatch followups.
 - Generic diagnostics now reject explicit type arguments on non-generic
@@ -2119,6 +2121,9 @@ Agent UX deliverables:
   method call type arguments now also skip dependent signature checks.
 - Generic behavior bound failures now skip dependent function and method body
   specialization diagnostics.
+  The `Result<T, E>` enum-method bound diagnostic is also pinned in
+  diagnostics JSON by
+  `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`.
 - Resolver value-parameter validation now owns its resolver diagnostic code
   mapping instead of constructing those codes at the call site.
 - Resolver module type-parameter absence validation now owns its resolver
