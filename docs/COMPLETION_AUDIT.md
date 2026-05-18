@@ -3523,11 +3523,12 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`,
   preserving imported undefined-call and unspecialized-symbol checks while
   keeping the multifile generated-C module focused on submodule wiring.
-- Generic inference conflict diagnostics now keep method and receiver conflict
-  coverage in `tests/generic_diagnostics/inference_conflicts/methods.rs`,
+- Generic inference conflict diagnostics now keep method conflict coverage in
+  focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
   preserving direct, receiver-derived, Result enum, function-type, array,
-  raw-pointer, and slice conflict checks while keeping the parent inference
-  conflict module focused on generic function inference conflicts.
+  pointer, raw-pointer, slice, generic-struct, and generic-enum conflict checks
+  while keeping the parent inference conflict module focused on generic
+  function inference conflicts.
 - Generic call-site bound diagnostics now keep method, receiver, Result enum,
   and UFC bound-failure coverage in
   `tests/generic_diagnostics/call_site_bounds/methods.rs`, preserving the
