@@ -3595,6 +3595,11 @@ checked-in docs, tests, and commits only.
   by `typechecker_gated_methods_use_owned_action_enum`,
   `result_raise_is_rejected_until_propagation_lowering_exists`, and
   `effect_await_is_rejected_until_async_lowering_exists`.
+- Gated method lookup now uses `GatedMethod::ALL` as the enum-owned static
+  table, so adding future gated methods does not require a separate spelling
+  match. Guarded by `typechecker_gated_methods_use_owned_action_enum`,
+  `result_raise_is_rejected_until_propagation_lowering_exists`, and
+  `effect_await_is_rejected_until_async_lowering_exists`.
 - `zen emit-json` mode routing now uses `EmitJsonMode` enum-owned spellings and
   generates its usage mode list from the same ordered source, keeping checked,
   deterministic, and gated IR boundary modes aligned. Guarded by

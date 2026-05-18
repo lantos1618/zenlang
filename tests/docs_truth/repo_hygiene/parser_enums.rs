@@ -70,6 +70,17 @@ fn typechecker_gated_methods_use_owned_action_enum() {
         source.contains("method.parse::<GatedMethod>()"),
         "typechecker gated method dispatch should parse through GatedMethod"
     );
+    assert!(
+        source.contains("const ALL: &[GatedMethod]"),
+        "typechecker gated methods should keep an enum-owned static table"
+    );
+    assert!(
+        source.contains("GatedMethod::ALL")
+            && source.contains(".iter()")
+            && source.contains(".copied()")
+            && source.contains(".find(|method| method.as_str() == value)"),
+        "typechecker gated method parsing should use the enum-owned static table"
+    );
 }
 
 #[test]
