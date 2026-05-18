@@ -12,12 +12,14 @@ enum GatedStdlibModule {
     ActorFramework,
     AllocatorFramework,
     AsyncRuntime,
+    SyncRuntime,
 }
 
 impl GatedStdlibModule {
     const CONCURRENCY_SEGMENT: &'static str = "concurrency";
     const ACTOR_SEGMENT: &'static str = "actor";
     const ASYNC_SEGMENT: &'static str = "async";
+    const SYNC_SEGMENT: &'static str = "sync";
     const MEMORY_SEGMENT: &'static str = "memory";
     const ALLOCATOR_SEGMENT: &'static str = "allocator";
 
@@ -42,6 +44,15 @@ impl GatedStdlibModule {
         }
         if sub_path
             .first()
+            .is_some_and(|segment| segment == Self::CONCURRENCY_SEGMENT)
+            && sub_path
+                .get(1)
+                .is_some_and(|segment| segment == Self::SYNC_SEGMENT)
+        {
+            return Some(Self::SyncRuntime);
+        }
+        if sub_path
+            .first()
             .is_some_and(|segment| segment == Self::MEMORY_SEGMENT)
             && sub_path
                 .get(1)
@@ -62,6 +73,9 @@ impl GatedStdlibModule {
             }
             Self::AsyncRuntime => {
                 "std async runtime modules are gated until Sync/Async effect checking and task lowering are implemented"
+            }
+            Self::SyncRuntime => {
+                "std sync runtime modules are gated until channel, mailbox, and blocking semantics are implemented"
             }
         }
     }
