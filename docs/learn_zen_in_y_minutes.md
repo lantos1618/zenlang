@@ -31,6 +31,11 @@ Quick map:
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
   design surfaces, with unstable spellings called out as gated previews.
 
+Read examples literally. If text is static, the type says `StaticString`. If a
+value can allocate, grow, or escape with heap ownership, the allocator appears
+in the type that owns it. If control flow exits early, the source says so with a
+data value, a final expression, or a loop-control call.
+
 If you only remember one page, make it this one:
 
 ```zen
@@ -376,6 +381,17 @@ allocator path instead of happening implicitly from a literal.
 Use `StaticString` for fixed program text and diagnostics. Use allocator-backed
 `String` only when the API really needs runtime-owned, mutable, or growable
 text.
+
+The quick distinction:
+
+| Text shape | Owns memory | Needs allocator | Can grow | Typical use |
+| --- | --- | --- | --- | --- |
+| `StaticString` | No | No | No | literals, labels, diagnostics |
+| `String<A>` | Yes | Yes | Yes | runtime text, builders, owned buffers |
+
+That means `"Zen"` is a `StaticString`, not a small `String`. A string literal
+has known bytes in the program image; a dynamic string has runtime storage and
+must remember which allocator owns that storage.
 
 ## Operators And Casts
 
@@ -777,6 +793,15 @@ Point.requires(Json)
 `.extends` makes a behavior inherit parent requirements. `.requires` asserts
 that a type must have a behavior implementation.
 
+These are receiver-first relationship declarations, not free-floating
+keywords. Zen keeps the left-hand side as the thing being changed:
+
+| Relationship | Meaning |
+| --- | --- |
+| `Point.implements(Json)` | `Point` provides `Json` methods |
+| `PrettyJson.extends(Json)` | `PrettyJson` includes `Json` requirements |
+| `Point.requires(Json)` | `Point` is required to have `Json` available |
+
 ## Loops
 
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
@@ -899,6 +924,49 @@ There is no hidden loop result channel here. The value that survives the loop is
 an ordinary binding, and every control edge names whether the loop is done or
 continues.
 
+Loop recipes use the same skeleton:
+
+```zen
+// Count up until a bound.
+count = (limit: i32) i32 {
+    i ::= 0
+    loop((l) {
+        i >= limit ?
+            | true { l.done() }
+            | false {
+                i = i + 1
+                l.next()
+            }
+    })
+    i
+}
+
+// Stop on a sentinel.
+scan = (limit: i32, stop_at: i32) Option<i32> {
+    i ::= 0
+    found ::= Option<i32>.None
+    loop((l) {
+        i >= limit ?
+            | true { l.done() }
+            | false {
+                i == stop_at ?
+                    | true {
+                        found = Option<i32>.Some(i)
+                        l.done()
+                    }
+                    | false {
+                        i = i + 1
+                        l.next()
+                    }
+            }
+    })
+    found
+}
+```
+
+The shape is intentionally regular. Counted loops, sentinel loops, and nested
+exits all stay prefix-only and make the next control edge explicit.
+
 ## Defer
 
 ```zen
@@ -993,6 +1061,22 @@ OwnedBytes<T, A>: {
 
 The important part is not the exact container name. The important part is that
 the pointer, length, and allocator capability travel together.
+
+Allocator-aware owners should be designed so the allocation cannot be separated
+from the capability that can release or grow it:
+
+```zen
+Buffer<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+```
+
+Passing only `RawPtr<T>` around loses ownership information. Passing
+`Buffer<T, A>` keeps the raw address, size facts, and allocator capability in
+one value.
 
 ## Pointer, Slice, And Array Types
 
