@@ -37,3 +37,11 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         "build-graph command should reject env effects before target execution"
     );
 }
+
+#[test]
+fn build_graph_command_rejects_env_read_without_fallback_before_unselected_targets() {
+    assert_env_read_without_fallback_before_unselected_targets(
+        &["build-graph", "build.zen"],
+        "build-graph command should reject env effects before selected target execution",
+    );
+}

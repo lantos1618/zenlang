@@ -3376,6 +3376,16 @@ checked-in docs, tests, and commits only.
   `build_graph_command_rejects_undeclared_file_read_effects_before_unselected_targets`,
   and
   `build_graph_command_rejects_file_read_without_fallback_before_unselected_targets`.
+- Legacy `zen build-graph build.zen` now also has matching declared env-read
+  unselected-target coverage: declared fallback arms allow selected executable
+  targets to build while unrelated missing test sources are ignored, and
+  missing-fallback env reads are rejected before unrelated target handling or
+  output creation. Coverage:
+  `build_graph_command_accepts_declared_env_read_with_unselected_targets`,
+  `build_graph_command_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  `build_graph_command_accepts_identifier_fallback_declared_env_read_with_unselected_targets`,
+  and
+  `build_graph_command_rejects_env_read_without_fallback_before_unselected_targets`.
 
 ## Current Phase
 
