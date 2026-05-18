@@ -72,6 +72,12 @@ and do not assume Phase 4 is ready without evidence.
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
   proving `Box<T>.wrap_result` can infer `T` from the concrete receiver and
   specialize `Result<Option<T>, str>` without unresolved generated C calls.
+- Generic association targets remain gated deliberately. The parser now has
+  focused coverage for `Box<T>.implements`, `Box<T>.requires`, and
+  `Box<T>.extends` through
+  `parser::tests::generic_type_association_keywords_are_explicitly_gated`,
+  avoiding accidental partial promotion before the behavior solver can model
+  generic target templates.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.

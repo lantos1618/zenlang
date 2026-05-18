@@ -158,6 +158,28 @@ fn parse_generic_impl_block_hoists_receiver_type_params_to_methods() {
 }
 
 #[test]
+fn generic_type_association_keywords_are_explicitly_gated() {
+    for (keyword, source) in [
+        ("implements", "Box<T>.implements(Json<T>) { }"),
+        ("requires", "Box<T>.requires(Json<T>)"),
+        ("extends", "Box<T>.extends(Json<T>)"),
+    ] {
+        let errors = parse_err(source);
+        let message = errors
+            .first()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| "missing parser error".to_string());
+
+        assert!(
+            message.contains(&format!(
+                "generic association target `Type<T>.{keyword}` is gated"
+            )),
+            "expected explicit generic association gate for {keyword}, got {errors:?}"
+        );
+    }
+}
+
+#[test]
 fn parse_behavior_impl_with_generic_behavior_args() {
     let prog = parse_ok("Point.implements(Json<i32>) { }");
     match &prog.declarations[0] {

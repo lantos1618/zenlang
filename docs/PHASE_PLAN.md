@@ -94,6 +94,12 @@ checked-in docs, tests, and commits only.
   parameter parsing in a focused declaration-types module, leaving the main
   declaration parser responsible for dispatch, imports, functions, and
   top-level bindings.
+- Generic association target syntax such as `Box<T>.implements(Json<T>)`,
+  `Box<T>.requires(Json<T>)`, and `Box<T>.extends(Json<T>)` now has an explicit
+  parser gate through
+  `parser::tests::generic_type_association_keywords_are_explicitly_gated`,
+  keeping the unsupported behavior-solver boundary separate from supported
+  generic non-behavior `Type<T>.impl` blocks.
 - Resolver symbol table data-model definitions now live in a focused core
   include, leaving symbol-table lookup and definition behavior in the parent
   implementation file.
