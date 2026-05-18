@@ -3937,6 +3937,10 @@ Agent UX deliverables:
   `emit_json_hir_generic_behavior_association_schema_matches_golden`, covering
   the checked `Point` declaration plus concrete
   `Point.encode__Json_StaticString` association function signature.
+- HIR JSON for generic behavior-bound UFCS dispatch is now pinned by
+  `emit_json_hir_generic_behavior_bound_ufcs_schema_matches_golden`, covering
+  the checked `Point` declaration plus concrete `encode_Point` and
+  `Point.encode__Json_Point` function signatures.
 - MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
   and block result expressions for checked match expressions instead of only
   reporting the scrutinee. Guarded by `emit_json_mir_outputs_match_arm_schema`.

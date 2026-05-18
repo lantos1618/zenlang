@@ -152,6 +152,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_hir_generic_result_schema_matches_golden",
         "emit_json_hir_nested_generic_result_schema_matches_golden",
         "emit_json_hir_generic_behavior_association_schema_matches_golden",
+        "emit_json_hir_generic_behavior_bound_ufcs_schema_matches_golden",
         "emit_json_hir_rejects_hand_authored_json_before_ir_override",
         "emit_json_mir_outputs_checked_minimal_function_graph",
         "emit_json_mir_minimal_function_schema_matches_golden",

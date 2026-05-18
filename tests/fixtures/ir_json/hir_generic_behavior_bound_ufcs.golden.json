@@ -1,0 +1,48 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Point",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "x",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "Point.encode__Json_Point",
+        "params": [
+          {
+            "name": "value",
+            "type": "Point"
+          }
+        ],
+        "return_type": "Point"
+      },
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "encode_Point",
+        "params": [
+          {
+            "name": "value",
+            "type": "Point"
+          }
+        ],
+        "return_type": "Point"
+      }
+    ],
+    "globals": []
+  }
+}
