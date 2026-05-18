@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/syscall_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E0203",
+      "message": "syscall0 is gated until host effect declarations and syscall ABI semantics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/syscall_gate.zen",
+        "start": 22,
+        "end": 42,
+        "line": 3,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

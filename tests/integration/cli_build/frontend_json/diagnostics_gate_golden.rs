@@ -140,3 +140,18 @@ main = () void {
         "tests/fixtures/ir_json/diagnostics_atomic_gate.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_syscall_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "syscall_gate.zen",
+        r#"
+main = () void {
+    @builtin.syscall0(1)
+}
+"#,
+        "syscall gate",
+        "syscall gate should emit one gated intrinsic diagnostic",
+        "tests/fixtures/ir_json/diagnostics_syscall_gate.golden.json",
+    );
+}

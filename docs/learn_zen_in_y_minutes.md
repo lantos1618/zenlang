@@ -39,6 +39,72 @@ value can allocate, grow, or escape with heap ownership, the allocator appears
 in the type that owns it. If control flow exits early, the source says so with a
 data value, a final expression, or a loop-control call.
 
+## Copy These Forms First
+
+Zen is prefix-first at declaration and control boundaries. Use these spellings
+as the canonical forms before reaching for alternatives:
+
+```zen
+{ io } = std
+
+StaticLabel: {
+    text: StaticString,
+}
+
+Json: behavior {
+    encode: (Self) StaticString
+}
+
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
+
+Point.implements(Json) {
+    encode = (self: Point) StaticString {
+        "point"
+    }
+}
+
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+```
+
+The important boundaries:
+
+- StaticString is not a String. It is static text baked into the program:
+  a stable pointer and a constant length, with no allocator and no ownership.
+- `String<A>` is dynamic text. It owns runtime memory and must carry the
+  allocator capability that can release or grow that memory.
+- loop control is prefix-only: enter with `loop((l) { ... })`, then call
+  `l.done()`, `l.next()`, `done(l)`, or `next(l)`.
+- behavior relationships stay attached to the thing being changed:
+  `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
+  `Point.requires(Json)`.
+- There is no `impl Type for Behavior` spelling. There is no source-level
+  `async` keyword. There is no `async fn` spelling in the stable tour. Sync,
+  async, and allocator behavior is visible through types such as
+  `Allocator<T, Sync>`, `Allocator<T, Async>`, `Result<T, E>`, and
+  `Task<Result<T, E>>`.
+
 If you only remember one page, make it this one:
 
 ```zen

@@ -2073,9 +2073,9 @@ Agent UX deliverables:
   type-parameter metadata as callable info, so incomplete typed bound refs do
   not leave stale function or method template type parameters behind.
 - The docs truth gate now locks the quiet CI trigger shape: normal branch pushes
-  do not run Actions, `pull_request.synchronize` is absent, manual
-  dispatch is retained, and fmt/clippy/test jobs are guarded by the draft-PR
-  condition.
+  do not run Actions, PR checks rerun on opened, synchronized, reopened, and
+  ready-for-review pull requests, manual dispatch is retained, and
+  fmt/clippy/test jobs are guarded by the draft-PR condition.
 - Resolver variant payload expectations now pass the paired typed/display
   payload metadata directly to validation instead of wrapping it in a redundant
   intermediate object.
@@ -4234,6 +4234,11 @@ Agent UX deliverables:
   `@builtin.atomic_load(...)` as a gated memory-order/effect surface instead
   of an ordinary unknown-builtin fallback while Sync/Async effects remain in
   the Required Test Backlog.
+- Syscall intrinsic gate diagnostics are now pinned at the CLI JSON boundary by
+  `emit_json_diagnostics_syscall_gate_schema_matches_golden`, covering
+  `@builtin.syscall0(...)` as a gated host-effect/syscall ABI surface instead
+  of an ordinary unknown-builtin fallback while host-effect declarations remain
+  in the Required Test Backlog.
 - Raw allocation intrinsic gate diagnostics are now pinned at the CLI JSON
   boundary by `emit_json_diagnostics_raw_allocate_gate_schema_matches_golden`,
   covering `@builtin.raw_allocate(...)` as a gated allocator surface instead
