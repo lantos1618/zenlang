@@ -4320,6 +4320,10 @@ and do not assume Phase 4 is ready without evidence.
   covering `Result_Option_i32_StaticString`, dependent `Option_i32`, and the
   specialized `unwrap_result_Option_i32_StaticString` plus `unwrap_option_i32`
   function signatures.
+- HIR JSON for explicit generic behavior association dispatch is now pinned by
+  `emit_json_hir_generic_behavior_association_schema_matches_golden`, covering
+  the checked `Point` declaration plus concrete
+  `Point.encode__Json_StaticString` association function signature.
 - MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
   and block result expressions for checked match expressions instead of only
   reporting the scrutinee. Covered by `emit_json_mir_outputs_match_arm_schema`.
