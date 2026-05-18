@@ -4193,6 +4193,9 @@ and do not assume Phase 4 is ready without evidence.
   function parameter and return types, and named mutable top-level globals
   instead of anonymous top-level blocks. Covered by
   `emit_json_hir_outputs_enum_function_and_global_declarations`.
+- The checked HIR declaration schema is now pinned by the golden fixture test
+  `emit_json_hir_declaration_schema_matches_golden`, reducing the IR boundary
+  backlog without treating broader JSON/YAML schema work as complete.
 - MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
   and block result expressions for checked match expressions instead of only
   reporting the scrutinee. Covered by `emit_json_mir_outputs_match_arm_schema`.

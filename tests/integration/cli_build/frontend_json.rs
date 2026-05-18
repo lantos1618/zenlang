@@ -3,6 +3,8 @@ use std::process::Command;
 
 #[path = "frontend_json/diagnostics_json.rs"]
 mod diagnostics_json;
+#[path = "frontend_json/hir_golden.rs"]
+mod hir_golden;
 #[path = "frontend_json/ir_boundaries.rs"]
 mod ir_boundaries;
 #[path = "frontend_json/layout_json.rs"]

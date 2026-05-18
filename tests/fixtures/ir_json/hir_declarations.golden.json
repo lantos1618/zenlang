@@ -1,0 +1,74 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Pair",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "left",
+            "type": "i32"
+          },
+          {
+            "name": "right",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "MaybePair",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "None",
+            "tag": 0,
+            "payload": []
+          },
+          {
+            "name": "Some",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "Pair"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "choose",
+        "params": [
+          {
+            "name": "candidate",
+            "type": "Pair"
+          },
+          {
+            "name": "enabled",
+            "type": "bool"
+          }
+        ],
+        "return_type": "MaybePair"
+      },
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      }
+    ],
+    "globals": [
+      {
+        "name": "threshold",
+        "type": "i32",
+        "mutable": true
+      }
+    ]
+  }
+}
