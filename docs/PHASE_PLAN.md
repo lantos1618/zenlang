@@ -3673,6 +3673,10 @@ checked-in docs, tests, and commits only.
   lowering body. Guarded by
   `codegen_c_intrinsics_use_owned_name_enum`, `production_rust_files_stay_below_cleanup_threshold`,
   and `codegen::c` tests.
+- Build graph host-effect method recognition now parses build DSL method names
+  through `BuildTargetDslIdent` instead of matching raw method strings.
+  Guarded by `build_target_dsl_ident_owns_source_spelling` and
+  `build_graph_host_effect_methods_parse_dsl_ident_enum`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

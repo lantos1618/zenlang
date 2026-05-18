@@ -55,6 +55,13 @@ fn build_target_dsl_ident_owns_source_spelling() {
     assert_eq!(BuildTargetDslIdent::Env.as_str(), "env");
     assert_eq!(BuildTargetDslIdent::Os.as_str(), "os");
     assert_eq!(BuildTargetDslIdent::ReadFile.as_str(), "read_file");
+    assert_eq!("b".parse(), Ok(BuildTargetDslIdent::Builder));
+    assert_eq!("add".parse(), Ok(BuildTargetDslIdent::Add));
+    assert_eq!("build".parse(), Ok(BuildTargetDslIdent::Build));
+    assert_eq!("env".parse(), Ok(BuildTargetDslIdent::Env));
+    assert_eq!("os".parse(), Ok(BuildTargetDslIdent::Os));
+    assert_eq!("read_file".parse(), Ok(BuildTargetDslIdent::ReadFile));
+    assert!("read_env".parse::<BuildTargetDslIdent>().is_err());
     assert_eq!(BuildTargetDslIdent::Builder.to_string(), "b");
 }
 

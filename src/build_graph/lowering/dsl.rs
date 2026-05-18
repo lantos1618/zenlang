@@ -180,6 +180,22 @@ impl fmt::Display for BuildTargetDslIdent {
     }
 }
 
+impl FromStr for BuildTargetDslIdent {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            Self::BUILDER => Ok(Self::Builder),
+            Self::ADD => Ok(Self::Add),
+            Self::BUILD => Ok(Self::Build),
+            Self::ENV => Ok(Self::Env),
+            Self::OS => Ok(Self::Os),
+            Self::READ_FILE => Ok(Self::ReadFile),
+            _ => Err(()),
+        }
+    }
+}
+
 impl fmt::Display for BuildTargetDslKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
