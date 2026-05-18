@@ -3576,12 +3576,12 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/generic_specializations/behavior_bounds/`, preserving
   undefined-call and unspecialized-symbol checks without one mixed assertion
   file.
-- Generic inference conflict diagnostics now keep method conflict coverage in
-  focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
-  preserving direct, receiver-derived, Result enum, function-type, array,
-  pointer, raw-pointer, slice, generic-struct, and generic-enum conflict checks
-  while keeping the parent inference conflict module focused on generic
-  function inference conflicts.
+- Generic inference conflict diagnostics now keep both function and method
+  conflict coverage in focused child modules under
+  `tests/generic_diagnostics/inference_conflicts/`, preserving direct,
+  receiver-derived, Result enum, function-type, array, pointer, raw-pointer,
+  slice, generic-struct, and generic-enum conflict checks while leaving the
+  parent inference conflict module as wiring only.
 - Generic call-site bound diagnostics now keep method, receiver, Result enum,
   and UFC bound-failure coverage in
   `tests/generic_diagnostics/call_site_bounds/methods.rs`, preserving the

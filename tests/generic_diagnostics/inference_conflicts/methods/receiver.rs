@@ -1,4 +1,4 @@
-use super::super::*;
+use super::super::super::*;
 
 #[test]
 fn generic_method_inference_conflict_is_error() {
