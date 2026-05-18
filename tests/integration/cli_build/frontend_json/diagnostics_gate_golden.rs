@@ -115,6 +115,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_await_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "await_gate.zen",
+        r#"
+Task<T>: {
+    value: T
+}
+
+main = () i32 {
+    task = Task<i32> { value: 1 }
+    task.await()
+}
+"#,
+        "await gate",
+        "await gate should emit one Sync/Async feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_await_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",
