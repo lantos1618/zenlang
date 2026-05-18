@@ -4277,6 +4277,9 @@ and do not assume Phase 4 is ready without evidence.
 - The checked MIR match schema is now pinned by the golden fixture test
   `emit_json_mir_match_schema_matches_golden`, reducing the IR boundary
   backlog without treating the broader JSON/YAML schema work as complete.
+- MIR JSON for generic `Result<T, E>` specialization is now pinned by
+  `emit_json_mir_generic_result_schema_matches_golden`, covering concrete
+  `Result_i32_StaticString` enum construction and match-arm lowering.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
