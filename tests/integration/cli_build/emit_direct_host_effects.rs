@@ -1,6 +1,6 @@
 use std::process::Command;
 
-#[path = "emit_direct_host_effects/file_reads.rs"]
+#[path = "emit_direct_host_effects/file_reads/mod.rs"]
 mod file_reads;
 
 #[test]

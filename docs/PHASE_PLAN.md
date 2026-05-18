@@ -2927,6 +2927,9 @@ checked-in docs, tests, and commits only.
   wildcard, and identifier fallback arms on declared file reads, plus declared
   env reads with unselected graph targets, while keeping the matching
   undeclared file-read and missing-fallback rejections before C emission.
+  The file-read fixtures live in focused declared, unselected-target, and
+  rejection modules under
+  `tests/integration/cli_build/emit_direct_host_effects/file_reads/`.
   Coverage:
   `emit_command_build_zen_accepts_declared_file_read_effects`,
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
