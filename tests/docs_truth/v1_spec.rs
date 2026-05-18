@@ -136,6 +136,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden",
         "emit_json_diagnostics_raw_allocate_gate_schema_matches_golden",
         "emit_json_diagnostics_byte_memory_gate_schema_matches_golden",
+        "emit_json_diagnostics_raw_pointer_gate_schema_matches_golden",
         "emit_json_diagnostics_generic_function_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_method_type_arg_annotation_arity_schema_matches_golden",

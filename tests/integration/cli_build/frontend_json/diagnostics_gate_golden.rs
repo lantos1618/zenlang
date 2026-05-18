@@ -110,3 +110,18 @@ main = () void {
         "tests/fixtures/ir_json/diagnostics_byte_memory_gate.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_raw_pointer_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "raw_pointer_gate.zen",
+        r#"
+main = () void {
+    @builtin.gep(0, 1)
+}
+"#,
+        "raw pointer gate",
+        "raw pointer gate should emit one gated intrinsic diagnostic",
+        "tests/fixtures/ir_json/diagnostics_raw_pointer_gate.golden.json",
+    );
+}

@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/raw_pointer_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E0203",
+      "message": "raw pointer offset is gated until ownership and layout semantics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/raw_pointer_gate.zen",
+        "start": 22,
+        "end": 40,
+        "line": 3,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
