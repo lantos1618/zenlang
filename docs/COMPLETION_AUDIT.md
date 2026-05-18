@@ -4004,6 +4004,10 @@ and do not assume Phase 4 is ready without evidence.
   builtin generic wrapper spellings through focused parser type-name enums
   instead of matching raw strings in `resolve_type_name`. Covered by
   `parser_type_names_use_owned_type_name_enums` and parser type examples.
+- Parser type-declaration suffix keywords now parse through
+  `TypeDeclarationKeyword::ALL`, keeping `impl`, `implements`, `requires`, and
+  `extends` on one enum-owned static spelling table. Covered by
+  `parser_type_declaration_suffixes_use_owned_keyword_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

@@ -14,6 +14,12 @@ pub enum TypeDeclarationKeyword {
 }
 
 impl TypeDeclarationKeyword {
+    pub const ALL: &[TypeDeclarationKeyword] = &[
+        TypeDeclarationKeyword::Impl,
+        TypeDeclarationKeyword::Implements,
+        TypeDeclarationKeyword::Requires,
+        TypeDeclarationKeyword::Extends,
+    ];
     pub const IMPL: &'static str = "impl";
     pub const IMPLEMENTS: &'static str = "implements";
     pub const REQUIRES: &'static str = "requires";
@@ -39,17 +45,11 @@ impl FromStr for TypeDeclarationKeyword {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if value == Self::Impl.as_str() {
-            Ok(Self::Impl)
-        } else if value == Self::Implements.as_str() {
-            Ok(Self::Implements)
-        } else if value == Self::Requires.as_str() {
-            Ok(Self::Requires)
-        } else if value == Self::Extends.as_str() {
-            Ok(Self::Extends)
-        } else {
-            Err(())
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|keyword| keyword.as_str() == value)
+            .ok_or(())
     }
 }
 
