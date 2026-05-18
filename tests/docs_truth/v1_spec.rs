@@ -136,6 +136,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_target_yaml_rejects_layout_overrides",
         "emit_json_target_yaml_rejects_unsupported_backend_codegen",
         "emit_json_build_graph_project_schema_matches_golden",
+        "emit_json_build_graph_host_effect_schema_matches_golden",
         "build.zen",
         "zen test build.zen",
         "test target execution",
