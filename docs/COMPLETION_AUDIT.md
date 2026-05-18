@@ -2606,6 +2606,8 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_wildcard_fallback_declared_file_read_effects`,
   `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
   `cargo test --test integration build_graph_command_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration build_graph_command_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   and
   `cargo test --test integration build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
   Missing fallback arms on deterministic file reads also reject before
@@ -2642,6 +2644,8 @@ and do not assume Phase 4 is ready without evidence.
   Multi-target executable graph execution now has the matching positive and
   negative file-read coverage through
   `cargo test --test integration build_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration build_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration build_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   `cargo test --test integration build_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`,
   and
   `cargo test --test integration build_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
@@ -2689,6 +2693,8 @@ and do not assume Phase 4 is ready without evidence.
   Multi-target test graph execution now has the matching positive and negative
   file-read coverage through
   `cargo test --test integration test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   `cargo test --test integration test_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`,
   and
   `cargo test --test integration test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
@@ -2755,6 +2761,8 @@ and do not assume Phase 4 is ready without evidence.
   Multi-target graph validation now has the matching positive and negative
   file-read coverage through
   `cargo test --test integration check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   `cargo test --test integration check_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and
   `cargo test --test integration check_command_multi_target_build_zen_rejects_file_read_without_fallback`.
@@ -2837,6 +2845,8 @@ and do not assume Phase 4 is ready without evidence.
   Multi-target executable graph execution now has the matching positive and
   negative file-read coverage through
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   `cargo test --test integration direct_file_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`,
   and
   `cargo test --test integration direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
