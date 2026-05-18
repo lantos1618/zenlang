@@ -2992,9 +2992,10 @@ and do not assume Phase 4 is ready without evidence.
   graph-only-library modules while preserving coverage through
   `cargo test --test integration legacy_graph_command_validation`.
 - Direct build.zen integration tests now keep graph validation cases in
-  `tests/integration/cli_build/direct_build_graph_validation.rs`, reducing
-  `tests/integration/cli_build/direct_build_graph_execution.rs` from 417 to
-  198 lines while preserving coverage through
+  `tests/integration/cli_build/direct_build_graph_validation.rs` and
+  `tests/integration/cli_build/direct_build_graph_validation/`, split across
+  execution-scope, dependency-shape, target-metadata, gated-dependency, and
+  graph-only-library modules while preserving coverage through
   `cargo test --test integration direct_file_command_build_zen`.
 - Check-command build.zen integration tests now keep graph validation cases in
   `tests/integration/cli_build/graph_validation/`, split across basic
