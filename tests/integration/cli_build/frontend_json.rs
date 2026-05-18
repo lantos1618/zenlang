@@ -359,32 +359,7 @@ overrides:
 }
 
 #[test]
-fn emit_json_layout_command_is_explicitly_gated() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "layout",
-            test_dir().join("hello.zen").to_str().unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json layout");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json layout should be gated: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("type layout JSON emission is gated until ABI layout tests exist"),
-        "expected layout gate diagnostic, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_layout_rejects_program_before_layout_json() {
+fn emit_json_layout_outputs_checked_type_layouts() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let zen_path = tmp.path().join("layout_subject.zen");
     std::fs::write(
@@ -392,17 +367,10 @@ fn emit_json_layout_rejects_program_before_layout_json() {
         r#"
 Point: {
     x: i32,
-    y: i32
+    label: StaticString
 }
 
-Result<T, E>:
-    Ok(T),
-    Err(E)
-
-main = () i32 {
-    point = Point { x: 1, y: 2 }
-    point.x
-}
+main = () i32 { 0 }
 "#,
     )
     .expect("write layout subject");
@@ -413,24 +381,34 @@ main = () i32 {
         .expect("run zen emit-json layout on program input");
 
     assert!(
-        !output.status.success(),
-        "zen emit-json layout should be gated before layout emission: stdout={}, stderr={}",
+        output.status.success(),
+        "zen emit-json layout should emit checked layout JSON: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "gated layout should not emit type layout JSON, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("type layout JSON emission is gated until ABI layout tests exist"),
-        "expected layout gate diagnostic, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "layout should reject through the ABI-layout gate, not command/path handling, stderr={stderr}"
-    );
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("layout stdout is json");
+    assert_eq!(json["format"], "zen.layout.v0");
+    assert_eq!(json["semantic_status"], "checked");
+    assert_eq!(json["target"]["pointer_size"], 8);
+    assert_eq!(json["target"]["usize_size"], 8);
+
+    let layouts = json["layouts"].as_object().expect("layouts object");
+    assert_eq!(layouts["i32"]["size"], 4);
+    assert_eq!(layouts["i32"]["alignment"], 4);
+    assert_eq!(layouts["StaticString"]["size"], 16);
+    assert_eq!(layouts["StaticString"]["alignment"], 8);
+
+    let point = &layouts["Point"];
+    assert_eq!(point["kind"], "struct");
+    assert_eq!(point["size"], 24);
+    assert_eq!(point["alignment"], 8);
+    let fields = point["fields"].as_array().expect("Point fields");
+    assert_eq!(fields[0]["name"], "x");
+    assert_eq!(fields[0]["offset"], 0);
+    assert_eq!(fields[0]["type"], "i32");
+    assert_eq!(fields[1]["name"], "label");
+    assert_eq!(fields[1]["offset"], 8);
+    assert_eq!(fields[1]["type"], "StaticString");
 }

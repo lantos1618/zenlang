@@ -3905,14 +3905,11 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph JSON now carries `format: "zen.build_graph.v0"` and
   `semantic_status: "deterministic"` while preserving the existing graph
   payload keys, covered by `emit_json_build_graph_outputs_project_build_graph`.
-- `emit-json layout` now has an explicit gated command and usage entry for type
-  layout JSON, covered by `emit_json_layout_command_is_explicitly_gated`,
+- `emit-json layout` now has checked compiler-owned layout JSON for the stable
+  subset: primitive sizes, baked `StaticString`, pointer-sized views, and struct
+  field offsets. Covered by `emit_json_layout_outputs_checked_type_layouts`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
-  `root_usage_lists_supported_and_gated_emit_json_modes`, while ABI layout JSON
-  remains gated until layout tests exist.
-- Real program inputs to `emit-json layout` now reject at the ABI-layout gate
-  before emitting type layout JSON. Covered by
-  `emit_json_layout_rejects_program_before_layout_json`.
+  `root_usage_lists_supported_and_gated_emit_json_modes`.
 - Hand-authored layout JSON inputs to `emit-json layout` reject at the
   compiler-owned layout schema boundary before any forged ABI override can be
   accepted. Covered by
@@ -4099,18 +4096,17 @@ and do not assume Phase 4 is ready without evidence.
   derives its usage mode list from that same ordered source, covered by
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
-  `emit_json_layout_command_is_explicitly_gated`.
+  `emit_json_layout_outputs_checked_type_layouts`.
 - `zen emit-json` mode parsing now uses the same `EmitJsonMode` ordered table
   as usage generation instead of a second parse-mode branch list, covered by
   `cli_emit_json_modes_use_owned_mode_enum` and
   `emit_json_usage_lists_supported_and_gated_modes`.
 - Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`, so
-  HIR, MIR, layout, and target YAML gate text stays attached to the enum that
-  owns mode spelling and usage. Covered by
+  HIR, MIR, and target YAML gate text stays attached to the enum that owns mode
+  spelling and usage. Covered by
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_hir_command_is_explicitly_gated`,
   `emit_json_mir_command_is_explicitly_gated`,
-  `emit_json_layout_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
 - Real program inputs to `emit-json hir` and `emit-json mir` now reject at the
   schema/golden-test gate before emitting HIR or MIR JSON. Covered by

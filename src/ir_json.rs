@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+mod layout;
+
 use crate::ast::typed::TypedProgram;
 use crate::ast::Program;
 use crate::error::{Diagnostic, FileTable, Label, Span};
@@ -135,6 +137,10 @@ pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<Strin
     };
 
     serde_json::to_string_pretty(&graph)
+}
+
+pub fn layout_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
+    layout::program_to_json(program)
 }
 
 fn symbol_json(symbol: &Symbol) -> SymbolJson<'_> {

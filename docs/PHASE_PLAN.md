@@ -3623,15 +3623,12 @@ Agent UX deliverables:
   `semantic_status: "deterministic"` at the top level while preserving the
   existing target, dependency, feature, and host-effect payload keys. Covered by
   `emit_json_build_graph_outputs_project_build_graph`.
-- `emit-json layout` is now an explicit gated CLI mode for type layout JSON and
-  rejects until ABI layout tests exist. The mode is listed in both root and
-  emit-json usage, and covered by
-  `emit_json_layout_command_is_explicitly_gated`,
+- `emit-json layout` now emits checked compiler-owned layout JSON for the
+  stable subset: primitive sizes, baked `StaticString`, pointer-sized views, and
+  struct field offsets. The mode remains listed in both root and emit-json
+  usage, and is covered by `emit_json_layout_outputs_checked_type_layouts`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`.
-- Real program inputs to `emit-json layout` now reject at the ABI-layout gate
-  before emitting type layout JSON. Guarded by
-  `emit_json_layout_rejects_program_before_layout_json`.
 - Hand-authored layout JSON inputs to `emit-json layout` now reject at the
   compiler-owned layout schema boundary before any forged ABI override can be
   accepted. Guarded by
@@ -3821,18 +3818,17 @@ Agent UX deliverables:
   deterministic, and gated IR boundary modes aligned. Guarded by
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
-  `emit_json_layout_command_is_explicitly_gated`.
+  `emit_json_layout_outputs_checked_type_layouts`.
 - `zen emit-json` mode parsing now also uses the same `EmitJsonMode` ordered
   table as usage generation, so adding an IR boundary mode no longer requires a
   second parse-mode branch list. Guarded by
   `cli_emit_json_modes_use_owned_mode_enum` and `emit_json_usage_lists_supported_and_gated_modes`.
 - Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`,
-  keeping HIR, MIR, layout, and target YAML gate text attached to the same enum
-  that owns mode spelling and usage. Guarded by
+  keeping HIR, MIR, and target YAML gate text attached to the same enum that
+  owns mode spelling and usage. Guarded by
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_hir_command_is_explicitly_gated`,
   `emit_json_mir_command_is_explicitly_gated`,
-  `emit_json_layout_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
 - Real program inputs to `emit-json hir` and `emit-json mir` now reject at the
   schema/golden-test gate before emitting HIR or MIR JSON. Guarded by
