@@ -4189,6 +4189,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_layout_outputs_checked_type_layouts` and
   `emit_json_target_yaml_validates_minimal_target_schema` plus
   `emit_json_build_graph_outputs_project_build_graph`.
+- HIR JSON declaration coverage now includes enum variant tags/payload fields,
+  function parameter and return types, and named mutable top-level globals
+  instead of anonymous top-level blocks. Covered by
+  `emit_json_hir_outputs_enum_function_and_global_declarations`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
