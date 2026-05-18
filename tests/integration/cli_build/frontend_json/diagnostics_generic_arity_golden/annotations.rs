@@ -118,6 +118,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_generic_enum_local_annotation_missing_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_enum_local_annotation_missing_args.zen",
+        r#"
+Option<T>:
+    None,
+    Some(T)
+
+main = () i32 {
+    value: Option = Option<i32>.Some(1)
+    0
+}
+"#,
+        "generic enum local annotation missing arguments",
+        "generic enum local annotation missing-arguments diagnostics should not emit dependent-use followups",
+        "tests/fixtures/ir_json/diagnostics_generic_enum_local_annotation_missing_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_enum_annotation_missing_args_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_enum_annotation_missing_args.zen",

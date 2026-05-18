@@ -704,6 +704,11 @@ Agent UX deliverables:
   covering the stable `E5001` payload for local
   `value: Option<i32, StaticString>` annotations without variable-mismatch
   followups.
+- Diagnostics JSON for missing generic enum local annotation type arguments is
+  now pinned by
+  `emit_json_diagnostics_generic_enum_local_annotation_missing_args_schema_matches_golden`,
+  covering the stable `E5001` payload for local bare `value: Option`
+  annotations without variable-mismatch followups.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
