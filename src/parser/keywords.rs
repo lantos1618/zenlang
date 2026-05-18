@@ -34,6 +34,11 @@ pub(super) enum ParserMutabilityKeyword {
     Mut,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ParserBehaviorKeyword {
+    Behavior,
+}
+
 impl ParserPrefixKeyword {
     const ALL: &[ParserPrefixKeyword] = &[
         ParserPrefixKeyword::True,
@@ -181,6 +186,30 @@ impl ParserMutabilityKeyword {
 }
 
 impl FromStr for ParserMutabilityKeyword {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|keyword| keyword.as_str() == value)
+            .ok_or(())
+    }
+}
+
+impl ParserBehaviorKeyword {
+    const ALL: &[ParserBehaviorKeyword] = &[ParserBehaviorKeyword::Behavior];
+
+    const BEHAVIOR: &'static str = "behavior";
+
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Behavior => Self::BEHAVIOR,
+        }
+    }
+}
+
+impl FromStr for ParserBehaviorKeyword {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
