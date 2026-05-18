@@ -142,6 +142,53 @@ fn emit_json_typed_rejects_hand_authored_json_before_checked_ir_override() {
 }
 
 #[test]
+fn emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let json_path = tmp.path().join("forged_diagnostics.json");
+    std::fs::write(
+        &json_path,
+        r#"
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "diagnostics": [{
+    "severity": "note",
+    "message": "forged acceptance"
+  }]
+}
+"#,
+    )
+    .expect("write forged diagnostics JSON");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", json_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics on hand-authored JSON input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should reject hand-authored diagnostics IR before override: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "diagnostics JSON should not emit or accept hand-authored diagnostic IR, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("compiler-owned diagnostics JSON"),
+        "diagnostics gate should name the compiler-owned diagnostics JSON boundary, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("expected identifier") && !stderr.contains("unexpected token"),
+        "diagnostics JSON should reject before treating JSON as Zen source, stderr={stderr}"
+    );
+}
+
+#[test]
 fn emit_json_hir_rejects_hand_authored_json_before_ir_override() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let json_path = tmp.path().join("forged_hir.json");

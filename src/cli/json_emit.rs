@@ -46,6 +46,7 @@ pub(super) fn cmd_emit_json_typed(path_str: &str) {
 
 pub(super) fn cmd_emit_json_diagnostics(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_diagnostics_emit(path_str);
 
     let path = Path::new(path_str);
     if !path.exists() {
