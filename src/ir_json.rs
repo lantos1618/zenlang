@@ -13,6 +13,7 @@ use crate::resolver::Symbol;
 #[derive(Serialize)]
 struct AstJsonGraph<'a> {
     format: &'static str,
+    schema_version: u32,
     semantic_status: &'static str,
     entry_module: u32,
     modules: Vec<AstJsonModule<'a>>,
@@ -92,6 +93,7 @@ pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<Stri
 
     let graph = AstJsonGraph {
         format: "zen.ast.v0",
+        schema_version: 0,
         semantic_status: "unchecked",
         entry_module: graph.entry.0,
         modules: modules

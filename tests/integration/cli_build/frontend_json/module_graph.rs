@@ -42,6 +42,7 @@ main = () i32 {
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("emit-json ast stdout is json");
     assert_eq!(json["format"], "zen.ast.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "unchecked");
     assert_eq!(json["entry_module"], 0);
     assert_eq!(json["modules"].as_array().expect("modules array").len(), 2);

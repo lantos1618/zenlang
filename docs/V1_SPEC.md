@@ -162,9 +162,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`,
   `zen emit-json hir <file>`, `zen emit-json layout <file>`,
   `zen emit-json build-graph <file>`, and
-  `zen emit-json target-yaml <file>`. Hand-authored AST, symbols, typed, HIR,
-  and diagnostics JSON inputs are rejected before the frontend treats them as
-  Zen source or compiler-produced diagnostics, covered by
+  `zen emit-json target-yaml <file>`. AST JSON includes
+  `schema_version: 0` with `semantic_status: "unchecked"`. Hand-authored AST,
+  symbols, typed, HIR, and diagnostics JSON inputs are rejected before the
+  frontend treats them as Zen source or compiler-produced diagnostics, covered by
   `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`,
   `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, and
