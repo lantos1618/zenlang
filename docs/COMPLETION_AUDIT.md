@@ -3821,6 +3821,11 @@ and do not assume Phase 4 is ready without evidence.
   implemented rather than gated, backed by resolver/module/privacy evidence and
   guarded by
   `docs_truth::v1_spec_records_phase_one_feature_gates_and_test_backlog`.
+- `docs/V1_SPEC.md` now marks generic specialization for functions, structs,
+  enums, and methods as implemented, backed by executable generic fixtures and
+  generated-C assertions for missing mangled calls and duplicate emitted
+  definitions. Generic association solver work remains separate from this
+  implemented specialization surface.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
