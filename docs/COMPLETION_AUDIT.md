@@ -349,6 +349,11 @@ and do not assume Phase 4 is ready without evidence.
   pinned by `emit_json_typed_generic_result_schema_matches_golden`, covering
   concrete `Result_i32_StaticString` enum payloads,
   `unwrap_or_i32_StaticString`, and typed call sites.
+- Checked typed JSON for nested generic `Result<Option<T>, E>` specialization
+  is now pinned by
+  `emit_json_typed_nested_generic_result_schema_matches_golden`, covering
+  `Result_Option_i32_StaticString`, dependent `Option_i32`, specialized unwrap
+  calls, and nested enum payload typing.
 - Diagnostics JSON now carries `semantic_status: "diagnostic"`, covered by
   `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
   machine-readable diagnostics path is distinct from both unchecked AST and
