@@ -29,6 +29,11 @@ pub(super) enum ParserModuleRoot {
     AtStd,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ParserMutabilityKeyword {
+    Mut,
+}
+
 impl ParserPrefixKeyword {
     const ALL: &[ParserPrefixKeyword] = &[
         ParserPrefixKeyword::True,
@@ -159,6 +164,30 @@ impl FromStr for ParserModuleRoot {
             .iter()
             .copied()
             .find(|root| root.as_str() == value)
+            .ok_or(())
+    }
+}
+
+impl ParserMutabilityKeyword {
+    const ALL: &[ParserMutabilityKeyword] = &[ParserMutabilityKeyword::Mut];
+
+    const MUT: &'static str = "mut";
+
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Mut => Self::MUT,
+        }
+    }
+}
+
+impl FromStr for ParserMutabilityKeyword {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|keyword| keyword.as_str() == value)
             .ok_or(())
     }
 }
