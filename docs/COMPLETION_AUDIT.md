@@ -4153,6 +4153,11 @@ and do not assume Phase 4 is ready without evidence.
 - Dynamic `String` builtin recognition routes through the `GatedBuiltinType`
   enum table instead of a direct `DYNAMIC_STRING_TYPE_NAME` equality. Covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- The generated behavior association gate for `Type.derive(...)` now reports a
+  diagnostic span over the full gated association call instead of just the
+  receiver token, keeping generated/fallback association work gated while
+  improving editor and agent localization. Covered by
+  `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
 - Dev UX and Agent UX are now tracked as first-class roadmap lanes in
   `docs/PHASE_PLAN.md`, with MoonBit-style toolchain integration as the
   benchmark and concrete future surfaces for the VS Code extension,
