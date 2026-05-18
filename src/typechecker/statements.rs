@@ -22,8 +22,15 @@ impl TypeChecker {
                 ..
             } => {
                 let typed_value = self.check_expr(value)?;
+                let annotation_valid = ty
+                    .as_ref()
+                    .is_none_or(|t| self.generic_type_annotation_arities_valid(t));
                 let var_type = if let Some(t) = ty {
-                    self.resolve_type(t)
+                    if annotation_valid {
+                        self.resolve_type(t)
+                    } else {
+                        Type::Unknown
+                    }
                 } else {
                     typed_value.ty.clone()
                 };

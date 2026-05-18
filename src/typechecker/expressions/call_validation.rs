@@ -205,7 +205,7 @@ impl TypeChecker {
         type_args.is_empty() || type_args.len() == type_params.len()
     }
 
-    pub(super) fn generic_type_annotation_arities_valid(&self, ast_type: &AstType) -> bool {
+    pub(crate) fn generic_type_annotation_arities_valid(&self, ast_type: &AstType) -> bool {
         match ast_type {
             AstType::Named(name) => self
                 .structs
