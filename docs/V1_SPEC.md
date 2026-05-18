@@ -101,7 +101,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   report raw memory operation gates until allocator ownership and effect
   semantics exist. Byte-memory intrinsics `@builtin.memcpy(...)`,
   `@builtin.memmove(...)`, `@builtin.memset(...)`, and `@builtin.memcmp(...)`
-  report the same allocator/effect gate.
+  report the same allocator/effect gate. Imports of std allocator sketches are
+  gated before loading aspirational allocator source files, covered by
+  `stdlib_allocator_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`.
 - `Type matching`: gated. Comptime type matching operates on typed metadata for
   primitives, structs, enums, fields, variants, behaviors, allocator modes, and
   effect modes. It is separate from runtime value matching.

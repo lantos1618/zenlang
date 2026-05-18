@@ -3938,6 +3938,11 @@ and do not assume Phase 4 is ready without evidence.
 - Sync and Async typed allocator annotations now both reject through the
   allocator gate rather than falling through to unknown-type diagnostics.
   Covered by `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`.
+- Std allocator module imports now reject before loading aspirational allocator
+  source sketches, so parser diagnostics from allocator/effect prototypes do
+  not leak into stable compiler paths. Covered by
+  `stdlib_allocator_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`.
 - Actor framework type spellings `Actor`, `ActorRef`, `Mailbox`, and
   `Supervisor` now use AST gated builtin type metadata and produce actor-specific
   gated diagnostics rather than ordinary unknown-type errors. Covered by
