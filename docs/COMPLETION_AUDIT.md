@@ -2609,6 +2609,9 @@ and do not assume Phase 4 is ready without evidence.
 - `emit-json build-graph` pins declared and used deterministic host-effect JSON
   arrays, covered by
   `cargo test --test integration emit_json_build_graph_host_effect_schema_matches_golden`.
+- `emit-json build-graph` pins library exports plus executable dependency and
+  feature metadata arrays, covered by
+  `cargo test --test integration emit_json_build_graph_target_metadata_schema_matches_golden`.
 - `emit-json build-graph` emits declared deterministic file-read effects
   through `.Err`, wildcard, and identifier fallback arms, and rejects
   undeclared file reads through the advertised graph command, covered by

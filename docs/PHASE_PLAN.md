@@ -2499,7 +2499,9 @@ Agent UX deliverables:
   `emit_json_build_graph_outputs_target_dependencies_and_features` covers
   target metadata JSON emission,
   `emit_json_build_graph_host_effect_schema_matches_golden` pins the canonical
-  declared/used host-effect JSON arrays, and
+  declared/used host-effect JSON arrays,
+  `emit_json_build_graph_target_metadata_schema_matches_golden` pins the
+  canonical library export, dependency, and feature JSON arrays, and
   `emit_json_build_graph_rejects_undeclared_host_effects` plus
   `emit_json_build_graph_rejects_undeclared_host_effects_before_test_target_lowering`
   and `emit_json_build_graph_rejects_undeclared_host_effects_before_library_target_lowering`
@@ -3632,7 +3634,9 @@ Agent UX deliverables:
   the canonical project payload is pinned by
   `emit_json_build_graph_project_schema_matches_golden`, and the canonical
   host-effect payload is pinned by
-  `emit_json_build_graph_host_effect_schema_matches_golden`.
+  `emit_json_build_graph_host_effect_schema_matches_golden`. Library export,
+  dependency, and feature payloads are pinned by
+  `emit_json_build_graph_target_metadata_schema_matches_golden`.
 - `emit-json layout` now emits checked compiler-owned layout JSON for the
   stable subset with `schema_version: 0`: primitive sizes, baked
   `StaticString`, pointer-sized views, and struct field offsets. The mode
