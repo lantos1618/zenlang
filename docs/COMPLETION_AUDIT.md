@@ -2032,6 +2032,9 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_explicit_type_arg_arity_does_not_emit_inference_followup`
   and
   `generic_diagnostics::generic_method_explicit_type_arg_arity_does_not_emit_inference_followup`.
+  The diagnostics JSON shape for a hard generic `Result<T, E>` enum-method
+  arity failure is pinned by
+  `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden`.
 - Invalid explicit generic function and method type-argument arity now also
   skips dependent signature checks so bare omitted type parameters do not
   cascade into argument or return mismatches, covered by
@@ -4148,6 +4151,10 @@ and do not assume Phase 4 is ready without evidence.
   test `emit_json_diagnostics_removed_return_schema_matches_golden`, including
   the stable code, span, and structured suggested-fix payload for agent/editor
   consumers.
+- Generic `Result<T, E>` enum-method arity diagnostics JSON is now pinned by
+  `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden`,
+  including stable code, span, empty fixes/context, and no inference or
+  argument-mismatch followup diagnostics.
 - Hand-authored build graph JSON inputs to `emit-json build-graph` reject at
   the compiler-owned build graph JSON boundary before generic `build.zen` path
   validation can stand in for deterministic graph provenance. Covered by

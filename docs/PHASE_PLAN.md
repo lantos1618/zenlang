@@ -190,6 +190,8 @@ Agent UX deliverables:
   uniqueness and call/definition assertions.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
+  Diagnostics JSON pins this machine-readable shape through
+  `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden`.
 - Imported generic enum methods now cover the same explicit type-argument arity
   failure through the module graph, preserving the hard method diagnostic
   without inference or argument-mismatch followups.
@@ -2108,6 +2110,8 @@ Agent UX deliverables:
   the shared call-signature checker.
 - Explicit generic function and method type-argument arity failures now stop
   before specialization emits misleading follow-up inference diagnostics.
+  The `Result<T, E>` enum-method arity diagnostic is also pinned in diagnostics
+  JSON by `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden`.
 - Invalid explicit generic function and method type-argument arity now also
   skips dependent signature checks so bare omitted type parameters do not
   cascade into argument or return mismatches.
