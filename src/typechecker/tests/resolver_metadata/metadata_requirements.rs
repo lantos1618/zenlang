@@ -174,7 +174,7 @@ fn resolver_behavior_method_metadata_requires_method_types() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 "#,
     );

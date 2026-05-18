@@ -5,11 +5,11 @@ pub Point: {
 }
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "encoded"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 }

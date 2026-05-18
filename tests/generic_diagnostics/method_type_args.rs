@@ -86,7 +86,7 @@ Box.get<T> = (self: Box<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    box.get<i32, str>()
+    box.get<i32, StaticString>()
 }
 "#,
     );

@@ -8,7 +8,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 Callback<T: Json<T>>: Wrap((i32) i32), None
 "#,

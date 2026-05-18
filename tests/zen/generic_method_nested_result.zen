@@ -12,8 +12,8 @@ Result<T, E>:
     Ok(T),
     Err(E)
 
-Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, str> {
-    Result<Option<T>, str>.Ok(Option<T>.Some(self.value))
+Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, StaticString> {
+    Result<Option<T>, StaticString>.Ok(Option<T>.Some(self.value))
 }
 
 unwrap_option<T> = (value: Option<T>, fallback: T) T {
@@ -31,7 +31,7 @@ unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
 main = () i32 {
     box = Box<i32> { value: 42 }
     wrapped = box.wrap_result()
-    fallback = Result<Option<i32>, str>.Err("bad")
+    fallback = Result<Option<i32>, StaticString>.Err("bad")
     some = unwrap_result(wrapped, Option<i32>.None)
     other = unwrap_result(fallback, Option<i32>.Some(7))
     io.println("${unwrap_option(some, 0)}")

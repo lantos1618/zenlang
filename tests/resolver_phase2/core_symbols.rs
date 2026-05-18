@@ -128,7 +128,7 @@ distance = (point: Point) UnknownReturn { 0 }
 fn resolver_rejects_method_on_unknown_type() {
     let program = parse_program(
         r#"
-Missing.label = () str { "missing" }
+Missing.label = () StaticString { "missing" }
 "#,
     );
 

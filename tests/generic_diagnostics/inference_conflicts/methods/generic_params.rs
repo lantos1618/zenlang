@@ -18,7 +18,7 @@ Holder.choose_box<T> = (self: Holder, left: T, box: Box<T>) T {
 
 main = () i32 {
     holder = Holder { value: 0 }
-    box = Box<str> { value: "bad" }
+    box = Box<StaticString> { value: "bad" }
     holder.choose_box(1, box)
 }
 "#,
@@ -26,7 +26,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Holder.choose_box`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Holder.choose_box`: inferred `i32` and `StaticString`"
         )),
         "expected generic method struct inference conflict diagnostic, got {errors:?}"
     );
@@ -50,7 +50,7 @@ Holder.choose_option<T> = (self: Holder, left: T, value: Option<T>) T {
 
 main = () i32 {
     holder = Holder { value: 0 }
-    value = Option<str>.Some("bad")
+    value = Option<StaticString>.Some("bad")
     holder.choose_option(1, value)
 }
 "#,
@@ -58,7 +58,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Holder.choose_option`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Holder.choose_option`: inferred `i32` and `StaticString`"
         )),
         "expected generic method enum inference conflict diagnostic, got {errors:?}"
     );

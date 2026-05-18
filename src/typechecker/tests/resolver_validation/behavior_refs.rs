@@ -76,12 +76,12 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
     let contains =
         BehaviorRefValidation::for_role(BehaviorRefRole::Impl, BehaviorRefCheck::Contains);
     assert_eq!(
-            contains.contains_name_message("Point", "PrettyJson", "Json<str>"),
-            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<str>'"
+            contains.contains_name_message("Point", "PrettyJson", "Json<StaticString>"),
+            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<StaticString>'"
         );
     assert_eq!(
-            contains.contains_ref_message("Point", "PrettyJson", "Json<str>"),
-            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<str>'"
+            contains.contains_ref_message("Point", "PrettyJson", "Json<StaticString>"),
+            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<StaticString>'"
         );
 
     let list = BehaviorRefValidation::for_role(BehaviorRefRole::Parent, BehaviorRefCheck::List);
@@ -129,17 +129,17 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    encode = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -153,8 +153,11 @@ Point.requires(Json<str>)
         .expect("type symbol");
 
     let parent = BehaviorRefActual::for_role(behavior, BehaviorRefRole::Parent);
-    assert_eq!(format_behavior_ref_names(parent.names), "Json<str>");
-    assert_eq!(format_behavior_refs(parent.refs), "Json<str>");
+    assert_eq!(
+        format_behavior_ref_names(parent.names),
+        "Json<StaticString>"
+    );
+    assert_eq!(format_behavior_refs(parent.refs), "Json<StaticString>");
 
     let implementation = BehaviorRefActual::for_role(ty, BehaviorRefRole::Impl);
     assert_eq!(
@@ -164,8 +167,11 @@ Point.requires(Json<str>)
     assert_eq!(format_behavior_refs(implementation.refs), "PrettyJson");
 
     let required = BehaviorRefActual::for_role(ty, BehaviorRefRole::Required);
-    assert_eq!(format_behavior_ref_names(required.names), "Json<str>");
-    assert_eq!(format_behavior_refs(required.refs), "Json<str>");
+    assert_eq!(
+        format_behavior_ref_names(required.names),
+        "Json<StaticString>"
+    );
+    assert_eq!(format_behavior_refs(required.refs), "Json<StaticString>");
 }
 
 #[test]
@@ -179,17 +185,17 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    encode = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -208,12 +214,18 @@ Point.requires(Json<str>)
     let (required_names, required_refs) =
         BehaviorRefActual::metadata_for_role(ty, BehaviorRefRole::Required);
 
-    assert_eq!(format_behavior_ref_names(parent_names), "Json<str>");
-    assert_eq!(format_behavior_refs(parent_refs), "Json<str>");
+    assert_eq!(
+        format_behavior_ref_names(parent_names),
+        "Json<StaticString>"
+    );
+    assert_eq!(format_behavior_refs(parent_refs), "Json<StaticString>");
     assert_eq!(format_behavior_ref_names(impl_names), "PrettyJson");
     assert_eq!(format_behavior_refs(impl_refs), "PrettyJson");
-    assert_eq!(format_behavior_ref_names(required_names), "Json<str>");
-    assert_eq!(format_behavior_refs(required_refs), "Json<str>");
+    assert_eq!(
+        format_behavior_ref_names(required_names),
+        "Json<StaticString>"
+    );
+    assert_eq!(format_behavior_refs(required_refs), "Json<StaticString>");
 }
 
 #[test]

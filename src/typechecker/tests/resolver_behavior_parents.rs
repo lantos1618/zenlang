@@ -5,11 +5,11 @@ fn check_program_with_symbols_validates_resolver_behavior_parent_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -42,10 +42,10 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -64,7 +64,7 @@ PrettyJson.extends(Json<str>)
 
     assert!(
             err.iter().any(|d| d.message.contains(
-                "resolver behavior symbol 'PrettyJson' has parents 'Json<i32>', expected to include 'Json<str>'"
+                "resolver behavior symbol 'PrettyJson' has parents 'Json<i32>', expected to include 'Json<StaticString>'"
             )),
             "expected resolver generic behavior parent metadata diagnostic, got {err:?}"
         );
@@ -79,10 +79,10 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -103,7 +103,7 @@ PrettyJson.extends(Json<str>)
         .expect_err("resolver generic behavior parent ref mismatch should fail");
 
     let expected =
-            "resolver behavior symbol 'PrettyJson' has parent refs 'Json<i32>', expected to include 'Json<str>'";
+            "resolver behavior symbol 'PrettyJson' has parent refs 'Json<i32>', expected to include 'Json<StaticString>'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver generic behavior parent ref diagnostic, got {err:?}"
@@ -141,15 +141,15 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -182,15 +182,15 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_parent_refs() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)

@@ -1,7 +1,7 @@
 { Json } = base
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)

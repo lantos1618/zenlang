@@ -1,7 +1,7 @@
 { io } = std
 { Json, Point } = traits
 
-render<T: Json<str>> = (value: T) str {
+render<T: Json<StaticString>> = (value: T) StaticString {
     value.encode()
 }
 

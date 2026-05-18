@@ -5,10 +5,10 @@ fn resolver_records_behavior_parent_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -37,11 +37,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
 
@@ -50,7 +50,7 @@ Point.requires(Json<str>)
 
     assert_eq!(
         point.behavior_impl_names.as_deref(),
-        Some(&["Json<str>".to_string()][..])
+        Some(&["Json<StaticString>".to_string()][..])
     );
     assert_eq!(
         point.behavior_impl_refs.as_deref(),
@@ -63,7 +63,7 @@ Point.requires(Json<str>)
     );
     assert_eq!(
         point.behavior_required_names.as_deref(),
-        Some(&["Json<str>".to_string()][..])
+        Some(&["Json<StaticString>".to_string()][..])
     );
     assert_eq!(
         point.behavior_required_refs.as_deref(),
@@ -84,10 +84,10 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     );
 
@@ -99,7 +99,7 @@ PrettyJson.extends(Json<str>)
             .expect("behavior symbol")
             .behavior_parent_names
             .as_deref(),
-        Some(&["Json<str>".to_string()][..])
+        Some(&["Json<StaticString>".to_string()][..])
     );
     assert_eq!(
         table

@@ -5,17 +5,17 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_impl_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -45,17 +45,17 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -95,11 +95,11 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_required_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 Point: { x: i32 }
@@ -134,11 +134,11 @@ fn check_program_with_symbols_rejects_extra_resolver_behavior_required_refs() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 Point: { x: i32 }

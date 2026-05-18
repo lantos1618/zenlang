@@ -10,7 +10,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 Box: { value: i32 }
 Box.apply<U: Json<U>> = (self: Box, callback: (U) U) (U) U {

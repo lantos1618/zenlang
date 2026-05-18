@@ -5,11 +5,11 @@ fn behavior_impl_for_unknown_type_is_error() {
     let errors = frontend_errors(
         r#"
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Missing.implements(Json) {
-    to_json = (value: Missing) str {
+    to_json = (value: Missing) StaticString {
         "missing"
     }
 }
@@ -33,11 +33,11 @@ Box<T>: {
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Box.implements(Json) {
-    to_json = (value: Box) str {
+    to_json = (value: Box) StaticString {
         "box"
     }
 }
@@ -61,7 +61,7 @@ Box<T>: {
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Box.requires(Json)
@@ -85,15 +85,15 @@ Point: {
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str {
+    to_json = (value: Point) StaticString {
         "point"
     }
 
-    extra = (value: Point) str {
+    extra = (value: Point) StaticString {
         "extra"
     }
 }
@@ -118,15 +118,15 @@ Point: {
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str {
+    to_json = (value: Point) StaticString {
         "point"
     }
 
-    to_json = (value: Point) str {
+    to_json = (value: Point) StaticString {
         "point again"
     }
 }

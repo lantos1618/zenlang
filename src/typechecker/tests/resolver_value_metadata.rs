@@ -172,9 +172,9 @@ fn check_program_with_symbols_validates_resolver_function_type_parameter_bounds(
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
-encode<T: Json> = (value: T) str { "encoded" }
+encode<T: Json> = (value: T) StaticString { "encoded" }
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -227,7 +227,7 @@ identity<T: Json<T>> = (value: T) T { value }
         .check_program_with_symbols(&program, &symbols)
         .expect_err("resolver function generic bound ref mismatch should fail");
 
-    let expected = "resolver value symbol 'identity' has type parameter bound refs '(T: Json<str>)', expected '(T: Json<T>)'";
+    let expected = "resolver value symbol 'identity' has type parameter bound refs '(T: Json<StaticString>)', expected '(T: Json<T>)'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver function generic bound ref diagnostic, got {err:?}"

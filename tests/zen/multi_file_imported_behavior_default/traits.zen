@@ -1,5 +1,5 @@
 pub Json: behavior {
-    to_json: (Self) str {
+    to_json: (Self) StaticString {
         "default-json"
     }
 }

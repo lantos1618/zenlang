@@ -5,7 +5,7 @@ fn resolver_accepts_behavior_requires_known_type_and_behavior() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
@@ -24,7 +24,7 @@ fn resolver_rejects_duplicate_behavior_required_edges() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
@@ -69,11 +69,11 @@ fn resolver_accepts_behavior_extends_known_behaviors() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -90,11 +90,11 @@ fn resolver_rejects_duplicate_behavior_parent_edges() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)

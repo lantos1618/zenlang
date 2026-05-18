@@ -8,7 +8,7 @@ Point: { x: i32 }
 Option<T>: Some(T), None
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Pretty.extends(Json)
@@ -75,7 +75,7 @@ fn ast_precollection_validation_tasks_collect_self_and_extends_work() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Pretty.extends(Json)
@@ -105,7 +105,7 @@ fn ast_declaration_collection_tasks_include_precollection_validation_work() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Pretty.extends(Json)
@@ -137,7 +137,7 @@ fn ast_declaration_collection_bundle_replays_collection_passes() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 make = () Point { Point { x: 1 } }
@@ -247,12 +247,12 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (self: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (self: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
-JsonString.extends(Json<str>)
+Point.requires(Json<StaticString>)
+JsonString.extends(Json<StaticString>)
 
 main = () i32 { 1 }
 "#,
@@ -274,11 +274,11 @@ fn ast_declaration_semantic_bundle_replays_validation_passes() {
 Point: { x: i32 = "bad" }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(MissingBehavior)
@@ -311,7 +311,7 @@ main = (value: MissingType) i32 { 1 }
     assert!(
         checker.diagnostics().iter().any(|d| d
             .message
-            .contains("field `x` default expects `i32`, found `str`")),
+            .contains("field `x` default expects `i32`, found `StaticString`")),
         "expected field default diagnostics, got {:?}",
         checker.diagnostics()
     );

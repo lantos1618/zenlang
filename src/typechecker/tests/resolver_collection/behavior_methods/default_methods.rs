@@ -47,7 +47,7 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_default_method_name_
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { "default" }
+    encode: (self: Self) StaticString { "default" }
 }
 
 Point.implements(Json) {
@@ -87,11 +87,11 @@ fn collect_declarations_with_symbols_skips_default_when_resolver_restores_impl_m
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { "default" }
+    encode: (self: Self) StaticString { "default" }
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );

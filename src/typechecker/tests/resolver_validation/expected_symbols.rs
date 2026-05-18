@@ -14,7 +14,7 @@ fn expected_parameter_builds_name_display_and_type_together() {
     );
 
     assert_eq!(parameter.name, "mapper");
-    assert_eq!(parameter.display, "(i32) str");
+    assert_eq!(parameter.display, "(i32) StaticString");
     assert_eq!(
         parameter.typed,
         AstType::Function {
@@ -127,8 +127,8 @@ fn expected_behavior_method_builds_signature_and_metadata_together() {
         expected.signature,
         (
             "map".to_string(),
-            vec!["(i32) str".to_string()],
-            "str".to_string(),
+            vec!["(i32) StaticString".to_string()],
+            "StaticString".to_string(),
         )
     );
     assert_eq!(expected.metadata.name, "map");

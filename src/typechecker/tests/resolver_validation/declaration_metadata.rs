@@ -9,7 +9,7 @@ Point: { x: i32 }
 Option: Some(i32), None
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.impl = {
@@ -17,7 +17,7 @@ Point.impl = {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -59,11 +59,11 @@ fn expected_behavior_edges_build_parent_edges_from_extends_together() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -89,11 +89,11 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "pretty" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 "#,
     );
@@ -114,9 +114,9 @@ Point.implements(PrettyJson) {
     );
 
     assert!(tc.diagnostics.iter().any(|d| d.code == "E0236" && d.message.contains(
-            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<str>'"
+            "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<StaticString>'"
         )));
     assert!(tc.diagnostics.iter().any(|d| d.code == "E0247" && d.message.contains(
-            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<str>'"
+            "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<StaticString>'"
         )));
 }

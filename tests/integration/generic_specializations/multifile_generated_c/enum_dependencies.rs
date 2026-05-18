@@ -5,15 +5,15 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("multi_file_generic/main.zen"));
     assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
-    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
+    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
     assert!(c_source.contains("int32_t unwrap_option_i32(Option_i32 value, int32_t fallback)"));
-    assert!(
-        c_source.contains("int32_t unwrap_result_i32_str(Result_i32_str value, int32_t fallback)")
-    );
+    assert!(c_source.contains(
+        "int32_t unwrap_result_i32_StaticString(Result_i32_StaticString value, int32_t fallback)"
+    ));
     assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
-    assert!(c_source.contains("unwrap_result_i32_str(err, 9LL)"));
+    assert!(c_source.contains("unwrap_result_i32_StaticString(err, 9LL)"));
     assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_i32_str");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_i32_StaticString");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_option"));
@@ -36,12 +36,13 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_result_enum_method/main.zen"),
     );
-    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
-    assert!(c_source
-        .contains("int32_t Result_unwrap_or_i32_str(Result_i32_str self, int32_t fallback)"));
-    assert!(c_source.contains("Result_unwrap_or_i32_str(ok, 0LL)"));
-    assert!(c_source.contains("Result_unwrap_or_i32_str(err, 144LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_str");
+    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
+    assert!(c_source.contains(
+        "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)"
+    ));
+    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok, 0LL)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err, 144LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_StaticString");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T Result_unwrap_or"));
     assert!(!c_source.contains("Result_unwrap_or(err"));
@@ -49,21 +50,22 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_result_enum_multi_specialization/main.zen"),
     );
-    assert!(c_source.contains("typedef struct Result_i32_str Result_i32_str;"));
-    assert!(c_source.contains("typedef struct Result_bool_str Result_bool_str;"));
-    assert!(c_source
-        .contains("int32_t Result_unwrap_or_i32_str(Result_i32_str self, int32_t fallback)"));
-    assert!(
-        c_source.contains("bool Result_unwrap_or_bool_str(Result_bool_str self, bool fallback)")
-    );
-    assert!(c_source.contains("Result_unwrap_or_i32_str(ok_int, 0LL)"));
-    assert!(c_source.contains("Result_unwrap_or_i32_str(err_int, 144LL)"));
-    assert!(c_source.contains("Result_unwrap_or_bool_str(ok_bool, true)"));
-    assert!(c_source.contains("Result_unwrap_or_bool_str(err_bool, true)"));
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_str");
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_bool_str");
-    assert_c_function_definition_count(&c_source, "Result_unwrap_or_i32_str", 1);
-    assert_c_function_definition_count(&c_source, "Result_unwrap_or_bool_str", 1);
+    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
+    assert!(c_source.contains("typedef struct Result_bool_StaticString Result_bool_StaticString;"));
+    assert!(c_source.contains(
+        "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)"
+    ));
+    assert!(c_source.contains(
+        "bool Result_unwrap_or_bool_StaticString(Result_bool_StaticString self, bool fallback)"
+    ));
+    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok_int, 0LL)"));
+    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err_int, 144LL)"));
+    assert!(c_source.contains("Result_unwrap_or_bool_StaticString(ok_bool, true)"));
+    assert!(c_source.contains("Result_unwrap_or_bool_StaticString(err_bool, true)"));
+    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_StaticString");
+    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_bool_StaticString");
+    assert_c_function_definition_count(&c_source, "Result_unwrap_or_i32_StaticString", 1);
+    assert_c_function_definition_count(&c_source, "Result_unwrap_or_bool_StaticString", 1);
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T Result_unwrap_or"));
     assert!(!c_source.contains("Result_unwrap_or(err"));

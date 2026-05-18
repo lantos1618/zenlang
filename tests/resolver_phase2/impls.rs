@@ -5,13 +5,13 @@ fn resolver_records_behavior_impl_methods_as_value_symbols() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { "point" }
+    stringify = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -31,7 +31,7 @@ Point.implements(Json) {
         method.parameter_type_names.as_deref(),
         Some(&["Point".to_string()][..])
     );
-    assert_eq!(method.return_type_name.as_deref(), Some("str"));
+    assert_eq!(method.return_type_name.as_deref(), Some("StaticString"));
     assert_eq!(method.type_parameter_count, Some(0));
     assert_eq!(method.type_parameter_names.as_deref(), Some(&[][..]));
     assert_eq!(method.type_parameter_bounds.as_deref(), Some(&[][..]));
@@ -182,13 +182,13 @@ fn resolver_records_behavior_impl_method_body_locals() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str {
+    stringify = (value: Point) StaticString {
         label = "point"
         label
     }

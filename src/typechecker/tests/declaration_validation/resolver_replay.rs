@@ -109,11 +109,11 @@ fn resolver_behavior_impl_replay_task_helper_pushes_metadata_and_type_refs_toget
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 "#,
     );
@@ -216,7 +216,7 @@ fn resolver_behavior_impl_block_declaration_tasks_collect_only_behavior_impls() 
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.impl = {
@@ -224,7 +224,7 @@ Point.impl = {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );

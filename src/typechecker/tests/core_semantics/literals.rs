@@ -31,7 +31,7 @@ Result<T, E>:
     Err(E)
 
 main = () i32 {
-    value = Result<i32, str>.Ok(1)
+    value = Result<i32, StaticString>.Ok(1)
     value.raise()
 }
 "#,

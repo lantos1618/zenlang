@@ -13,16 +13,16 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -34,8 +34,8 @@ Point.requires(Json<str>)
     assert_eq!(tasks.type_associations.len(), 1);
     let type_task = &tasks.type_associations[0];
     assert_eq!(type_task.name, "Point");
-    assert_eq!(type_task.impl_edges[0].display, "Json<str>");
-    assert_eq!(type_task.required_edges[0].display, "Json<str>");
+    assert_eq!(type_task.impl_edges[0].display, "Json<StaticString>");
+    assert_eq!(type_task.required_edges[0].display, "Json<StaticString>");
 
     assert_eq!(tasks.behavior_parents.len(), 2);
     let pretty_task = tasks
@@ -43,7 +43,7 @@ Point.requires(Json<str>)
         .iter()
         .find(|task| task.name == "PrettyJson")
         .expect("PrettyJson parent task");
-    assert_eq!(pretty_task.parent_edges[0].display, "Json<str>");
+    assert_eq!(pretty_task.parent_edges[0].display, "Json<StaticString>");
     let json_task = tasks
         .behavior_parents
         .iter()
@@ -100,11 +100,11 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -122,7 +122,7 @@ Point.requires(Json<str>)
     assert_eq!(tasks.type_declarations[0].name, "Point");
     assert_eq!(
         tasks.expected_associations.impls.owned_edges_for("Point")[0].display,
-        "Json<str>"
+        "Json<StaticString>"
     );
     assert_eq!(
         tasks
@@ -130,7 +130,7 @@ Point.requires(Json<str>)
             .required
             .owned_edges_for("Point")[0]
             .display,
-        "Json<str>"
+        "Json<StaticString>"
     );
     assert_eq!(tasks.behavior_declarations.len(), 1);
     assert_eq!(tasks.behavior_declarations[0].name, "Json");
@@ -147,16 +147,16 @@ Json<T>: behavior {
 }
 
 Pretty<T>: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 Pretty.extends(Json<T>)
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -174,11 +174,11 @@ Point.requires(Json<str>)
     assert_eq!(association_tasks.type_associations[0].name, "Point");
     assert_eq!(
         association_tasks.type_associations[0].impl_edges[0].display,
-        "Json<str>"
+        "Json<StaticString>"
     );
     assert_eq!(
         association_tasks.type_associations[0].required_edges[0].display,
-        "Json<str>"
+        "Json<StaticString>"
     );
     assert_eq!(association_tasks.behavior_parents.len(), 2);
     let pretty_task = association_tasks
@@ -225,11 +225,11 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
 main = (input: i32) i32 {
     input
@@ -262,8 +262,8 @@ main = (input: i32) i32 {
 
     let type_task = &tasks.behavior_associations.type_associations[0];
     assert_eq!(type_task.name, "Point");
-    assert_eq!(type_task.impl_edges[0].display, "Json<str>");
-    assert_eq!(type_task.required_edges[0].display, "Json<str>");
+    assert_eq!(type_task.impl_edges[0].display, "Json<StaticString>");
+    assert_eq!(type_task.required_edges[0].display, "Json<StaticString>");
     assert_eq!(tasks.behavior_associations.behavior_parents.len(), 1);
 }
 

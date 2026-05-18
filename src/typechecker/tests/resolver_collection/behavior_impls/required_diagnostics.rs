@@ -10,7 +10,7 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -37,10 +37,8 @@ Point.requires(Json<str>)
         .map(|diagnostic| diagnostic.message.as_str())
         .collect();
     assert!(
-        messages
-            .iter()
-            .any(|message| *message
-                == "type `Point` does not implement required behavior `Json_str`"),
+        messages.iter().any(|message| *message
+            == "type `Point` does not implement required behavior `Json_StaticString`"),
         "resolver-restored requires metadata should report the validated missing impl, got {:?}",
         messages
     );
@@ -61,18 +59,18 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Point: { x: i32 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { "point" }
-    pretty = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -114,13 +112,13 @@ Json<T>: behavior {
 }
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
+Point.implements(Json<StaticString>) {
 }
 
 Point.implements(Json<i32>) {
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 Point.requires(Json<i32>)
 "#,
     );
@@ -154,7 +152,7 @@ Point.requires(Json<i32>)
     );
     assert!(
         tc.behavior_impls
-            .contains(&("Point".to_string(), "Json_str".to_string()))
+            .contains(&("Point".to_string(), "Json_StaticString".to_string()))
             && tc
                 .behavior_impls
                 .contains(&("Point".to_string(), "Json_i32".to_string())),
@@ -173,11 +171,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -211,11 +209,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -254,11 +252,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()

@@ -41,8 +41,8 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
 identity<T: Json<T>> = (value: T) T {
@@ -73,11 +73,11 @@ fn behavior_generic_bound_accepts_later_behavior_declaration() {
     let program = parse_program(
         r#"
 Serializable<T: Json>: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 main = () i32 {
@@ -96,7 +96,7 @@ fn behavior_generic_bound_unknown_behavior_reports_once() {
     let program = parse_program(
         r#"
 Serializable<T: Missing>: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 main = () i32 {
@@ -130,14 +130,14 @@ fn generic_behavior_bound_accepts_type_with_impl() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     "encoded"
 }
 
@@ -161,21 +161,21 @@ fn generic_behavior_bound_accepts_inherited_behavior_impl() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    to_json = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     "encoded"
 }
 
@@ -199,10 +199,10 @@ fn generic_behavior_bound_rejects_type_without_impl() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     "encoded"
 }
 

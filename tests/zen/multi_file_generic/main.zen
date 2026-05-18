@@ -4,8 +4,8 @@
 main = () i32 {
     some = Option<i32>.Some(42)
     none = Option<i32>.None
-    ok = Result<i32, str>.Ok(5)
-    err = Result<i32, str>.Err("bad")
+    ok = Result<i32, StaticString>.Ok(5)
+    err = Result<i32, StaticString>.Err("bad")
     io.println("${unwrap_option(some, 0)}")
     io.println("${unwrap_option(none, 7)}")
     io.println("${unwrap_result(ok, 0)}")

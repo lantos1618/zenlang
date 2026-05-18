@@ -80,11 +80,11 @@ fn collect_declarations_with_symbols_uses_resolver_impl_method_name_metadata_for
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -113,11 +113,11 @@ fn collect_declarations_with_symbols_does_not_let_stale_ast_name_hide_extra_impl
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    extra = (value: Point) str { "extra" }
+    extra = (value: Point) StaticString { "extra" }
 }
 "#,
     );
@@ -153,11 +153,11 @@ fn collect_declarations_with_symbols_uses_resolver_impl_method_parameter_names_f
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (value: Self) str
+    encode: (value: Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -189,11 +189,11 @@ fn collect_declarations_with_symbols_ignores_stale_impl_method_parameter_order_f
         r#"
 Point: { x: i32 }
 Mapper: behavior {
-    map: (value: Self, input: i32) str
+    map: (value: Self, input: i32) StaticString
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { "point" }
+    map = (value: Point, input: i32) StaticString { "point" }
 }
 "#,
     );
@@ -227,11 +227,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_impl_target_name_met
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -260,7 +260,7 @@ fn resolver_declaration_metadata_skips_behavior_impl_methods_until_behavior_impl
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.impl = {
@@ -268,7 +268,7 @@ Point.impl = {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );

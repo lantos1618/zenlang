@@ -10,7 +10,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.requires(Json<i32, str>)
+Point.requires(Json<i32, StaticString>)
 "#,
     );
 
@@ -32,7 +32,7 @@ fn behavior_requires_nongeneric_behavior_type_args_are_error() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.requires(Json<i32>)
@@ -63,11 +63,11 @@ fn behavior_requires_passes_when_impl_exists() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -86,7 +86,7 @@ fn behavior_requires_rejects_missing_impl() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.requires(Json)
@@ -111,7 +111,7 @@ fn behavior_requires_generic_behavior_without_type_args_is_error() {
 Point: { x: i32 }
 
 Json<T>: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.requires(Json)

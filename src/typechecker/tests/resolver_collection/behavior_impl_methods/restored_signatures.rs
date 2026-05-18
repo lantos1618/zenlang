@@ -7,11 +7,11 @@ fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_imp
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -47,11 +47,11 @@ fn collect_declarations_with_symbols_clears_stale_behavior_impl_method_signature
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -97,11 +97,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_impl_method_signatur
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -148,11 +148,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode<T> = (value: Point) str { "point" }
+    encode<T> = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -205,11 +205,11 @@ fn collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_t
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode<T> = (value: Point) str { "point" }
+    encode<T> = (value: Point) StaticString { "point" }
 }
 "#,
     );

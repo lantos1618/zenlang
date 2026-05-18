@@ -173,8 +173,8 @@ fn behavior_method_validation_formats_messages() {
 
     assert_eq!(validation.display_code, "METHODS");
     assert_eq!(
-            validation.display_message("Serializable", "(encode(Self) bool)", "(encode(Self) str)"),
-            "resolver behavior symbol 'Serializable' has methods '(encode(Self) bool)', expected '(encode(Self) str)'"
+            validation.display_message("Serializable", "(encode(Self) bool)", "(encode(Self) StaticString)"),
+            "resolver behavior symbol 'Serializable' has methods '(encode(Self) bool)', expected '(encode(Self) StaticString)'"
         );
     assert_eq!(
             validation.typed_message(

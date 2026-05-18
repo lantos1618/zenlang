@@ -3,12 +3,12 @@ pub Json<T>: behavior {
 }
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 pub FancyJson: behavior {
-    fancy: (Self) str
+    fancy: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 FancyJson.extends(PrettyJson)

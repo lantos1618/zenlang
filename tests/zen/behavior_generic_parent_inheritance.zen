@@ -9,22 +9,22 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "point"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
 main = () i32 {
     point = Point { x: 1 }

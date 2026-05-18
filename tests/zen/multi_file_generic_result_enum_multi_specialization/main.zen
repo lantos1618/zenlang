@@ -2,10 +2,10 @@
 { Result } = result
 
 main = () i32 {
-    ok_int = Result<i32, str>.Ok(55)
-    err_int = Result<i32, str>.Err("bad")
-    ok_bool = Result<bool, str>.Ok(false)
-    err_bool = Result<bool, str>.Err("nope")
+    ok_int = Result<i32, StaticString>.Ok(55)
+    err_int = Result<i32, StaticString>.Err("bad")
+    ok_bool = Result<bool, StaticString>.Ok(false)
+    err_bool = Result<bool, StaticString>.Err("nope")
 
     io.println("${ok_int.unwrap_or(0)}")
     io.println("${err_int.unwrap_or(144)}")

@@ -7,13 +7,13 @@ fn check_program_with_symbols_validates_resolver_behavior_impl_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -45,8 +45,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -65,7 +65,7 @@ Point.implements(Json<str>) {
         .expect_err("resolver generic behavior impl metadata mismatch should fail");
 
     let expected =
-            "resolver type symbol 'Point' has behavior impls 'Json<i32>', expected to include 'Json<str>'";
+            "resolver type symbol 'Point' has behavior impls 'Json<i32>', expected to include 'Json<StaticString>'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver generic behavior impl metadata diagnostic, got {err:?}"
@@ -82,8 +82,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -105,7 +105,7 @@ Point.implements(Json<str>) {
         .expect_err("resolver generic behavior impl ref mismatch should fail");
 
     let expected =
-            "resolver type symbol 'Point' has behavior impl refs 'Json<i32>', expected to include 'Json<str>'";
+            "resolver type symbol 'Point' has behavior impl refs 'Json<i32>', expected to include 'Json<StaticString>'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver generic behavior impl ref diagnostic, got {err:?}"
@@ -117,13 +117,13 @@ fn check_program_with_symbols_validates_resolver_behavior_required_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -157,11 +157,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -179,7 +179,7 @@ Point.requires(Json<str>)
         .expect_err("resolver generic behavior requires metadata mismatch should fail");
 
     let expected =
-            "resolver type symbol 'Point' has behavior requires 'Json<i32>', expected to include 'Json<str>'";
+            "resolver type symbol 'Point' has behavior requires 'Json<i32>', expected to include 'Json<StaticString>'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver generic behavior requires metadata diagnostic, got {err:?}"
@@ -196,11 +196,11 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -221,7 +221,7 @@ Point.requires(Json<str>)
         .expect_err("resolver generic behavior requires ref mismatch should fail");
 
     let expected =
-            "resolver type symbol 'Point' has behavior requires refs 'Json<i32>', expected to include 'Json<str>'";
+            "resolver type symbol 'Point' has behavior requires refs 'Json<i32>', expected to include 'Json<StaticString>'";
     assert!(
         err.iter().any(|d| d.message.contains(expected)),
         "expected resolver generic behavior requires ref diagnostic, got {err:?}"

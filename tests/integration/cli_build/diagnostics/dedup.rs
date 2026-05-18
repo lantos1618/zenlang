@@ -24,7 +24,7 @@ pub Point: {
         r#"
 { Json, Point } = traits
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
 main = () i32 {
     0
@@ -46,7 +46,7 @@ main = () i32 {
     );
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let diagnostic = "type `Point` does not implement required behavior `Json_str`";
+    let diagnostic = "type `Point` does not implement required behavior `Json_StaticString`";
     assert!(
         stderr.contains(diagnostic),
         "expected missing behavior diagnostic, stderr={stderr}"

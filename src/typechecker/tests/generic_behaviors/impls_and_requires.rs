@@ -7,11 +7,11 @@ fn behavior_impl_with_required_method_passes() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -28,7 +28,7 @@ fn behavior_impl_missing_required_method_is_error() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
@@ -55,7 +55,7 @@ fn behavior_impl_can_omit_default_method() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str { "{}" }
+    to_json: (Self) StaticString { "{}" }
 }
 
 Point.implements(Json) {
@@ -75,15 +75,15 @@ fn behavior_impl_duplicate_is_error() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -107,11 +107,11 @@ fn behavior_impl_generic_behavior_without_type_args_is_error() {
 Point: { x: i32 }
 
 Json<T>: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -134,11 +134,11 @@ fn behavior_impl_nongeneric_behavior_type_args_are_error() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json<i32>) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -170,11 +170,11 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
 
@@ -253,7 +253,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
+Point.implements(Json<StaticString>) {
     encode = (value: Point) i32 { 1 }
 }
 "#,
@@ -265,7 +265,7 @@ Point.implements(Json<str>) {
     assert!(
         errors.iter().any(|d| d
             .message
-            .contains("method `encode` for behavior `Json_str` expects return `str`, found `i32`")),
+            .contains("method `encode` for behavior `Json_StaticString` expects return `StaticString`, found `i32`")),
         "expected substituted behavior method return diagnostic, got {errors:?}"
     );
 }
@@ -277,22 +277,22 @@ fn behavior_impl_overlapping_inherited_behavior_is_error() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
 
 Point.implements(Json) {
-    to_json = (value: Point) str { "point" }
+    to_json = (value: Point) StaticString { "point" }
 }
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    to_json = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 "#,
     );

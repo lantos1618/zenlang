@@ -89,7 +89,7 @@ Point: { x: i32 = "bad" }
     assert!(
         err.iter().any(|d| d
             .message
-            .contains("field `x` default expects `i32`, found `str`")),
+            .contains("field `x` default expects `i32`, found `StaticString`")),
         "expected field default type mismatch diagnostic, got {err:?}"
     );
 }

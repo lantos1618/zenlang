@@ -18,7 +18,7 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
         Type::F64 => "f64".into(),
         Type::Bool => "bool".into(),
         Type::Void => "void".into(),
-        Type::Str => "str".into(),
+        Type::Str => "StaticString".into(),
         Type::String => "String".into(),
         Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
             symbol_mangle_key(name)
@@ -58,6 +58,16 @@ fn symbol_mangle_key(symbol: &str) -> String {
 
 pub(super) fn concrete_name_matches_generic(concrete_name: &str, generic_name: &str) -> bool {
     concrete_name == generic_name || concrete_name.starts_with(&format!("{generic_name}_"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{type_mangle_key, Type};
+
+    #[test]
+    fn static_string_mangle_uses_public_type_name() {
+        assert_eq!(type_mangle_key(&Type::Str), "StaticString");
+    }
 }
 
 /// Substitute type parameters in an AstType, returning a new AstType.

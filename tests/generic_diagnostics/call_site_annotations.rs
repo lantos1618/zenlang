@@ -14,7 +14,7 @@ identity<T> = (value: T) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    bad = identity<Box<i32, str>>(box)
+    bad = identity<Box<i32, StaticString>>(box)
     bad.value
 }
 "#,
@@ -51,7 +51,7 @@ Holder.wrap<T> = (self: Holder, value: T) T {
 main = () i32 {
     holder = Holder { value: 1 }
     box = Box<i32> { value: 1 }
-    bad = holder.wrap<Box<i32, str>>(box)
+    bad = holder.wrap<Box<i32, StaticString>>(box)
     bad.value
 }
 "#,
@@ -111,7 +111,7 @@ Box<T>: {
 }
 
 main = () i32 {
-    f = (box: Box<i32, str>) i32 {
+    f = (box: Box<i32, StaticString>) i32 {
         0
     }
     0
@@ -162,7 +162,7 @@ Box<T>: {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    bad = cast(box, Box<i32, str>)
+    bad = cast(box, Box<i32, StaticString>)
     bad.value
 }
 "#,

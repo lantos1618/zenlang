@@ -10,7 +10,7 @@ fn resolver_records_type_and_behavior_generic_parameter_counts() {
 Box<T>: { value: T }
 Option<T>: Some(T), None
 Serializable<T>: behavior {
-    encode: (T) str
+    encode: (T) StaticString
 }
 "#,
     );
@@ -71,7 +71,7 @@ fn resolver_rejects_duplicate_type_parameter_names() {
 Box<T, T>: { value: T }
 Option<T, T>: Some(T), None
 Serializable<T, T>: behavior {
-    encode: (T) str
+    encode: (T) StaticString
 }
 identity<T, T> = (value: T) T { value }
 "#,
@@ -96,12 +96,12 @@ fn resolver_records_type_and_behavior_generic_bounds() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 Box<T: Json>: { value: T }
 Option<T: Json>: Some(T), None
 Serializable<T: Json>: behavior {
-    encode: (T) str
+    encode: (T) StaticString
 }
 "#,
     );

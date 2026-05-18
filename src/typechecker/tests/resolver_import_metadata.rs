@@ -156,7 +156,7 @@ main = () i32 {
         Some(vec![(
             "encode".to_string(),
             vec!["Self".to_string()],
-            "str".to_string(),
+            "StaticString".to_string(),
         )]),
     );
     symbols.set_behavior_method_types_for_test(

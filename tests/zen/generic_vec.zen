@@ -11,7 +11,7 @@ Vec<T>.len = (self: Vec<T>) i32 {
 
 main = () i32 {
     ints = Vec<i32> { first: 4, len: 1 }
-    words = Vec<str> { first: "zen", len: 1 }
+    words = Vec<StaticString> { first: "zen", len: 1 }
     io.println("${ints.len()}")
     io.println("${words.len()}")
     0

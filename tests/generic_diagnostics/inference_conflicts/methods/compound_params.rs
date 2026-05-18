@@ -14,7 +14,7 @@ Box.choose_with<T> = (self: Box<T>, mapper: (T) T) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    mapper = (value: str) str {
+    mapper = (value: StaticString) StaticString {
         value
     }
     box.choose_with(mapper)
@@ -24,7 +24,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_with`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_with`: inferred `i32` and `StaticString`"
         )),
         "expected generic method function-type inference conflict diagnostic, got {errors:?}"
     );
@@ -52,7 +52,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_array`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_array`: inferred `i32` and `StaticString`"
         )),
         "expected generic method array-type inference conflict diagnostic, got {errors:?}"
     );
@@ -72,7 +72,7 @@ Box.choose_raw<T> = (self: Box<T>, ptr: RawPtr<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    ptr = cast("bad", RawPtr<str>)
+    ptr = cast("bad", RawPtr<StaticString>)
     box.choose_raw(ptr)
 }
 "#,
@@ -80,7 +80,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_raw`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_raw`: inferred `i32` and `StaticString`"
         )),
         "expected generic method raw-pointer inference conflict diagnostic, got {errors:?}"
     );
@@ -100,7 +100,7 @@ Box.choose_ptr<T> = (self: Box<T>, ptr: Ptr<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    ptr = cast("bad", Ptr<str>)
+    ptr = cast("bad", Ptr<StaticString>)
     box.choose_ptr(ptr)
 }
 "#,
@@ -108,7 +108,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_ptr`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_ptr`: inferred `i32` and `StaticString`"
         )),
         "expected generic method pointer inference conflict diagnostic, got {errors:?}"
     );
@@ -128,7 +128,7 @@ Box.choose_mut_ptr<T> = (self: Box<T>, ptr: MutPtr<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    ptr = cast("bad", MutPtr<str>)
+    ptr = cast("bad", MutPtr<StaticString>)
     box.choose_mut_ptr(ptr)
 }
 "#,
@@ -136,7 +136,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_mut_ptr`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_mut_ptr`: inferred `i32` and `StaticString`"
         )),
         "expected generic method mutable pointer inference conflict diagnostic, got {errors:?}"
     );
@@ -156,7 +156,7 @@ Box.choose_slice<T> = (self: Box<T>, items: Slice<T>) T {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    items = cast("bad", Slice<str>)
+    items = cast("bad", Slice<StaticString>)
     box.choose_slice(items)
 }
 "#,
@@ -164,7 +164,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_slice`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose_slice`: inferred `i32` and `StaticString`"
         )),
         "expected generic method slice inference conflict diagnostic, got {errors:?}"
     );

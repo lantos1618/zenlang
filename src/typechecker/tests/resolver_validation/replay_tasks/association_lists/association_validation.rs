@@ -37,7 +37,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut tasks = Vec::new();
@@ -68,11 +68,11 @@ Pretty<T>: behavior {
 
 Pretty.extends(Json<T>)
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
 
@@ -105,11 +105,11 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
     let mut checker = TypeChecker::new();

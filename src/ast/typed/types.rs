@@ -84,7 +84,7 @@ impl Type {
             Type::F64 => "f64".into(),
             Type::Bool => "bool".into(),
             Type::Void => "void".into(),
-            Type::Str => "str".into(),
+            Type::Str => "StaticString".into(),
             Type::String => "String".into(),
             Type::Named(n) => n.clone(),
             Type::Struct { name, .. } => name.clone(),
@@ -143,5 +143,15 @@ impl Type {
     /// Returns true if this type is a float.
     pub fn is_float(&self) -> bool {
         matches!(self, Type::F32 | Type::F64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Type;
+
+    #[test]
+    fn static_string_display_uses_public_type_name() {
+        assert_eq!(Type::Str.display_name(), "StaticString");
     }
 }

@@ -6,20 +6,20 @@ Point: {
 }
 
 Point.implements(FancyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "encoded"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 
-    fancy = (value: Point) str {
+    fancy = (value: Point) StaticString {
         "fancy"
     }
 }
 
-encode<T: Json<str>> = (value: T) str {
+encode<T: Json<StaticString>> = (value: T) StaticString {
     value.encode()
 }
 

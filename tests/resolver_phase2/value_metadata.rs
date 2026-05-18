@@ -186,9 +186,9 @@ fn resolver_records_value_symbol_generic_bounds() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
-encode<T: Json> = (value: T) str { "encoded" }
+encode<T: Json> = (value: T) StaticString { "encoded" }
 "#,
     );
 

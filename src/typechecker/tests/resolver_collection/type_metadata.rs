@@ -10,7 +10,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 Pipeline<T: Json<T>>: { callback: (i32) i32 }
 "#,

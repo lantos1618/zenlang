@@ -7,7 +7,7 @@ fn impl_block_declaration_tasks_collect_behavior_and_plain_impls() {
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.impl = {
@@ -15,7 +15,7 @@ Point.impl = {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );

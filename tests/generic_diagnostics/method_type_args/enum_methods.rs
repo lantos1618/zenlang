@@ -16,7 +16,7 @@ Option.unwrap_or<T> = (self: Self, fallback: T) T {
 
 main = () i32 {
     value = Option<i32>.Some(1)
-    value.unwrap_or<i32, str>(0)
+    value.unwrap_or<i32, StaticString>(0)
 }
 "#,
     );
@@ -48,7 +48,7 @@ Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
 }
 
 main = () i32 {
-    value = Result<i32, str>.Ok(1)
+    value = Result<i32, StaticString>.Ok(1)
     value.unwrap_or<i32>(0)
 }
 "#,

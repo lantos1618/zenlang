@@ -1,13 +1,13 @@
 { io } = std
 
 Json: behavior {
-    to_json: (Self) str {
+    to_json: (Self) StaticString {
         "default-json"
     }
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -17,7 +17,7 @@ Point: {
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty-point"
     }
 }

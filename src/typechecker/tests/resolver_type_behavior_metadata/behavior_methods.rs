@@ -5,7 +5,7 @@ fn check_program_with_symbols_validates_resolver_behavior_method_signatures() {
     let program = parse_program(
         r#"
 Serializable: behavior {
-    encode: (Self, i32) str
+    encode: (Self, i32) StaticString
 }
 "#,
     );
@@ -18,7 +18,7 @@ Serializable: behavior {
         Some(vec![(
             "encode".to_string(),
             vec!["Self".to_string(), "bool".to_string()],
-            "str".to_string(),
+            "StaticString".to_string(),
         )]),
     );
     let mut tc = TypeChecker::new();
@@ -29,7 +29,7 @@ Serializable: behavior {
 
     assert!(
             err.iter().any(|d| d.message.contains(
-                "resolver behavior symbol 'Serializable' has methods '(encode(Self, bool) str)', expected '(encode(Self, i32) str)'"
+                "resolver behavior symbol 'Serializable' has methods '(encode(Self, bool) StaticString)', expected '(encode(Self, i32) StaticString)'"
             )),
             "expected resolver behavior method signature diagnostic, got {err:?}"
         );
@@ -127,7 +127,7 @@ Json<T>: behavior {
         Some(vec![(
             "encode".to_string(),
             vec!["Self".to_string()],
-            "str".to_string(),
+            "StaticString".to_string(),
         )]),
     );
     let mut tc = TypeChecker::new();
@@ -138,7 +138,7 @@ Json<T>: behavior {
 
     assert!(
             err.iter().any(|d| d.message.contains(
-                "resolver behavior symbol 'Json' has methods '(encode(Self) str)', expected '(encode(Self) T)'"
+                "resolver behavior symbol 'Json' has methods '(encode(Self) StaticString)', expected '(encode(Self) T)'"
             )),
             "expected resolver generic behavior method signature diagnostic, got {err:?}"
         );

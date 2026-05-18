@@ -9,17 +9,17 @@ fn behavior_extends_requires_parent_methods() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "pretty" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 "#,
     );
@@ -42,18 +42,18 @@ fn behavior_extends_impl_satisfies_parent_requires() {
 Point: { x: i32 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    to_json = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    to_json = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 
 Point.requires(Json)
@@ -76,13 +76,13 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "pretty" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 "#,
     );
@@ -109,17 +109,17 @@ Json<T>: behavior {
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str { "point" }
-    pretty = (value: Point) str { "pretty" }
+    encode = (value: Point) StaticString { "point" }
+    pretty = (value: Point) StaticString { "pretty" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
 
@@ -163,15 +163,15 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
 Point.implements(Json<i32>) {
     encode = (value: Point) i32 { value.x }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 Point.requires(Json<i32>)
 "#,
     );

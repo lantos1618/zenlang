@@ -2,7 +2,7 @@
 { Json } = traits
 { Point } = model
 
-encode<T: Json<str>> = (value: T) str {
+encode<T: Json<StaticString>> = (value: T) StaticString {
     value.encode()
 }
 

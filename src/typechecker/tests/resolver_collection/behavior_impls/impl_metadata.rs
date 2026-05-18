@@ -10,8 +10,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -30,8 +30,8 @@ Point.implements(Json<str>) {
 
     assert!(
         tc.behavior_impls
-            .contains(&("Point".to_string(), "Json_str".to_string())),
-        "resolver metadata should restore the validated Json<str> impl"
+            .contains(&("Point".to_string(), "Json_StaticString".to_string())),
+        "resolver metadata should restore the validated Json<StaticString> impl"
     );
     assert!(
         !tc.behavior_impls
@@ -55,8 +55,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -88,7 +88,7 @@ fn collect_declarations_with_symbols_does_not_synthesize_stale_impl_defaults_aft
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (self: Self) str { "default" }
+    encode: (self: Self) StaticString { "default" }
 }
 
 Point.implements(Json) {
@@ -142,8 +142,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -174,8 +174,8 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -199,8 +199,8 @@ Point.implements(Json<str>) {
 
     assert!(
         tc.behavior_impls
-            .contains(&("Point".to_string(), "Json_str".to_string())),
-        "resolver metadata should restore the validated Point implements Json<str> association"
+            .contains(&("Point".to_string(), "Json_StaticString".to_string())),
+        "resolver metadata should restore the validated Point implements Json<StaticString> association"
     );
     assert!(
             !tc.behavior_impls
