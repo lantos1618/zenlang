@@ -125,3 +125,74 @@ main = () i32 {
     assert_eq!(edit["span"]["column"], 5);
     assert_eq!(edit["replacement"], "");
 }
+
+#[test]
+fn emit_json_diagnostics_includes_structured_infix_as_cast_fix() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("as_cast.zen");
+    let source = r#"
+main = (x: i32) i64 {
+    x + 1 as i64
+}
+"#;
+    let expression = "x + 1 as i64";
+    let expression_start = source.find(expression).expect("source contains as-cast") as u32;
+    let expression_end = expression_start + expression.len() as u32;
+    std::fs::write(&zen_path, source).expect("write removed as-cast source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should fail on removed as-cast syntax: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("diagnostics stdout is json");
+    let diagnostic = &json["diagnostics"][0];
+    assert_eq!(diagnostic["code"], "E2000");
+    assert!(
+        diagnostic["message"]
+            .as_str()
+            .expect("diagnostic message")
+            .contains("`as` cast syntax has been removed"),
+        "unexpected diagnostic payload: {diagnostic}"
+    );
+
+    let suggestions = diagnostic["suggested_fixes"]
+        .as_array()
+        .expect("diagnostic should carry structured suggested fixes");
+    assert_eq!(
+        suggestions.len(),
+        1,
+        "unexpected suggestions: {suggestions:?}"
+    );
+
+    let fix = &suggestions[0];
+    assert_eq!(fix["kind"], "replace_infix_as_cast_with_prefix_cast");
+    assert_eq!(
+        fix["title"],
+        "Rewrite infix `as` cast to prefix `cast(value, Type)`"
+    );
+
+    let edit = &fix["edits"][0];
+    assert_eq!(
+        fix["edits"].as_array().expect("fix edits array").len(),
+        1,
+        "as-cast fix should carry exactly one text edit: {fix}"
+    );
+    assert!(edit["span"]["path"]
+        .as_str()
+        .expect("edit span path")
+        .ends_with("as_cast.zen"));
+    assert_eq!(edit["span"]["start"], expression_start);
+    assert_eq!(edit["span"]["end"], expression_end);
+    assert_eq!(edit["span"]["line"], 3);
+    assert_eq!(edit["span"]["column"], 5);
+    assert_eq!(edit["replacement"], "cast(value, Type)");
+}

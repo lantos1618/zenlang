@@ -118,6 +118,14 @@ pub const REMOVED_RETURN_KEYWORD_MESSAGE: &str =
 pub const REMOVED_RETURN_FIX_KIND: &str = "replace_removed_return_with_final_expression";
 pub const REMOVED_RETURN_FIX_TITLE: &str =
     "Remove `return` and use the value as the final expression";
+pub const REMOVED_AS_CAST_MESSAGE: &str =
+    "`as` cast syntax has been removed; use cast(value, Type)";
+pub const REMOVED_INFIX_AS_CAST_MESSAGE: &str =
+    "`as` cast syntax has been removed; use prefix cast(value, Type)";
+pub const REMOVED_INFIX_AS_CAST_FIX_KIND: &str = "replace_infix_as_cast_with_prefix_cast";
+pub const REMOVED_INFIX_AS_CAST_FIX_TITLE: &str =
+    "Rewrite infix `as` cast to prefix `cast(value, Type)`";
+pub const REMOVED_INFIX_AS_CAST_REPLACEMENT: &str = "cast(value, Type)";
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {
@@ -272,7 +280,9 @@ impl From<CompileError> for Diagnostic {
                     context: Vec::new(),
                     suggested_fixes: Vec::new(),
                 };
-                diagnostic.with_removed_return_fix()
+                diagnostic
+                    .with_removed_return_fix()
+                    .with_removed_infix_as_cast_fix()
             }
             CompileError::Type(msg, span) => Diagnostic {
                 severity: Severity::Error,
@@ -322,6 +332,22 @@ impl Diagnostic {
             REMOVED_RETURN_FIX_KIND,
             REMOVED_RETURN_FIX_TITLE,
             vec![TextEdit::new(span, "")],
+        ))
+    }
+
+    fn with_removed_infix_as_cast_fix(self) -> Self {
+        if self.message != REMOVED_INFIX_AS_CAST_MESSAGE {
+            return self;
+        }
+
+        let Some(span) = self.span else {
+            return self;
+        };
+
+        self.with_suggested_fix(SuggestedFix::new(
+            REMOVED_INFIX_AS_CAST_FIX_KIND,
+            REMOVED_INFIX_AS_CAST_FIX_TITLE,
+            vec![TextEdit::new(span, REMOVED_INFIX_AS_CAST_REPLACEMENT)],
         ))
     }
 }
