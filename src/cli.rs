@@ -92,6 +92,18 @@ impl EmitJsonMode {
             .collect::<Vec<_>>()
             .join("|")
     }
+
+    fn gate_message(self) -> Option<&'static str> {
+        match self {
+            Self::Hir => Some("HIR JSON emission is gated until schema and golden tests exist"),
+            Self::Mir => Some("MIR JSON emission is gated until schema and golden tests exist"),
+            Self::Layout => Some("type layout JSON emission is gated until ABI layout tests exist"),
+            Self::TargetYaml => Some(
+                "target YAML validation is gated until schemas and negative validation tests exist",
+            ),
+            Self::Ast | Self::Symbols | Self::Typed | Self::Diagnostics | Self::BuildGraph => None,
+        }
+    }
 }
 
 impl FromStr for EmitJsonMode {
@@ -171,34 +183,22 @@ pub fn main() {
             }
             let mode = args[2].as_str();
             match mode.parse::<EmitJsonMode>() {
-                Ok(EmitJsonMode::Ast) => cmd_emit_json_ast(&args[3]),
-                Ok(EmitJsonMode::Symbols) => cmd_emit_json_symbols(&args[3]),
-                Ok(EmitJsonMode::Typed) => cmd_emit_json_typed(&args[3]),
-                Ok(EmitJsonMode::Diagnostics) => cmd_emit_json_diagnostics(&args[3]),
-                Ok(EmitJsonMode::BuildGraph) => cmd_emit_json_build_graph(&args[3]),
-                Ok(EmitJsonMode::Hir) => {
-                    eprintln!(
-                        "error: HIR JSON emission is gated until schema and golden tests exist"
-                    );
-                    process::exit(1);
-                }
-                Ok(EmitJsonMode::Mir) => {
-                    eprintln!(
-                        "error: MIR JSON emission is gated until schema and golden tests exist"
-                    );
-                    process::exit(1);
-                }
-                Ok(EmitJsonMode::Layout) => {
-                    eprintln!(
-                        "error: type layout JSON emission is gated until ABI layout tests exist"
-                    );
-                    process::exit(1);
-                }
-                Ok(EmitJsonMode::TargetYaml) => {
-                    eprintln!(
-                        "error: target YAML validation is gated until schemas and negative validation tests exist"
-                    );
-                    process::exit(1);
+                Ok(mode) => {
+                    if let Some(message) = mode.gate_message() {
+                        eprintln!("error: {message}");
+                        process::exit(1);
+                    }
+                    match mode {
+                        EmitJsonMode::Ast => cmd_emit_json_ast(&args[3]),
+                        EmitJsonMode::Symbols => cmd_emit_json_symbols(&args[3]),
+                        EmitJsonMode::Typed => cmd_emit_json_typed(&args[3]),
+                        EmitJsonMode::Diagnostics => cmd_emit_json_diagnostics(&args[3]),
+                        EmitJsonMode::BuildGraph => cmd_emit_json_build_graph(&args[3]),
+                        EmitJsonMode::Hir
+                        | EmitJsonMode::Mir
+                        | EmitJsonMode::Layout
+                        | EmitJsonMode::TargetYaml => unreachable!("gated emit-json mode exited"),
+                    }
                 }
                 Err(()) => {
                     eprintln!("{}", emit_json_usage());
