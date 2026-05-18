@@ -34,20 +34,48 @@ fn emit_command_build_zen_accepts_identifier_fallback_declared_env_read() {
 
 #[test]
 fn emit_command_build_zen_accepts_declared_env_read_with_unselected_targets() {
+    assert_emit_command_accepts_declared_env_read_with_unselected_targets(
+        r#"| .Err { "default" }"#,
+        "emit_command_build_zen_accepts_declared_env_read_with_unselected_targets",
+    );
+}
+
+#[test]
+fn emit_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets() {
+    assert_emit_command_accepts_declared_env_read_with_unselected_targets(
+        r#"| _ { "default" }"#,
+        "emit_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets",
+    );
+}
+
+#[test]
+fn emit_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets() {
+    assert_emit_command_accepts_declared_env_read_with_unselected_targets(
+        r#"| err { "default" }"#,
+        "emit_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets",
+    );
+}
+
+fn assert_emit_command_accepts_declared_env_read_with_unselected_targets(
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Test { name: "unit", root: "unit.zen" })
-    b.add(Library { name: "core", exports: ["lib.zen"] })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
+    b.add(Test {{ name: "unit", root: "unit.zen" }})
+    b.add(Library {{ name: "core", exports: ["lib.zen"] }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -86,7 +114,7 @@ value = () i32 {
 
     assert!(
         output.status.success(),
-        "zen emit build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen emit build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
