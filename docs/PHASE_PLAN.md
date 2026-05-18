@@ -4234,6 +4234,11 @@ Agent UX deliverables:
   `@builtin.atomic_load(...)` as a gated memory-order/effect surface instead
   of an ordinary unknown-builtin fallback while Sync/Async effects remain in
   the Required Test Backlog.
+- Syscall intrinsic gate diagnostics are now pinned at the CLI JSON boundary by
+  `emit_json_diagnostics_syscall_gate_schema_matches_golden`, covering
+  `@builtin.syscall0(...)` as a gated host-effect/syscall ABI surface instead
+  of an ordinary unknown-builtin fallback while host-effect declarations remain
+  in the Required Test Backlog.
 - Raw allocation intrinsic gate diagnostics are now pinned at the CLI JSON
   boundary by `emit_json_diagnostics_raw_allocate_gate_schema_matches_golden`,
   covering `@builtin.raw_allocate(...)` as a gated allocator surface instead
