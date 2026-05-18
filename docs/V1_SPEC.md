@@ -97,11 +97,12 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   Neither replaces compiler resolver, typechecker, effect checker, or MIR passes.
   `zen emit-json ast <file>` emits `semantic_status: "unchecked"` to make that
   boundary explicit.
-- `Actors in std`: gated. Actors are a stdlib framework first, with `Actor`,
-  `ActorRef`, `Mailbox`, `Channel`, and `Supervisor` built on effect-aware queues
-  and typed allocators. No actor syntax is v1-stable yet, and promoted actor
-  framework type spellings report gated diagnostics until std actor semantics
-  exist.
+- `Actors in std`: gated. Actors are a stdlib framework first, with promoted
+  framework spellings `Actor`, `ActorRef`, `Mailbox`, and `Supervisor` built on
+  effect-aware queues and typed allocators. No actor syntax is v1-stable yet,
+  and promoted actor framework type spellings report gated diagnostics until
+  std actor semantics exist. `Channel` remains an experimental stdlib channel
+  sketch until promoted, so it is not a global actor builtin type spelling.
 - `JSON/YAML IR boundaries`: gated. JSON is the machine-readable exchange format
   for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts, and
   diagnostics. YAML is the human-authored format for target descriptions, ABI
