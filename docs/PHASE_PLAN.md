@@ -624,6 +624,10 @@ Agent UX deliverables:
   pinned by `emit_json_diagnostics_generic_requires_arity_schema_matches_golden`,
   covering the stable `E5001` payload when `Json<T>` is referenced as
   `Json<i32, StaticString>`.
+- Diagnostics JSON for generic `.implements` behavior-reference arity is now
+  pinned by `emit_json_diagnostics_generic_impl_arity_schema_matches_golden`,
+  covering the stable `E5001` payload when `Point.implements(Json)` omits
+  required type arguments.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits
@@ -1271,7 +1275,9 @@ Agent UX deliverables:
   `integration::imported_duplicate_generic_behavior_impl_is_error`.
 - Imported generic behavior impl arity diagnostics are covered through the
   module graph by
-  `integration::imported_generic_behavior_impl_type_arg_arity_is_error`.
+  `integration::imported_generic_behavior_impl_type_arg_arity_is_error`, with
+  public JSON shape pinned by
+  `emit_json_diagnostics_generic_impl_arity_schema_matches_golden`.
 - Imported generic behavior inheritance arity diagnostics are covered through
   the module graph by
   `integration::imported_generic_behavior_extends_type_arg_arity_is_error`.
