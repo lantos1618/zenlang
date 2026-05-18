@@ -244,6 +244,7 @@ enum CompilerOwnedJsonBoundary {
     Typed,
     Symbols,
     Diagnostics,
+    BuildGraph,
 }
 
 impl CompilerOwnedJsonBoundary {
@@ -253,6 +254,7 @@ impl CompilerOwnedJsonBoundary {
             Self::Typed => "compiler-owned typed JSON emission rejects hand-authored JSON IR before it can override checked types or layouts",
             Self::Symbols => "compiler-owned symbols JSON emission rejects hand-authored resolver IR before it can override symbol metadata",
             Self::Diagnostics => "compiler-owned diagnostics JSON emission rejects hand-authored diagnostic IR before it can override compiler diagnostics",
+            Self::BuildGraph => "compiler-owned build graph JSON emission rejects hand-authored graph IR before it can override deterministic build metadata",
         }
     }
 }
@@ -278,6 +280,10 @@ fn reject_hand_authored_json_for_symbols_emit(path_str: &str) {
 
 fn reject_hand_authored_json_for_diagnostics_emit(path_str: &str) {
     reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Diagnostics);
+}
+
+fn reject_hand_authored_json_for_build_graph_emit(path_str: &str) {
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::BuildGraph);
 }
 
 fn has_json_extension(path_str: &str) -> bool {

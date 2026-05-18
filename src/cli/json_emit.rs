@@ -89,6 +89,7 @@ pub(super) fn cmd_emit_json_diagnostics(path_str: &str) {
 }
 
 pub(super) fn cmd_emit_json_build_graph(path_str: &str) {
+    super::reject_hand_authored_json_for_build_graph_emit(path_str);
     let graph = super::load_build_graph(path_str);
     match graph.canonical_json() {
         Ok(json) => println!("{json}"),
