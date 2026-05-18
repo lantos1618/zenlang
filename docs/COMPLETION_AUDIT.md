@@ -2758,7 +2758,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration check_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Missing fallback arms on deterministic env reads reject before source
   validation through
-  `cargo test --test integration check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`.
+  `cargo test --test integration check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`
+  and before multi-target source validation through
+  `cargo test --test integration check_command_multi_target_build_zen_rejects_env_read_without_fallback`.
 - Single-target `zen emit build.zen` rejects multi-executable ambiguity before
   per-executable source validation, covered by
   `cargo test --test integration emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source`.
