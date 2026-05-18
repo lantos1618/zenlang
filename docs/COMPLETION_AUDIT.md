@@ -3763,6 +3763,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/graph_validation_test_command_host_effects/env_reads/`,
   preserving undeclared env-read and validation-order checks while keeping
   file-read coverage wired separately from the parent module.
+- Legacy `zen build-graph` host-effect tests now split env-read rejection
+  coverage into focused basic and ordering modules under
+  `tests/integration/cli_build/legacy_graph_command_host_effects/env_reads/`,
+  preserving undeclared env-read and validation-order checks while keeping
+  file-read coverage wired separately from the parent module.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
