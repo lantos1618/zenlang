@@ -123,6 +123,18 @@ fn parse_return_keyword_is_removed() {
 }
 
 #[test]
+fn parse_infix_as_cast_syntax_is_removed() {
+    let err = parse_str("main = (x: i32) i64 {\n    x as i64\n}")
+        .expect_err("infix as-cast syntax should no longer parse");
+    assert!(
+        err.iter().any(|err| err
+            .to_string()
+            .contains("`as` cast syntax has been removed")),
+        "expected removed infix as-cast syntax diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn parse_nested_generic_type() {
     // DynVec<Ptr<i32>> with nested generics
     let prog = parse_ok("foo = (v: DynVec<Ptr<i32>>) void { }");

@@ -2,8 +2,8 @@
 
 main = () i32 {
     x = 42
-    y = x as i64
-    z = 3.14 as i32
+    y = cast(x, i64)
+    z = cast(3.14, i32)
     io.println("x as i64: ${y}")
     io.println("3.14 as i32: ${z}")
     0

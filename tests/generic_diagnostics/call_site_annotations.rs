@@ -177,7 +177,7 @@ main = () i32 {
 }
 
 #[test]
-fn as_cast_target_annotation_without_type_args_is_error() {
+fn cast_target_annotation_without_type_args_is_error() {
     let errors = typecheck_errors(
         r#"
 Box<T>: {
@@ -186,7 +186,7 @@ Box<T>: {
 
 main = () i32 {
     box = Box<i32> { value: 1 }
-    bad = box as Box
+    bad = cast(box, Box)
     0
 }
 "#,
@@ -196,6 +196,6 @@ main = () i32 {
         errors.iter().any(|d| d
             .message
             .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected as-cast target generic annotation arity diagnostic, got {errors:?}"
+        "expected cast target generic annotation arity diagnostic, got {errors:?}"
     );
 }
