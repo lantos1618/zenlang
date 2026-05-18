@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/pointer_inner_generic_annotation_arity.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5001",
+      "message": "generic struct `Box` expects 1 type arguments, found 2",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/pointer_inner_generic_annotation_arity.zen",
+        "start": 27,
+        "end": 82,
+        "line": 6,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

@@ -113,3 +113,22 @@ factory = () () Box {
         "tests/fixtures/ir_json/diagnostics_function_type_return_annotation_missing_args.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_pointer_inner_generic_annotation_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "pointer_inner_generic_annotation_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+read = (ptr: Ptr<Box<i32, StaticString>>) i32 {
+    0
+}
+"#,
+        "pointer inner generic annotation arity",
+        "pointer inner generic annotation arity diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_pointer_inner_generic_annotation_arity.golden.json",
+    );
+}
