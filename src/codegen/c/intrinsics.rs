@@ -1,4 +1,7 @@
 use super::*;
+use names::CIntrinsic;
+
+mod names;
 
 impl CEmitter {
     // ── Intrinsics ────────────────────────────────────────────
@@ -9,42 +12,47 @@ impl CEmitter {
         args: &[TypedExpression],
         result_ty: &Type,
     ) -> String {
-        match name {
+        let Ok(intrinsic) = name.parse::<CIntrinsic>() else {
+            self.line(&format!("#error \"Unknown intrinsic: {}\"", name));
+            return "(void)0".into();
+        };
+
+        match intrinsic {
             // -- Memory allocation ----------------------------------------
-            "raw_allocate" => {
+            CIntrinsic::RawAllocate => {
                 let size = self.emit_expr_inline(&args[0]);
                 format!("malloc({})", size)
             }
-            "raw_deallocate" => {
+            CIntrinsic::RawDeallocate => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 format!("free({})", ptr)
             }
-            "raw_reallocate" => {
+            CIntrinsic::RawReallocate => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let new_size = self.emit_expr_inline(&args[2]);
                 format!("realloc({}, {})", ptr, new_size)
             }
 
             // -- Memory operations ----------------------------------------
-            "memcpy" => {
+            CIntrinsic::Memcpy => {
                 let dest = self.emit_expr_inline(&args[0]);
                 let src = self.emit_expr_inline(&args[1]);
                 let n = self.emit_expr_inline(&args[2]);
                 format!("memcpy({}, {}, {})", dest, src, n)
             }
-            "memmove" => {
+            CIntrinsic::Memmove => {
                 let dest = self.emit_expr_inline(&args[0]);
                 let src = self.emit_expr_inline(&args[1]);
                 let n = self.emit_expr_inline(&args[2]);
                 format!("memmove({}, {}, {})", dest, src, n)
             }
-            "memset" => {
+            CIntrinsic::Memset => {
                 let dest = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 let n = self.emit_expr_inline(&args[2]);
                 format!("memset({}, {}, {})", dest, val, n)
             }
-            "memcmp" => {
+            CIntrinsic::Memcmp => {
                 let a = self.emit_expr_inline(&args[0]);
                 let b = self.emit_expr_inline(&args[1]);
                 let n = self.emit_expr_inline(&args[2]);
@@ -52,12 +60,12 @@ impl CEmitter {
             }
 
             // -- Load / Store ---------------------------------------------
-            "load" => {
+            CIntrinsic::Load => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let ty = self.c_type(result_ty);
                 format!("(*(({}*)({})))", ty, ptr)
             }
-            "store" => {
+            CIntrinsic::Store => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 let ty = self.c_type(&args[1].ty);
@@ -65,7 +73,7 @@ impl CEmitter {
             }
 
             // -- Type introspection ---------------------------------------
-            "sizeof" => {
+            CIntrinsic::Sizeof => {
                 if !args.is_empty() {
                     let ty = self.c_type(&args[0].ty);
                     format!("sizeof({})", ty)
@@ -76,7 +84,7 @@ impl CEmitter {
                     "0".into()
                 }
             }
-            "alignof" => {
+            CIntrinsic::Alignof => {
                 if !args.is_empty() {
                     let ty = self.c_type(&args[0].ty);
                     format!("_Alignof({})", ty)
@@ -87,20 +95,20 @@ impl CEmitter {
             }
 
             // -- Pointer operations ---------------------------------------
-            "int_to_ptr" => {
+            CIntrinsic::IntToPtr => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((void*)(uintptr_t)({}))", val)
             }
-            "ptr_to_int" => {
+            CIntrinsic::PtrToInt => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 format!("((uintptr_t)({}))", ptr)
             }
-            "gep" => {
+            CIntrinsic::Gep => {
                 let base = self.emit_expr_inline(&args[0]);
                 let offset = self.emit_expr_inline(&args[1]);
                 format!("((uint8_t*)({}) + ({}))", base, offset)
             }
-            "gep_struct" => {
+            CIntrinsic::GepStruct => {
                 // Struct GEP: byte-offset into a struct by field index.
                 // In C we just cast to uint8_t* and offset, since the
                 // actual field layout matches.
@@ -108,43 +116,43 @@ impl CEmitter {
                 let idx = self.emit_expr_inline(&args[1]);
                 format!("((uint8_t*)({}) + ({}))", ptr, idx)
             }
-            "raw_ptr_offset" => {
+            CIntrinsic::RawPtrOffset => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let offset = self.emit_expr_inline(&args[1]);
                 format!("((uint8_t*)({}) + ({}))", ptr, offset)
             }
-            "raw_ptr_cast" => {
+            CIntrinsic::RawPtrCast => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let ty = self.c_type(result_ty);
                 format!("(({})({})", ty, ptr)
             }
-            "null_ptr" | "nullptr" => "(NULL)".into(),
-            "is_null" => {
+            CIntrinsic::NullPtr | CIntrinsic::Nullptr => "(NULL)".into(),
+            CIntrinsic::IsNull => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 format!("(({}) == NULL)", ptr)
             }
 
             // -- Atomic operations ----------------------------------------
-            "atomic_load" => {
+            CIntrinsic::AtomicLoad => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 format!("__atomic_load_n({}, __ATOMIC_SEQ_CST)", ptr)
             }
-            "atomic_store" => {
+            CIntrinsic::AtomicStore => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 format!("__atomic_store_n({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
             }
-            "atomic_add" => {
+            CIntrinsic::AtomicAdd => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 format!("__atomic_fetch_add({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
             }
-            "atomic_sub" => {
+            CIntrinsic::AtomicSub => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 format!("__atomic_fetch_sub({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
             }
-            "atomic_cas" => {
+            CIntrinsic::AtomicCas => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let expected = self.emit_expr_inline(&args[1]);
                 let desired = self.emit_expr_inline(&args[2]);
@@ -155,37 +163,37 @@ impl CEmitter {
                     ptr, tmp, desired
                 )
             }
-            "atomic_xchg" => {
+            CIntrinsic::AtomicXchg => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let val = self.emit_expr_inline(&args[1]);
                 format!("__atomic_exchange_n({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
             }
-            "fence" => "(__atomic_thread_fence(__ATOMIC_SEQ_CST), (void)0)".into(),
+            CIntrinsic::Fence => "(__atomic_thread_fence(__ATOMIC_SEQ_CST), (void)0)".into(),
 
             // -- Syscalls -------------------------------------------------
-            "syscall0" => {
+            CIntrinsic::Syscall0 => {
                 let num = self.emit_expr_inline(&args[0]);
                 format!("syscall({})", num)
             }
-            "syscall1" => {
+            CIntrinsic::Syscall1 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 format!("syscall({}, {})", num, a0)
             }
-            "syscall2" => {
+            CIntrinsic::Syscall2 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 let a1 = self.emit_expr_inline(&args[2]);
                 format!("syscall({}, {}, {})", num, a0, a1)
             }
-            "syscall3" => {
+            CIntrinsic::Syscall3 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 let a1 = self.emit_expr_inline(&args[2]);
                 let a2 = self.emit_expr_inline(&args[3]);
                 format!("syscall({}, {}, {}, {})", num, a0, a1, a2)
             }
-            "syscall4" => {
+            CIntrinsic::Syscall4 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 let a1 = self.emit_expr_inline(&args[2]);
@@ -193,7 +201,7 @@ impl CEmitter {
                 let a3 = self.emit_expr_inline(&args[4]);
                 format!("syscall({}, {}, {}, {}, {})", num, a0, a1, a2, a3)
             }
-            "syscall5" => {
+            CIntrinsic::Syscall5 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 let a1 = self.emit_expr_inline(&args[2]);
@@ -202,7 +210,7 @@ impl CEmitter {
                 let a4 = self.emit_expr_inline(&args[5]);
                 format!("syscall({}, {}, {}, {}, {}, {})", num, a0, a1, a2, a3, a4)
             }
-            "syscall6" => {
+            CIntrinsic::Syscall6 => {
                 let num = self.emit_expr_inline(&args[0]);
                 let a0 = self.emit_expr_inline(&args[1]);
                 let a1 = self.emit_expr_inline(&args[2]);
@@ -217,10 +225,10 @@ impl CEmitter {
             }
 
             // -- Debug / trap / panic -------------------------------------
-            "trap" => "(__builtin_trap(), (void)0)".into(),
-            "debugtrap" => "(__builtin_debugtrap(), (void)0)".into(),
-            "unreachable" => "(__builtin_unreachable(), (void)0)".into(),
-            "panic" => {
+            CIntrinsic::Trap => "(__builtin_trap(), (void)0)".into(),
+            CIntrinsic::Debugtrap => "(__builtin_debugtrap(), (void)0)".into(),
+            CIntrinsic::Unreachable => "(__builtin_unreachable(), (void)0)".into(),
+            CIntrinsic::Panic => {
                 let msg = self.emit_expr_inline(&args[0]);
                 format!(
                     "(fprintf(stderr, \"panic: %.*s\\n\", (int)({msg}).len, ({msg}).ptr), abort(), (void)0)"
@@ -228,62 +236,62 @@ impl CEmitter {
             }
 
             // -- Bitwise operations ---------------------------------------
-            "bswap16" => {
+            CIntrinsic::Bswap16 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("__builtin_bswap16({})", val)
             }
-            "bswap32" => {
+            CIntrinsic::Bswap32 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("__builtin_bswap32({})", val)
             }
-            "bswap64" => {
+            CIntrinsic::Bswap64 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("__builtin_bswap64({})", val)
             }
-            "ctlz" => {
+            CIntrinsic::Ctlz => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((uint64_t)__builtin_clzll({}))", val)
             }
-            "cttz" => {
+            CIntrinsic::Cttz => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((uint64_t)__builtin_ctzll({}))", val)
             }
-            "ctpop" => {
+            CIntrinsic::Ctpop => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((uint64_t)__builtin_popcountll({}))", val)
             }
 
             // -- Overflow-checked arithmetic ------------------------------
-            "add_overflow" => self.emit_overflow_op("add", args),
-            "sub_overflow" => self.emit_overflow_op("sub", args),
-            "mul_overflow" => self.emit_overflow_op("mul", args),
+            CIntrinsic::AddOverflow => self.emit_overflow_op("add", args),
+            CIntrinsic::SubOverflow => self.emit_overflow_op("sub", args),
+            CIntrinsic::MulOverflow => self.emit_overflow_op("mul", args),
 
             // -- Type conversions -----------------------------------------
-            "trunc_f64_i64" => {
+            CIntrinsic::TruncF64I64 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((int64_t)({}))", val)
             }
-            "trunc_f32_i32" => {
+            CIntrinsic::TruncF32I32 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((int32_t)({}))", val)
             }
-            "sitofp_i64_f64" => {
+            CIntrinsic::SitofpI64F64 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((double)({}))", val)
             }
-            "uitofp_u64_f64" => {
+            CIntrinsic::UitofpU64F64 => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((double)({}))", val)
             }
 
             // -- IO (libc wrappers) ---------------------------------------
-            "libc_write" => {
+            CIntrinsic::LibcWrite => {
                 let fd = self.emit_expr_inline(&args[0]);
                 let buf = self.emit_expr_inline(&args[1]);
                 let len = self.emit_expr_inline(&args[2]);
                 format!("((int64_t)write({}, {}, {}))", fd, buf, len)
             }
-            "libc_read" => {
+            CIntrinsic::LibcRead => {
                 let fd = self.emit_expr_inline(&args[0]);
                 let buf = self.emit_expr_inline(&args[1]);
                 let len = self.emit_expr_inline(&args[2]);
@@ -291,37 +299,37 @@ impl CEmitter {
             }
 
             // -- String operations ----------------------------------------
-            "strlen" => {
+            CIntrinsic::Strlen => {
                 let s = self.emit_expr_inline(&args[0]);
                 format!("strlen({})", s)
             }
-            "static_string_ptr" => {
+            CIntrinsic::StaticStringPtr => {
                 let s = self.emit_expr_inline(&args[0]);
                 format!("((uint8_t*)({}))", s)
             }
 
             // -- FFI / dynamic loading ------------------------------------
-            "load_library" => {
+            CIntrinsic::LoadLibrary => {
                 let path = self.emit_expr_inline(&args[0]);
                 format!("dlopen({}, RTLD_LAZY)", path)
             }
-            "get_symbol" => {
+            CIntrinsic::GetSymbol => {
                 let handle = self.emit_expr_inline(&args[0]);
                 let sym = self.emit_expr_inline(&args[1]);
                 format!("dlsym({}, {})", handle, sym)
             }
-            "unload_library" => {
+            CIntrinsic::UnloadLibrary => {
                 let handle = self.emit_expr_inline(&args[0]);
                 format!("dlclose({})", handle)
             }
-            "dlerror" => "((uint8_t*)dlerror())".into(),
-            "call_external" => {
+            CIntrinsic::Dlerror => "((uint8_t*)dlerror())".into(),
+            CIntrinsic::CallExternal => {
                 let fptr = self.emit_expr_inline(&args[0]);
                 format!("((int64_t(*)(void))({}))()", fptr)
             }
 
             // -- Inline C -------------------------------------------------
-            "inline_c" => {
+            CIntrinsic::InlineC => {
                 // The arg should be a string literal containing raw C code.
                 if let TypedExprKind::StringLiteral(code) = &args[0].kind {
                     self.line(code);
@@ -333,21 +341,21 @@ impl CEmitter {
             }
 
             // -- Enum intrinsics ------------------------------------------
-            "discriminant" => {
+            CIntrinsic::Discriminant => {
                 let val = self.emit_expr_inline(&args[0]);
                 format!("((int32_t)(((int32_t*)({}))[0]))", val)
             }
-            "set_discriminant" => {
+            CIntrinsic::SetDiscriminant => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let disc = self.emit_expr_inline(&args[1]);
                 format!("(((int32_t*)({})) [0] = ({}))", ptr, disc)
             }
-            "get_payload" => {
+            CIntrinsic::GetPayload => {
                 let val = self.emit_expr_inline(&args[0]);
                 // Payload sits after the discriminant (4 bytes, aligned)
                 format!("((uint8_t*)({}) + sizeof(int32_t))", val)
             }
-            "set_payload" => {
+            CIntrinsic::SetPayload => {
                 let ptr = self.emit_expr_inline(&args[0]);
                 let payload = self.emit_expr_inline(&args[1]);
                 // This is a raw byte copy; caller must know the size.
@@ -357,12 +365,6 @@ impl CEmitter {
                     "(memcpy((uint8_t*)({}) + sizeof(int32_t), {}, 0), (void)0)",
                     ptr, payload
                 )
-            }
-
-            // -- Unknown --------------------------------------------------
-            _ => {
-                self.line(&format!("#error \"Unknown intrinsic: {}\"", name));
-                "(void)0".into()
             }
         }
     }
