@@ -106,6 +106,23 @@ main = (value: String) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "generic_dynamic_string_gate.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = (box: Box<String>) void { }
+"#,
+        "generic dynamic string gate",
+        "generic dynamic string gate should emit one allocator-backed text diagnostic",
+        "tests/fixtures/ir_json/diagnostics_generic_dynamic_string_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_range_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "range_gate.zen",
