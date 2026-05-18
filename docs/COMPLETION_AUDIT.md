@@ -3753,6 +3753,11 @@ and do not assume Phase 4 is ready without evidence.
   is guarded by `learn_zen_guide_covers_core_tour_and_gated_previews`,
   `readme_is_language_first_and_links_reference_docs`, and
   `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
+- The Learn Zen guide now includes concrete nested loop-control and UFC
+  loop-control examples, keeping `outer.done()`, `inner.next()`, `done(l)`, and
+  `next(l)` visible in public language docs. Covered by
+  `learn_zen_guide_covers_core_tour_and_gated_previews` and
+  `public_language_docs_and_examples_do_not_teach_return_keyword`.
 - Legacy `zen build-graph build.zen` file-read host-effect validation now
   matches the unselected-target coverage on `zen build build.zen` and direct
   `zen build.zen`: declared fallback arms allow selected executable targets to
