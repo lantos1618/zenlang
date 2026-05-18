@@ -61,7 +61,8 @@ fn build_command_build_zen_accepts_identifier_fallback_declared_env_read_for_mul
 
 #[test]
 fn build_command_build_zen_accepts_declared_env_read_with_unselected_targets() {
-    assert_build_command_accepts_declared_env_read_with_unselected_targets(
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build", "build.zen"],
         r#"| .Err { "default" }"#,
         "build_command_build_zen_accepts_declared_env_read_with_unselected_targets",
     );
@@ -69,7 +70,8 @@ fn build_command_build_zen_accepts_declared_env_read_with_unselected_targets() {
 
 #[test]
 fn build_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets() {
-    assert_build_command_accepts_declared_env_read_with_unselected_targets(
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build", "build.zen"],
         r#"| _ { "default" }"#,
         "build_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets",
     );
@@ -77,7 +79,8 @@ fn build_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unse
 
 #[test]
 fn build_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets() {
-    assert_build_command_accepts_declared_env_read_with_unselected_targets(
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build", "build.zen"],
         r#"| err { "default" }"#,
         "build_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets",
     );
@@ -142,7 +145,37 @@ fn direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_f
     );
 }
 
-fn assert_build_command_accepts_declared_env_read_with_unselected_targets(
+#[test]
+fn direct_file_command_build_zen_accepts_declared_env_read_with_unselected_targets() {
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build.zen"],
+        r#"| .Err { "default" }"#,
+        "direct_file_command_build_zen_accepts_declared_env_read_with_unselected_targets",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets(
+) {
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build.zen"],
+        r#"| _ { "default" }"#,
+        "direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets(
+) {
+    assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+        &["build.zen"],
+        r#"| err { "default" }"#,
+        "direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets",
+    );
+}
+
+fn assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+    args: &[&str],
     fallback_arm: &str,
     case_name: &str,
 ) {
@@ -184,14 +217,14 @@ value = () i32 {
     .expect("write lib.zen");
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
+        .args(args)
         .current_dir(tmp.path())
         .output()
-        .expect("run zen build build.zen");
+        .expect("run zen executable build graph command");
 
     assert!(
         output.status.success(),
-        "{case_name}: zen build build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen executable build graph command failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

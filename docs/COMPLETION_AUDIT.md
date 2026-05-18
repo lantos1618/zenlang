@@ -2910,9 +2910,17 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
   and
   `cargo test --test integration direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
+  Direct build graphs with unselected test and library targets keep declared
+  env-read fallback behavior through
+  `cargo test --test integration direct_file_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `cargo test --test integration direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  and
+  `cargo test --test integration direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets`.
   Missing fallback arms on deterministic env reads reject before execution
   through
   `cargo test --test integration direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`
+  and before unselected-target source handling through
+  `cargo test --test integration direct_file_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   and before multi-target direct execution through
   `cargo test --test integration direct_file_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Direct `zen build.zen` validates and typechecks graph-only library exports

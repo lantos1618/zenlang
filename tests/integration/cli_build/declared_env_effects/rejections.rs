@@ -42,6 +42,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn build_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets() {
+    assert_env_read_without_fallback_before_unselected_targets(
+        &["build", "build.zen"],
+        "build command should reject env effects before selected target execution",
+    );
+}
+
+fn assert_env_read_without_fallback_before_unselected_targets(args: &[&str], build_message: &str) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
@@ -77,10 +84,10 @@ value = () i32 {
     .expect("write lib.zen");
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
+        .args(args)
         .current_dir(tmp.path())
         .output()
-        .expect("run zen build build.zen");
+        .expect("run zen executable build graph command");
 
     assert_env_read_without_fallback_failed(&output);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -88,10 +95,7 @@ value = () i32 {
         !stderr.contains("missing_unit.zen"),
         "host-effect validation should run before unrelated test source handling, stderr={stderr}"
     );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "build command should reject env effects before selected target execution"
-    );
+    assert!(!tmp.path().join("build").exists(), "{build_message}");
 }
 
 #[test]
@@ -99,6 +103,14 @@ fn direct_file_command_build_zen_rejects_env_read_without_fallback_before_execut
     assert_env_read_without_fallback_is_rejected(
         &["build.zen"],
         "direct build.zen command should not start after graph validation fails",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets() {
+    assert_env_read_without_fallback_before_unselected_targets(
+        &["build.zen"],
+        "direct build.zen command should reject env effects before selected target execution",
     );
 }
 
