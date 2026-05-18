@@ -3895,6 +3895,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`, while ABI layout JSON
   remains gated until layout tests exist.
+- Real program inputs to `emit-json layout` now reject at the ABI-layout gate
+  before emitting type layout JSON. Covered by
+  `emit_json_layout_rejects_program_before_layout_json`.
 - Static string literals no longer implicitly satisfy allocator-backed
   `String`; `String` is recognized as a builtin dynamic text type, but
   allocation must remain explicit. Covered by

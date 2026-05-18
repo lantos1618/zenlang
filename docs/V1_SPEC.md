@@ -140,8 +140,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   diagnostics emission through `zen emit-json ast <file>`,
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
   `zen emit-json diagnostics <file>`. `zen emit-json layout <file>` is an
-  explicit gated command and rejects until ABI layout tests exist. AST JSON is
-  explicitly marked unchecked; symbols JSON is explicitly marked resolved;
+  explicit gated command and rejects until ABI layout tests exist; real program
+  inputs are rejected before layout JSON emission, covered by
+  `emit_json_layout_rejects_program_before_layout_json`. AST JSON is explicitly
+  marked unchecked; symbols JSON is explicitly marked resolved;
   typed JSON is explicitly marked checked; diagnostics JSON is explicitly
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
   check, build, or test paths. Hand-authored target YAML remains gated before

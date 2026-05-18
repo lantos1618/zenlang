@@ -3571,6 +3571,9 @@ checked-in docs, tests, and commits only.
   `emit_json_layout_command_is_explicitly_gated`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`.
+- Real program inputs to `emit-json layout` now reject at the ABI-layout gate
+  before emitting type layout JSON. Guarded by
+  `emit_json_layout_rejects_program_before_layout_json`.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by

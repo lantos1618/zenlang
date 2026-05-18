@@ -292,3 +292,55 @@ fn emit_json_layout_command_is_explicitly_gated() {
         "expected layout gate diagnostic, stderr={stderr}"
     );
 }
+
+#[test]
+fn emit_json_layout_rejects_program_before_layout_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("layout_subject.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+Point: {
+    x: i32,
+    y: i32
+}
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+main = () i32 {
+    point = Point { x: 1, y: 2 }
+    point.x
+}
+"#,
+    )
+    .expect("write layout subject");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "layout", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json layout on program input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json layout should be gated before layout emission: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "gated layout should not emit type layout JSON, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("type layout JSON emission is gated until ABI layout tests exist"),
+        "expected layout gate diagnostic, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("unknown command") && !stderr.contains("No such file"),
+        "layout should reject through the ABI-layout gate, not command/path handling, stderr={stderr}"
+    );
+}
