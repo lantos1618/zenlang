@@ -138,6 +138,11 @@ checked-in docs, tests, and commits only.
 - Generic diagnostics now cover generic struct constructor arity failures
   without leaking raw type-parameter field mismatch followups, including
   `generic_struct_constructor_without_type_args_is_error`.
+- Imported generic struct and enum constructor arity diagnostics now have
+  module-graph coverage through
+  `imported_generic_aggregate_constructor_type_arg_arity_is_error`, preserving
+  the hard aggregate arity diagnostics without field or payload mismatch
+  followups.
 - Generic diagnostics now cover non-generic struct and enum constructors that
   receive type arguments, including
   `nongeneric_struct_constructor_type_args_are_error` and
