@@ -3406,6 +3406,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/declared_env_effects/executable/`, keeping the
   shared multi-target and unselected-target helpers separate from entrypoint
   assertions.
+- `zen build build.zen` declared file-read host-effect tests now split
+  single-target and multi-target positive cases under
+  `tests/integration/cli_build/build_command_host_effects/file_reads/declared/`,
+  preserving the same fallback-arm coverage while keeping each module focused.
 
 ## Current Phase
 
