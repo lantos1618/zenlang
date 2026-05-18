@@ -3650,6 +3650,13 @@ checked-in docs, tests, and commits only.
   provenance, memory-access, and layout gates instead of unknown/generic builtin
   failures. Guarded by `raw_pointer_intrinsics_are_rejected_as_ownership_gates`
   and `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Atomic compiler intrinsics `@builtin.atomic_load(...)`,
+  `@builtin.atomic_store(...)`, `@builtin.atomic_add(...)`,
+  `@builtin.atomic_sub(...)`, `@builtin.atomic_cas(...)`,
+  `@builtin.atomic_xchg(...)`, and `@builtin.fence()` now reject as memory-order
+  and Sync/Async effect gates instead of silently typechecking as unknown void
+  builtins. Guarded by `atomic_intrinsics_are_rejected_as_effect_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded
