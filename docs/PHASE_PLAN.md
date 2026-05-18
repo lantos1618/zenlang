@@ -907,8 +907,9 @@ checked-in docs, tests, and commits only.
   Generic inference now also walks function, array, and raw-pointer parameter
   shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics. Generic method inference conflict coverage now
-  mirrors those compound parameter shapes and includes slice parameters, so
-  method receiver inference cannot hide later nested argument conflicts.
+  mirrors those compound parameter shapes and includes slice parameters plus
+  nested generic struct and enum parameters, so method receiver inference
+  cannot hide later nested argument conflicts.
   Resolver now rejects duplicate generic type-parameter names across value,
   type, and behavior declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.

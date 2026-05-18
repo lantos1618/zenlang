@@ -554,7 +554,8 @@ and do not assume Phase 4 is ready without evidence.
   shapes, so nested type parameters inside compound arguments can produce
   direct conflict diagnostics. Generic method inference conflicts now have
   matching compound-shape coverage for function, array, raw-pointer, and slice
-  parameter types in `tests/generic_diagnostics.rs`.
+  parameter types, plus nested generic struct and enum parameter types, in
+  `tests/generic_diagnostics.rs`.
   Resolver rejects duplicate generic type-parameter names across value, type,
   and behavior declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
