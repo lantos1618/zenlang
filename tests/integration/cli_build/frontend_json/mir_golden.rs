@@ -49,3 +49,39 @@ main = () i32 {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_mir_minimal_function_schema_matches_golden() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("mir_subject.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+main = () i32 {
+    value = 40 + 2
+    value
+}
+"#,
+    )
+    .expect("write MIR subject");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "mir", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json mir on program input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json mir should emit checked minimal MIR JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual = String::from_utf8(output.stdout).expect("MIR minimal stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual).expect("MIR minimal stdout is JSON");
+    let expected_path = fixture("tests/fixtures/ir_json/mir_minimal_function.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
