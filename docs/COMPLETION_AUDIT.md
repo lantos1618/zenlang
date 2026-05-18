@@ -4085,6 +4085,9 @@ and do not assume Phase 4 is ready without evidence.
   schema/golden-test gate before emitting HIR or MIR JSON. Covered by
   `emit_json_hir_rejects_program_before_hir_json` and
   `emit_json_mir_rejects_program_before_mir_json`.
+- Hand-authored JSON IR inputs to `emit-json mir` reject at the compiler-owned
+  schema boundary before any forged type or layout override can be accepted.
+  Covered by `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
   `emit-json target-yaml` rejects a real `.yaml` file at the schema-validation
   gate before emitting any JSON. Covered by
