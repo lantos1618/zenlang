@@ -60,6 +60,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Executable target dependencies compile",
         "dependency cycles",
         "dependency-ordered multi-executable build tests",
+        "Deterministic build graph compiles executable and test targets",
         "Accepted Syntax Forms",
         "Test Evidence",
         "Planned Positive Test",
@@ -212,4 +213,9 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
             "docs/V1_SPEC.md is missing Phase 1 requirement: {required}"
         );
     }
+
+    assert!(
+        !spec.contains("Deterministic build graph creates one executable target"),
+        "docs/V1_SPEC.md still describes the build.zen backlog as single-executable only"
+    );
 }
