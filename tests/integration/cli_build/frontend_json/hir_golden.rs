@@ -143,3 +143,35 @@ fn emit_json_hir_nested_generic_result_schema_matches_golden() {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_hir_generic_behavior_association_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "hir",
+            fixture("tests/zen/behavior_json_generic_association.zen")
+                .to_str()
+                .unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json hir on generic behavior association input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json hir should emit checked generic behavior association HIR JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual =
+        String::from_utf8(output.stdout).expect("HIR generic behavior association stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual)
+        .expect("HIR generic behavior association stdout is JSON");
+    let expected_path =
+        fixture("tests/fixtures/ir_json/hir_generic_behavior_association.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
