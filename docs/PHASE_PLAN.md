@@ -567,10 +567,11 @@ Agent UX deliverables:
   `return` keyword, giving agents and editor clients a span-addressed edit to
   remove `return` and use the expression as the block result. Guarded by
   `emit_json_diagnostics_includes_structured_return_keyword_fix`.
-- `emit-json hir` and `emit-json mir` now reject with explicit gated diagnostics
-  tied to the v1 JSON backlog, covered by
-  `emit_json_hir_command_is_explicitly_gated`,
-  `emit_json_mir_command_is_explicitly_gated`.
+- `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
+  tools and agents, covered by
+  `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` still
+  rejects with an explicit gated diagnostic tied to the v1 JSON backlog, covered
+  by `emit_json_mir_command_is_explicitly_gated`.
 - Build-graph JSON host-effect tests now keep declared file-read fallback
   accept/reject cases in a focused child module, leaving env-effect rejection
   ordering coverage in the parent integration module.
@@ -3602,13 +3603,12 @@ Agent UX deliverables:
   coverage already has positive and negative evidence. Guarded by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - `zen emit-json` usage diagnostics now advertise the complete current JSON
-  boundary surface, including checked `ast`/`symbols`/`typed`/`diagnostics`,
-  deterministic `build-graph`, validated `target-yaml`, and gated `hir`/`mir`
-  modes.
+  boundary surface, including checked `ast`/`symbols`/`typed`/`diagnostics`/`hir`,
+  deterministic `build-graph`, validated `target-yaml`, and gated `mir` mode.
   Covered by `emit_json_usage_lists_supported_and_gated_modes`, so the CLI
-  help text cannot hide gated IR/YAML modes from users.
+  help text cannot hide checked or gated IR/YAML modes from users.
 - The root `zen` usage banner now mirrors that IR/YAML boundary by listing the
-  gated `emit-json hir` and `emit-json mir` commands plus validated
+  checked `emit-json hir` command, gated `emit-json mir` command, and validated
   `emit-json target-yaml` instead of omitting them. Covered by
   `root_usage_lists_supported_and_gated_emit_json_modes`.
 - The root `zen` usage banner now labels `emit-json ast` as unchecked AST JSON,
@@ -3824,14 +3824,13 @@ Agent UX deliverables:
   second parse-mode branch list. Guarded by
   `cli_emit_json_modes_use_owned_mode_enum` and `emit_json_usage_lists_supported_and_gated_modes`.
 - Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`,
-  keeping HIR and MIR gate text attached to the same enum that owns mode
-  spelling and usage. Guarded by
-  `cli_emit_json_modes_use_owned_mode_enum`,
-  `emit_json_hir_command_is_explicitly_gated`,
+  keeping MIR gate text attached to the same enum that owns mode spelling and
+  usage. Guarded by `cli_emit_json_modes_use_owned_mode_enum` and
   `emit_json_mir_command_is_explicitly_gated`.
-- Real program inputs to `emit-json hir` and `emit-json mir` now reject at the
-  schema/golden-test gate before emitting HIR or MIR JSON. Guarded by
-  `emit_json_hir_rejects_program_before_hir_json` and
+- Real program inputs to `emit-json hir` now emit checked declaration-level HIR
+  JSON, guarded by `emit_json_hir_outputs_checked_declaration_graph`. Real
+  program inputs to `emit-json mir` still reject at the schema/golden-test gate
+  before emitting MIR JSON. Guarded by
   `emit_json_mir_rejects_program_before_mir_json`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as

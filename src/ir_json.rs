@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+mod hir;
 mod layout;
 
 use crate::ast::typed::TypedProgram;
@@ -137,6 +138,10 @@ pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<Strin
     };
 
     serde_json::to_string_pretty(&graph)
+}
+
+pub fn hir_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
+    hir::program_to_json(program)
 }
 
 pub fn layout_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
