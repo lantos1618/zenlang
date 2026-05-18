@@ -4021,6 +4021,9 @@ and do not assume Phase 4 is ready without evidence.
 - Parser module roots now construct `@builtin` and `@std` spellings through
   `ParserModuleRoot` instead of parser-local raw strings. Covered by
   `parser_module_roots_use_owned_root_enum` and parser import tests.
+- Parser mutability markers now parse `mut` through `ParserMutabilityKeyword`
+  and a shared parser helper for fields and parameters. Covered by
+  `parser_mutability_keywords_use_owned_keyword_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

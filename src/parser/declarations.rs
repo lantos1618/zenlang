@@ -1,6 +1,18 @@
 use super::*;
 
 impl Parser {
+    pub(super) fn consume_mutability_keyword(&mut self) -> bool {
+        use crate::parser::keywords::ParserMutabilityKeyword;
+
+        if let Token::Identifier(ref name) = self.peek() {
+            if name.parse::<ParserMutabilityKeyword>().is_ok() {
+                self.advance();
+                return true;
+            }
+        }
+        false
+    }
+
     // ── Declarations ──────────────────────────────────────────
 
     pub(super) fn parse_declaration(&mut self) -> Result<Declaration, CompileError> {
@@ -259,12 +271,7 @@ impl Parser {
             let param_start = self.peek_span();
 
             // Optional `mut` qualifier
-            let mutable = if matches!(self.peek(), Token::Identifier(ref s) if s == "mut") {
-                self.advance();
-                true
-            } else {
-                false
-            };
+            let mutable = self.consume_mutability_keyword();
 
             let (name, _) = self.expect_identifier()?;
             self.expect(&Token::Colon)?;

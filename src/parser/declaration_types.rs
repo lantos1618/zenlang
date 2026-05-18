@@ -33,12 +33,7 @@ impl Parser {
             let field_start = self.peek_span();
 
             // optional `mut` prefix
-            let mutable = if matches!(self.peek(), Token::Identifier(ref s) if s == "mut") {
-                self.advance();
-                true
-            } else {
-                false
-            };
+            let mutable = self.consume_mutability_keyword();
 
             let (field_name, _) = self.expect_identifier()?;
             self.expect(&Token::Colon)?;

@@ -3698,6 +3698,9 @@ checked-in docs, tests, and commits only.
 - Parser module roots now construct `@builtin` and `@std` spellings through
   `ParserModuleRoot` instead of parser-local raw strings. Guarded by
   `parser_module_roots_use_owned_root_enum` and parser import tests.
+- Parser mutability markers now parse `mut` through `ParserMutabilityKeyword`
+  and a shared parser helper for fields and parameters. Guarded by
+  `parser_mutability_keywords_use_owned_keyword_enum`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded
