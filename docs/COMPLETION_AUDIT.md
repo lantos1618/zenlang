@@ -3816,6 +3816,10 @@ and do not assume Phase 4 is ready without evidence.
   coverage, so `build.zen` is no longer listed as only planned backlog. This is
   guarded by
   `docs_truth::v1_spec_records_phase_one_feature_gates_and_test_backlog`.
+- `docs/V1_SPEC.md` now marks strict resolver, symbol IDs, and privacy as
+  implemented rather than gated, backed by resolver/module/privacy evidence and
+  guarded by
+  `docs_truth::v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

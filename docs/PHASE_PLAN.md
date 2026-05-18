@@ -3263,6 +3263,9 @@ checked-in docs, tests, and commits only.
   `src/lexer/tests/syntax_examples.rs`, keeping Zen function/import,
   declaration, UFC, pattern-match, and method-call tokenization examples
   separate from core token/operator coverage.
+- `docs/V1_SPEC.md` now records strict resolver, symbol IDs, and privacy as
+  implemented with resolver/module/privacy tests as the evidence gate, guarded
+  by `docs_truth::v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - C codegen type mapping tests now live in
   `src/codegen/c/tests/type_mapping.rs`, keeping primitive, string, pointer,
   named, and function-pointer type mapping coverage separate from program
