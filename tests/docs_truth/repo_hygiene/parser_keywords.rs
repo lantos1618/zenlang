@@ -86,3 +86,37 @@ fn parser_this_methods_use_owned_method_enum() {
         );
     }
 }
+
+#[test]
+fn parser_module_roots_use_owned_root_enum() {
+    for path in ["src/parser/atoms.rs", "src/parser/import_declarations.rs"] {
+        let source = read(path);
+        for forbidden in [
+            r#""@builtin".to_string()"#,
+            r#""@std".to_string()"#,
+            r#"format!("@std.{}""#,
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} should construct parser module roots through ParserModuleRoot, not raw root spelling: {forbidden}"
+            );
+        }
+    }
+
+    let keywords = read("src/parser/keywords.rs");
+    for required in [
+        "enum ParserModuleRoot",
+        "const ALL: &[ParserModuleRoot]",
+        "impl FromStr for ParserModuleRoot",
+        ".find(|root| root.as_str() == value)",
+        "ParserModuleRoot::AtBuiltin.as_str().to_string()",
+        "ParserModuleRoot::AtStd.join_module_parts(&module_parts)",
+    ] {
+        assert!(
+            keywords.contains(required)
+                || read("src/parser/atoms.rs").contains(required)
+                || read("src/parser/import_declarations.rs").contains(required),
+            "parser module root spelling should live in ParserModuleRoot: {required}"
+        );
+    }
+}

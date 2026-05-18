@@ -3695,6 +3695,9 @@ checked-in docs, tests, and commits only.
 - Parser `@this.defer(...)` dispatch now parses `defer` through
   `ParserThisMethod` instead of a raw method spelling check. Guarded by
   `parser_this_methods_use_owned_method_enum` and defer tests.
+- Parser module roots now construct `@builtin` and `@std` spellings through
+  `ParserModuleRoot` instead of parser-local raw strings. Guarded by
+  `parser_module_roots_use_owned_root_enum` and parser import tests.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

@@ -1,4 +1,5 @@
 use super::*;
+use crate::parser::keywords::ParserModuleRoot;
 
 impl Parser {
     pub(super) fn parse_import(&mut self) -> Result<Declaration, CompileError> {
@@ -41,11 +42,11 @@ impl Parser {
         match self.peek().clone() {
             Token::AtStd => {
                 self.advance();
-                path.push("@std".to_string());
+                path.push(ParserModuleRoot::AtStd.as_str().to_string());
             }
             Token::AtBuiltin => {
                 self.advance();
-                path.push("@builtin".to_string());
+                path.push(ParserModuleRoot::AtBuiltin.as_str().to_string());
             }
             Token::Identifier(name) => {
                 self.advance();
