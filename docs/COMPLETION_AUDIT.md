@@ -888,6 +888,9 @@ and do not assume Phase 4 is ready without evidence.
 - Imported behavior inheritance follows parent behavior imports from the defining
   module, with negative coverage in
   `integration::imported_behavior_extends_imported_parent_requires_parent_methods`.
+- Imported behavior impl coherence rejects entry-module implementations of
+  both an imported generic parent behavior and an imported child behavior,
+  covered by `integration::imported_behavior_extends_parent_impl_overlap_is_error`.
 - Generic dispatch through an imported child behavior can call a method inherited
   from that behavior's imported parent, covered by
   `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
