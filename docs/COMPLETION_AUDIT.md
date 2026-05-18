@@ -4137,10 +4137,13 @@ and do not assume Phase 4 is ready without evidence.
   compiler-owned schema boundary before forged typed HIR can be accepted.
   Covered by `emit_json_hir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
-  `emit-json target-yaml` validates a minimal schema into `zen.target.v0` JSON
-  and rejects attempts to override compiler-owned type layouts. Covered by
-  `emit_json_target_yaml_validates_minimal_target_schema` and
-  `emit_json_target_yaml_rejects_layout_overrides`.
+  `emit-json target-yaml` validates a minimal schema plus the current C backend
+  schema into `zen.target.v0` JSON, rejects attempts to override
+  compiler-owned type layouts, and rejects unsupported backend code generators.
+  Covered by `emit_json_target_yaml_validates_minimal_target_schema`,
+  `emit_json_target_yaml_validates_backend_schema`,
+  `emit_json_target_yaml_rejects_layout_overrides`, and
+  `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
 - Typechecker boolean literal identifiers parse `true` and `false` through
   `TypecheckerBoolLiteralKeyword::ALL` rather than direct spelling checks.
   Covered by `typechecker_boolean_literals_use_owned_keyword_enum` and parser

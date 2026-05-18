@@ -195,9 +195,13 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   typed JSON is explicitly marked checked; diagnostics JSON is explicitly
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
   check, build, or test paths. Hand-authored target YAML validates through a
-  minimal schema into `zen.target.v0` JSON and rejects compiler-owned layout
-  overrides, covered by `emit_json_target_yaml_validates_minimal_target_schema`
-  and `emit_json_target_yaml_rejects_layout_overrides`.
+  minimal target schema plus an optional current-backend schema into
+  `zen.target.v0` JSON and rejects compiler-owned layout overrides or
+  unsupported backend code generators, covered by
+  `emit_json_target_yaml_validates_minimal_target_schema`,
+  `emit_json_target_yaml_validates_backend_schema`,
+  `emit_json_target_yaml_rejects_layout_overrides`, and
+  `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable
@@ -236,7 +240,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader HIR schema and golden tests still required |
 | MIR JSON emission | gated | `emit_json_mir_command_is_explicitly_gated`, `emit_json_mir_rejects_program_before_mir_json`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; schema and golden tests still required |
-| Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema`, `emit_json_target_yaml_rejects_layout_overrides`; broader ABI/backend option schemas still required |
+| Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; positive allocator semantics tests still required |

@@ -480,9 +480,9 @@ checked typed program, and `diagnostics` is machine-readable error output.
 primitive sizes, `StaticString`, pointer-sized views, and struct field offsets.
 `hir` reports checked declaration-level HIR for tools and agents that need a
 stable graph of types, functions, and globals without owning compiler truth.
-`target-yaml` validates a human-authored target description into canonical
-`zen.target.v0` JSON while rejecting attempts to override compiler-owned type
-layouts.
+`target-yaml` validates a human-authored target description and current C
+backend options into canonical `zen.target.v0` JSON while rejecting attempts to
+override compiler-owned type layouts or select unsupported backends.
 
 Hand-authored JSON is not accepted as compiler truth; the compiler emits these
 views from source so tools cannot override checked types or layouts.
