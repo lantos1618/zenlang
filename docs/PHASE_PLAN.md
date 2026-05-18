@@ -4234,6 +4234,11 @@ Agent UX deliverables:
   covering `@builtin.raw_allocate(...)` as a gated allocator surface instead
   of an ordinary unknown-builtin fallback while typed allocator semantics
   remain in the Required Test Backlog.
+- Byte-memory intrinsic gate diagnostics are now pinned at the CLI JSON
+  boundary by `emit_json_diagnostics_byte_memory_gate_schema_matches_golden`,
+  covering `@builtin.memcpy(...)` as a gated allocator surface instead of an
+  ordinary unknown-builtin fallback while typed allocator semantics remain in
+  the Required Test Backlog.
 
 ## Current Phase
 

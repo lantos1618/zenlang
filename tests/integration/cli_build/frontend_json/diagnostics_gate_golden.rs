@@ -95,3 +95,18 @@ main = () void {
         "tests/fixtures/ir_json/diagnostics_raw_allocate_gate.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_byte_memory_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "byte_memory_gate.zen",
+        r#"
+main = () void {
+    @builtin.memcpy(0, 0, 8)
+}
+"#,
+        "byte memory gate",
+        "byte memory gate should emit one gated intrinsic diagnostic",
+        "tests/fixtures/ir_json/diagnostics_byte_memory_gate.golden.json",
+    );
+}
