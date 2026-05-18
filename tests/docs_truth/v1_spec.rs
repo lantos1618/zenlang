@@ -76,6 +76,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Actors in std",
         "JSON/YAML IR boundaries",
         "comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown",
+        "primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown",
         "comptime type matching",
         "gated until typed metadata and derive lowering exist",
         "Ownership and raw pointer operations",

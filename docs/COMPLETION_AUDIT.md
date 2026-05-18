@@ -3911,6 +3911,10 @@ and do not assume Phase 4 is ready without evidence.
   type-argument diagnostics. Covered by
   `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Primitive and enum `@builtin.type_match<T>()` calls now reject through the
+  same comptime metadata gate, proving the gated surface is not limited to
+  struct names. Covered by
+  `primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown`.
 - Planned async scheduler intrinsics now have explicit gated diagnostics:
   `@builtin.async_enqueue(...)` and `@builtin.async_yield()` reject as
   Sync/Async effect gates instead of silently typechecking as unknown void

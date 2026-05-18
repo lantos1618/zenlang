@@ -184,7 +184,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; positive allocator semantics tests still required |
-| Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
+| Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`, `primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Ownership and raw pointer operations | gated | `raw_pointer_intrinsics_are_rejected_as_ownership_gates`; ownership/resource tests still required |
 | Host syscalls | gated | `syscall_intrinsics_are_rejected_as_host_effect_gates`; host-effect declaration and ABI tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
