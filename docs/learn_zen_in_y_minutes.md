@@ -26,8 +26,8 @@ Quick map:
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
 - loops use one prefix form, `loop((label) { ... })`, with explicit
   compiler-owned `label.done()` and `label.next()` control calls;
-- static text is `StaticString`; dynamic owned text is allocator-backed
-  `String`;
+- static text is `StaticString`; allocator-backed `String` is the dynamic
+  owned text shape and is still gated;
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
   design surfaces, with unstable spellings called out as gated previews.
 
@@ -74,7 +74,8 @@ The shape is intentional:
 - `StaticString` is literal/static text: pointer plus length into program
   storage, with no allocator.
 - `String` is runtime-owned dynamic text: pointer, length, capacity, and an
-  allocator capability.
+  allocator capability. It is a gated allocator-backed shape, not what string
+  literals produce.
 - `loop((l) { ... })` is the loop form. Exit with `l.done()` or `done(l)`;
   continue with `l.next()` or `next(l)`.
 - `Sync`, `Async`, and `Allocator<T, Mode>` live in type signatures so effects
@@ -704,9 +705,11 @@ prefix-only: call `loop`, pass a loop-control parameter, then choose the next
 step by calling loop-control verbs on that parameter.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
-`next` are compiler-owned loop-control verbs attached to that handle, so they
-are part of the language instead of arbitrary user methods on a library type.
-That keeps loop control visible without adding more statement keywords.
+`next` are compiler-owned loop-control verbs for that handle. They are not
+arbitrary user methods on a library object. That keeps loop control visible
+without adding more statement keywords.
+
+This is the core loop shape:
 
 ```zen
 sum_to = (limit: i32) i32 {
@@ -736,25 +739,6 @@ the loop handle here; this is not general user-defined method dispatch. See
 `break` and `continue` are not Zen source forms. Use `l.done()` and `l.next()`
 or their UFC forms instead.
 
-A counted loop is just state plus an explicit control decision:
-
-```zen
-count_to = (limit: i32) i32 {
-    i ::= 0
-
-    loop((l) {
-        i >= limit ?
-            | true { l.done() }
-            | false {
-                i = i + 1
-                l.next()
-            }
-    })
-
-    i
-}
-```
-
 Nested loops can target an outer label directly:
 
 ```zen
@@ -763,9 +747,7 @@ nested = (stop: bool) void {
         loop((inner) {
             stop ?
                 | true { outer.done() }
-                | false {
-                    inner.next()
-                }
+                | false { inner.next() }
         })
 
         outer.next()
@@ -777,19 +759,12 @@ Loop controls also support the narrow UFC form, which keeps the operation
 first while still naming the loop handle explicitly:
 
 ```zen
-single_step = (ready: bool) i32 {
-    value ::= 0
-
+step = (done_now: bool) void {
     loop((l) {
-        ready ?
+        done_now ?
             | true { done(l) }
-            | false {
-                value = value + 1
-                next(l)
-            }
+            | false { next(l) }
     })
-
-    value
 }
 ```
 
@@ -798,7 +773,7 @@ loop, and `next(inner)` continues only the inner loop. UFC loop control is
 limited to these compiler-owned verbs; it does not make loop handles ordinary
 objects.
 
-This is the complete stable loop surface:
+The complete stable loop surface is:
 
 - `loop((l) { ... })` starts a loop and binds a control handle.
 - `l.done()` exits that loop.
@@ -808,19 +783,8 @@ This is the complete stable loop surface:
 - There is no suffix/body-first loop spelling; `loop(...)` is the prefix entry
   point.
 
-Loops are expressions in the same block language as the rest of Zen, but their
-purpose is control flow. Accumulated values are usually kept in explicit mutable
-bindings outside the loop and read after `done`.
-
-The shape to remember is:
-
-```zen
-loop((label) {
-    condition ?
-        | true { label.done() }
-        | false { label.next() }
-})
-```
+Loops do not have a hidden result channel. Accumulated values live in explicit
+mutable bindings outside the loop and are read after `done`.
 
 Loop syntax is prefix-only.
 
