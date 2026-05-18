@@ -3068,7 +3068,9 @@ and do not assume Phase 4 is ready without evidence.
   `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
   `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
-  and `test_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  `test_command_build_zen_rejects_file_read_without_fallback_before_execution`,
+  and
+  `test_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
   wildcard, and identifier fallback arms on declared file reads, plus declared
   env reads with unselected graph targets, while keeping the matching
@@ -3080,7 +3082,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
-  and `emit_command_build_zen_rejects_undeclared_file_read_effects`.
+  `emit_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`,
+  `emit_command_build_zen_rejects_undeclared_file_read_effects`, and
+  `emit_command_build_zen_rejects_file_read_without_fallback`.
 - Direct `zen build.zen` execution now has executable graph fixtures for
   `.Err`, wildcard, and identifier fallback arms on declared file reads, while
   keeping the matching undeclared file-read and missing-fallback rejections
@@ -3092,7 +3096,9 @@ and do not assume Phase 4 is ready without evidence.
   `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`,
   `direct_file_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
-  and `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`.
+  `direct_file_command_build_zen_rejects_file_read_without_fallback_before_execution`,
+  and
+  `direct_file_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
 - Imported behavior association dependency seeding is now split into
   `src/typechecker/resolver_validation/imports_behavior_dependencies.rs`,
   preserving imported behavior inheritance and impl coverage while keeping the
