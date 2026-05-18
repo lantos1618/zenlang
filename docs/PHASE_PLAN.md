@@ -2560,7 +2560,9 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before source validation
   through
-  `check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`.
+  `check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`
+  and before multi-target source validation through
+  `check_command_multi_target_build_zen_rejects_env_read_without_fallback`.
   Declared deterministic file-read effects are accepted through `.Err`,
   wildcard, and identifier fallback arms, covered by
   `check_command_build_zen_accepts_declared_file_read_effects`,
