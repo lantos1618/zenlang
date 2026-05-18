@@ -2575,7 +2575,9 @@ checked-in docs, tests, and commits only.
   `check_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before source validation
   through
-  `check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`.
+  `check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`
+  and before multi-target source validation through
+  `check_command_multi_target_build_zen_rejects_file_read_without_fallback`.
   Library-only graphs remain valid on this non-executing path through
   `check_command_build_zen_accepts_library_only_graph_validation`.
 - Normal `zen test build.zen` compiles and runs test graph targets, covered by
