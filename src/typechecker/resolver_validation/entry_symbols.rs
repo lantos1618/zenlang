@@ -245,7 +245,7 @@ impl TypeChecker {
                 Declaration::TopLevelExpr { expr, .. } => {
                     self.require_resolver_scoped_expr_locals(symbols, expr, &mut scope_cursor);
                 }
-                Declaration::Error { .. } => {}
+                Declaration::Derive { .. } | Declaration::Error { .. } => {}
             }
         }
         let replay_tasks = Self::collect_resolver_validation_replay_tasks(program, symbols);

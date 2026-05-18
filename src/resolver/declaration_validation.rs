@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::ast::Declaration;
-use crate::error::Diagnostic;
+use crate::error::{Diagnostic, GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE};
 
 use super::metadata_helpers::behavior_ref_display;
 use super::symbol_table::ScopeStack;
@@ -292,6 +292,35 @@ impl Resolver {
                 for type_arg in behavior_type_args {
                     self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
+            }
+            Declaration::Derive {
+                type_name,
+                behavior,
+                behavior_type_args,
+                span,
+            } => {
+                if !self.is_known_type_name(table, &[], type_name) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0201",
+                        format!("unknown type symbol '{type_name}'"),
+                        *span,
+                    ));
+                }
+                if !self.is_known_behavior_name(table, behavior) {
+                    diagnostics.push(Diagnostic::error(
+                        "E0202",
+                        format!("unknown behavior symbol '{behavior}'"),
+                        *span,
+                    ));
+                }
+                for type_arg in behavior_type_args {
+                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
+                }
+                diagnostics.push(Diagnostic::error(
+                    "E2000",
+                    GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE,
+                    *span,
+                ));
             }
             Declaration::BehaviorExtends {
                 behavior,

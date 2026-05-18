@@ -296,16 +296,23 @@ impl From<CompileError> for Diagnostic {
                 context: Vec::new(),
                 suggested_fixes: Vec::new(),
             },
-            CompileError::Resolution(msg, span) => Diagnostic {
-                severity: Severity::Error,
-                code: "E3500".to_string(),
-                message: msg,
-                span,
-                labels: Vec::new(),
-                notes: Vec::new(),
-                context: Vec::new(),
-                suggested_fixes: Vec::new(),
-            },
+            CompileError::Resolution(msg, span) => {
+                let code = if msg == GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE {
+                    "E2000"
+                } else {
+                    "E3500"
+                };
+                Diagnostic {
+                    severity: Severity::Error,
+                    code: code.to_string(),
+                    message: msg,
+                    span,
+                    labels: Vec::new(),
+                    notes: Vec::new(),
+                    context: Vec::new(),
+                    suggested_fixes: Vec::new(),
+                }
+            }
             CompileError::Internal(msg) => Diagnostic {
                 severity: Severity::Error,
                 code: "E9999".to_string(),

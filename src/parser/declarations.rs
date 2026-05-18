@@ -1,5 +1,4 @@
 use super::*;
-use crate::error::GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE;
 use crate::parser::keywords::ParserBehaviorKeyword;
 
 impl Parser {
@@ -143,7 +142,7 @@ impl Parser {
                             self.parse_behavior_extends(name, name_span)
                         }
                         TypeDeclarationKeyword::Derive => {
-                            self.reject_gated_generated_behavior_derive(name_span)
+                            self.parse_behavior_derive(name, name_span)
                         }
                     };
                 }
@@ -205,17 +204,6 @@ impl Parser {
             format!(
                 "generic association target `Type<T>.{keyword}` is gated; use non-generic `{keyword}` associations or keep the generic behavior target deferred to docs/V1_SPEC.md"
             ),
-            Some(span),
-        ))
-    }
-
-    fn reject_gated_generated_behavior_derive<T>(
-        &mut self,
-        name_span: Span,
-    ) -> Result<T, CompileError> {
-        let span = self.gated_association_call_span(name_span);
-        Err(CompileError::Syntax(
-            GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE.to_string(),
             Some(span),
         ))
     }

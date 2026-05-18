@@ -84,11 +84,13 @@ and do not assume Phase 4 is ready without evidence.
   avoiding accidental partial promotion before the behavior solver can model
   generic target templates.
 - Generated/fallback behavior association remains gated deliberately. The
-  parser now reserves `Type.derive(Json)` through the enum-owned type
-  declaration suffix table and reports the generated association gate through
-  `parser::tests::generated_behavior_derive_association_is_explicitly_gated`,
-  keeping derive fallback syntax out of ordinary method parsing until fallback
-  resolution and ambiguity diagnostics exist.
+  parser now reserves `Type.derive(Json)` as an AST declaration through the
+  enum-owned type declaration suffix table, and resolver validation reports
+  the generated association gate through
+  `parser::tests::parse_generated_behavior_derive_association` and
+  `resolver_gates_generated_behavior_derive_association`, keeping derive
+  fallback lowering blocked until fallback resolution and ambiguity diagnostics
+  exist.
 - Generic method specializations that call generic functions have executable
   and generated-C coverage in `tests/zen/generic_method_worklist.zen`, including
   call-resolution assertions for the reached generic function dependency.

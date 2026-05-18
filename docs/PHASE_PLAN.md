@@ -150,10 +150,11 @@ Agent UX deliverables:
   keeping the unsupported behavior-solver boundary separate from supported
   generic non-behavior `Type<T>.impl` blocks.
 - Generated/fallback behavior association syntax such as `Type.derive(Json)`
-  is now reserved and explicitly gated through the same enum-owned type
-  declaration suffix table, guarded by
-  `parser::tests::generated_behavior_derive_association_is_explicitly_gated`
-  and `parser_type_declaration_suffixes_use_owned_keyword_enum`.
+  is now parsed into a reserved AST declaration for non-generic receivers, then
+  explicitly gated during resolver validation. Guarded by
+  `parser::tests::parse_generated_behavior_derive_association`,
+  `resolver_gates_generated_behavior_derive_association`, and
+  `parser_type_declaration_suffixes_use_owned_keyword_enum`.
 - Resolver symbol table data-model definitions now live in a focused core
   include, leaving symbol-table lookup and definition behavior in the parent
   implementation file.

@@ -81,7 +81,8 @@ impl TypeChecker {
             Declaration::TopLevelExpr { expr, .. } => {
                 tasks.push(SelfTypeContextValidationTask::TopLevelExpr { expr });
             }
-            Declaration::Import { .. } | Declaration::Error { .. } => {}
+            Declaration::Derive { .. } | Declaration::Import { .. } | Declaration::Error { .. } => {
+            }
         }
     }
 

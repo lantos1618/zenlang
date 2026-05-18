@@ -275,8 +275,10 @@ planned positive test and one planned negative test before implementation.
 | JSON/YAML IR boundaries | Checked layout JSON, checked MIR JSON, and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 
 Generated/fallback behavior association syntax is reserved but not implemented:
-`Type.derive(Json)` currently reports an explicit parser gate, covered by
-`parser::tests::generated_behavior_derive_association_is_explicitly_gated`.
+`Type.derive(Json)` currently parses into a reserved AST declaration and then
+reports an explicit resolver gate, covered by
+`parser::tests::parse_generated_behavior_derive_association` and
+`resolver_gates_generated_behavior_derive_association`.
 The diagnostics JSON path reports that gate over the full
 `Type.derive(...)` association call, covered by
 `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.

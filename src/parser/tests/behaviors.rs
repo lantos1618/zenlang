@@ -188,17 +188,21 @@ fn generic_type_association_keywords_are_explicitly_gated() {
 }
 
 #[test]
-fn generated_behavior_derive_association_is_explicitly_gated() {
-    let errors = parse_err("Point.derive(Json)");
-    let message = errors
-        .first()
-        .map(ToString::to_string)
-        .unwrap_or_else(|| "missing parser error".to_string());
-
-    assert!(
-        message.contains("generated behavior association `Type.derive(...)` is gated"),
-        "expected explicit generated behavior association gate, got {errors:?}"
-    );
+fn parse_generated_behavior_derive_association() {
+    let prog = parse_ok("Point.derive(Json)");
+    match &prog.declarations[0] {
+        Declaration::Derive {
+            type_name,
+            behavior,
+            behavior_type_args,
+            ..
+        } => {
+            assert_eq!(type_name, "Point");
+            assert_eq!(behavior, "Json");
+            assert!(behavior_type_args.is_empty());
+        }
+        other => panic!("expected Derive, got {:?}", other),
+    }
 }
 
 #[test]

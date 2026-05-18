@@ -159,6 +159,7 @@ impl Resolver {
                 }
             }
             Declaration::Requires { .. }
+            | Declaration::Derive { .. }
             | Declaration::BehaviorExtends { .. }
             | Declaration::TopLevelExpr { .. }
             | Declaration::Error { .. } => {}

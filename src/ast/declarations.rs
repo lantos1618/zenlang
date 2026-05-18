@@ -174,6 +174,14 @@ pub enum Declaration {
         span: Span,
     },
 
+    /// Generated/fallback behavior association: `Point.derive(Json)`
+    Derive {
+        type_name: String,
+        behavior: String,
+        behavior_type_args: Vec<AstType>,
+        span: Span,
+    },
+
     /// Behavior inheritance: `PrettyPrint.extends(Serializable)`
     BehaviorExtends {
         behavior: String,
@@ -201,6 +209,7 @@ impl Declaration {
             | Declaration::Behavior { span, .. }
             | Declaration::ImplBlock { span, .. }
             | Declaration::Requires { span, .. }
+            | Declaration::Derive { span, .. }
             | Declaration::BehaviorExtends { span, .. }
             | Declaration::TopLevelExpr { span, .. }
             | Declaration::Error { span, .. } => *span,
