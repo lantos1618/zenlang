@@ -101,6 +101,11 @@ fn test_type_impl_methods() {
 }
 
 #[test]
+fn test_generic_type_impl_methods() {
+    run_test("generic_type_impl_methods");
+}
+
+#[test]
 fn test_generic_result_enum() {
     run_test("generic_result_enum");
 }

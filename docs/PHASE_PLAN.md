@@ -1412,12 +1412,14 @@ checked-in docs, tests, and commits only.
   generic enum dependency also compile and emit concrete call/definition pairs,
   covered by
   `tests/zen/multi_file_type_method_return_enum_dependency/main.zen`.
-- Non-behavior `Type.impl = { ... }` blocks now parse, resolve as
-  `Type.method` value symbols, typecheck, and emit concrete method functions,
-  including generic impl methods. Covered by `parser::tests::parse_impl_block`,
+- Non-behavior `Type.impl = { ... }` and `Type<T>.impl = { ... }` blocks now
+  parse, resolve as `Type.method` value symbols, typecheck, and emit concrete
+  method functions, including receiver-inferred generic impl methods. Covered
+  by `parser::tests::parse_impl_block`,
+  `parser::tests::parse_generic_impl_block_hoists_receiver_type_params_to_methods`,
   `resolver_phase2::resolver_accepts_non_behavior_impl_blocks_as_method_symbols`,
-  `tests/zen/type_impl_methods.zen`, `tests/zen/multi_file_type_impl/main.zen`,
-  and generated-C assertions in
+  `tests/zen/type_impl_methods.zen`, `tests/zen/generic_type_impl_methods.zen`,
+  `tests/zen/multi_file_type_impl/main.zen`, and generated-C assertions in
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`;
   `integration::imported_private_type_impl_methods_are_not_visible` covers the
   graph-owned import privacy boundary. Duplicate non-behavior impl method names

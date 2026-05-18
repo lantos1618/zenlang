@@ -1,0 +1,22 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box<T>.impl = {
+    get = (self: Box<T>) T {
+        self.value
+    }
+
+    replace = (self: Box<T>, value: T) Box<T> {
+        Box<T> { value: value }
+    }
+}
+
+main = () i32 {
+    box = Box<i32> { value: 41 }
+    next = box.replace(42)
+    io.println("${next.get()}")
+    0
+}
