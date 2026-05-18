@@ -3692,6 +3692,9 @@ checked-in docs, tests, and commits only.
 - Parser pattern keyword dispatch now parses `true`, `false`, and `_` through
   `ParserPatternKeyword` instead of raw identifier spelling guards. Guarded by
   `parser_pattern_keywords_use_owned_keyword_enum` and parser pattern tests.
+- Parser `@this.defer(...)` dispatch now parses `defer` through
+  `ParserThisMethod` instead of a raw method spelling check. Guarded by
+  `parser_this_methods_use_owned_method_enum` and defer tests.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

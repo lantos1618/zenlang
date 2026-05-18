@@ -18,6 +18,11 @@ pub(super) enum ParserPatternKeyword {
     Wildcard,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ParserThisMethod {
+    Defer,
+}
+
 impl ParserPrefixKeyword {
     const ALL: &[ParserPrefixKeyword] = &[
         ParserPrefixKeyword::True,
@@ -90,6 +95,30 @@ impl FromStr for ParserPatternKeyword {
             .iter()
             .copied()
             .find(|keyword| keyword.as_str() == value)
+            .ok_or(())
+    }
+}
+
+impl ParserThisMethod {
+    const ALL: &[ParserThisMethod] = &[ParserThisMethod::Defer];
+
+    const DEFER: &'static str = "defer";
+
+    pub(super) fn as_str(self) -> &'static str {
+        match self {
+            Self::Defer => Self::DEFER,
+        }
+    }
+}
+
+impl FromStr for ParserThisMethod {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|method| method.as_str() == value)
             .ok_or(())
     }
 }
