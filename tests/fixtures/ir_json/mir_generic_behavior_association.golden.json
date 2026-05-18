@@ -1,0 +1,92 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "Point.encode__Json_StaticString",
+      "params": [
+        {
+          "name": "self",
+          "type": "Point"
+        }
+      ],
+      "return_type": "StaticString",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "static_string",
+              "type": "StaticString",
+              "value": "point"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "point",
+              "type": "Point",
+              "mutable": false,
+              "value": {
+                "kind": "struct",
+                "type": "Point",
+                "name": "Point",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "call",
+                    "type": "StaticString",
+                    "function": "Point.encode__Json_StaticString",
+                    "args": [
+                      {
+                        "kind": "local",
+                        "type": "Point",
+                        "name": "point"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

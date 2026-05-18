@@ -4341,6 +4341,10 @@ and do not assume Phase 4 is ready without evidence.
   covering nested `Result_Option_i32_StaticString` construction, dependent
   `Option_i32` values, specialized calls, and match-arm lowering for both
   unwrap helpers.
+- MIR JSON for explicit generic behavior association dispatch is now pinned by
+  `emit_json_mir_generic_behavior_association_schema_matches_golden`, covering
+  `Point.encode__Json_StaticString` return lowering and the typed association
+  call nested inside `io_println`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
