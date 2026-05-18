@@ -4054,6 +4054,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_mir_command_is_explicitly_gated`,
   `emit_json_layout_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
+- Hand-authored target YAML remains outside the compiler-owned IR path:
+  `emit-json target-yaml` rejects a real `.yaml` file at the schema-validation
+  gate before emitting any JSON. Covered by
+  `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

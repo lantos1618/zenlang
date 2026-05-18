@@ -3733,6 +3733,10 @@ checked-in docs, tests, and commits only.
   `emit_json_mir_command_is_explicitly_gated`,
   `emit_json_layout_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
+- Hand-authored target YAML remains outside the compiler-owned IR path:
+  `emit-json target-yaml` now has explicit coverage that a real `.yaml` file is
+  rejected at the schema-validation gate before emitting any JSON. Guarded by
+  `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
 
 ## Current Phase
 

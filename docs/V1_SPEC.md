@@ -144,7 +144,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   explicitly marked unchecked; symbols JSON is explicitly marked resolved;
   typed JSON is explicitly marked checked; diagnostics JSON is explicitly
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
-  check, build, or test paths.
+  check, build, or test paths. Hand-authored target YAML remains gated before
+  validation or JSON emission, covered by
+  `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable
