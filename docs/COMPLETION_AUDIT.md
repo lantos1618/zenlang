@@ -2772,6 +2772,9 @@ and do not assume Phase 4 is ready without evidence.
   Missing fallback arms on deterministic file reads also reject before C
   emission, covered by
   `cargo test --test integration emit_command_build_zen_rejects_file_read_without_fallback`.
+  Emit graphs with unselected test and library targets keep that rejection
+  before unselected target source validation through
+  `cargo test --test integration emit_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
   Declared deterministic env reads with `.Err`, wildcard, and identifier
   fallback arms are accepted on the same emit path through
   `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_fallback`,
