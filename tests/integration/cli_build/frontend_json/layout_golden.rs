@@ -146,3 +146,34 @@ fn emit_json_layout_generic_option_schema_matches_golden() {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_layout_nested_generic_result_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "layout",
+            fixture("tests/zen/generic_nested_result_enum.zen")
+                .to_str()
+                .unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json layout on nested generic Result program input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json layout should emit checked nested generic Result layout JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual =
+        String::from_utf8(output.stdout).expect("layout nested generic Result stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual)
+        .expect("layout nested generic Result stdout is JSON");
+    let expected_path = fixture("tests/fixtures/ir_json/layout_nested_generic_result.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}

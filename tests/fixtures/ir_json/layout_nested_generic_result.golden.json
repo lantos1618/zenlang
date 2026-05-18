@@ -1,0 +1,138 @@
+{
+  "format": "zen.layout.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "target": {
+    "pointer_size": 8,
+    "pointer_alignment": 8,
+    "usize_size": 8
+  },
+  "layouts": {
+    "Option_i32": {
+      "kind": "enum",
+      "size": 8,
+      "alignment": 4,
+      "variants": [
+        {
+          "name": "None",
+          "tag": 0
+        },
+        {
+          "name": "Some",
+          "tag": 1,
+          "payload_fields": [
+            {
+              "name": "payload",
+              "type": "i32",
+              "offset": 0
+            }
+          ]
+        }
+      ]
+    },
+    "Result_Option_i32_StaticString": {
+      "kind": "enum",
+      "size": 24,
+      "alignment": 8,
+      "variants": [
+        {
+          "name": "Ok",
+          "tag": 0,
+          "payload_fields": [
+            {
+              "name": "payload",
+              "type": "Option_i32",
+              "offset": 0
+            }
+          ]
+        },
+        {
+          "name": "Err",
+          "tag": 1,
+          "payload_fields": [
+            {
+              "name": "payload",
+              "type": "StaticString",
+              "offset": 0
+            }
+          ]
+        }
+      ]
+    },
+    "StaticString": {
+      "kind": "static_string",
+      "size": 16,
+      "alignment": 8
+    },
+    "String": {
+      "kind": "dynamic_string",
+      "size": 32,
+      "alignment": 8
+    },
+    "bool": {
+      "kind": "primitive",
+      "size": 1,
+      "alignment": 1
+    },
+    "f32": {
+      "kind": "primitive",
+      "size": 4,
+      "alignment": 4
+    },
+    "f64": {
+      "kind": "primitive",
+      "size": 8,
+      "alignment": 8
+    },
+    "i16": {
+      "kind": "primitive",
+      "size": 2,
+      "alignment": 2
+    },
+    "i32": {
+      "kind": "primitive",
+      "size": 4,
+      "alignment": 4
+    },
+    "i64": {
+      "kind": "primitive",
+      "size": 8,
+      "alignment": 8
+    },
+    "i8": {
+      "kind": "primitive",
+      "size": 1,
+      "alignment": 1
+    },
+    "u16": {
+      "kind": "primitive",
+      "size": 2,
+      "alignment": 2
+    },
+    "u32": {
+      "kind": "primitive",
+      "size": 4,
+      "alignment": 4
+    },
+    "u64": {
+      "kind": "primitive",
+      "size": 8,
+      "alignment": 8
+    },
+    "u8": {
+      "kind": "primitive",
+      "size": 1,
+      "alignment": 1
+    },
+    "usize": {
+      "kind": "primitive",
+      "size": 8,
+      "alignment": 8
+    },
+    "void": {
+      "kind": "primitive",
+      "size": 0,
+      "alignment": 1
+    }
+  }
+}
