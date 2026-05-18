@@ -346,7 +346,7 @@ and do not assume Phase 4 is ready without evidence.
   leaving executable-target and skipped-source checks in the parent module.
 - `zen check build.zen` host-effect integration tests now split declared
   file-read fallback accept/reject coverage into
-  `tests/integration/cli_build/graph_validation_host_effects/file_reads.rs`,
+  `tests/integration/cli_build/graph_validation_host_effects/file_reads/`,
   leaving env-effect ordering coverage in the parent module.
 - Direct `zen build.zen` validation tests now split direct and transitive gated
   test dependency rejection coverage into
