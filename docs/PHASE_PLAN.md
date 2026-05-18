@@ -3574,6 +3574,10 @@ checked-in docs, tests, and commits only.
   actor-specific gated diagnostics instead of unknown-type errors. Covered by
   `actor_framework_types_are_rejected_as_gated_not_unknown` and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Gated builtin type lookup now uses `GatedBuiltinType::ALL` as the enum-owned
+  static table, so adding future gated type spellings does not require a
+  separate name-to-variant match. Guarded by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Builtin public type spellings now route through shared AST type helpers
   instead of ad hoc semantic string checks, keeping `String` recognition and
   `StaticString` display spelling tied to one source. Guarded by

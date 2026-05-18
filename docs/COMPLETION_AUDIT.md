@@ -3898,6 +3898,9 @@ and do not assume Phase 4 is ready without evidence.
   gated diagnostics rather than ordinary unknown-type errors. Covered by
   `actor_framework_types_are_rejected_as_gated_not_unknown` and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Gated builtin type lookup now uses `GatedBuiltinType::ALL` as the enum-owned
+  static table rather than a separate name-to-variant match, covered by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Builtin public type spellings now use shared AST helpers rather than
   duplicated semantic string comparisons, covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
