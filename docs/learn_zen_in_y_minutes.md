@@ -137,6 +137,24 @@ main = () i32 {
 Functions have typed parameters and an explicit result type. A non-void
 function's final expression must produce that result on every non-error path.
 
+## Blocks Return Their Final Expression
+
+```zen
+max = (a: i32, b: i32) i32 {
+    a > b ?
+        | true { a }
+        | false { b }
+}
+
+main = () i32 {
+    max(10, 42)
+}
+```
+
+Zen does not use a `return` keyword. Function bodies, match arms, and nested
+blocks produce values from their final expression. Use `Result` or `Option`
+when a path can fail or be absent.
+
 ## Structs
 
 ```zen
@@ -562,7 +580,9 @@ literals, and interpolation does not implicitly construct allocator-backed
 The following syntax and APIs are gated design goals, not stable compiler
 behavior yet. They are included here because they are central to the intended
 language shape: allocation is explicit, async work is effect-aware, and sync
-code cannot accidentally call async operations.
+code cannot accidentally call async operations. Current compiler paths reject
+these spellings with feature-gate diagnostics instead of treating them as
+ordinary unknown names.
 
 ### Sync And Async Preview
 
@@ -579,8 +599,10 @@ read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes
 }
 ```
 
-The intended rule is that sync code either stays sync or crosses an explicit
-runtime boundary. It does not implicitly await async work.
+The rule is that sync code either stays sync or crosses an explicit runtime
+boundary. It does not implicitly await async work. Planned `.await()` and async
+scheduler intrinsics are gated until task lowering and effect checking are
+promoted.
 
 ### Allocator Preview
 
@@ -624,6 +646,11 @@ make_async_buffer<T, A: Allocator<T, Async>> =
     allocator.alloc(len)
 }
 ```
+
+Raw allocation intrinsics such as `@builtin.raw_allocate(...)`,
+`@builtin.raw_deallocate(...)`, and `@builtin.raw_reallocate(...)` are also
+gated. They exist as compiler-owned names so allocator diagnostics can be
+specific, but stable source code should not call them yet.
 
 The model is:
 
