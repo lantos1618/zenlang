@@ -3364,6 +3364,18 @@ checked-in docs, tests, and commits only.
 - Root smoke fixtures under `tests/test_*.zen` now use expression-tail returns
   instead of the removed `return` keyword, guarded by
   `root_smoke_fixtures_do_not_use_removed_return_keyword`.
+- Legacy `zen build-graph build.zen` now has the same declared file-read
+  unselected-target coverage as the newer graph execution entrypoints: declared
+  fallback arms allow selected executable targets to build while unrelated
+  missing test sources are ignored, and undeclared or missing-fallback file
+  reads are rejected before unrelated target handling or output creation.
+  Coverage:
+  `build_graph_command_accepts_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_rejects_undeclared_file_read_effects_before_unselected_targets`,
+  and
+  `build_graph_command_rejects_file_read_without_fallback_before_unselected_targets`.
 
 ## Current Phase
 

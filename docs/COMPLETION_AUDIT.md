@@ -3675,6 +3675,18 @@ and do not assume Phase 4 is ready without evidence.
 - Root smoke fixtures under `tests/test_*.zen` no longer use the removed
   `return` keyword and are guarded by
   `root_smoke_fixtures_do_not_use_removed_return_keyword`.
+- Legacy `zen build-graph build.zen` file-read host-effect validation now
+  matches the unselected-target coverage on `zen build build.zen` and direct
+  `zen build.zen`: declared fallback arms allow selected executable targets to
+  build while unrelated missing test sources are ignored, and undeclared or
+  missing-fallback file reads are rejected before unrelated target handling or
+  output creation. Coverage:
+  `build_graph_command_accepts_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`,
+  `build_graph_command_rejects_undeclared_file_read_effects_before_unselected_targets`,
+  and
+  `build_graph_command_rejects_file_read_without_fallback_before_unselected_targets`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
