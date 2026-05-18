@@ -60,6 +60,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_nongeneric_struct_constructor_type_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nongeneric_struct_constructor_type_args.zen",
+        r#"
+Point: {
+    x: i32
+}
+
+main = () i32 {
+    point = Point<i32> { x: 1 }
+    point.x
+}
+"#,
+        "non-generic struct constructor type arguments",
+        "non-generic struct constructor type-argument diagnostics should not emit field mismatch followups",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_struct_constructor_type_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_enum_constructor_arity_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_enum_constructor_arity.zen",
