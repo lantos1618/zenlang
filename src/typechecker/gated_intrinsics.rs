@@ -1,3 +1,6 @@
+use std::fmt;
+use std::str::FromStr;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum GatedIntrinsic {
     AtomicAdd,
@@ -23,6 +26,13 @@ pub(super) enum GatedIntrinsic {
     RawPtrCast,
     RawReallocate,
     Store,
+    Syscall0,
+    Syscall1,
+    Syscall2,
+    Syscall3,
+    Syscall4,
+    Syscall5,
+    Syscall6,
     TypeMatch,
 }
 
@@ -51,6 +61,13 @@ impl GatedIntrinsic {
     pub(super) const RAW_PTR_CAST: &'static str = "raw_ptr_cast";
     pub(super) const RAW_REALLOCATE: &'static str = "raw_reallocate";
     pub(super) const STORE: &'static str = "store";
+    pub(super) const SYSCALL0: &'static str = "syscall0";
+    pub(super) const SYSCALL1: &'static str = "syscall1";
+    pub(super) const SYSCALL2: &'static str = "syscall2";
+    pub(super) const SYSCALL3: &'static str = "syscall3";
+    pub(super) const SYSCALL4: &'static str = "syscall4";
+    pub(super) const SYSCALL5: &'static str = "syscall5";
+    pub(super) const SYSCALL6: &'static str = "syscall6";
     pub(super) const TYPE_MATCH: &'static str = "type_match";
     const ALL: &[GatedIntrinsic] = &[
         Self::AtomicAdd,
@@ -76,15 +93,15 @@ impl GatedIntrinsic {
         Self::RawPtrCast,
         Self::RawReallocate,
         Self::Store,
+        Self::Syscall0,
+        Self::Syscall1,
+        Self::Syscall2,
+        Self::Syscall3,
+        Self::Syscall4,
+        Self::Syscall5,
+        Self::Syscall6,
         Self::TypeMatch,
     ];
-
-    pub(super) fn from_name(name: &str) -> Option<Self> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|intrinsic| intrinsic.as_str() == name)
-    }
 
     pub(super) const fn as_str(self) -> &'static str {
         match self {
@@ -111,6 +128,13 @@ impl GatedIntrinsic {
             Self::RawPtrCast => Self::RAW_PTR_CAST,
             Self::RawReallocate => Self::RAW_REALLOCATE,
             Self::Store => Self::STORE,
+            Self::Syscall0 => Self::SYSCALL0,
+            Self::Syscall1 => Self::SYSCALL1,
+            Self::Syscall2 => Self::SYSCALL2,
+            Self::Syscall3 => Self::SYSCALL3,
+            Self::Syscall4 => Self::SYSCALL4,
+            Self::Syscall5 => Self::SYSCALL5,
+            Self::Syscall6 => Self::SYSCALL6,
             Self::TypeMatch => Self::TYPE_MATCH,
         }
     }
@@ -186,9 +210,48 @@ impl GatedIntrinsic {
             Self::Store => {
                 "raw pointer store is gated until ownership and memory access semantics are implemented"
             }
+            Self::Syscall0 => {
+                "syscall0 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall1 => {
+                "syscall1 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall2 => {
+                "syscall2 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall3 => {
+                "syscall3 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall4 => {
+                "syscall4 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall5 => {
+                "syscall5 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
+            Self::Syscall6 => {
+                "syscall6 is gated until host effect declarations and syscall ABI semantics are implemented"
+            }
             Self::TypeMatch => {
                 "comptime type matching is gated until typed metadata and derive lowering are implemented"
             }
         }
+    }
+}
+
+impl fmt::Display for GatedIntrinsic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for GatedIntrinsic {
+    type Err = ();
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        GatedIntrinsic::ALL
+            .iter()
+            .copied()
+            .find(|intrinsic| intrinsic.as_str() == name)
+            .ok_or(())
     }
 }

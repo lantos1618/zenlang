@@ -3980,6 +3980,11 @@ and do not assume Phase 4 is ready without evidence.
   and Sync/Async effect gates instead of silently typechecking as unknown void
   builtins. Covered by `atomic_intrinsics_are_rejected_as_effect_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Raw syscall compiler intrinsics `@builtin.syscall0(...)` through
+  `@builtin.syscall6(...)` now reject as host-effect and syscall ABI gates
+  instead of silently typechecking as unknown void builtins. Covered by
+  `syscall_intrinsics_are_rejected_as_host_effect_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

@@ -112,8 +112,16 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         r#"name == "raw_ptr_cast""#,
         r#"name == "raw_reallocate""#,
         r#"name == "store""#,
+        r#"name == "syscall0""#,
+        r#"name == "syscall1""#,
+        r#"name == "syscall2""#,
+        r#"name == "syscall3""#,
+        r#"name == "syscall4""#,
+        r#"name == "syscall5""#,
+        r#"name == "syscall6""#,
         r#"name == "type_match""#,
         r#"match name"#,
+        "from_name",
         r#""atomic_add" =>"#,
         r#""atomic_cas" =>"#,
         r#""atomic_load" =>"#,
@@ -137,6 +145,13 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         r#""raw_ptr_cast" =>"#,
         r#""raw_reallocate" =>"#,
         r#""store" =>"#,
+        r#""syscall0" =>"#,
+        r#""syscall1" =>"#,
+        r#""syscall2" =>"#,
+        r#""syscall3" =>"#,
+        r#""syscall4" =>"#,
+        r#""syscall5" =>"#,
+        r#""syscall6" =>"#,
         r#""type_match" =>"#,
     ] {
         assert!(
@@ -147,6 +162,8 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
     for required in [
         "enum GatedIntrinsic",
         "const ALL: &[GatedIntrinsic]",
+        "impl fmt::Display for GatedIntrinsic",
+        "impl FromStr for GatedIntrinsic",
         "pub(super) const ATOMIC_ADD: &'static str = \"atomic_add\"",
         "pub(super) const ATOMIC_CAS: &'static str = \"atomic_cas\"",
         "pub(super) const ATOMIC_LOAD: &'static str = \"atomic_load\"",
@@ -170,6 +187,13 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         "pub(super) const RAW_PTR_CAST: &'static str = \"raw_ptr_cast\"",
         "pub(super) const RAW_REALLOCATE: &'static str = \"raw_reallocate\"",
         "pub(super) const STORE: &'static str = \"store\"",
+        "pub(super) const SYSCALL0: &'static str = \"syscall0\"",
+        "pub(super) const SYSCALL1: &'static str = \"syscall1\"",
+        "pub(super) const SYSCALL2: &'static str = \"syscall2\"",
+        "pub(super) const SYSCALL3: &'static str = \"syscall3\"",
+        "pub(super) const SYSCALL4: &'static str = \"syscall4\"",
+        "pub(super) const SYSCALL5: &'static str = \"syscall5\"",
+        "pub(super) const SYSCALL6: &'static str = \"syscall6\"",
         "pub(super) const TYPE_MATCH: &'static str = \"type_match\"",
         "pub(super) const fn gate_message(self) -> &'static str",
         ".find(|intrinsic| intrinsic.as_str() == name)",
@@ -180,7 +204,7 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         );
     }
     assert!(
-        calls.contains("GatedIntrinsic::from_name(name)") && calls.contains("gated.gate_message()"),
+        calls.contains("name.parse::<GatedIntrinsic>()") && calls.contains("gated.gate_message()"),
         "function-call checking should route gated intrinsics through GatedIntrinsic"
     );
 }

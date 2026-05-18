@@ -23,7 +23,7 @@ impl TypeChecker {
         };
 
         if module.as_deref() == Some(GatedIntrinsic::INTRINSIC_MODULE) {
-            if let Some(gated) = GatedIntrinsic::from_name(name) {
+            if let Ok(gated) = name.parse::<GatedIntrinsic>() {
                 self.diagnostics
                     .push(Diagnostic::error("E0203", gated.gate_message(), span));
                 return Ok(TypedExpression {
