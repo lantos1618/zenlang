@@ -139,6 +139,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_typed_generic_result_schema_matches_golden",
         "emit_json_typed_nested_generic_result_schema_matches_golden",
         "emit_json_typed_generic_behavior_association_schema_matches_golden",
+        "emit_json_typed_generic_behavior_bound_ufcs_schema_matches_golden",
+        "Point.encode__Json_Point",
         "emit_json_build_graph_rejects_hand_authored_json_before_graph_override",
         "schema_version: 0",
         "emit_json_hir_outputs_checked_declaration_graph",

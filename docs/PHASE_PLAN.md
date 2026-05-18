@@ -596,6 +596,10 @@ Agent UX deliverables:
   `emit_json_typed_generic_behavior_association_schema_matches_golden`,
   covering the concrete `Point.encode__Json_StaticString` association function
   and its typed call site.
+- Checked typed JSON for generic behavior-bound UFCS dispatch is now pinned by
+  `emit_json_typed_generic_behavior_bound_ufcs_schema_matches_golden`, covering
+  `encode_Point` specialization through a substituted `T: Json<T>` bound to
+  the concrete `Point.encode__Json_Point` association function.
 - Diagnostics JSON now carries `semantic_status: "diagnostic"`, covered by
   `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
   machine-readable diagnostics path is distinct from both unchecked AST and
@@ -3952,6 +3956,10 @@ Agent UX deliverables:
   `emit_json_mir_generic_behavior_association_schema_matches_golden`, covering
   `Point.encode__Json_StaticString` return lowering and the typed association
   call nested inside `io_println`.
+- Typed JSON for generic behavior-bound UFCS dispatch is now pinned by
+  `emit_json_typed_generic_behavior_bound_ufcs_schema_matches_golden`, covering
+  `encode_Point` specialization and the body call to
+  `Point.encode__Json_Point` after substituting `T: Json<T>`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by

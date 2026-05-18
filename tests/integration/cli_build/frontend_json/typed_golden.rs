@@ -153,3 +153,36 @@ fn emit_json_typed_generic_behavior_association_schema_matches_golden() {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_typed_generic_behavior_bound_ufcs_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "typed",
+            test_dir()
+                .join("behavior_json_generic_bound_ufcs.zen")
+                .to_str()
+                .unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json typed on generic behavior-bound UFCS input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json typed should emit checked generic behavior-bound UFCS JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual = String::from_utf8(output.stdout)
+        .expect("typed generic behavior-bound UFCS stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual)
+        .expect("typed generic behavior-bound UFCS stdout is JSON");
+    let expected_path =
+        fixture("tests/fixtures/ir_json/typed_generic_behavior_bound_ufcs.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
