@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::keywords::ParserPrefixKeyword;
+use crate::parser::keywords::{ParserPrefixKeyword, ParserThisMethod};
 
 mod forms;
 
@@ -106,14 +106,18 @@ impl Parser {
                 if matches!(self.peek(), Token::Dot) {
                     self.advance(); // consume .
                     let (method, _) = self.expect_identifier()?;
-                    if method == "defer" {
-                        self.expect(&Token::LParen)?;
-                        let expr = self.parse_expression()?;
-                        let end = self.expect(&Token::RParen)?;
-                        return Ok(Expression::Defer {
-                            expr: Box::new(expr),
-                            span: span.merge(end),
-                        });
+                    if let Ok(method) = method.parse::<ParserThisMethod>() {
+                        match method {
+                            ParserThisMethod::Defer => {
+                                self.expect(&Token::LParen)?;
+                                let expr = self.parse_expression()?;
+                                let end = self.expect(&Token::RParen)?;
+                                return Ok(Expression::Defer {
+                                    expr: Box::new(expr),
+                                    span: span.merge(end),
+                                });
+                            }
+                        }
                     }
                     // Other @this.method calls
                     return Err(CompileError::Syntax(
