@@ -25,7 +25,7 @@ Quick map:
 - values come from final expressions, not `return`;
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
 - loops use one prefix form, `loop((label) { ... })`, with explicit
-  `label.done()` and `label.next()` control calls;
+  compiler-owned `label.done()` and `label.next()` control calls;
 - static text is `StaticString`; dynamic owned text is allocator-backed
   `String`;
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
@@ -194,7 +194,10 @@ implicit widening.
 
 String literals are `StaticString` values. The bytes are baked into the
 program image, and the value carries a pointer plus length for that static
-data. Dynamic `String` is a separate allocator-backed text type. It can own
+data. Think of it as compile-time-sized static text: the program knows where
+the bytes live, and using the literal does not allocate.
+
+Dynamic `String` is different. It is allocator-backed owned text: it can own
 runtime memory, grow, and change contents, so constructing one requires an
 allocator path instead of happening implicitly from a literal.
 
@@ -602,11 +605,12 @@ that a type must have a behavior implementation.
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
 are explicit calls instead of `break` or `continue`. The spelling is
 prefix-only: call `loop`, pass a loop-control parameter, then choose the next
-step by calling control operations on that parameter.
+step by calling loop-control verbs on that parameter.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
-`next` are compiler-owned loop-control operations attached to that handle, so
-they are part of the language instead of ordinary methods on a library type.
+`next` are compiler-owned loop-control verbs attached to that handle, so they
+are part of the language instead of arbitrary user methods on a library type.
+That keeps loop control visible without adding more statement keywords.
 
 ```zen
 sum_to = (limit: i32) i32 {
@@ -629,9 +633,9 @@ sum_to = (limit: i32) i32 {
 
 Loops use prefix `loop((l) { ... })` with explicit loop-control calls. The
 control parameter names the loop target: `l.done()` exits that target and
-`l.next()` continues it. The compiler recognizes these as loop-control actions,
-not user-defined method dispatch. See `examples/05_loops.zen` for the tutorial
-version.
+`l.next()` continues it. The compiler recognizes only the control verbs for
+the loop handle here; this is not general user-defined method dispatch. See
+`examples/05_loops.zen` for the tutorial version.
 
 A counted loop is just state plus an explicit control decision:
 
@@ -670,7 +674,8 @@ nested = (stop: bool) void {
 }
 ```
 
-Loop controls also support UFC form, which keeps the operation first:
+Loop controls also support the narrow UFC form, which keeps the operation
+first while still naming the loop handle explicitly:
 
 ```zen
 single_step = (ready: bool) i32 {
@@ -690,7 +695,9 @@ single_step = (ready: bool) i32 {
 ```
 
 The same target rule applies in nested loops: `done(outer)` exits the outer
-loop, and `next(inner)` continues only the inner loop.
+loop, and `next(inner)` continues only the inner loop. UFC loop control is
+limited to these compiler-owned verbs; it does not make loop handles ordinary
+objects.
 
 This is the complete stable loop surface:
 
@@ -699,6 +706,8 @@ This is the complete stable loop surface:
 - `l.next()` continues that loop.
 - `done(l)` and `next(l)` are the equivalent UFC forms.
 - A nested loop can control an outer loop with `outer.done()` or `done(outer)`.
+- There is no suffix/body-first loop spelling; `loop(...)` is the prefix entry
+  point.
 
 Loops are expressions in the same block language as the rest of Zen, but their
 purpose is control flow. Accumulated values are usually kept in explicit mutable
@@ -827,10 +836,11 @@ its length with the value, so a literal can be passed around without allocating
 or changing ownership. Its bytes live in the program image; the value is a
 stable pointer-and-length view and does not own or free memory.
 
-The allocator-backed String type is dynamic: it owns memory, can grow, can be
-built at runtime, and must be created through allocator-aware APIs once the
-allocator model is promoted. Until that ownership path exists, source-level
-`String` annotations are gated; use `StaticString` for literal/static text.
+The allocator-backed String type is dynamic: it owns memory, carries
+allocator-managed length and capacity, can grow, can be built at runtime, and
+must be created through allocator-aware APIs once the allocator model is
+promoted. Until that ownership path exists, source-level `String` annotations
+are gated; use `StaticString` for literal/static text.
 
 That distinction is deliberate:
 
