@@ -2073,9 +2073,9 @@ Agent UX deliverables:
   type-parameter metadata as callable info, so incomplete typed bound refs do
   not leave stale function or method template type parameters behind.
 - The docs truth gate now locks the quiet CI trigger shape: normal branch pushes
-  do not run Actions, `pull_request.synchronize` is absent, manual
-  dispatch is retained, and fmt/clippy/test jobs are guarded by the draft-PR
-  condition.
+  do not run Actions, PR checks rerun on opened, synchronized, reopened, and
+  ready-for-review pull requests, manual dispatch is retained, and
+  fmt/clippy/test jobs are guarded by the draft-PR condition.
 - Resolver variant payload expectations now pass the paired typed/display
   payload metadata directly to validation instead of wrapping it in a redundant
   intermediate object.

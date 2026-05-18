@@ -17,20 +17,12 @@ fn ci_and_release_only_advertise_existing_targets() {
     assert!(ci.contains("cargo test --lib"));
     assert!(ci.contains("cargo test --tests"));
     assert!(
-        ci.contains("types: [reopened, ready_for_review]"),
-        "CI pull_request triggers must avoid draft-open and synchronize spam while still running when PRs leave draft"
+        ci.contains("types: [opened, synchronize, reopened, ready_for_review]"),
+        "CI pull_request triggers must run for opened PRs, new PR commits, reopened PRs, and ready-for-review transitions"
     );
     assert!(
         !ci.contains("\n  push:"),
         "CI workflow should not run on normal branch pushes; use PR ready-for-review checks or manual dispatch"
-    );
-    assert!(
-        !ci.contains("types: [opened") && !ci.contains(", opened") && !ci.contains("- opened"),
-        "CI workflow should not create skipped runs for draft PR creation"
-    );
-    assert!(
-        !ci.contains("synchronize"),
-        "CI workflow should not run on every draft PR synchronize push"
     );
     assert_eq!(
         ci.matches("github.event.pull_request.draft == false")
