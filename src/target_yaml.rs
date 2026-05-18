@@ -63,6 +63,8 @@ struct TargetBackendInput {
     codegen: TargetBackendCodegen,
     #[serde(default)]
     c_compiler: Option<String>,
+    #[serde(default)]
+    c_flags: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -117,6 +119,8 @@ struct TargetBackendJson {
     codegen: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     c_compiler: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    c_flags: Vec<String>,
 }
 
 pub fn target_yaml_file_to_json(path: &Path) -> Result<String, TargetYamlError> {
@@ -152,6 +156,7 @@ impl From<TargetBackendInput> for TargetBackendJson {
         Self {
             codegen,
             c_compiler: input.c_compiler,
+            c_flags: input.c_flags,
         }
     }
 }
@@ -190,6 +195,11 @@ fn validate_target_yaml(input: &TargetYamlInput) -> Result<(), TargetYamlError> 
         {
             return Err(TargetYamlError::Schema(
                 "target YAML `backend.c_compiler` cannot be empty".into(),
+            ));
+        }
+        if backend.c_flags.iter().any(|flag| flag.trim().is_empty()) {
+            return Err(TargetYamlError::Schema(
+                "target YAML `backend.c_flags` entries cannot be empty".into(),
             ));
         }
     }
