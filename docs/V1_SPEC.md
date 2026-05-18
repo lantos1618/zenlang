@@ -112,11 +112,15 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   exist. Imports of std async runtime sketches are gated before loading
   aspirational scheduler/task source files, covered by
   `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
-  `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
+  `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`, with
+  public diagnostics JSON pinned by
+  `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`.
   Imports of std sync runtime sketches are likewise gated before loading
   aspirational channel source files, covered by
   `stdlib_sync_runtime_import_is_gated_before_loading_sketch` and
-  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`.
+  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`, with
+  public diagnostics JSON pinned by
+  `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`.
   Atomic compiler intrinsics `@builtin.atomic_load(...)`,
   `@builtin.atomic_store(...)`, `@builtin.atomic_add(...)`,
   `@builtin.atomic_sub(...)`, `@builtin.atomic_cas(...)`,
@@ -134,7 +138,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   report the same allocator/effect gate. Imports of std allocator sketches are
   gated before loading aspirational allocator source files, covered by
   `stdlib_allocator_import_is_gated_before_loading_sketch` and
-  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`.
+  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`, with
+  public diagnostics JSON pinned by
+  `emit_json_diagnostics_allocator_import_gate_schema_matches_golden`.
 - `Type matching`: gated. Comptime type matching operates on typed metadata for
   primitives, structs, enums, fields, variants, behaviors, allocator modes, and
   effect modes. It is separate from runtime value matching.

@@ -3964,11 +3964,15 @@ Agent UX deliverables:
   prototypes do not leak into stable compiler paths. Guarded by
   `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
   `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
+  Public CLI diagnostics JSON is pinned by
+  `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`.
 - Std sync runtime module imports now reject before loading aspirational
   channel source sketches, so parser diagnostics from blocking/channel
   prototypes do not leak into stable compiler paths. Guarded by
   `stdlib_sync_runtime_import_is_gated_before_loading_sketch` and
   `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`.
+  Public CLI diagnostics JSON is pinned by
+  `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`.
 - C runtime layout now mirrors that public model: static string literals emit
   as direct `zen_str` compound literals whose length is derived with `sizeof`,
   while dynamic `zen_string` carries an allocator pointer. Covered by
@@ -3986,7 +3990,9 @@ Agent UX deliverables:
   source sketches, so parser diagnostics from allocator/effect prototypes do
   not leak into stable compiler paths. Guarded by
   `stdlib_allocator_import_is_gated_before_loading_sketch` and
-  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`.
+  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`. Public
+  CLI diagnostics JSON is pinned by
+  `emit_json_diagnostics_allocator_import_gate_schema_matches_golden`.
 - Actor framework type spellings `Actor`, `ActorRef`, `Mailbox`, and
   `Supervisor` now share the same AST-owned gated builtin type path and report
   actor-specific gated diagnostics instead of unknown-type errors. Covered by
