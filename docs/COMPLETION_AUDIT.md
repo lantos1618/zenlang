@@ -4160,7 +4160,8 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
 - Gated generic association targets such as `Type<T>.derive(Json<T>)` now
   report diagnostics over the full reserved association target instead of only
-  the behavior argument token. Covered by
+  the behavior argument token. They also carry diagnostics JSON `context` with
+  `kind: "feature_gate"` and a note directing users to non-generic explicit behavior associations until generic behavior target templates exist. Covered by
   `emit_json_diagnostics_spans_full_gated_generic_association_target` and
   `generic_type_association_keywords_are_explicitly_gated`.
 - Dev UX and Agent UX are now tracked as first-class roadmap lanes in

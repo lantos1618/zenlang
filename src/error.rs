@@ -148,6 +148,12 @@ pub const GATED_GENERATED_BEHAVIOR_DERIVE_NOTE: &str =
     "Use an explicit `Type.implements(Behavior) { ... }` block until generated fallback derives are implemented";
 pub const GATED_GENERATED_BEHAVIOR_DERIVE_CONTEXT: &str =
     "reserved generated/fallback behavior association";
+pub const GATED_GENERIC_ASSOCIATION_TARGET_MESSAGE_PREFIX: &str =
+    "generic association target `Type<T>.";
+pub const GATED_GENERIC_ASSOCIATION_TARGET_NOTE: &str =
+    "Use a non-generic explicit behavior association until generic behavior target templates are implemented";
+pub const GATED_GENERIC_ASSOCIATION_TARGET_CONTEXT: &str =
+    "reserved generic behavior association target";
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {
@@ -305,6 +311,7 @@ impl From<CompileError> for Diagnostic {
                 diagnostic
                     .with_removed_return_fix()
                     .with_removed_infix_as_cast_fix()
+                    .with_generic_association_target_gate_context()
             }
             CompileError::Type(msg, span) => Diagnostic {
                 severity: Severity::Error,

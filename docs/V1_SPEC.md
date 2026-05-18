@@ -172,7 +172,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   Diagnostics JSON carries structured notes, suggested fixes, and context
   frames for agent/editor consumers; the `Type.derive(...)` feature gate now
   reports `context.kind = "feature_gate"` with a note pointing users to
-  explicit `Type.implements(Behavior) { ... }` blocks.
+  explicit `Type.implements(Behavior) { ... }` blocks. Gated generic
+  association targets such as `Type<T>.derive(...)` report the same
+  feature-gate context shape with a note to use non-generic explicit behavior associations until generic behavior target templates exist.
   Hand-authored build graph JSON inputs are rejected before generic build.zen
   path validation can stand in for the compiler-owned graph boundary, covered by
   `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
@@ -288,8 +290,8 @@ The diagnostics JSON path reports that gate over the full
 explicit-impl note, covered by
 `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
 Gated generic association targets such as `Type<T>.derive(Json<T>)` are also
-localized over the full reserved association target in diagnostics JSON,
-covered by
+localized over the full reserved association target in diagnostics JSON and now
+carry feature-gate context plus a non-generic-association note, covered by
 `emit_json_diagnostics_spans_full_gated_generic_association_target`.
 
 ## Stdlib Gate
