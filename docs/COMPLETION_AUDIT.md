@@ -3865,6 +3865,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit-json mir`, and `emit-json target-yaml` commands, covered by
   `root_usage_lists_supported_and_gated_emit_json_modes`, so top-level help
   does not hide the explicitly gated IR/YAML surface.
+- Symbols JSON now carries `semantic_status: "resolved"`, covered by
+  `emit_json_symbols_command_outputs_module_symbol_tables`, so resolver-owned
+  symbol metadata is explicitly separated from unchecked AST JSON and checked
+  typed JSON.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

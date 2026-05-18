@@ -41,6 +41,7 @@ struct TypedJsonProgram<'a> {
 #[derive(Serialize)]
 struct SymbolsJsonGraph<'a> {
     format: &'static str,
+    semantic_status: &'static str,
     entry_module: u32,
     modules: Vec<SymbolsJsonModule<'a>>,
 }
@@ -110,6 +111,7 @@ pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<
 
     let graph = SymbolsJsonGraph {
         format: "zen.symbols.v0",
+        semantic_status: "resolved",
         entry_module: graph.entry.0,
         modules: modules
             .into_iter()

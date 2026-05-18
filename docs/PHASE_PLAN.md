@@ -3540,6 +3540,10 @@ checked-in docs, tests, and commits only.
   gated `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` commands
   as gated instead of omitting them. Covered by
   `root_usage_lists_supported_and_gated_emit_json_modes`.
+- Symbols JSON now carries `semantic_status: "resolved"` alongside
+  `format: "zen.symbols.v0"`, making resolver-owned metadata distinct from
+  unchecked AST JSON and checked typed JSON. Covered by
+  `emit_json_symbols_command_outputs_module_symbol_tables`.
 
 ## Current Phase
 
