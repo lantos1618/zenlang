@@ -8,6 +8,7 @@ use crate::ast::typed::{
 #[derive(Serialize)]
 struct MirJsonProgram {
     format: &'static str,
+    schema_version: u32,
     semantic_status: &'static str,
     lowering_status: &'static str,
     functions: Vec<MirFunction>,
@@ -82,6 +83,7 @@ struct MirExpression {
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     let graph = MirJsonProgram {
         format: "zen.mir.v0",
+        schema_version: 0,
         semantic_status: "checked",
         lowering_status: "minimal",
         functions: program.functions.iter().map(mir_function).collect(),

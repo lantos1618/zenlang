@@ -129,6 +129,7 @@ main = () i32 {
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("MIR stdout is json");
     assert_eq!(json["format"], "zen.mir.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");
     assert_eq!(json["lowering_status"], "minimal");
 
@@ -232,6 +233,7 @@ main = () i32 { 0 }
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("HIR stdout is json");
     assert_eq!(json["format"], "zen.hir.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");
 
     let types = json["declarations"]["types"]

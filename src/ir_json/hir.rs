@@ -5,6 +5,7 @@ use crate::ast::typed::{Type, TypeDefKind, TypedFunction, TypedProgram, TypedTyp
 #[derive(Serialize)]
 struct HirJsonProgram {
     format: &'static str,
+    schema_version: u32,
     semantic_status: &'static str,
     declarations: HirDeclarations,
 }
@@ -60,6 +61,7 @@ struct HirGlobalDecl {
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     let graph = HirJsonProgram {
         format: "zen.hir.v0",
+        schema_version: 0,
         semantic_status: "checked",
         declarations: HirDeclarations {
             types: program.types.iter().map(hir_type_decl).collect(),
