@@ -3744,6 +3744,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/declared_env_effects/runner_command/`, preserving
   declared `.Err`, wildcard, and identifier fallback-arm coverage without using
   ignored `test_*` child paths.
+- `zen emit build.zen` target-selection validation tests now split ambiguous
+  executable graph coverage from no-executable-target coverage under
+  `tests/integration/cli_build/emit_direct_validation/target_selection/`,
+  preserving diagnostic ordering checks without one mixed validation file.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

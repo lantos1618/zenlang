@@ -1,37 +1,19 @@
 use std::process::Command;
 
-#[test]
-fn emit_command_build_zen_rejects_multiple_executable_targets() {
+#[path = "target_selection/ambiguity.rs"]
+mod ambiguity;
+#[path = "target_selection/no_executable.rs"]
+mod no_executable;
+
+fn run_emit_build_zen(
+    build_source: &str,
+    files: &[(&str, String)],
+) -> (tempfile::TempDir, std::process::Output) {
     let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("tool.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write tool.zen");
+    std::fs::write(tmp.path().join("build.zen"), build_source).expect("write build.zen");
+    for (path, source) in files {
+        std::fs::write(tmp.path().join(path), source).expect("write source file");
+    }
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args(["emit", "build.zen"])
@@ -39,6 +21,15 @@ main = () i32 {
         .output()
         .expect("run zen emit build.zen");
 
+    (tmp, output)
+}
+
+fn assert_emit_rejected_without_outputs(
+    tmp: &tempfile::TempDir,
+    output: &std::process::Output,
+    expected: &str,
+    output_reason: &str,
+) {
     assert!(
         !output.status.success(),
         "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
@@ -46,181 +37,22 @@ main = () i32 {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build graph C emission supports exactly one target, found 2"),
-        "expected single-target emit diagnostic, stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "zen emit build.zen should not create build outputs when graph emission is ambiguous"
-    );
-}
-
-#[test]
-fn emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "missing_tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen emit build.zen");
-
-    assert!(
-        !output.status.success(),
-        "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("build graph C emission supports exactly one target, found 2"),
-        "expected single-target emit diagnostic before source validation, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("missing_tool.zen"),
-        "emit should reject ambiguous executable graphs before per-target source validation, stderr={stderr}"
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "zen emit build.zen should not create build outputs when graph emission is ambiguous"
-    );
-}
-
-#[test]
-fn emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    b.add(Library { name: "core", exports: ["lib.zen"] })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("tool.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write tool.zen");
-    std::fs::write(
-        tmp.path().join("lib.zen"),
-        r#"
-value = () i32 {
-    true
-}
-"#,
-    )
-    .expect("write lib.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen emit build.zen");
-
-    assert!(
-        !output.status.success(),
-        "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("build graph C emission supports exactly one target, found 2"),
-        "expected single-target emit diagnostic before graph-only library typechecking, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("return type mismatch"),
-        "emit should reject ambiguous executable graphs before graph-only library typechecking, stderr={stderr}"
-    );
-    assert!(
-        !tmp.path().join("build").exists(),
-        "zen emit build.zen should not create build outputs when graph emission is ambiguous"
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_graph_without_executable_targets() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Test { name: "unit", root: "test.zen" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("test.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write test.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen emit build.zen");
-
-    assert!(
-        !output.status.success(),
-        "zen emit build.zen unexpectedly succeeded: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .contains("build graph C emission supports exactly one target, found 0"),
-        "expected single-target emit diagnostic, stderr={}",
+        String::from_utf8_lossy(&output.stderr).contains(expected),
+        "expected {output_reason} diagnostic, stderr={}",
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
         !tmp.path().join("build").exists(),
-        "zen emit build.zen should not create build outputs for a test-only graph"
+        "zen emit build.zen should not create build outputs when {output_reason}"
     );
+}
+
+fn main_source(value: &str) -> String {
+    format!(
+        r#"
+main = () i32 {{
+    {value}
+}}
+"#,
+    )
 }
