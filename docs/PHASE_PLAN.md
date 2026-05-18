@@ -1122,7 +1122,9 @@ checked-in docs, tests, and commits only.
   with generated-C assertions proving concrete inherited dispatch emission
   without unspecialized `T_encode` placeholders. Missing imported generic
   behavior impl diagnostics are covered by
-  `integration::imported_generic_behavior_requires_missing_impl_is_error`, and
+  `integration::imported_generic_behavior_requires_missing_impl_is_error`,
+  imported generic `.requires` arity diagnostics are covered by
+  `integration::imported_generic_behavior_requires_type_arg_arity_is_error`, and
   duplicate imported generic `.requires` edges are covered by
   `integration::imported_duplicate_generic_behavior_requires_is_error`.
 - Imported public generic functions can use behavior bounds whose behavior was
