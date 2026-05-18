@@ -135,6 +135,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_generic_result_method_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_result_method_bound_schema_matches_golden",
         "emit_json_diagnostics_generic_result_method_inference_schema_matches_golden",
+        "emit_json_diagnostics_generic_behavior_overlap_schema_matches_golden",
         "emit_json_typed_rejects_hand_authored_json_before_checked_ir_override",
         "emit_json_typed_generic_method_schema_matches_golden",
         "emit_json_typed_generic_option_schema_matches_golden",

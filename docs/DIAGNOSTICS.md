@@ -16,6 +16,7 @@ surface once listed here.
 | `E5000` | generic inference conflict, including conflicting inferred type arguments for generic methods. | `tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json` |
 | `E5001` | generic type-argument arity mismatch for functions, methods, structs, enums, annotations, and constructors. | `tests/fixtures/ir_json/diagnostics_generic_result_method_arity.golden.json` |
 | `E6004` | generic behavior-bound failure when a concrete type does not satisfy a required behavior bound. | `tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json` |
+| `E6010` | behavior implementation coherence failure, including overlapping generic parent and child behavior implementations. | `tests/fixtures/ir_json/diagnostics_generic_behavior_overlap.golden.json` |
 
 ## Catalog Rules
 
