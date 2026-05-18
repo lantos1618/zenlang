@@ -3865,6 +3865,11 @@ and do not assume Phase 4 is ready without evidence.
   inherited behavior dispatch, imported behavior association fixtures, and hard
   diagnostics. The broader generated/fallback association solver remains gated
   in the Feature Matrix.
+- The Required Test Backlog now scopes behavior-association remaining work to
+  generated/fallback association, rather than broad explicit behavior
+  association, because the explicit `Json<T>` proving ground already has
+  compiler-path evidence. Covered by
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - `zen emit-json` usage diagnostics now list the full checked, deterministic,
   and gated JSON/YAML mode surface: `ast`, `symbols`, `typed`, `diagnostics`,
   `build-graph`, `hir`, `mir`, and `target-yaml`. This is covered by
@@ -3895,6 +3900,11 @@ and do not assume Phase 4 is ready without evidence.
   allocation must remain explicit. Covered by
   `static_string_literal_does_not_implicitly_allocate_string` and
   `types_compatible_basics`.
+- Public docs now distinguish baked `StaticString` literals from interpolation:
+  interpolation is only a `StaticString`-shaped non-owning view and does not
+  construct allocator-backed `String`. Covered by
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog` and
+  `learn_zen_guide_covers_core_tour_and_gated_previews`.
 - C runtime layout now keeps the same split: static string literals emit as
   direct `zen_str` compound literals with `sizeof`-derived compile-time length,
   while dynamic `zen_string` carries an allocator pointer. Covered by

@@ -58,7 +58,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Field access and struct literals | implemented | `parser::tests::parse_struct_literal`, `tests/zen/nested_structs.zen` |
 | UFC-style method calls | implemented | `parser::tests::parse_ufc_chain`, `tests/zen/ufc.zen` |
 | Cast expressions `cast(value, Type)` | implemented | `parser::tests::parse_cast_expr`, `tests/zen/cast.zen` |
-| String literals and interpolation as `StaticString` | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen` |
+| String literals as baked `StaticString`; interpolation as non-owning `StaticString` views | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen` |
 | Pointer and slice type syntax accepted by parser | implemented | `parser::tests::parse_pointer_types`, `parser::tests::parse_slice_type` |
 | Generic specialization for functions, structs, enums, and methods | implemented | `tests/zen/generic_identity.zen`, `tests/zen/generic_struct.zen`, `tests/zen/generic_enum_option.zen`, `tests/zen/generic_result_enum.zen`, `tests/zen/generic_method.zen`, `tests/zen/generic_method_worklist.zen`, `tests/zen/generic_method_nested_result.zen`, `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`, `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`, `integration::generic_specializations_emit_each_generated_c_definition_once`, `generic_specializations::enum_generated_c::enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::method_worklist_generated_c::method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::enum_dependencies::multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::method_worklist_dependencies::multi_file_generic_method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols` |
 | Explicit behavior association proving ground | implemented | `tests/zen/behavior_json_explicit_impl.zen`, `tests/zen/behavior_json_generic_association.zen`, `tests/zen/behavior_distinct_generic_specialization_dispatch.zen`, `tests/zen/behavior_json_generic_bound_ufcs.zen`, `tests/zen/multi_file_imported_behavior_requires/main.zen`, `tests/zen/multi_file_behavior_inheritance/main.zen`, `generic_diagnostics::behavior_impl_for_unspecialized_generic_type_is_error`, `generic_diagnostics::generic_behavior_bound_unknown_method_is_error` |
@@ -76,7 +76,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   identity before it can be promoted as a stable construction target. Static
   string literals do not implicitly allocate or coerce into `String`; dynamic
   `String` construction must go through an explicit allocator-aware path once
-  that path is promoted.
+  that path is promoted. String interpolation currently returns a
+  `StaticString`-shaped non-owning view, but only literal text is guaranteed to
+  be baked program storage; interpolation must not imply allocator-backed
+  `String` construction.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,
@@ -179,7 +182,7 @@ planned positive test and one planned negative test before implementation.
 | `Sync/Async effects` | Async function may enqueue, yield, and call async operation through checked APIs | Sync function calling async operation without blocking boundary is rejected |
 | `Typed allocators` | `Allocator<i32, Sync>` returns a checked pointer result and propagates into a container | `Allocator<i32, Sync>` cannot satisfy an `Allocator<i32, Async>` parameter |
 | Type matching | `to_json<T>` derive branches on struct and enum metadata | Ambiguous or unreachable type-match arm is diagnosed |
-| Behavior association | Explicit `Json<T>` impl takes precedence over generated derive fallback | Missing or ambiguous associated behavior impl is rejected |
+| Generated/fallback behavior association | Generated `Json<T>` derive fallback is used only when no explicit impl exists | Missing or ambiguous generated/fallback behavior impl is rejected |
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 
