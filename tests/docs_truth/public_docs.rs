@@ -314,6 +314,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "tests/fixtures/ir_json/diagnostics_nested_generic_annotation_inner_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_nested_generic_instantiation_inner_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_function_type_parameter_annotation_arity.golden.json",
+        "tests/fixtures/ir_json/diagnostics_function_type_return_annotation_missing_args.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_struct_constructor_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_struct_constructor_missing_args.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_enum_constructor_arity.golden.json",

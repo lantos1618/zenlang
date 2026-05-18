@@ -9,6 +9,9 @@ impl TypeChecker {
         body: &Expression,
         span: &Span,
     ) -> Result<TypedFunction, Diagnostic> {
+        let return_annotation_valid = return_type
+            .as_ref()
+            .is_none_or(|ty| self.generic_type_annotation_arities_valid(ty));
         let ret_type = return_type
             .as_ref()
             .map(|ty| self.resolve_type(ty))
@@ -42,7 +45,7 @@ impl TypeChecker {
         self.pop_scope();
         self.current_return_type = None;
 
-        if ret_type != Type::Void && ret_type != Type::Never {
+        if return_annotation_valid && ret_type != Type::Void && ret_type != Type::Never {
             if let Some(expr) = &body_block.expr {
                 if expr.ty != Type::Never && !self.types_compatible(&ret_type, &expr.ty) {
                     return Err(Diagnostic::error(

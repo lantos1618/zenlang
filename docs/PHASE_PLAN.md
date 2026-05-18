@@ -675,6 +675,11 @@ Agent UX deliverables:
   pinned by
   `emit_json_diagnostics_function_type_parameter_annotation_arity_schema_matches_golden`,
   covering the stable `E5001` payload for `(Box<i32, StaticString>) i32`.
+- Diagnostics JSON for function type return generic annotation missing
+  arguments is now pinned by
+  `emit_json_diagnostics_function_type_return_annotation_missing_args_schema_matches_golden`,
+  covering the stable `E5001` payload for `() Box` without return-mismatch
+  followups.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
