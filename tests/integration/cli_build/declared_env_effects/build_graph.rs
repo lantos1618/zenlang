@@ -1,84 +1,11 @@
+#[path = "build_graph/multiple_targets.rs"]
+mod multiple_targets;
+#[path = "build_graph/single_target.rs"]
+mod single_target;
+#[path = "build_graph/unselected_targets.rs"]
+mod unselected_targets;
+
 use std::process::Command;
-
-use super::{assert_executable_command_accepts_declared_env_read, ExecutableCommandExpectation};
-
-#[test]
-fn build_graph_command_accepts_declared_env_read_with_fallback() {
-    assert_executable_command_accepts_declared_env_read(
-        &["build-graph", "build.zen"],
-        r#"| .Err { "default" }"#,
-        "build_graph_command_accepts_declared_env_read_with_fallback",
-        ExecutableCommandExpectation::BuildOutput,
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_wildcard_fallback_declared_env_read() {
-    assert_executable_command_accepts_declared_env_read(
-        &["build-graph", "build.zen"],
-        r#"| _ { "default" }"#,
-        "build_graph_command_accepts_wildcard_fallback_declared_env_read",
-        ExecutableCommandExpectation::BuildOutput,
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
-    assert_executable_command_accepts_declared_env_read(
-        &["build-graph", "build.zen"],
-        r#"| err { "default" }"#,
-        "build_graph_command_accepts_identifier_fallback_declared_env_read",
-        ExecutableCommandExpectation::BuildOutput,
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_declared_env_read_for_multiple_targets() {
-    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
-        r#"| .Err { "default" }"#,
-        "build_graph_command_accepts_declared_env_read_for_multiple_targets",
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_wildcard_fallback_declared_env_read_for_multiple_targets() {
-    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
-        r#"| _ { "default" }"#,
-        "build_graph_command_accepts_wildcard_fallback_declared_env_read_for_multiple_targets",
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_identifier_fallback_declared_env_read_for_multiple_targets() {
-    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
-        r#"| err { "default" }"#,
-        "build_graph_command_accepts_identifier_fallback_declared_env_read_for_multiple_targets",
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_declared_env_read_with_unselected_targets() {
-    assert_build_graph_command_accepts_declared_env_read_with_unselected_targets(
-        r#"| .Err { "default" }"#,
-        "build_graph_command_accepts_declared_env_read_with_unselected_targets",
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_wildcard_fallback_declared_env_read_with_unselected_targets() {
-    assert_build_graph_command_accepts_declared_env_read_with_unselected_targets(
-        r#"| _ { "default" }"#,
-        "build_graph_command_accepts_wildcard_fallback_declared_env_read_with_unselected_targets",
-    );
-}
-
-#[test]
-fn build_graph_command_accepts_identifier_fallback_declared_env_read_with_unselected_targets() {
-    assert_build_graph_command_accepts_declared_env_read_with_unselected_targets(
-        r#"| err { "default" }"#,
-        "build_graph_command_accepts_identifier_fallback_declared_env_read_with_unselected_targets",
-    );
-}
 
 fn assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
     fallback_arm: &str,

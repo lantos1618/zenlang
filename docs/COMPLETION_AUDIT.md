@@ -3720,6 +3720,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads/`,
   preserving deterministic-effect coverage while avoiding one large mixed test
   file.
+- Legacy `zen build-graph build.zen` declared env-read positive tests now split
+  single-target, multi-target, and unselected-target cases under
+  `tests/integration/cli_build/declared_env_effects/build_graph/`, preserving
+  declared `.Err`, wildcard, and identifier fallback-arm coverage without one
+  mixed test file.
 - Declared env-read executable graph tests now split normal
   `zen build build.zen` coverage from direct `zen build.zen` coverage under
   `tests/integration/cli_build/declared_env_effects/executable/`, preserving
