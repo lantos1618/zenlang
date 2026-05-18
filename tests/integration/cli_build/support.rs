@@ -77,6 +77,20 @@ pub(super) fn assert_zen_success(args: &[&str], output: &Output) {
     );
 }
 
+pub(super) fn assert_zen_failure_contains(args: &[&str], output: &Output, expected: &str) {
+    assert!(
+        !output.status.success(),
+        "zen {args:?} unexpectedly succeeded: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(expected),
+        "expected diagnostic `{expected}`, stderr={}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 pub(super) fn assert_built_binaries_run(paths: &[PathBuf]) {
     for bin_path in paths {
         assert!(

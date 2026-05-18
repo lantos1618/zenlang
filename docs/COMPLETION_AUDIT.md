@@ -3753,6 +3753,11 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/support.rs`, preserving normal `zen build
   build.zen`, direct `zen build.zen`, and legacy `zen build-graph` coverage
   while removing duplicated graph setup.
+- `zen build build.zen` validation tests now keep target-selection,
+  library-dependency, host-effect ordering, and execution-scope cases in
+  focused child modules under
+  `tests/integration/cli_build/build_command_validation/`, preserving the
+  same diagnostics and execution checks without one mixed parent file.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
