@@ -3182,10 +3182,11 @@ checked-in docs, tests, and commits only.
   checks in focused modules under
   `tests/integration/cli_build/legacy_graph_command_validation/`, preserving
   the same command behavior coverage while keeping the module index compact.
-- `zen test build.zen` graph-only library validation tests now live in
-  `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
-  keeping missing source, valid source, and library typecheck coverage separate
-  from test-target, gated-dependency, and skipped-source validation checks.
+- `zen test build.zen` graph validation tests now live in
+  `tests/integration/cli_build/graph_validation_test_command_validation.rs` and
+  `tests/integration/cli_build/graph_validation_test_command_validation/`,
+  keeping execution-scope, dependency-shape, target-metadata,
+  gated-dependency, and graph-only-library validation checks focused.
 - Build-graph JSON validation tests now live in
   `tests/integration/cli_build/build_graph_json/validation.rs`, keeping target
   field, dependency, unsupported target, and gated package/link diagnostics
