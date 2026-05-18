@@ -3570,6 +3570,12 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`,
   preserving imported undefined-call and unspecialized-symbol checks while
   keeping the multifile generated-C module focused on submodule wiring.
+- Behavior-bound generic specialization generated-C assertions now keep
+  local/default, imported behavior, and imported function dependency coverage in
+  focused child modules under
+  `tests/integration/generic_specializations/behavior_bounds/`, preserving
+  undefined-call and unspecialized-symbol checks without one mixed assertion
+  file.
 - Generic inference conflict diagnostics now keep method conflict coverage in
   focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
   preserving direct, receiver-derived, Result enum, function-type, array,
