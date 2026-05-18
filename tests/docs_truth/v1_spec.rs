@@ -48,6 +48,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Type matching",
         "Behavior association",
         "AST traversal",
+        "`Channel` remains an experimental stdlib channel",
         "semantic_status: \"unchecked\"",
         "typed JSON is explicitly marked checked",
         "diagnostics JSON is explicitly",
@@ -255,5 +256,9 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
     assert!(
         !spec.contains("| Strict resolver, symbol IDs, privacy | gated |"),
         "docs/V1_SPEC.md should not describe implemented resolver/module privacy evidence as gated"
+    );
+    assert!(
+        !spec.contains("`ActorRef`, `Mailbox`, `Channel`, and `Supervisor`"),
+        "docs/V1_SPEC.md should not imply Channel is a globally gated actor builtin"
     );
 }

@@ -3583,6 +3583,10 @@ checked-in docs, tests, and commits only.
   actor-specific gated diagnostics instead of unknown-type errors. Covered by
   `actor_framework_types_are_rejected_as_gated_not_unknown` and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- `Channel` remains documented as an experimental stdlib channel sketch rather
+  than a global actor builtin type spelling, preserving the importable stdlib
+  channel boundary until promotion has compiler-path evidence. Guarded by
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - Gated builtin type lookup now uses `GatedBuiltinType::ALL` as the enum-owned
   static table, so adding future gated type spellings does not require a
   separate name-to-variant match. Guarded by
