@@ -126,6 +126,8 @@ pub const REMOVED_INFIX_AS_CAST_FIX_KIND: &str = "replace_infix_as_cast_with_pre
 pub const REMOVED_INFIX_AS_CAST_FIX_TITLE: &str =
     "Rewrite infix `as` cast to prefix `cast(value, Type)`";
 pub const REMOVED_INFIX_AS_CAST_REPLACEMENT: &str = "cast(value, Type)";
+pub const GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE: &str =
+    "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented";
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {

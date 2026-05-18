@@ -263,6 +263,9 @@ planned positive test and one planned negative test before implementation.
 Generated/fallback behavior association syntax is reserved but not implemented:
 `Type.derive(Json)` currently reports an explicit parser gate, covered by
 `parser::tests::generated_behavior_derive_association_is_explicitly_gated`.
+The diagnostics JSON path reports that gate over the full
+`Type.derive(...)` association call, covered by
+`emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
 
 ## Stdlib Gate
 

@@ -196,3 +196,56 @@ main = (x: i32) i64 {
     assert_eq!(edit["span"]["column"], 5);
     assert_eq!(edit["replacement"], "cast(value, Type)");
 }
+
+#[test]
+fn emit_json_diagnostics_spans_full_gated_behavior_derive_association() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("derive_gate.zen");
+    let source = r#"
+Point: { x: i32 }
+
+Json: behavior {
+    to_json: (Self) StaticString
+}
+
+Point.derive(Json)
+"#;
+    let association = "Point.derive(Json)";
+    let association_start = source
+        .find(association)
+        .expect("source contains derive association") as u32;
+    let association_end = association_start + association.len() as u32;
+    std::fs::write(&zen_path, source).expect("write gated derive source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should fail on gated derive association: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("diagnostics stdout is json");
+    let diagnostic = &json["diagnostics"][0];
+    assert_eq!(diagnostic["code"], "E2000");
+    assert!(
+        diagnostic["message"]
+            .as_str()
+            .expect("diagnostic message")
+            .contains("generated behavior association `Type.derive(...)` is gated"),
+        "unexpected diagnostic payload: {diagnostic}"
+    );
+    assert!(diagnostic["span"]["path"]
+        .as_str()
+        .expect("diagnostic span path")
+        .ends_with("derive_gate.zen"));
+    assert_eq!(diagnostic["span"]["start"], association_start);
+    assert_eq!(diagnostic["span"]["end"], association_end);
+    assert_eq!(diagnostic["span"]["line"], 8);
+    assert_eq!(diagnostic["span"]["column"], 1);
+}

@@ -1,4 +1,5 @@
 use super::*;
+use crate::error::GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE;
 use crate::parser::keywords::ParserBehaviorKeyword;
 
 impl Parser {
@@ -205,12 +206,34 @@ impl Parser {
         ))
     }
 
-    fn reject_gated_generated_behavior_derive<T>(&self, span: Span) -> Result<T, CompileError> {
+    fn reject_gated_generated_behavior_derive<T>(
+        &mut self,
+        name_span: Span,
+    ) -> Result<T, CompileError> {
+        let span = self.gated_behavior_derive_span(name_span);
         Err(CompileError::Syntax(
-            "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented"
-                .to_string(),
+            GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE.to_string(),
             Some(span),
         ))
+    }
+
+    fn gated_behavior_derive_span(&mut self, name_span: Span) -> Span {
+        if !matches!(self.peek(), Token::LParen) {
+            return name_span.merge(self.prev_span());
+        }
+
+        self.advance();
+        let behavior_span = self.expect_identifier().map(|(_, span)| span).ok();
+        if matches!(self.peek(), Token::Lt) {
+            let _ = self.parse_type_arg_list();
+        }
+        self.skip_newlines();
+        match self.expect(&Token::RParen) {
+            Ok(end) => name_span.merge(end),
+            Err(_) => behavior_span
+                .map(|span| name_span.merge(span))
+                .unwrap_or_else(|| name_span.merge(self.prev_span())),
+        }
     }
 
     fn parse_function_def(
