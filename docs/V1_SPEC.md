@@ -170,6 +170,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, and
   `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+  Checked typed JSON for generic method specialization is pinned by
+  `emit_json_typed_generic_method_schema_matches_golden`, covering the
+  specialized `Box_i32` type and `Box.get_i32` method output.
   Diagnostics JSON carries structured notes, suggested fixes, and context
   frames for agent/editor consumers; the `Type.derive(...)` feature gate now
   reports `context.kind = "feature_gate"` with a note pointing users to

@@ -571,6 +571,9 @@ Agent UX deliverables:
 - Typed JSON now carries `semantic_status: "checked"`, covered by
   `emit_json_typed_command_outputs_checked_program`, keeping the checked output
   boundary explicit alongside the unchecked AST marker.
+- Checked typed JSON for generic method specialization is now pinned by
+  `emit_json_typed_generic_method_schema_matches_golden`, covering the
+  specialized `Box_i32` type and `Box.get_i32` method output.
 - Diagnostics JSON now carries `semantic_status: "diagnostic"`, covered by
   `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
   machine-readable diagnostics path is distinct from both unchecked AST and
