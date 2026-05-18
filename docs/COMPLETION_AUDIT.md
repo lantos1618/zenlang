@@ -3904,9 +3904,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_symbols_command_outputs_module_symbol_tables`, so resolver-owned
   symbol metadata is explicitly separated from unchecked AST JSON and checked
   typed JSON.
-- Build graph JSON now carries `format: "zen.build_graph.v0"` and
-  `semantic_status: "deterministic"` while preserving the existing graph
-  payload keys, covered by `emit_json_build_graph_outputs_project_build_graph`.
+- Build graph JSON now carries `format: "zen.build_graph.v0"`,
+  `schema_version: 0`, and `semantic_status: "deterministic"` while preserving
+  the existing graph payload keys, covered by
+  `emit_json_build_graph_outputs_project_build_graph`.
 - `emit-json layout` now has checked compiler-owned layout JSON with
   `schema_version: 0` for the stable subset: primitive sizes, baked
   `StaticString`, pointer-sized views, and struct field offsets. Covered by
@@ -4174,14 +4175,15 @@ and do not assume Phase 4 is ready without evidence.
   language server, agent-readable diagnostics, machine-readable project graph,
   and structured fix suggestions. Covered by
   `phase_plan_records_recovered_progress_and_next_slice`.
-- HIR, MIR, layout, and target-yaml JSON outputs now include numeric
+- HIR, MIR, layout, target-yaml, and build-graph JSON outputs now include numeric
   `schema_version: 0` fields next to their `format` tags, so tools and agents
   can pin the compiler-owned v0 schema without parsing the display format
   string. Covered by
   `emit_json_hir_outputs_checked_declaration_graph` and
   `emit_json_mir_outputs_checked_minimal_function_graph` plus
   `emit_json_layout_outputs_checked_type_layouts` and
-  `emit_json_target_yaml_validates_minimal_target_schema`.
+  `emit_json_target_yaml_validates_minimal_target_schema` plus
+  `emit_json_build_graph_outputs_project_build_graph`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
