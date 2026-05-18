@@ -694,6 +694,11 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_struct_local_annotation_arity_schema_matches_golden`,
   covering the stable `E5001` payload for local
   `box: Box<i32, StaticString>` annotations without variable-mismatch followups.
+- Diagnostics JSON for generic enum local annotation arity is now pinned by
+  `emit_json_diagnostics_generic_enum_local_annotation_arity_schema_matches_golden`,
+  covering the stable `E5001` payload for local
+  `value: Option<i32, StaticString>` annotations without variable-mismatch
+  followups.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
