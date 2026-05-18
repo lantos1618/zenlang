@@ -3548,6 +3548,17 @@ checked-in docs, tests, and commits only.
   `semantic_status: "deterministic"` at the top level while preserving the
   existing target, dependency, feature, and host-effect payload keys. Covered by
   `emit_json_build_graph_outputs_project_build_graph`.
+- `emit-json layout` is now an explicit gated CLI mode for type layout JSON and
+  rejects until ABI layout tests exist. The mode is listed in both root and
+  emit-json usage, and covered by
+  `emit_json_layout_command_is_explicitly_gated`,
+  `emit_json_usage_lists_supported_and_gated_modes`, and
+  `root_usage_lists_supported_and_gated_emit_json_modes`.
+- `StaticString` and allocator-backed `String` are no longer type-compatible:
+  static string literals stay baked into program storage and cannot implicitly
+  allocate dynamic `String` values. Covered by
+  `static_string_literal_does_not_implicitly_allocate_string` and
+  `types_compatible_basics`.
 
 ## Current Phase
 

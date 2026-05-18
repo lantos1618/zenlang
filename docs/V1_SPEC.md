@@ -73,7 +73,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 - `StaticString` is baked into the program. It denotes literal/static text with
   stable storage and length. The allocator-backed `String` type is owned,
   dynamic text and depends on the typed allocator model before it can be
-  promoted as a stable construction target.
+  promoted as a stable construction target. Static string literals do not
+  implicitly allocate or coerce into `String`; dynamic `String` construction
+  must go through an explicit allocator-aware path once that path is promoted.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,
@@ -103,10 +105,12 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   symbol table emission, checked typed program emission, and machine-readable
   diagnostics emission through `zen emit-json ast <file>`,
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
-  `zen emit-json diagnostics <file>`. AST JSON is explicitly marked unchecked;
-  symbols JSON is explicitly marked resolved; typed JSON is explicitly marked checked;
-  diagnostics JSON is explicitly marked diagnostic. semantic acceptance must use typed JSON,
-  diagnostics, check, build, or test paths.
+  `zen emit-json diagnostics <file>`. `zen emit-json layout <file>` is an
+  explicit gated command and rejects until ABI layout tests exist. AST JSON is
+  explicitly marked unchecked; symbols JSON is explicitly marked resolved;
+  typed JSON is explicitly marked checked; diagnostics JSON is explicitly
+  marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
+  check, build, or test paths.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable

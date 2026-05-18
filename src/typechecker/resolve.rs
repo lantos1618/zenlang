@@ -184,13 +184,6 @@ impl TypeChecker {
         }
         // Numeric width/sign conversions require explicit casts. Literal
         // coercion is handled before this check at declaration sites.
-        // Str and String are compatible
-        if matches!(
-            (expected, actual),
-            (Type::Str, Type::String) | (Type::String, Type::Str)
-        ) {
-            return true;
-        }
         false
     }
 
