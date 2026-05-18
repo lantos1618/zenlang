@@ -101,7 +101,7 @@ impl TypeChecker {
             } else {
                 if !type_args.is_empty() {
                     self.diagnostics.push(Diagnostic::error(
-                        "E5001",
+                        "E5002",
                         format!(
                             "non-generic method `{}` does not accept type arguments",
                             method_key
@@ -142,7 +142,7 @@ impl TypeChecker {
                 } else {
                     if !type_args.is_empty() {
                         self.diagnostics.push(Diagnostic::error(
-                            "E5001",
+                            "E5002",
                             format!(
                                 "non-generic method `{}` does not accept type arguments",
                                 generic_method_key
@@ -176,7 +176,7 @@ impl TypeChecker {
             } else {
                 if !type_args.is_empty() {
                     self.diagnostics.push(Diagnostic::error(
-                        "E5001",
+                        "E5002",
                         format!(
                             "non-generic function `{}` does not accept type arguments",
                             method

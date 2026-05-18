@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/nongeneric_function_type_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5002",
+      "message": "non-generic function `id` does not accept type arguments",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/nongeneric_function_type_args.zen",
+        "start": 58,
+        "end": 68,
+        "line": 7,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

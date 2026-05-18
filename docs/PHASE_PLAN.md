@@ -689,6 +689,10 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_function_arity_schema_matches_golden`,
   covering the stable `E5001` payload for `identity<i32, StaticString>(1)`
   without inference or argument-mismatch followups.
+- Diagnostics JSON for non-generic function call type arguments is now pinned
+  by `emit_json_diagnostics_nongeneric_function_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `id<i32>(1)` without argument-mismatch
+  followups.
 - Diagnostics JSON for generic function type-argument annotation arity is now
   pinned by
   `emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden`,

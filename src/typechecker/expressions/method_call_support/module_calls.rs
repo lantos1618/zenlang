@@ -104,7 +104,7 @@ impl TypeChecker {
         }
 
         self.diagnostics.push(Diagnostic::error(
-            "E5001",
+            "E5002",
             format!(
                 "non-generic {} `{}` does not accept type arguments",
                 kind, name
