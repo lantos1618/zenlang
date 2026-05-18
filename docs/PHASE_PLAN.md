@@ -500,8 +500,9 @@ checked-in docs, tests, and commits only.
   fallback and rejection-ordering coverage in focused child modules, leaving
   the parent integration module as host-effect module wiring only.
 - Build-command host-effect tests now keep declared file-read fallback accept
-  and reject cases in a focused child module, leaving env-effect and
-  ordering-before-execution cases in the parent integration module.
+  and reject cases in a focused child module and env-read coverage in
+  `tests/integration/cli_build/build_command_host_effects/env_reads/`, leaving
+  the parent integration module as wiring only.
 - Direct `zen build.zen` validation tests now keep graph-only library source
   and typecheck cases in a focused child module, separating them from
   executable target and gated test dependency validation.

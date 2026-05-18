@@ -319,9 +319,10 @@ and do not assume Phase 4 is ready without evidence.
   leaving the parent host-effect module as env/file module wiring.
 - Build-command host-effect integration tests now split declared file-read
   fallback accept/reject coverage into
-  `tests/integration/cli_build/build_command_host_effects/file_reads.rs`,
-  leaving env-effect and ordering-before-execution coverage in the parent
-  module.
+  `tests/integration/cli_build/build_command_host_effects/file_reads.rs`
+  and env-read coverage into
+  `tests/integration/cli_build/build_command_host_effects/env_reads/`, leaving
+  the parent module as wiring only.
 - Direct `zen build.zen` validation tests now split graph-only library source
   and typecheck coverage into
   `tests/integration/cli_build/direct_build_graph_validation/graph_only_libraries.rs`,
