@@ -210,10 +210,6 @@ impl FromStr for BuiltinGenericTypeName {
     }
 }
 
-pub fn is_builtin_type_name(name: &str) -> bool {
-    name == DYNAMIC_STRING_TYPE_NAME
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GatedBuiltinType {
     DynamicString,
@@ -290,6 +286,13 @@ impl GatedBuiltinType {
 
 pub fn gated_builtin_type_name(name: &str) -> Option<GatedBuiltinType> {
     GatedBuiltinType::from_name(name)
+}
+
+pub fn is_builtin_type_name(name: &str) -> bool {
+    matches!(
+        gated_builtin_type_name(name),
+        Some(GatedBuiltinType::DynamicString)
+    )
 }
 
 /// Parser-level type representation.

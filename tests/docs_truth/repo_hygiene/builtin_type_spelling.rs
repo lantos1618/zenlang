@@ -41,6 +41,14 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         helper.contains("pub fn is_builtin_type_name"),
         "builtin type-name recognition should be centralized"
     );
+    assert!(
+        !helper.contains("name == DYNAMIC_STRING_TYPE_NAME"),
+        "builtin type-name recognition should route through GatedBuiltinType, not a direct spelling check"
+    );
+    assert!(
+        helper.contains("Some(GatedBuiltinType::DynamicString)"),
+        "dynamic String recognition should be expressed through the gated builtin type enum"
+    );
 
     for path in [
         "src/resolver/type_validation.rs",

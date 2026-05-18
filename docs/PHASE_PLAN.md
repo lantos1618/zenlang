@@ -3816,6 +3816,13 @@ checked-in docs, tests, and commits only.
   `emit-json target-yaml` now has explicit coverage that a real `.yaml` file is
   rejected at the schema-validation gate before emitting any JSON. Guarded by
   `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
+- Typechecker boolean literal identifiers now parse `true` and `false` through
+  `TypecheckerBoolLiteralKeyword::ALL` instead of direct spelling checks.
+  Guarded by `typechecker_boolean_literals_use_owned_keyword_enum` and parser
+  boolean expression coverage.
+- Dynamic `String` builtin recognition now routes through the
+  `GatedBuiltinType` enum table instead of a direct `DYNAMIC_STRING_TYPE_NAME`
+  equality. Guarded by `semantic_builtin_type_checks_use_shared_spelling_helper`.
 
 ## Current Phase
 
