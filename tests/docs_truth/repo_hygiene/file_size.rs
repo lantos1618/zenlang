@@ -19,6 +19,9 @@ fn production_rust_files_stay_below_cleanup_threshold() {
     assert!(!paths.trim().is_empty(), "expected tracked Rust files");
 
     for path in paths.lines() {
+        if !repo_root().join(path).exists() {
+            continue;
+        }
         let line_count = read(path).lines().count();
         assert!(
             line_count <= MAX_LINES,
@@ -48,6 +51,9 @@ fn zen_source_files_stay_below_cleanup_threshold() {
     for path in paths.lines().filter(|path| {
         path.starts_with("examples/") || path.starts_with("stdlib/") || path.starts_with("tests/")
     }) {
+        if !repo_root().join(path).exists() {
+            continue;
+        }
         let line_count = read(path).lines().count();
         assert!(
             line_count < MAX_LINES,

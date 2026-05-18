@@ -76,7 +76,7 @@ fn parser_loop_control_calls_use_owned_action_enum() {
 #[test]
 fn parser_type_names_use_owned_type_name_enums() {
     let parser_types = read("src/parser/types.rs");
-    let type_names = read("src/parser/type_names.rs");
+    let type_names = read("src/ast/types.rs");
 
     for forbidden in [
         r#""i8" =>"#,
@@ -136,19 +136,21 @@ fn parser_type_names_use_owned_type_name_enums() {
     }
 
     for required in [
-        "enum ParserBuiltinTypeName",
-        "enum ParserBuiltinGenericTypeName",
-        "const ALL: &[ParserBuiltinTypeName]",
-        "const ALL: &[ParserBuiltinGenericTypeName]",
-        "impl FromStr for ParserBuiltinTypeName",
-        "impl FromStr for ParserBuiltinGenericTypeName",
+        "pub enum BuiltinTypeName",
+        "pub enum BuiltinGenericTypeName",
+        "pub const ALL: &[BuiltinTypeName]",
+        "pub const ALL: &[BuiltinGenericTypeName]",
+        "impl FromStr for BuiltinTypeName",
+        "impl FromStr for BuiltinGenericTypeName",
+        "impl fmt::Display for BuiltinTypeName",
+        "impl fmt::Display for BuiltinGenericTypeName",
         ".find(|name| name.as_str() == value)",
-        "name.parse::<ParserBuiltinTypeName>()",
-        "base.parse::<ParserBuiltinGenericTypeName>()",
+        "name.parse::<BuiltinTypeName>()",
+        "base.parse::<BuiltinGenericTypeName>()",
     ] {
         assert!(
             type_names.contains(required) || parser_types.contains(required),
-            "parser type-name spelling should live in parser type-name enums: {required}"
+            "parser type-name spelling should live in shared AST type-name enums: {required}"
         );
     }
 }

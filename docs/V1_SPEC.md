@@ -129,8 +129,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   framework spellings `Actor`, `ActorRef`, `Mailbox`, and `Supervisor` built on
   effect-aware queues and typed allocators. No actor syntax is v1-stable yet,
   and promoted actor framework type spellings report gated diagnostics until
-  std actor semantics exist. `Channel` remains an experimental stdlib channel
-  sketch until promoted, so it is not a global actor builtin type spelling.
+  std actor semantics exist; this includes generic and bare actor framework
+  spellings, covered by `actor_framework_types_are_rejected_as_gated_not_unknown`
+  and `bare_actor_framework_types_are_rejected_as_gated_not_unknown`.
+  `Channel` remains an experimental stdlib channel sketch until promoted, so it
+  is not a global actor builtin type spelling.
 - `JSON/YAML IR boundaries`: gated. JSON is the machine-readable exchange format
   for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts, and
   diagnostics. YAML is the human-authored format for target descriptions, ABI
