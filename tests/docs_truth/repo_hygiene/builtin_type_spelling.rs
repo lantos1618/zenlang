@@ -11,6 +11,10 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         "pub const ALLOCATOR_TYPE_NAME: &str = \"Allocator\"",
         "pub const SYNC_EFFECT_TYPE_NAME: &str = \"Sync\"",
         "pub const ASYNC_EFFECT_TYPE_NAME: &str = \"Async\"",
+        "pub const ACTOR_TYPE_NAME: &str = \"Actor\"",
+        "pub const ACTOR_REF_TYPE_NAME: &str = \"ActorRef\"",
+        "pub const MAILBOX_TYPE_NAME: &str = \"Mailbox\"",
+        "pub const SUPERVISOR_TYPE_NAME: &str = \"Supervisor\"",
         "pub enum GatedBuiltinType",
         "pub fn gated_builtin_type_name",
     ] {

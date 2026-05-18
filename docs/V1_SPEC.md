@@ -99,7 +99,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   boundary explicit.
 - `Actors in std`: gated. Actors are a stdlib framework first, with `Actor`,
   `ActorRef`, `Mailbox`, `Channel`, and `Supervisor` built on effect-aware queues
-  and typed allocators. No actor syntax is v1-stable yet.
+  and typed allocators. No actor syntax is v1-stable yet, and promoted actor
+  framework type spellings report gated diagnostics until std actor semantics
+  exist.
 - `JSON/YAML IR boundaries`: gated. JSON is the machine-readable exchange format
   for compiler-owned AST, typed HIR, MIR, symbol tables, type layouts, and
   diagnostics. YAML is the human-authored format for target descriptions, ABI
