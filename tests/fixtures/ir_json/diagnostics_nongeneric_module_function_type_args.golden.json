@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/nongeneric_module_function_type_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5002",
+      "message": "non-generic function `io.println` does not accept type arguments",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/nongeneric_module_function_type_args.zen",
+        "start": 35,
+        "end": 57,
+        "line": 5,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
