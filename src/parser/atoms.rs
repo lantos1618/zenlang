@@ -87,6 +87,10 @@ impl Parser {
                                 .into(),
                             Some(span),
                         )),
+                        ParserPrefixKeyword::As => Err(CompileError::Syntax(
+                            "`as` cast syntax has been removed; use cast(value, Type)".into(),
+                            Some(span),
+                        )),
                         ParserPrefixKeyword::Break => Ok(Expression::Break { span }),
                         ParserPrefixKeyword::Continue => Ok(Expression::Continue { span }),
                         ParserPrefixKeyword::Loop => self.parse_loop(span),

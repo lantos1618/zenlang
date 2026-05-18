@@ -154,23 +154,6 @@ impl Parser {
                     continue;
                 }
 
-                // `as` cast: expr as Type
-                Token::Identifier(ref s) if s == "as" => {
-                    let (l_bp, _) = (12, 13);
-                    if l_bp < min_bp {
-                        break;
-                    }
-                    self.advance(); // consume `as`
-                    let target_type = self.parse_type()?;
-                    let span = lhs.span().merge(self.prev_span());
-                    lhs = Expression::Cast {
-                        expr: Box::new(lhs),
-                        target_type,
-                        span,
-                    };
-                    continue;
-                }
-
                 _ => {}
             }
 

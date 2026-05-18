@@ -4066,6 +4066,10 @@ and do not assume Phase 4 is ready without evidence.
   `ParserBehaviorKeyword` instead of raw declaration spelling checks. Covered by
   `parser_behavior_declaration_keyword_uses_owned_keyword_enum` and parser
   behavior declaration tests.
+- Infix `expr as Type` cast syntax has been removed in favor of the documented
+  prefix `cast(value, Type)` form. Covered by
+  `parse_infix_as_cast_syntax_is_removed`,
+  `public_cast_fixture_uses_prefix_cast_syntax`, and `tests/zen/cast.zen`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,
