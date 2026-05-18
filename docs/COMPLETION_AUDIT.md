@@ -2717,6 +2717,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`,
   and
   `cargo test --test integration test_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`.
+  Missing fallback arms on file reads reject before unselected-target source
+  handling through
+  `cargo test --test integration test_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
   Declared deterministic env reads with `.Err`, wildcard, and identifier
   fallback arms are accepted on the same test execution path through
   `cargo test --test integration test_command_build_zen_accepts_declared_env_read_with_fallback`,
@@ -3133,6 +3136,7 @@ and do not assume Phase 4 is ready without evidence.
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   `test_command_build_zen_rejects_file_read_without_fallback_before_execution`,
+  `test_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`,
   and
   `test_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
 - `zen emit build.zen` now has executable graph fixtures for `.Err`,
