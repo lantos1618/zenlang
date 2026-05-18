@@ -3769,6 +3769,10 @@ checked-in docs, tests, and commits only.
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `emit_json_layout_command_is_explicitly_gated`.
+- `zen emit-json` mode parsing now also uses the same `EmitJsonMode` ordered
+  table as usage generation, so adding an IR boundary mode no longer requires a
+  second parse-mode branch list. Guarded by
+  `cli_emit_json_modes_use_owned_mode_enum` and `emit_json_usage_lists_supported_and_gated_modes`.
 - Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`,
   keeping HIR, MIR, layout, and target YAML gate text attached to the same enum
   that owns mode spelling and usage. Guarded by
