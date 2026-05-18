@@ -150,12 +150,33 @@ The shape is intentional:
 - `String` is runtime-owned dynamic text: pointer, length, capacity, and an
   allocator capability. It is a gated allocator-backed shape, not what string
   literals produce.
+- Static text and dynamic text are different types, not different sizes of the
+  same type.
 - `loop((l) { ... })` is the loop form. Exit with `l.done()` or `done(l)`;
   continue with `l.next()` or `next(l)`.
 - `Sync`, `Async`, and `Allocator<T, Mode>` live in type signatures so effects
   and ownership are visible.
 - `return`, `break`, `continue`, exceptions, null, and hidden allocation are
   not the stable source model.
+
+## Control Flow At A Glance
+
+Zen control flow is expression-oriented and prefix-first at the boundary where
+control begins:
+
+| Need | Stable form |
+| --- | --- |
+| Choose by bool, enum, `Option`, or `Result` | `value ? | Pattern { expr }` |
+| Produce a function result | put the value in the final expression |
+| Repeat work | `loop((l) { ... })` |
+| Continue a loop | `l.next()` or `next(l)` |
+| Exit a loop | `l.done()` or `done(l)` |
+| Fail or be absent | use `Result<T, E>` or `Option<T>` |
+
+Loop syntax is prefix-only. No in-between loop syntax exists. There is no
+`while (...) { ... }`, no `for item in items { ... }`, and no body-first loop
+spelling. Convert those forms to `loop((l) { ... })` with explicit state and
+explicit `done`/`next` edges.
 
 At a glance, the major surfaces look like this:
 
@@ -892,7 +913,7 @@ operation, and the receiver is the type or behavior being updated.
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
 are explicit calls instead of `break` or `continue`. The spelling is
 prefix-only: call `loop`, pass a loop-control parameter, then choose the next
-step by calling loop-control verbs on that parameter.
+edge with `done` or `next`.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
 `next` are compiler-owned loop-control verbs for that handle. They are not
@@ -924,7 +945,7 @@ Loops use prefix `loop((l) { ... })` with explicit loop-control calls. The
 control parameter names the loop target: `l.done()` exits that target and
 `l.next()` continues it. The compiler recognizes only the control verbs for
 the loop handle here; this is not general user-defined method dispatch. See
-`examples/05_loops.zen` for the tutorial version.
+`examples/05_loops.zen` for the runnable tutorial version.
 
 `break` and `continue` are not Zen source forms. Use `l.done()` and `l.next()`
 or their UFC forms instead.
@@ -975,8 +996,6 @@ The complete stable loop surface is:
 
 Loops do not have a hidden result channel. Accumulated values live in explicit
 mutable bindings outside the loop and are read after `done`.
-
-Loop syntax is prefix-only.
 
 Use this recipe when converting `while condition` code:
 
@@ -1089,8 +1108,9 @@ scan = (limit: i32, stop_at: i32) Option<i32> {
 }
 ```
 
-The shape is intentionally regular. Counted loops, sentinel loops, and nested
-exits all stay prefix-only and make the next control edge explicit.
+The shape is intentionally regular: counted loops, sentinel loops, nested
+exits, and UFC control calls all use the same loop entry and the same two
+compiler-owned verbs.
 
 ## Defer
 

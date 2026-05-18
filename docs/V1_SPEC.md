@@ -164,7 +164,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   and promoted actor framework type spellings report gated diagnostics until
   std actor semantics exist; this includes generic and bare actor framework
   spellings, covered by `actor_framework_types_are_rejected_as_gated_not_unknown`
-  and `bare_actor_framework_types_are_rejected_as_gated_not_unknown`.
+  and `bare_actor_framework_types_are_rejected_as_gated_not_unknown`. Public
+  diagnostics JSON is pinned by
+  `emit_json_diagnostics_actor_type_gate_schema_matches_golden` and
+  `emit_json_diagnostics_bare_actor_type_gate_schema_matches_golden`.
   Imports of std actor framework sketches are also gated before loading
   aspirational actor source files, covered by
   `stdlib_actor_framework_import_is_gated_before_loading_sketch` and

@@ -256,6 +256,11 @@ Agent UX deliverables:
   for `Actor<i32>`, proving the public path reports actor scheduling/mailbox
   semantics as gated instead of an ordinary unknown-type diagnostic. Covered by
   `emit_json_diagnostics_actor_type_gate_schema_matches_golden`.
+- Bare std actor framework type spelling now has a pinned CLI diagnostics JSON
+  gate for `Actor`, proving the public path reports the non-generic spelling
+  as the same gated actor surface instead of an ordinary unknown-type
+  diagnostic. Covered by
+  `emit_json_diagnostics_bare_actor_type_gate_schema_matches_golden`.
 - Range expressions now have a pinned CLI diagnostics JSON gate for `1..3`,
   proving the public path reports range typing as gated instead of exposing a
   generic type mismatch. Covered by
