@@ -126,6 +126,9 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
     let guide = read("docs/learn_zen_in_y_minutes.md");
 
     for required in [
+        "## Comments",
+        "## Assignment And Mutation",
+        "## Operators And Casts",
         "## Static And Dynamic Strings",
         "## Error Handling",
         "Result<T, E>",
@@ -160,6 +163,12 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "Sync allocation returns `Result` directly",
         "Async allocation returns `Task<Result<...>>`",
         "Sync code cannot call async operations without an explicit runtime boundary",
+        "## Pointer, Slice, And Array Types",
+        "RawPtr<T>",
+        "`Ptr<T>`, `MutPtr<T>`, `Slice<T>`, and `[T; N]`",
+        "raw pointer offset",
+        "comptime type matching",
+        "actor framework",
         "gated design",
         "docs/V1_SPEC.md",
         "examples/05_loops.zen",
