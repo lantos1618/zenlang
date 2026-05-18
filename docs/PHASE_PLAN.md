@@ -3386,6 +3386,11 @@ checked-in docs, tests, and commits only.
   `build_graph_command_accepts_identifier_fallback_declared_env_read_with_unselected_targets`,
   and
   `build_graph_command_rejects_env_read_without_fallback_before_unselected_targets`.
+- Legacy `zen build-graph build.zen` file-read host-effect tests now live in
+  focused `declared`, `rejections`, and `unselected_targets` modules under
+  `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads/`,
+  keeping the coverage added for deterministic file-read effects out of a
+  single large test file.
 
 ## Current Phase
 

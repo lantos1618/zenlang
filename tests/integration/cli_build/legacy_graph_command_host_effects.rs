@@ -1,6 +1,6 @@
 use std::process::Command;
 
-#[path = "legacy_graph_command_host_effects/file_reads.rs"]
+#[path = "legacy_graph_command_host_effects/file_reads/mod.rs"]
 mod file_reads;
 
 #[test]
