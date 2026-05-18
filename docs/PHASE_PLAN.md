@@ -3936,9 +3936,10 @@ Agent UX deliverables:
   `kind: "feature_gate"` and a note directing users to explicit
   `Type.implements(Behavior) { ... }` blocks, improving editor and agent UX
   while generated fallback semantics remain gated. Guarded by
-  `emit_json_diagnostics_spans_full_gated_behavior_derive_association`, while
-  the feature remains gated until generated/fallback association semantics have
-  positive and negative solver tests.
+  `emit_json_diagnostics_spans_full_gated_behavior_derive_association` and
+  pinned by `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`,
+  while the feature remains gated until generated/fallback association
+  semantics have positive and negative solver tests.
 - Gated generic association targets such as `Type<T>.derive(Json<T>)` now report
   diagnostics over the full reserved association target rather than only the
   behavior argument token. They also carry diagnostics JSON `context` with

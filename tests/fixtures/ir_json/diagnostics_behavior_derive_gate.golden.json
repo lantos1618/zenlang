@@ -1,0 +1,44 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/derive_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E2000",
+      "message": "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/derive_gate.zen",
+        "start": 73,
+        "end": 91,
+        "line": 8,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [
+        "Use an explicit `Type.implements(Behavior) { ... }` block until generated fallback derives are implemented"
+      ],
+      "context": [
+        {
+          "span": {
+            "file_id": 0,
+            "path": "$TMP/derive_gate.zen",
+            "start": 73,
+            "end": 91,
+            "line": 8,
+            "column": 1
+          },
+          "kind": "feature_gate",
+          "message": "reserved generated/fallback behavior association"
+        }
+      ],
+      "suggested_fixes": []
+    }
+  ]
+}
