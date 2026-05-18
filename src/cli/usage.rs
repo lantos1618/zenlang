@@ -9,7 +9,7 @@ pub(super) fn print_usage() {
         "  build-graph <build.zen>   Compile executable targets from deterministic build graph"
     );
     eprintln!("  emit  <file>   Emit C source (no compilation)");
-    eprintln!("  emit-json ast <file>   Emit resolved AST JSON");
+    eprintln!("  emit-json ast <file>   Emit unchecked AST JSON");
     eprintln!("  emit-json symbols <file>   Emit resolver symbol tables JSON");
     eprintln!("  emit-json typed <file>   Emit checked typed program JSON");
     eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
