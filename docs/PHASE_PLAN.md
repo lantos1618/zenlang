@@ -3910,6 +3910,9 @@ Agent UX deliverables:
 - MIR JSON for generic `Result<T, E>` specialization is now pinned by
   `emit_json_mir_generic_result_schema_matches_golden`, covering concrete
   `Result_i32_StaticString` enum construction and match-arm lowering.
+- MIR JSON for generic `Option<T>` specialization is now pinned by
+  `emit_json_mir_generic_option_schema_matches_golden`, covering concrete
+  `Option_i32` enum construction and match-arm lowering.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by
