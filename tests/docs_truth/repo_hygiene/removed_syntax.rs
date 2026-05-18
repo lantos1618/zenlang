@@ -10,7 +10,7 @@ fn source_ast_no_longer_has_return_expression_nodes() {
         "src/codegen/c/emit.rs",
         "src/codegen/c/types.rs",
     ] {
-        let source = read(path);
+        let source = read(&path);
         for forbidden in [
             "Expression::Return",
             "TypedExprKind::Return",
@@ -104,7 +104,7 @@ fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
         "stdlib/core/ptr.zen",
         "stdlib/core/slice.zen",
     ] {
-        let source = read(path);
+        let source = read(&path);
         assert!(
             !source.contains("return "),
             "{path} still uses the removed return keyword"
@@ -117,25 +117,43 @@ fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
 }
 
 #[test]
-fn root_smoke_fixtures_do_not_use_removed_return_keyword() {
-    for path in [
-        "tests/test_arena_async.zen",
-        "tests/test_gpa_trait.zen",
-        "tests/test_heap_sync.zen",
-        "tests/test_io_import.zen",
-        "tests/test_minimal.zen",
-        "tests/test_nested_import.zen",
-        "tests/test_no_import.zen",
-        "tests/test_panic.zen",
-        "tests/test_raw_alloc.zen",
-        "tests/test_simple_allocator.zen",
-        "tests/test_unified_allocator.zen",
-    ] {
-        let source = read(path);
+fn root_smoke_fixtures_do_not_use_removed_or_gated_syntax() {
+    let mut paths = std::fs::read_dir(repo_root().join("tests"))
+        .expect("read tests directory")
+        .map(|entry| {
+            let entry = entry.expect("tests directory entry should be readable");
+            entry
+                .path()
+                .strip_prefix(repo_root())
+                .expect("test path should be under repo root")
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|path| path.starts_with("tests/test_") && path.ends_with(".zen"))
+        .collect::<Vec<_>>();
+    paths.sort();
+    assert!(!paths.is_empty(), "expected root smoke fixtures");
+
+    for path in paths {
+        let source = read(&path);
         assert!(
             !source.contains("return "),
             "{path} still uses the removed return keyword"
         );
+        for gated_claim in [
+            "@std.memory",
+            "Heap.sync",
+            "Arena.async",
+            "Allocator",
+            "ExecutionMode",
+            "function coloring",
+            "async/await",
+        ] {
+            assert!(
+                !source.contains(gated_claim),
+                "{path} still teaches gated allocator/effect syntax: {gated_claim}"
+            );
+        }
     }
 }
 

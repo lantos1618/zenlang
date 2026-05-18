@@ -3724,8 +3724,9 @@ and do not assume Phase 4 is ready without evidence.
   establishing the first small stdlib cleanup gate before broader stdlib
   compilation is promoted.
 - Root smoke fixtures under `tests/test_*.zen` no longer use the removed
-  `return` keyword and are guarded by
-  `root_smoke_fixtures_do_not_use_removed_return_keyword`.
+  `return` keyword or stale allocator/effect claims. The remaining root smoke
+  fixtures are guarded by
+  `root_smoke_fixtures_do_not_use_removed_or_gated_syntax`.
 - Legacy `zen build-graph build.zen` file-read host-effect validation now
   matches the unselected-target coverage on `zen build build.zen` and direct
   `zen build.zen`: declared fallback arms allow selected executable targets to
