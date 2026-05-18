@@ -620,6 +620,10 @@ Agent UX deliverables:
   pinned by `emit_json_diagnostics_duplicate_generic_requires_schema_matches_golden`,
   covering the stable `E3500` payload for duplicate
   `Point.requires(Json<StaticString>)` assertions.
+- Diagnostics JSON for generic `.requires` behavior-reference arity is now
+  pinned by `emit_json_diagnostics_generic_requires_arity_schema_matches_golden`,
+  covering the stable `E5001` payload when `Json<T>` is referenced as
+  `Json<i32, StaticString>`.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits
@@ -1287,8 +1291,10 @@ Agent UX deliverables:
   `Point.requires(Json<StaticString>)` implementation is pinned by
   `emit_json_diagnostics_generic_requires_missing_impl_schema_matches_golden`.
   Imported generic `.requires` arity diagnostics are covered by
-  `integration::imported_generic_behavior_requires_type_arg_arity_is_error`, and
-  duplicate imported generic `.requires` edges are covered by
+  `integration::imported_generic_behavior_requires_type_arg_arity_is_error`,
+  with public JSON shape pinned by
+  `emit_json_diagnostics_generic_requires_arity_schema_matches_golden`.
+  Duplicate imported generic `.requires` edges are covered by
   `integration::imported_duplicate_generic_behavior_requires_is_error` plus the
   public JSON golden
   `emit_json_diagnostics_duplicate_generic_requires_schema_matches_golden`.
