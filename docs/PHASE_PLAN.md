@@ -236,6 +236,10 @@ Agent UX deliverables:
   The `Result<T, E>` enum-method inference conflict is also pinned in
   diagnostics JSON by
   `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden`.
+- Typed allocator/effect syntax now reports the same gated reserved-type
+  diagnostic through resolver-backed CLI diagnostics instead of falling back to
+  ordinary unknown-type errors. Diagnostics JSON pins the public shape through
+  `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`.
 - Generic diagnostics now reject explicit type arguments on non-generic
   module-qualified calls such as `io.println<i32>(...)`, so import/module call
   syntax no longer silently drops malformed type arguments.
@@ -4205,6 +4209,11 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_association_gate_schema_matches_golden`, plus
   the existing parser gate
   `generic_type_association_keywords_are_explicitly_gated`.
+- Typed allocator/effect gate diagnostics are now pinned at the CLI JSON
+  boundary by `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`,
+  covering `Allocator<i32, Sync>` as a gated reserved type surface instead of
+  ordinary `unknown type symbol` resolver fallbacks while allocator semantics
+  remain in the Required Test Backlog.
 
 ## Current Phase
 

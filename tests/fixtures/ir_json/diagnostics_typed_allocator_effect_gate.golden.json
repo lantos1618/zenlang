@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/typed_allocator_effect_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3500",
+      "message": "typed allocators are gated until allocator ownership and effect semantics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/typed_allocator_effect_gate.zen",
+        "start": 9,
+        "end": 40,
+        "line": 2,
+        "column": 9
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

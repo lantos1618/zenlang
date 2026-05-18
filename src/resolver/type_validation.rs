@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::ast::{is_builtin_type_name, AstType, Param, TypeParam};
+use crate::ast::{gated_builtin_type_name, is_builtin_type_name, AstType, Param, TypeParam};
 use crate::error::{Diagnostic, Span};
 
 use super::{Namespace, Resolver, SymbolTable};
@@ -83,6 +83,10 @@ impl Resolver {
     ) {
         match ast_type {
             AstType::Named(name) => {
+                if let Some(gated) = gated_builtin_type_name(name) {
+                    diagnostics.push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    return;
+                }
                 if !self.is_known_type_name(table, type_params, name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",
@@ -92,6 +96,10 @@ impl Resolver {
                 }
             }
             AstType::Generic { name, type_args } => {
+                if let Some(gated) = gated_builtin_type_name(name) {
+                    diagnostics.push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    return;
+                }
                 if !self.is_known_type_name(table, type_params, name) {
                     diagnostics.push(Diagnostic::error(
                         "E0201",
