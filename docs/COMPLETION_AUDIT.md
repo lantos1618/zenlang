@@ -4057,6 +4057,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_mir_command_is_explicitly_gated`,
   `emit_json_layout_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
+- Real program inputs to `emit-json hir` and `emit-json mir` now reject at the
+  schema/golden-test gate before emitting HIR or MIR JSON. Covered by
+  `emit_json_hir_rejects_program_before_hir_json` and
+  `emit_json_mir_rejects_program_before_mir_json`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
   `emit-json target-yaml` rejects a real `.yaml` file at the schema-validation
   gate before emitting any JSON. Covered by
