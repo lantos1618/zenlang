@@ -3869,6 +3869,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_symbols_command_outputs_module_symbol_tables`, so resolver-owned
   symbol metadata is explicitly separated from unchecked AST JSON and checked
   typed JSON.
+- Build graph JSON now carries `format: "zen.build_graph.v0"` and
+  `semantic_status: "deterministic"` while preserving the existing graph
+  payload keys, covered by `emit_json_build_graph_outputs_project_build_graph`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

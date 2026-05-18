@@ -3544,6 +3544,10 @@ checked-in docs, tests, and commits only.
   `format: "zen.symbols.v0"`, making resolver-owned metadata distinct from
   unchecked AST JSON and checked typed JSON. Covered by
   `emit_json_symbols_command_outputs_module_symbol_tables`.
+- Build graph JSON now carries `format: "zen.build_graph.v0"` and
+  `semantic_status: "deterministic"` at the top level while preserving the
+  existing target, dependency, feature, and host-effect payload keys. Covered by
+  `emit_json_build_graph_outputs_project_build_graph`.
 
 ## Current Phase
 

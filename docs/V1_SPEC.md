@@ -112,6 +112,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   target C for one graph target, `zen build build.zen` compiles executable
   targets through that graph, and direct `zen build.zen` aliases that same graph
   build path. `zen test build.zen` compiles and runs test graph targets.
+  `zen emit-json build-graph <build.zen>` emits `format: "zen.build_graph.v0"`
+  and `semantic_status: "deterministic"` with the constrained graph payload.
   Executable target dependencies compile before their dependents. Test targets
   are lowered, emitted in build graph JSON, compiled, and run through the
   constrained test command. Library targets are lowered and emitted in build
