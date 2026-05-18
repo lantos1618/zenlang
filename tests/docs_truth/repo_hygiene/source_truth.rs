@@ -6,6 +6,10 @@ fn v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined() {
     let old_spec_header = old_spec.lines().take(20).collect::<Vec<_>>().join("\n");
 
     assert!(
+        old_spec.lines().count() <= 80,
+        "LANGUAGE_SPEC.zen is an archive pointer, not a second language spec"
+    );
+    assert!(
         old_spec_header.contains("Archived aspirational notes"),
         "LANGUAGE_SPEC.zen must be explicitly quarantined at the top"
     );
@@ -13,6 +17,12 @@ fn v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined() {
         old_spec_header.contains("docs/V1_SPEC.md is the versioned v1 source of truth"),
         "LANGUAGE_SPEC.zen must point to docs/V1_SPEC.md as the source of truth"
     );
+    for stale_syntax in ["return ", "@std", ".implements(Geometric,"] {
+        assert!(
+            !old_spec.contains(stale_syntax),
+            "LANGUAGE_SPEC.zen archive pointer should not preserve stale syntax examples: {stale_syntax}"
+        );
+    }
 }
 
 #[test]

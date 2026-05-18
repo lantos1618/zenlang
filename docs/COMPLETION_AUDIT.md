@@ -38,6 +38,9 @@ and do not assume Phase 4 is ready without evidence.
 ## Verified Evidence
 
 - `docs/PHASE_PLAN.md` is present and guarded by `tests/docs_truth.rs`.
+- `LANGUAGE_SPEC.zen` is a short quarantine pointer to current public docs and
+  status docs, guarded by
+  `repo_hygiene::source_truth::v1_spec_is_single_source_of_truth_and_old_spec_is_quarantined`.
 - Resolver Phase 2 has dedicated tests in `tests/resolver_phase2.rs`.
 - CLI and integration frontend paths now run resolver diagnostics before
   typechecking.
