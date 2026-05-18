@@ -3485,9 +3485,10 @@ and do not assume Phase 4 is ready without evidence.
   target field, dependency, unsupported target, and gated package/link
   diagnostics while keeping successful graph JSON shape fixtures focused.
 - Imported behavior inheritance frontend diagnostics now live in
-  `tests/integration/frontend_diagnostics/behavior_extends.rs`, preserving
-  direct, imported-parent, and transitive parent-method diagnostics while
-  keeping frontend helper and generic arity diagnostics focused.
+  `tests/integration/frontend_diagnostics/behavior_extends/`, preserving
+  direct, imported-parent, and transitive parent-method diagnostics alongside
+  parent/child overlap diagnostics while keeping frontend helper and generic
+  arity diagnostics focused.
 - Generic explicit arity follow-up suppression diagnostics now live in
   `tests/generic_diagnostics/method_type_args/arity_followups.rs`, preserving
   function and method inference/argument follow-up checks while keeping direct

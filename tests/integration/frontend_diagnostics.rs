@@ -1,6 +1,6 @@
 use super::*;
 
-#[path = "frontend_diagnostics/behavior_extends.rs"]
+#[path = "frontend_diagnostics/behavior_extends/mod.rs"]
 mod behavior_extends;
 
 #[test]
