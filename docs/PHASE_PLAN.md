@@ -2738,7 +2738,9 @@ checked-in docs, tests, and commits only.
   fallback behavior through
   `direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before execution through
-  `direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`.
+  `direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`
+  and before multi-target direct execution through
+  `direct_file_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted through
   `direct_file_command_build_zen_accepts_declared_file_read_effects`, and
   multi-target executable graph execution keeps the same declared file-read
