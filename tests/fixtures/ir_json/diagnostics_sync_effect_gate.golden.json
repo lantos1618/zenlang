@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/sync_effect_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3500",
+      "message": "`Sync` effect mode is gated until Sync/Async effect checking is implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/sync_effect_gate.zen",
+        "start": 9,
+        "end": 19,
+        "line": 2,
+        "column": 9
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
