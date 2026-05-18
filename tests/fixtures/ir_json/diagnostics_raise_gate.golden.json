@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/raise_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3054",
+      "message": "`.raise()` is gated until Result propagation typing and lowering are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/raise_gate.zen",
+        "start": 102,
+        "end": 115,
+        "line": 8,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

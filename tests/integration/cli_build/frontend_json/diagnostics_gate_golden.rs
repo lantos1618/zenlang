@@ -95,6 +95,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_raise_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "raise_gate.zen",
+        r#"
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+main = () i32 {
+    value = Result<i32, StaticString>.Ok(1)
+    value.raise()
+}
+"#,
+        "raise gate",
+        "raise gate should emit one propagation feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_raise_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",
