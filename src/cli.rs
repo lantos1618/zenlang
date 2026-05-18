@@ -238,31 +238,46 @@ fn reject_build_zen_for_emit_json_mode(path_str: &str) {
     }
 }
 
-fn reject_hand_authored_json_for_ast_emit(path_str: &str) {
+#[derive(Clone, Copy)]
+enum CompilerOwnedJsonBoundary {
+    Ast,
+    Typed,
+    Symbols,
+    Diagnostics,
+}
+
+impl CompilerOwnedJsonBoundary {
+    fn rejection_message(self) -> &'static str {
+        match self {
+            Self::Ast => "compiler-owned AST JSON emission rejects hand-authored JSON IR before it can override unchecked syntax trees",
+            Self::Typed => "compiler-owned typed JSON emission rejects hand-authored JSON IR before it can override checked types or layouts",
+            Self::Symbols => "compiler-owned symbols JSON emission rejects hand-authored resolver IR before it can override symbol metadata",
+            Self::Diagnostics => "compiler-owned diagnostics JSON emission rejects hand-authored diagnostic IR before it can override compiler diagnostics",
+        }
+    }
+}
+
+fn reject_hand_authored_json_for_emit(path_str: &str, boundary: CompilerOwnedJsonBoundary) {
     if has_json_extension(path_str) {
-        eprintln!(
-            "error: compiler-owned AST JSON emission rejects hand-authored JSON IR before it can override unchecked syntax trees"
-        );
+        eprintln!("error: {}", boundary.rejection_message());
         process::exit(1);
     }
+}
+
+fn reject_hand_authored_json_for_ast_emit(path_str: &str) {
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Ast);
 }
 
 fn reject_hand_authored_json_for_typed_emit(path_str: &str) {
-    if has_json_extension(path_str) {
-        eprintln!(
-            "error: compiler-owned typed JSON emission rejects hand-authored JSON IR before it can override checked types or layouts"
-        );
-        process::exit(1);
-    }
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Typed);
 }
 
 fn reject_hand_authored_json_for_symbols_emit(path_str: &str) {
-    if has_json_extension(path_str) {
-        eprintln!(
-            "error: compiler-owned symbols JSON emission rejects hand-authored resolver IR before it can override symbol metadata"
-        );
-        process::exit(1);
-    }
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Symbols);
+}
+
+fn reject_hand_authored_json_for_diagnostics_emit(path_str: &str) {
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Diagnostics);
 }
 
 fn has_json_extension(path_str: &str) -> bool {
