@@ -524,6 +524,9 @@ checked-in docs, tests, and commits only.
   package/link target rejection coverage in a focused child module, leaving the
   root build graph test file for shared helpers and positive lowering smoke
   tests.
+- Cross-entrypoint `build.zen` target metadata matrix tests now keep library,
+  executable, test-target, and deterministic-body diagnostics in focused child
+  modules, leaving the parent matrix file for command fanout helpers.
 - `zen build build.zen` validation tests now keep direct and transitive gated
   test dependency rejection coverage in a focused child module, leaving the
   parent build command validation file for executable-target and skipped-source

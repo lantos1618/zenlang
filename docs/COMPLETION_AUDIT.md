@@ -355,6 +355,10 @@ and do not assume Phase 4 is ready without evidence.
   package/link target rejection coverage into
   `tests/build_graph/target_metadata.rs`, leaving the root build graph test
   file for shared helpers and positive lowering smoke tests.
+- Cross-entrypoint `build.zen` target metadata matrix tests now split library,
+  executable, test-target, and deterministic-body diagnostics into
+  `tests/integration/cli_build/target_metadata_matrix/`, leaving the parent
+  matrix file for command fanout helpers.
 - `zen build build.zen` validation tests now split direct and transitive gated
   test dependency rejection coverage into
   `tests/integration/cli_build/build_command_validation/gated_dependencies.rs`,
