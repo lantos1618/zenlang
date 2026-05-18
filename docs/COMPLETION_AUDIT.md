@@ -3955,6 +3955,12 @@ and do not assume Phase 4 is ready without evidence.
   literal/static storage type. Covered by
   `dynamic_string_type_is_rejected_as_allocator_backed_gate` and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Raw memory compiler intrinsics `@builtin.raw_allocate(...)`,
+  `@builtin.raw_deallocate(...)`, and `@builtin.raw_reallocate(...)` now reject
+  as allocator ownership/effect gates instead of silently typechecking as
+  unknown void builtins. Covered by
+  `raw_memory_intrinsics_are_rejected_as_allocator_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,
