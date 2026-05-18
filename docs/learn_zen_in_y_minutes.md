@@ -297,6 +297,9 @@ that a type must have a behavior implementation.
 
 ## Loops
 
+Zen has one loop form. There are no `for` or `while` keywords, and loop exits
+are explicit calls instead of `break` or `continue`.
+
 ```zen
 sum_to = (limit: i32) i32 {
     total ::= 0
@@ -316,10 +319,9 @@ sum_to = (limit: i32) i32 {
 }
 ```
 
-Loops use prefix `loop((l) { ... })` with explicit loop-control calls:
-`l.done()` exits the target loop and `l.next()` continues it. The same control
-operations can be called in UFC form as `done(l)` and `next(l)`. See
-`examples/05_loops.zen` for the tutorial version.
+Loops use prefix `loop((l) { ... })` with explicit loop-control calls. The
+control parameter names the loop target: `l.done()` exits that target and
+`l.next()` continues it. See `examples/05_loops.zen` for the tutorial version.
 
 Nested loops can target an outer label directly:
 
@@ -344,7 +346,7 @@ nested = (stop: bool) i32 {
 }
 ```
 
-The loop controls are ordinary calls, so UFC form is equivalent:
+Loop controls are ordinary calls, so UFC form is equivalent:
 
 ```zen
 single_step = (ready: bool) i32 {
@@ -362,6 +364,9 @@ single_step = (ready: bool) i32 {
     value
 }
 ```
+
+The same rule applies in nested loops: `done(outer)` exits the outer loop, and
+`next(inner)` continues only the inner loop.
 
 ## Defer
 
@@ -421,7 +426,25 @@ literals, and interpolation does not implicitly construct allocator-backed
 
 The following syntax and APIs are gated design goals, not stable compiler
 behavior yet. They are included here because they are central to the intended
-language shape.
+language shape: allocation is explicit, async work is effect-aware, and sync
+code cannot accidentally call async operations.
+
+`Sync` and `Async` are effect modes. They are part of the type contract, not
+marker-only names:
+
+```zen
+read_now = (file: File, allocator: Allocator<u8, Sync>) Result<Buffer<u8>, IoError> {
+    bytes = file.read_all(allocator).raise()
+    Result<Buffer<u8>, IoError>.Ok(bytes)
+}
+
+read_later = (file: File, allocator: Allocator<u8, Async>) Task<Result<Buffer<u8>, IoError>> {
+    file.read_all_async(allocator)
+}
+```
+
+The intended rule is that sync code either stays sync or crosses an explicit
+runtime boundary. It does not implicitly await async work.
 
 ```zen
 Allocator<T, Sync>: behavior {
@@ -448,7 +471,24 @@ make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer
 }
 ```
 
-The intended model is:
+Allocators are typed by the value they allocate and by the effect mode they run
+under. A sync allocator returns a direct checked result. An async allocator
+returns a task-shaped result:
+
+```zen
+make_async_buffer<T, A: Allocator<T, Async>> =
+    (allocator: A, len: usize) Task<Result<Buffer<T, A>, AllocError>> {
+    allocator.alloc(len).then((ptr) {
+        Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
+            ptr: ptr,
+            len: len,
+            allocator: allocator
+        })
+    })
+}
+```
+
+The model is:
 
 - `Sync` and `Async` are real effects, not marker-only names.
 - Sync code cannot call async operations without an explicit runtime boundary.
@@ -457,6 +497,8 @@ The intended model is:
   exceptions.
 - `.raise()` is the planned Result propagation operator, but it is gated until
   typechecked propagation and lowering are implemented.
+- Task chaining and async scheduler APIs are gated until Sync/Async effect
+  checking and task lowering are implemented.
 
 For the current contract and gate status, see `docs/V1_SPEC.md`.
 

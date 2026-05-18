@@ -263,6 +263,30 @@ impl Parser {
         })
     }
 
+    pub(super) fn parse_behavior_derive(
+        &mut self,
+        type_name: String,
+        name_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        self.skip_newlines();
+        self.expect(&Token::LParen)?;
+        self.skip_newlines();
+        let (behavior, behavior_span) = self.expect_identifier()?;
+        let behavior_type_args = if matches!(self.peek(), Token::Lt) {
+            self.parse_type_arg_list()?
+        } else {
+            Vec::new()
+        };
+        self.skip_newlines();
+        let end = self.expect(&Token::RParen)?;
+        Ok(Declaration::Derive {
+            type_name,
+            behavior,
+            behavior_type_args,
+            span: name_span.merge(behavior_span).merge(end),
+        })
+    }
+
     pub(super) fn parse_behavior_extends(
         &mut self,
         behavior: String,
