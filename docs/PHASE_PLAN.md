@@ -3642,6 +3642,8 @@ Agent UX deliverables:
   raw-pointer, slice, and fixed-array field types, and preserves simple enum
   variant tag/payload layout facts. Guarded by
   `emit_json_layout_outputs_compound_type_layout_entries`.
+- The checked compound layout schema is now pinned by a golden JSON fixture,
+  guarded by `emit_json_layout_compound_schema_matches_golden`.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by

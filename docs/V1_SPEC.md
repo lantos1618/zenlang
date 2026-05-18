@@ -204,7 +204,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   baked `StaticString`, pointer/slice/array layout entries, struct field
   offsets, and simple enum variant tags/payloads, covered by
   `emit_json_layout_outputs_checked_type_layouts` and
-  `emit_json_layout_outputs_compound_type_layout_entries`. Hand-authored layout JSON
+  `emit_json_layout_outputs_compound_type_layout_entries`. The checked
+  compound layout schema is also pinned by
+  `emit_json_layout_compound_schema_matches_golden`. Hand-authored layout JSON
   inputs are rejected at the compiler-owned layout schema boundary before any
   ABI override can be accepted, covered by
   `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
@@ -263,6 +265,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_outputs_enum_function_and_global_declarations` covers enum variants/payloads, function params/returns, and globals, `emit_json_hir_declaration_schema_matches_golden` pins the checked declaration schema, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
 | MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_outputs_match_arm_schema` covers match kind, arm patterns/bindings, and block results, `emit_json_mir_match_schema_matches_golden` pins the checked match schema, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
+| Layout JSON emission | constrained | `emit_json_layout_outputs_checked_type_layouts` checks primitive, `StaticString`, and struct layout facts, `emit_json_layout_outputs_compound_type_layout_entries` covers pointer, raw pointer, slice, array, and enum payload entries, `emit_json_layout_compound_schema_matches_golden` pins the checked compound layout schema, `emit_json_layout_rejects_hand_authored_json_before_layout_override`; broader ABI schemas still required |
 | Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema` checks `schema_version: 0`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |

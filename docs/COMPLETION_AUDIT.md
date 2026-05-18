@@ -3922,6 +3922,9 @@ and do not assume Phase 4 is ready without evidence.
   raw-pointer, slice, and fixed-array field types, and preserves simple enum
   variant tag/payload layout facts. Covered by
   `emit_json_layout_outputs_compound_type_layout_entries`.
+- The checked compound layout schema is now pinned by the golden fixture test
+  `emit_json_layout_compound_schema_matches_golden`, reducing the IR boundary
+  backlog without treating broader ABI schema work as complete.
 - Static string literals no longer implicitly satisfy allocator-backed
   `String`; `String` is recognized as a builtin dynamic text type, but
   allocation must remain explicit. Covered by
