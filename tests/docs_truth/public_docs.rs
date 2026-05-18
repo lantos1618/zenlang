@@ -127,6 +127,9 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
 
     for required in [
         "## Comments",
+        "prefix-first declarations",
+        "stable source forms you can use in examples today",
+        "gated design previews that show intended syntax",
         "## Assignment And Mutation",
         "## Operators And Casts",
         "## Blocks Return Their Final Expression",
@@ -148,6 +151,8 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "not baked",
         "does not implicitly construct allocator-backed",
         "## Loops",
+        "prefix-first: call `loop`",
+        "loop-control actions as compiler-owned operations",
         "loop",
         "l.done()",
         "l.next()",
@@ -169,6 +174,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "Sync allocation returns `Result` directly",
         "Async allocation returns `Task<Result<...>>`",
         "Sync code cannot call async operations without an explicit runtime boundary",
+        "Dynamic memory ownership is visible in the returned type",
         "Planned `.await()`",
         "@builtin.raw_allocate",
         "@builtin.raw_deallocate",

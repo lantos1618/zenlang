@@ -3679,6 +3679,10 @@ Agent UX deliverables:
   `emit_json_layout_outputs_compound_type_layout_entries`.
 - The checked compound layout schema is now pinned by a golden JSON fixture,
   guarded by `emit_json_layout_compound_schema_matches_golden`.
+- Layout JSON for generic `Result<T, E>` specialization is now pinned by
+  `emit_json_layout_generic_result_schema_matches_golden`, covering concrete
+  `Result_i32_StaticString` enum size, alignment, variants, and payload field
+  offsets.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by
