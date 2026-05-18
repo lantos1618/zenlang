@@ -38,7 +38,11 @@ pub(super) enum HostEffectResultVariant {
 }
 
 impl BuildTargetDslKind {
-    const ALL: [Self; 3] = [Self::Executable, Self::Test, Self::Library];
+    const ALL: &[BuildTargetDslKind] = &[
+        BuildTargetDslKind::Executable,
+        BuildTargetDslKind::Test,
+        BuildTargetDslKind::Library,
+    ];
     const EXECUTABLE: &'static str = "Executable";
     const TEST: &'static str = "Test";
     const LIBRARY: &'static str = "Library";
@@ -67,6 +71,18 @@ impl BuildTargetDslKind {
 }
 
 impl BuildTargetField {
+    const ALL: &[BuildTargetField] = &[
+        BuildTargetField::Name,
+        BuildTargetField::Main,
+        BuildTargetField::Root,
+        BuildTargetField::RootSourceFile,
+        BuildTargetField::OutDir,
+        BuildTargetField::Dependencies,
+        BuildTargetField::Features,
+        BuildTargetField::Exports,
+        BuildTargetField::Packages,
+        BuildTargetField::Link,
+    ];
     const NAME: &'static str = "name";
     const MAIN: &'static str = "main";
     const ROOT: &'static str = "root";
@@ -102,23 +118,17 @@ impl FromStr for BuildTargetField {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::NAME => Ok(Self::Name),
-            Self::MAIN => Ok(Self::Main),
-            Self::ROOT => Ok(Self::Root),
-            Self::ROOT_SOURCE_FILE => Ok(Self::RootSourceFile),
-            Self::OUT_DIR => Ok(Self::OutDir),
-            Self::DEPENDENCIES => Ok(Self::Dependencies),
-            Self::FEATURES => Ok(Self::Features),
-            Self::EXPORTS => Ok(Self::Exports),
-            Self::PACKAGES => Ok(Self::Packages),
-            Self::LINK => Ok(Self::Link),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|field| field.as_str() == value)
+            .ok_or(())
     }
 }
 
 impl HostEffectResultVariant {
+    const ALL: &[HostEffectResultVariant] =
+        &[HostEffectResultVariant::Ok, HostEffectResultVariant::Err];
     const OK: &'static str = "Ok";
     const ERR: &'static str = "Err";
 
@@ -140,11 +150,11 @@ impl FromStr for HostEffectResultVariant {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, <Self as FromStr>::Err> {
-        match value {
-            Self::OK => Ok(Self::Ok),
-            Self::ERR => Ok(Self::Err),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|variant| variant.as_str() == value)
+            .ok_or(())
     }
 }
 
@@ -155,6 +165,14 @@ impl fmt::Display for BuildTargetField {
 }
 
 impl BuildTargetDslIdent {
+    const ALL: &[BuildTargetDslIdent] = &[
+        BuildTargetDslIdent::Builder,
+        BuildTargetDslIdent::Add,
+        BuildTargetDslIdent::Build,
+        BuildTargetDslIdent::Env,
+        BuildTargetDslIdent::Os,
+        BuildTargetDslIdent::ReadFile,
+    ];
     const BUILDER: &'static str = "b";
     const ADD: &'static str = "add";
     const BUILD: &'static str = "build";
@@ -184,15 +202,11 @@ impl FromStr for BuildTargetDslIdent {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::BUILDER => Ok(Self::Builder),
-            Self::ADD => Ok(Self::Add),
-            Self::BUILD => Ok(Self::Build),
-            Self::ENV => Ok(Self::Env),
-            Self::OS => Ok(Self::Os),
-            Self::READ_FILE => Ok(Self::ReadFile),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|ident| ident.as_str() == value)
+            .ok_or(())
     }
 }
 
@@ -206,11 +220,10 @@ impl FromStr for BuildTargetDslKind {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::EXECUTABLE => Ok(Self::Executable),
-            Self::TEST => Ok(Self::Test),
-            Self::LIBRARY => Ok(Self::Library),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|kind| kind.as_str() == value)
+            .ok_or(())
     }
 }

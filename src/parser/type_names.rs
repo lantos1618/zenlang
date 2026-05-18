@@ -30,6 +30,24 @@ pub(super) enum ParserBuiltinGenericTypeName {
 }
 
 impl ParserBuiltinTypeName {
+    const ALL: &[ParserBuiltinTypeName] = &[
+        ParserBuiltinTypeName::I8,
+        ParserBuiltinTypeName::I16,
+        ParserBuiltinTypeName::I32,
+        ParserBuiltinTypeName::I64,
+        ParserBuiltinTypeName::U8,
+        ParserBuiltinTypeName::U16,
+        ParserBuiltinTypeName::U32,
+        ParserBuiltinTypeName::U64,
+        ParserBuiltinTypeName::Usize,
+        ParserBuiltinTypeName::F32,
+        ParserBuiltinTypeName::F64,
+        ParserBuiltinTypeName::Bool,
+        ParserBuiltinTypeName::Void,
+        ParserBuiltinTypeName::Str,
+        ParserBuiltinTypeName::StaticString,
+        ParserBuiltinTypeName::SelfType,
+    ];
     const I8_NAME: &'static str = "i8";
     const I16_NAME: &'static str = "i16";
     const I32_NAME: &'static str = "i32";
@@ -45,6 +63,27 @@ impl ParserBuiltinTypeName {
     const VOID_NAME: &'static str = "void";
     const STR_NAME: &'static str = "str";
     const SELF_NAME: &'static str = "Self";
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::I8 => Self::I8_NAME,
+            Self::I16 => Self::I16_NAME,
+            Self::I32 => Self::I32_NAME,
+            Self::I64 => Self::I64_NAME,
+            Self::U8 => Self::U8_NAME,
+            Self::U16 => Self::U16_NAME,
+            Self::U32 => Self::U32_NAME,
+            Self::U64 => Self::U64_NAME,
+            Self::Usize => Self::USIZE_NAME,
+            Self::F32 => Self::F32_NAME,
+            Self::F64 => Self::F64_NAME,
+            Self::Bool => Self::BOOL_NAME,
+            Self::Void => Self::VOID_NAME,
+            Self::Str => Self::STR_NAME,
+            Self::StaticString => STATIC_STRING_TYPE_NAME,
+            Self::SelfType => Self::SELF_NAME,
+        }
+    }
 
     pub(super) fn ast_type(self) -> AstType {
         match self {
@@ -71,33 +110,34 @@ impl FromStr for ParserBuiltinTypeName {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::I8_NAME => Ok(Self::I8),
-            Self::I16_NAME => Ok(Self::I16),
-            Self::I32_NAME => Ok(Self::I32),
-            Self::I64_NAME => Ok(Self::I64),
-            Self::U8_NAME => Ok(Self::U8),
-            Self::U16_NAME => Ok(Self::U16),
-            Self::U32_NAME => Ok(Self::U32),
-            Self::U64_NAME => Ok(Self::U64),
-            Self::USIZE_NAME => Ok(Self::Usize),
-            Self::F32_NAME => Ok(Self::F32),
-            Self::F64_NAME => Ok(Self::F64),
-            Self::BOOL_NAME => Ok(Self::Bool),
-            Self::VOID_NAME => Ok(Self::Void),
-            Self::STR_NAME => Ok(Self::Str),
-            STATIC_STRING_TYPE_NAME => Ok(Self::StaticString),
-            Self::SELF_NAME => Ok(Self::SelfType),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|name| name.as_str() == value)
+            .ok_or(())
     }
 }
 
 impl ParserBuiltinGenericTypeName {
+    const ALL: &[ParserBuiltinGenericTypeName] = &[
+        ParserBuiltinGenericTypeName::Ptr,
+        ParserBuiltinGenericTypeName::MutPtr,
+        ParserBuiltinGenericTypeName::RawPtr,
+        ParserBuiltinGenericTypeName::Slice,
+    ];
     const PTR: &'static str = "Ptr";
     const MUT_PTR: &'static str = "MutPtr";
     const RAW_PTR: &'static str = "RawPtr";
     const SLICE: &'static str = "Slice";
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Ptr => Self::PTR,
+            Self::MutPtr => Self::MUT_PTR,
+            Self::RawPtr => Self::RAW_PTR,
+            Self::Slice => Self::SLICE,
+        }
+    }
 
     pub(super) fn ast_type(self, mut type_args: Vec<AstType>) -> Result<AstType, Vec<AstType>> {
         if type_args.len() != 1 {
@@ -117,12 +157,10 @@ impl FromStr for ParserBuiltinGenericTypeName {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::PTR => Ok(Self::Ptr),
-            Self::MUT_PTR => Ok(Self::MutPtr),
-            Self::RAW_PTR => Ok(Self::RawPtr),
-            Self::SLICE => Ok(Self::Slice),
-            _ => Err(()),
-        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|name| name.as_str() == value)
+            .ok_or(())
     }
 }

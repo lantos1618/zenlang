@@ -84,11 +84,42 @@ fn parser_type_names_use_owned_type_name_enums() {
         );
     }
 
+    for forbidden in [
+        "Self::I8_NAME => Ok(Self::I8)",
+        "Self::I16_NAME => Ok(Self::I16)",
+        "Self::I32_NAME => Ok(Self::I32)",
+        "Self::I64_NAME => Ok(Self::I64)",
+        "Self::U8_NAME => Ok(Self::U8)",
+        "Self::U16_NAME => Ok(Self::U16)",
+        "Self::U32_NAME => Ok(Self::U32)",
+        "Self::U64_NAME => Ok(Self::U64)",
+        "Self::USIZE_NAME => Ok(Self::Usize)",
+        "Self::F32_NAME => Ok(Self::F32)",
+        "Self::F64_NAME => Ok(Self::F64)",
+        "Self::BOOL_NAME => Ok(Self::Bool)",
+        "Self::VOID_NAME => Ok(Self::Void)",
+        "Self::STR_NAME => Ok(Self::Str)",
+        "STATIC_STRING_TYPE_NAME => Ok(Self::StaticString)",
+        "Self::SELF_NAME => Ok(Self::SelfType)",
+        "Self::PTR => Ok(Self::Ptr)",
+        "Self::MUT_PTR => Ok(Self::MutPtr)",
+        "Self::RAW_PTR => Ok(Self::RawPtr)",
+        "Self::SLICE => Ok(Self::Slice)",
+    ] {
+        assert!(
+            !type_names.contains(forbidden),
+            "parser type-name FromStr should use enum-owned static tables, not raw match arms: {forbidden}"
+        );
+    }
+
     for required in [
         "enum ParserBuiltinTypeName",
         "enum ParserBuiltinGenericTypeName",
+        "const ALL: &[ParserBuiltinTypeName]",
+        "const ALL: &[ParserBuiltinGenericTypeName]",
         "impl FromStr for ParserBuiltinTypeName",
         "impl FromStr for ParserBuiltinGenericTypeName",
+        ".find(|name| name.as_str() == value)",
         "name.parse::<ParserBuiltinTypeName>()",
         "base.parse::<ParserBuiltinGenericTypeName>()",
     ] {
