@@ -4139,9 +4139,9 @@ and do not assume Phase 4 is ready without evidence.
   Covered by `emit_json_hir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
   `emit-json target-yaml` validates a minimal schema plus the current C backend
-  schema into `zen.target.v0` JSON, accepts optional `backend.c_flags`, rejects
-  empty C flag entries, rejects attempts to override compiler-owned type
-  layouts, and rejects unsupported backend code generators.
+  schema into `zen.target.v0` JSON with `schema_version: 0`, accepts optional
+  `backend.c_flags`, rejects empty C flag entries, rejects attempts to override
+  compiler-owned type layouts, and rejects unsupported backend code generators.
   Covered by `emit_json_target_yaml_validates_minimal_target_schema`,
   `emit_json_target_yaml_validates_backend_schema`,
   `emit_json_target_yaml_validates_c_backend_flags`,
@@ -4174,12 +4174,14 @@ and do not assume Phase 4 is ready without evidence.
   language server, agent-readable diagnostics, machine-readable project graph,
   and structured fix suggestions. Covered by
   `phase_plan_records_recovered_progress_and_next_slice`.
-- HIR, MIR, and layout JSON outputs now include numeric `schema_version: 0`
-  fields next to their `format` tags, so tools and agents can pin the
-  compiler-owned v0 schema without parsing the display format string. Covered by
+- HIR, MIR, layout, and target-yaml JSON outputs now include numeric
+  `schema_version: 0` fields next to their `format` tags, so tools and agents
+  can pin the compiler-owned v0 schema without parsing the display format
+  string. Covered by
   `emit_json_hir_outputs_checked_declaration_graph` and
   `emit_json_mir_outputs_checked_minimal_function_graph` plus
-  `emit_json_layout_outputs_checked_type_layouts`.
+  `emit_json_layout_outputs_checked_type_layouts` and
+  `emit_json_target_yaml_validates_minimal_target_schema`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

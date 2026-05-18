@@ -30,6 +30,7 @@ abi: sysv
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("target-yaml stdout is json");
     assert_eq!(json["format"], "zen.target.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "validated");
     assert_eq!(json["target"]["triple"], "x86_64-unknown-linux-gnu");
     assert_eq!(json["target"]["pointer_width"], 64);

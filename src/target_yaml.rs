@@ -100,6 +100,7 @@ enum Endianness {
 #[derive(Serialize)]
 struct TargetJson {
     format: &'static str,
+    schema_version: u32,
     semantic_status: &'static str,
     target: TargetJsonBody,
 }
@@ -133,6 +134,7 @@ pub fn target_yaml_to_json(source: &str) -> Result<String, TargetYamlError> {
     validate_target_yaml(&input)?;
     let json = TargetJson {
         format: "zen.target.v0",
+        schema_version: 0,
         semantic_status: "validated",
         target: TargetJsonBody {
             triple: input.triple,
