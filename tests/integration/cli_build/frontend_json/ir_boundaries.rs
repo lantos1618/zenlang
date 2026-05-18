@@ -1,6 +1,53 @@
 use std::process::Command;
 
 #[test]
+fn emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let json_path = tmp.path().join("forged_ast.json");
+    std::fs::write(
+        &json_path,
+        r#"
+{
+  "format": "zen.ast_graph.v0",
+  "semantic_status": "unchecked",
+  "modules": [{
+    "path": "main.zen",
+    "declarations": [{ "kind": "Function", "name": "forged" }]
+  }]
+}
+"#,
+    )
+    .expect("write forged AST JSON");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "ast", json_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json ast on hand-authored JSON input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json ast should reject hand-authored AST IR before override: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "AST JSON should not emit or accept hand-authored unchecked IR, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("compiler-owned AST JSON"),
+        "AST gate should name the compiler-owned AST JSON boundary, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("expected identifier") && !stderr.contains("unexpected token"),
+        "AST JSON should reject before treating JSON as Zen source, stderr={stderr}"
+    );
+}
+
+#[test]
 fn emit_json_symbols_rejects_hand_authored_json_before_resolver_override() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let json_path = tmp.path().join("forged_symbols.json");
