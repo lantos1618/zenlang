@@ -58,6 +58,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "Typed allocators",
         "raw_memory_intrinsics_are_rejected_as_allocator_gates",
         "byte_memory_intrinsics_are_rejected_as_allocator_gates",
+        "sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown",
         "@builtin.raw_allocate",
         "@builtin.raw_deallocate",
         "@builtin.raw_reallocate",
@@ -319,5 +320,9 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
     assert!(
         !spec.contains("`ActorRef`, `Mailbox`, `Channel`, and `Supervisor`"),
         "docs/V1_SPEC.md should not imply Channel is a globally gated actor builtin"
+    );
+    assert!(
+        !spec.contains("sync and async allocator tests still required"),
+        "docs/V1_SPEC.md should not keep stale allocator-test backlog wording after Sync/Async allocator gate coverage exists"
     );
 }
