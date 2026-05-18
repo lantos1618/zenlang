@@ -1,7 +1,14 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum GatedIntrinsic {
+    AtomicAdd,
+    AtomicCas,
+    AtomicLoad,
+    AtomicStore,
+    AtomicSub,
+    AtomicXchg,
     AsyncEnqueue,
     AsyncYield,
+    Fence,
     Gep,
     GepStruct,
     IntToPtr,
@@ -21,8 +28,15 @@ pub(super) enum GatedIntrinsic {
 
 impl GatedIntrinsic {
     pub(super) const INTRINSIC_MODULE: &'static str = "@builtin";
+    pub(super) const ATOMIC_ADD: &'static str = "atomic_add";
+    pub(super) const ATOMIC_CAS: &'static str = "atomic_cas";
+    pub(super) const ATOMIC_LOAD: &'static str = "atomic_load";
+    pub(super) const ATOMIC_STORE: &'static str = "atomic_store";
+    pub(super) const ATOMIC_SUB: &'static str = "atomic_sub";
+    pub(super) const ATOMIC_XCHG: &'static str = "atomic_xchg";
     pub(super) const ASYNC_ENQUEUE: &'static str = "async_enqueue";
     pub(super) const ASYNC_YIELD: &'static str = "async_yield";
+    pub(super) const FENCE: &'static str = "fence";
     pub(super) const GEP: &'static str = "gep";
     pub(super) const GEP_STRUCT: &'static str = "gep_struct";
     pub(super) const INT_TO_PTR: &'static str = "int_to_ptr";
@@ -39,8 +53,15 @@ impl GatedIntrinsic {
     pub(super) const STORE: &'static str = "store";
     pub(super) const TYPE_MATCH: &'static str = "type_match";
     const ALL: &[GatedIntrinsic] = &[
+        Self::AtomicAdd,
+        Self::AtomicCas,
+        Self::AtomicLoad,
+        Self::AtomicStore,
+        Self::AtomicSub,
+        Self::AtomicXchg,
         Self::AsyncEnqueue,
         Self::AsyncYield,
+        Self::Fence,
         Self::Gep,
         Self::GepStruct,
         Self::IntToPtr,
@@ -67,8 +88,15 @@ impl GatedIntrinsic {
 
     pub(super) const fn as_str(self) -> &'static str {
         match self {
+            Self::AtomicAdd => Self::ATOMIC_ADD,
+            Self::AtomicCas => Self::ATOMIC_CAS,
+            Self::AtomicLoad => Self::ATOMIC_LOAD,
+            Self::AtomicStore => Self::ATOMIC_STORE,
+            Self::AtomicSub => Self::ATOMIC_SUB,
+            Self::AtomicXchg => Self::ATOMIC_XCHG,
             Self::AsyncEnqueue => Self::ASYNC_ENQUEUE,
             Self::AsyncYield => Self::ASYNC_YIELD,
+            Self::Fence => Self::FENCE,
             Self::Gep => Self::GEP,
             Self::GepStruct => Self::GEP_STRUCT,
             Self::IntToPtr => Self::INT_TO_PTR,
@@ -89,11 +117,32 @@ impl GatedIntrinsic {
 
     pub(super) const fn gate_message(self) -> &'static str {
         match self {
+            Self::AtomicAdd => {
+                "atomic add is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
+            Self::AtomicCas => {
+                "atomic compare-and-swap is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
+            Self::AtomicLoad => {
+                "atomic load is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
+            Self::AtomicStore => {
+                "atomic store is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
+            Self::AtomicSub => {
+                "atomic subtract is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
+            Self::AtomicXchg => {
+                "atomic exchange is gated until memory-order and Sync/Async effect semantics are implemented"
+            }
             Self::AsyncEnqueue => {
                 "async task enqueue is gated until Sync/Async effect checking and task lowering are implemented"
             }
             Self::AsyncYield => {
                 "async yield is gated until Sync/Async effect checking and task lowering are implemented"
+            }
+            Self::Fence => {
+                "atomic fence is gated until memory-order and Sync/Async effect semantics are implemented"
             }
             Self::Gep => {
                 "raw pointer offset is gated until ownership and layout semantics are implemented"
