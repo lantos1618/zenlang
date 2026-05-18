@@ -15,6 +15,8 @@ impl GatedMethod {
     const RAISE: &'static str = "raise";
     const AWAIT: &'static str = "await";
 
+    const ALL: &[GatedMethod] = &[Self::ResultRaise, Self::EffectAwait];
+
     const fn as_str(self) -> &'static str {
         match self {
             Self::ResultRaise => Self::RAISE,
@@ -48,11 +50,11 @@ impl FromStr for GatedMethod {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::RAISE => Ok(Self::ResultRaise),
-            Self::AWAIT => Ok(Self::EffectAwait),
-            _ => Err(()),
-        }
+        GatedMethod::ALL
+            .iter()
+            .copied()
+            .find(|method| method.as_str() == value)
+            .ok_or(())
     }
 }
 
