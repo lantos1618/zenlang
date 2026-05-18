@@ -37,8 +37,8 @@ impl TypeChecker {
     }
 
     pub(crate) fn is_root_std_import(&self, name: &str) -> bool {
-        self.imports
-            .get(name)
-            .is_some_and(|path| path == &["std".to_string()] || path == &["@std".to_string()])
+        self.imports.get(name).is_some_and(|path| {
+            crate::typechecker::import_roots::parse_root_import_path(path).is_some()
+        })
     }
 }

@@ -25,6 +25,7 @@ mod gated_intrinsics;
 mod generic_bound_validation;
 mod generic_type_reference_walker;
 mod generic_type_validation;
+mod import_roots;
 mod monomorphize;
 mod monomorphize_dependencies;
 mod monomorphize_inference;
