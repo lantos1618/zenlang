@@ -1,0 +1,127 @@
+use std::process::Command;
+
+#[test]
+fn emit_json_diagnostics_command_outputs_machine_readable_errors() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("bad_type.zen");
+    let source = r#"
+main = () i32 {
+    true
+}
+"#;
+    std::fs::write(&zen_path, source).expect("write bad source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should fail on errors: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("diagnostics stdout is json");
+    assert_eq!(json["format"], "zen.diagnostics.v0");
+    assert_eq!(json["semantic_status"], "diagnostic");
+    assert_eq!(json["files"].as_array().expect("files array").len(), 1);
+
+    let diagnostic = &json["diagnostics"][0];
+    assert_eq!(diagnostic["severity"], "error");
+    assert_eq!(diagnostic["code"], "E3030");
+    assert!(
+        diagnostic["suggested_fixes"]
+            .as_array()
+            .expect("suggested_fixes array")
+            .is_empty(),
+        "ordinary type diagnostics should not carry return keyword fixes: {diagnostic}"
+    );
+    assert!(
+        diagnostic["message"]
+            .as_str()
+            .expect("diagnostic message")
+            .contains("return type mismatch: expected `i32`, found `bool`"),
+        "unexpected diagnostic payload: {diagnostic}"
+    );
+
+    let span = &diagnostic["span"];
+    assert!(span["path"]
+        .as_str()
+        .expect("span path")
+        .ends_with("bad_type.zen"));
+    assert_eq!(span["line"], 3);
+    assert_eq!(span["column"], 5);
+}
+
+#[test]
+fn emit_json_diagnostics_includes_structured_return_keyword_fix() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("return_keyword.zen");
+    let source = r#"
+main = () i32 {
+    return 1
+}
+"#;
+    let return_start = source.find("return").expect("source contains return") as u32;
+    let return_end = return_start + "return".len() as u32;
+    std::fs::write(&zen_path, source).expect("write removed return source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should fail on removed return syntax: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("diagnostics stdout is json");
+    let diagnostic = &json["diagnostics"][0];
+    assert_eq!(diagnostic["code"], "E2000");
+    assert!(
+        diagnostic["message"]
+            .as_str()
+            .expect("diagnostic message")
+            .contains("return keyword has been removed"),
+        "unexpected diagnostic payload: {diagnostic}"
+    );
+
+    let suggestions = diagnostic["suggested_fixes"]
+        .as_array()
+        .expect("diagnostic should carry structured suggested fixes");
+    assert_eq!(
+        suggestions.len(),
+        1,
+        "unexpected suggestions: {suggestions:?}"
+    );
+
+    let fix = &suggestions[0];
+    assert_eq!(fix["kind"], "replace_removed_return_with_final_expression");
+    assert_eq!(
+        fix["title"],
+        "Remove `return` and use the value as the final expression"
+    );
+
+    let edit = &fix["edits"][0];
+    assert_eq!(
+        fix["edits"].as_array().expect("fix edits array").len(),
+        1,
+        "return fix should carry exactly one text edit: {fix}"
+    );
+    assert!(edit["span"]["path"]
+        .as_str()
+        .expect("edit span path")
+        .ends_with("return_keyword.zen"));
+    assert_eq!(edit["span"]["start"], return_start);
+    assert_eq!(edit["span"]["end"], return_end);
+    assert_eq!(edit["span"]["line"], 3);
+    assert_eq!(edit["span"]["column"], 5);
+    assert_eq!(edit["replacement"], "");
+}

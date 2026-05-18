@@ -1,4 +1,5 @@
 use super::*;
+use crate::error::REMOVED_RETURN_KEYWORD_MESSAGE;
 use crate::parser::keywords::{ParserModuleRoot, ParserPrefixKeyword, ParserThisMethod};
 
 mod forms;
@@ -74,17 +75,14 @@ impl Parser {
                 if let Ok(keyword) = name.parse::<ParserPrefixKeyword>() {
                     let (_, span) = self.advance();
                     match keyword {
-                        ParserPrefixKeyword::True => Ok(Expression::BoolLiteral {
-                            value: true,
-                            span,
-                        }),
-                        ParserPrefixKeyword::False => Ok(Expression::BoolLiteral {
-                            value: false,
-                            span,
-                        }),
+                        ParserPrefixKeyword::True => {
+                            Ok(Expression::BoolLiteral { value: true, span })
+                        }
+                        ParserPrefixKeyword::False => {
+                            Ok(Expression::BoolLiteral { value: false, span })
+                        }
                         ParserPrefixKeyword::Return => Err(CompileError::Syntax(
-                            "return keyword has been removed; use the final expression in the block"
-                                .into(),
+                            REMOVED_RETURN_KEYWORD_MESSAGE.into(),
                             Some(span),
                         )),
                         ParserPrefixKeyword::As => Err(CompileError::Syntax(

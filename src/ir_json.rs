@@ -188,12 +188,26 @@ struct DiagnosticJson<'a> {
     span: Option<DiagnosticJsonSpan<'a>>,
     labels: Vec<DiagnosticJsonLabel<'a>>,
     notes: &'a [String],
+    suggested_fixes: Vec<DiagnosticJsonSuggestedFix<'a>>,
 }
 
 #[derive(Serialize)]
 struct DiagnosticJsonLabel<'a> {
     span: DiagnosticJsonSpan<'a>,
     message: &'a str,
+}
+
+#[derive(Serialize)]
+struct DiagnosticJsonSuggestedFix<'a> {
+    kind: &'a str,
+    title: &'a str,
+    edits: Vec<DiagnosticJsonTextEdit<'a>>,
+}
+
+#[derive(Serialize)]
+struct DiagnosticJsonTextEdit<'a> {
+    span: DiagnosticJsonSpan<'a>,
+    replacement: &'a str,
 }
 
 #[derive(Serialize)]
@@ -225,6 +239,7 @@ pub fn diagnostics_to_json(
                     .and_then(|span| diagnostic_json_span(span, files)),
                 labels: diagnostic_json_labels(&diagnostic.labels, files),
                 notes: &diagnostic.notes,
+                suggested_fixes: diagnostic_json_suggested_fixes(diagnostic, files),
             })
             .collect(),
     };
@@ -266,6 +281,38 @@ fn diagnostic_json_labels<'a>(
                 span,
                 message: label.message.as_str(),
             })
+        })
+        .collect()
+}
+
+fn diagnostic_json_suggested_fixes<'a>(
+    diagnostic: &'a Diagnostic,
+    files: &'a FileTable,
+) -> Vec<DiagnosticJsonSuggestedFix<'a>> {
+    diagnostic
+        .suggested_fixes
+        .iter()
+        .filter_map(|fix| {
+            let edits: Vec<_> = fix
+                .edits
+                .iter()
+                .filter_map(|edit| {
+                    diagnostic_json_span(edit.span, files).map(|span| DiagnosticJsonTextEdit {
+                        span,
+                        replacement: edit.replacement.as_str(),
+                    })
+                })
+                .collect();
+
+            if edits.is_empty() {
+                None
+            } else {
+                Some(DiagnosticJsonSuggestedFix {
+                    kind: fix.kind.as_str(),
+                    title: fix.title.as_str(),
+                    edits,
+                })
+            }
         })
         .collect()
 }

@@ -336,6 +336,10 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
   machine-readable diagnostics path is distinct from both unchecked AST and
   accepted typed output.
+- Diagnostics JSON now carries structured `suggested_fixes` for the removed
+  `return` keyword, giving agent/editor clients a span-addressed replacement
+  edit that removes `return` and leaves the expression as the block result.
+  Covered by `emit_json_diagnostics_includes_structured_return_keyword_fix`.
 - `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
   explicit gated diagnostics tied to the v1 JSON/YAML backlog. Coverage:
   `emit_json_hir_command_is_explicitly_gated`,

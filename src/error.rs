@@ -113,6 +113,44 @@ pub struct ContextFrame {
     pub message: String,
 }
 
+pub const REMOVED_RETURN_KEYWORD_MESSAGE: &str =
+    "return keyword has been removed; use the final expression in the block";
+pub const REMOVED_RETURN_FIX_KIND: &str = "replace_removed_return_with_final_expression";
+pub const REMOVED_RETURN_FIX_TITLE: &str =
+    "Remove `return` and use the value as the final expression";
+
+#[derive(Debug, Clone)]
+pub struct TextEdit {
+    pub span: Span,
+    pub replacement: String,
+}
+
+impl TextEdit {
+    pub fn new(span: Span, replacement: impl Into<String>) -> Self {
+        Self {
+            span,
+            replacement: replacement.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SuggestedFix {
+    pub kind: String,
+    pub title: String,
+    pub edits: Vec<TextEdit>,
+}
+
+impl SuggestedFix {
+    pub fn new(kind: impl Into<String>, title: impl Into<String>, edits: Vec<TextEdit>) -> Self {
+        Self {
+            kind: kind.into(),
+            title: title.into(),
+            edits,
+        }
+    }
+}
+
 // ── Diagnostic ─────────────────────────────────────────────────────
 
 /// A single compiler diagnostic — shared across all phases.
@@ -125,6 +163,7 @@ pub struct Diagnostic {
     pub labels: Vec<Label>,
     pub notes: Vec<String>,
     pub context: Vec<ContextFrame>,
+    pub suggested_fixes: Vec<SuggestedFix>,
 }
 
 impl Diagnostic {
@@ -138,6 +177,7 @@ impl Diagnostic {
             labels: Vec::new(),
             notes: Vec::new(),
             context: Vec::new(),
+            suggested_fixes: Vec::new(),
         }
     }
 
@@ -151,6 +191,7 @@ impl Diagnostic {
             labels: Vec::new(),
             notes: Vec::new(),
             context: Vec::new(),
+            suggested_fixes: Vec::new(),
         }
     }
 
@@ -169,6 +210,11 @@ impl Diagnostic {
     /// Add a context frame showing how we reached this diagnostic.
     pub fn with_context(mut self, frame: ContextFrame) -> Self {
         self.context.push(frame);
+        self
+    }
+
+    pub fn with_suggested_fix(mut self, fix: SuggestedFix) -> Self {
+        self.suggested_fixes.push(fix);
         self
     }
 
@@ -215,15 +261,19 @@ impl std::error::Error for CompileError {}
 impl From<CompileError> for Diagnostic {
     fn from(err: CompileError) -> Self {
         match err {
-            CompileError::Syntax(msg, span) => Diagnostic {
-                severity: Severity::Error,
-                code: "E2000".to_string(),
-                message: msg,
-                span,
-                labels: Vec::new(),
-                notes: Vec::new(),
-                context: Vec::new(),
-            },
+            CompileError::Syntax(msg, span) => {
+                let diagnostic = Diagnostic {
+                    severity: Severity::Error,
+                    code: "E2000".to_string(),
+                    message: msg,
+                    span,
+                    labels: Vec::new(),
+                    notes: Vec::new(),
+                    context: Vec::new(),
+                    suggested_fixes: Vec::new(),
+                };
+                diagnostic.with_removed_return_fix()
+            }
             CompileError::Type(msg, span) => Diagnostic {
                 severity: Severity::Error,
                 code: "E3000".to_string(),
@@ -232,6 +282,7 @@ impl From<CompileError> for Diagnostic {
                 labels: Vec::new(),
                 notes: Vec::new(),
                 context: Vec::new(),
+                suggested_fixes: Vec::new(),
             },
             CompileError::Resolution(msg, span) => Diagnostic {
                 severity: Severity::Error,
@@ -241,6 +292,7 @@ impl From<CompileError> for Diagnostic {
                 labels: Vec::new(),
                 notes: Vec::new(),
                 context: Vec::new(),
+                suggested_fixes: Vec::new(),
             },
             CompileError::Internal(msg) => Diagnostic {
                 severity: Severity::Error,
@@ -250,8 +302,27 @@ impl From<CompileError> for Diagnostic {
                 labels: Vec::new(),
                 notes: Vec::new(),
                 context: Vec::new(),
+                suggested_fixes: Vec::new(),
             },
         }
+    }
+}
+
+impl Diagnostic {
+    fn with_removed_return_fix(self) -> Self {
+        if self.message != REMOVED_RETURN_KEYWORD_MESSAGE {
+            return self;
+        }
+
+        let Some(span) = self.span else {
+            return self;
+        };
+
+        self.with_suggested_fix(SuggestedFix::new(
+            REMOVED_RETURN_FIX_KIND,
+            REMOVED_RETURN_FIX_TITLE,
+            vec![TextEdit::new(span, "")],
+        ))
     }
 }
 
