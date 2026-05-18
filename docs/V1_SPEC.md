@@ -90,6 +90,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 - `AST traversal`: experimental. Raw AST traversal is for tooling and source
   transforms. Typed HIR traversal is required for semantic metaprogramming.
   Neither replaces compiler resolver, typechecker, effect checker, or MIR passes.
+  `zen emit-json ast <file>` emits `semantic_status: "unchecked"` to make that
+  boundary explicit.
 - `Actors in std`: gated. Actors are a stdlib framework first, with `Actor`,
   `ActorRef`, `Mailbox`, `Channel`, and `Supervisor` built on effect-aware queues
   and typed allocators. No actor syntax is v1-stable yet.
@@ -101,7 +103,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   symbol table emission, checked typed program emission, and machine-readable
   diagnostics emission through `zen emit-json ast <file>`,
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
-  `zen emit-json diagnostics <file>`.
+  `zen emit-json diagnostics <file>`. AST JSON is explicitly marked unchecked;
+  semantic acceptance must use typed JSON, diagnostics, check, build, or test
+  paths.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable
