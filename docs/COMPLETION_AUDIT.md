@@ -310,6 +310,10 @@ and do not assume Phase 4 is ready without evidence.
   serialization coverage into
   `tests/integration/cli_build/frontend_json/module_graph.rs`, leaving
   typed-program and diagnostics JSON checks in the parent module.
+- AST JSON now carries `semantic_status: "unchecked"`, and the same integration
+  fixture proves a semantically invalid program can emit AST JSON while
+  `emit-json typed` rejects it. Coverage:
+  `emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects`.
 - `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
   explicit gated diagnostics tied to the v1 JSON/YAML backlog. Coverage:
   `emit_json_hir_command_is_explicitly_gated`,
