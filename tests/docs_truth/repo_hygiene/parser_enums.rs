@@ -409,6 +409,10 @@ fn cli_emit_json_modes_use_owned_mode_enum() {
         "emit-json usage should be generated from EmitJsonMode"
     );
     assert!(
+        source.contains(".find(|mode| mode.as_str() == value)"),
+        "emit-json mode parsing should use the enum-owned ordered table"
+    );
+    assert!(
         source.contains("fn gate_message(self) -> Option<&'static str>"),
         "emit-json gated diagnostics should be owned by EmitJsonMode"
     );

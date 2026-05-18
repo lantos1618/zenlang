@@ -116,18 +116,11 @@ impl FromStr for EmitJsonMode {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            Self::AST => Ok(Self::Ast),
-            Self::SYMBOLS => Ok(Self::Symbols),
-            Self::TYPED => Ok(Self::Typed),
-            Self::DIAGNOSTICS => Ok(Self::Diagnostics),
-            Self::BUILD_GRAPH => Ok(Self::BuildGraph),
-            Self::HIR => Ok(Self::Hir),
-            Self::MIR => Ok(Self::Mir),
-            Self::LAYOUT => Ok(Self::Layout),
-            Self::TARGET_YAML => Ok(Self::TargetYaml),
-            _ => Err(()),
-        }
+        Self::ORDERED
+            .iter()
+            .copied()
+            .find(|mode| mode.as_str() == value)
+            .ok_or(())
     }
 }
 
