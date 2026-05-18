@@ -238,6 +238,15 @@ fn reject_build_zen_for_emit_json_mode(path_str: &str) {
     }
 }
 
+fn reject_hand_authored_json_for_ast_emit(path_str: &str) {
+    if has_json_extension(path_str) {
+        eprintln!(
+            "error: compiler-owned AST JSON emission rejects hand-authored JSON IR before it can override unchecked syntax trees"
+        );
+        process::exit(1);
+    }
+}
+
 fn reject_hand_authored_json_for_typed_emit(path_str: &str) {
     if has_json_extension(path_str) {
         eprintln!(

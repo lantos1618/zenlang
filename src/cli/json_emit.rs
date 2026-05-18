@@ -7,6 +7,7 @@ use zen::typechecker::TypeChecker;
 
 pub(super) fn cmd_emit_json_ast(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_ast_emit(path_str);
     let (graph, _files) = super::load_module_graph(path_str);
     match zen::ir_json::ast_graph_to_json(&graph) {
         Ok(json) => println!("{json}"),

@@ -3772,6 +3772,10 @@ checked-in docs, tests, and commits only.
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by
   `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+- Hand-authored AST JSON inputs to `emit-json ast` now reject at the
+  compiler-owned AST JSON boundary before forged unchecked syntax trees can be
+  treated as Zen source or accepted as AST evidence. Guarded by
+  `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`.
 - Hand-authored symbols JSON inputs to `emit-json symbols` now reject at the
   compiler-owned symbols JSON boundary before forged resolver metadata can be
   treated as Zen source or accepted as symbol evidence. Guarded by
