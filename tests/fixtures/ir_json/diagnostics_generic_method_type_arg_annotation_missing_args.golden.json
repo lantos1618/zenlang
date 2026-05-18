@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_method_type_arg_annotation_missing_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5001",
+      "message": "generic struct `Box` expects 1 type arguments, found 0",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_method_type_arg_annotation_missing_args.zen",
+        "start": 205,
+        "end": 226,
+        "line": 17,
+        "column": 11
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

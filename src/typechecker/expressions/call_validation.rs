@@ -207,6 +207,12 @@ impl TypeChecker {
 
     pub(super) fn generic_type_annotation_arities_valid(&self, ast_type: &AstType) -> bool {
         match ast_type {
+            AstType::Named(name) => self
+                .structs
+                .get(name)
+                .map(|info| info.type_params.is_empty())
+                .or_else(|| self.enums.get(name).map(|info| info.type_params.is_empty()))
+                .unwrap_or(true),
             AstType::Generic { name, type_args } => {
                 let own_arity_valid = self
                     .structs
