@@ -26,7 +26,8 @@ Unsupported spec-like constructs must stay gated until parser and semantic tests
 exist. This includes unspecialized generic behavior bounds such as `T: Json`,
 unspecialized generic type association targets such as `Box.implements(Json)`,
 comptime execution, type matching, async operations, actor syntax, package
-manifests, and `build.zen` execution.
+manifests, and `build.zen` execution beyond the constrained deterministic
+graph surface.
 
 ## Accepted Syntax Forms
 
@@ -152,7 +153,7 @@ planned positive test and one planned negative test before implementation.
 | AST traversal | Tooling can read AST JSON for a parsed source fixture | AST traversal cannot bypass semantic checks for a core language feature |
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
-| `build.zen` | Deterministic build graph creates one executable target | Build script using undeclared host side effects is rejected |
+| `build.zen` | Deterministic build graph compiles executable and test targets | Build script using undeclared host side effects is rejected |
 
 ## Stdlib Gate
 
