@@ -3404,8 +3404,9 @@ checked-in docs, tests, and commits only.
   and explicit Result propagation before broader stdlib parsing/building is
   promoted.
 - Root smoke fixtures under `tests/test_*.zen` now use expression-tail returns
-  instead of the removed `return` keyword, guarded by
-  `root_smoke_fixtures_do_not_use_removed_return_keyword`.
+  instead of the removed `return` keyword and no longer carry stale allocator
+  or sync/async effect claims, guarded by
+  `root_smoke_fixtures_do_not_use_removed_or_gated_syntax`.
 - Legacy `zen build-graph build.zen` now has the same declared file-read
   unselected-target coverage as the newer graph execution entrypoints: declared
   fallback arms allow selected executable targets to build while unrelated
