@@ -162,8 +162,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   HIR/MIR JSON emission, covered by
   `emit_json_hir_rejects_program_before_hir_json` and
   `emit_json_mir_rejects_program_before_mir_json`. Hand-authored JSON IR inputs
-  to `zen emit-json mir <file>` are also rejected at the compiler-owned schema
+  to `zen emit-json hir <file>` and `zen emit-json mir <file>` are also
+  rejected at the compiler-owned schema
   boundary before any type or layout override can be accepted, covered by
+  `emit_json_hir_rejects_hand_authored_json_before_ir_override` and
   `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
   `zen emit-json layout <file>`
   is an explicit gated command and rejects until ABI layout tests exist; real
