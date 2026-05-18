@@ -71,3 +71,25 @@ fn typechecker_gated_methods_use_owned_action_enum() {
         "typechecker gated method dispatch should parse through GatedMethod"
     );
 }
+
+#[test]
+fn cli_emit_json_modes_use_owned_mode_enum() {
+    let source = read("src/cli.rs");
+
+    assert!(
+        source.contains("enum EmitJsonMode"),
+        "emit-json command routing should use an owned EmitJsonMode enum"
+    );
+    assert!(
+        source.contains("mode.parse::<EmitJsonMode>()"),
+        "emit-json command routing should parse modes through EmitJsonMode"
+    );
+    assert!(
+        source.contains("EmitJsonMode::usage()"),
+        "emit-json usage should be generated from EmitJsonMode"
+    );
+    assert!(
+        !source.contains("<ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml>"),
+        "emit-json usage should not duplicate the mode list as a raw string"
+    );
+}

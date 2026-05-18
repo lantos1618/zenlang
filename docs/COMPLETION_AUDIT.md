@@ -3890,6 +3890,11 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker_gated_methods_use_owned_action_enum`,
   `result_raise_is_rejected_until_propagation_lowering_exists`, and
   `effect_await_is_rejected_until_async_lowering_exists`.
+- `zen emit-json` mode routing now uses `EmitJsonMode` enum-owned spellings and
+  derives its usage mode list from that same ordered source, covered by
+  `cli_emit_json_modes_use_owned_mode_enum`,
+  `emit_json_usage_lists_supported_and_gated_modes`, and
+  `emit_json_layout_command_is_explicitly_gated`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
