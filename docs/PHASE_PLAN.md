@@ -244,6 +244,10 @@ Agent UX deliverables:
   JSON gate, proving the public path reports allocator-backed dynamic text as a
   gated reserved type and points users to `StaticString` for baked literal text.
   Covered by `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden`.
+- Std actor framework type spelling now has a pinned CLI diagnostics JSON gate
+  for `Actor<i32>`, proving the public path reports actor scheduling/mailbox
+  semantics as gated instead of an ordinary unknown-type diagnostic. Covered by
+  `emit_json_diagnostics_actor_type_gate_schema_matches_golden`.
 - Range expressions now have a pinned CLI diagnostics JSON gate for `1..3`,
   proving the public path reports range typing as gated instead of exposing a
   generic type mismatch. Covered by

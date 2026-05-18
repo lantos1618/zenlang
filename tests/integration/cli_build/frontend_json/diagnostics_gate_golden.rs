@@ -135,6 +135,19 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_actor_type_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "actor_type_gate.zen",
+        r#"
+main = (actor: Actor<i32>) void { }
+"#,
+        "actor framework type gate",
+        "actor framework type gate should emit one actor feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_actor_type_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",
