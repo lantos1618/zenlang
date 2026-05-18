@@ -100,6 +100,10 @@ main = () i32 {
             .contains("generic struct `Box` expects 1 type arguments, found 0")),
         "expected generic method type-argument annotation without args diagnostic, got {errors:?}"
     );
+    assert!(
+        errors.iter().all(|d| !d.message.contains("argument 2")),
+        "malformed generic method type argument should not also report argument mismatch, got {errors:?}"
+    );
 }
 
 #[test]

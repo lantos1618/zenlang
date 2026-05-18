@@ -135,6 +135,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_generic_function_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_method_type_arg_annotation_arity_schema_matches_golden",
+        "emit_json_diagnostics_generic_method_type_arg_annotation_missing_args_schema_matches_golden",
         "emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_struct_constructor_missing_args_schema_matches_golden",
         "emit_json_diagnostics_generic_enum_constructor_arity_schema_matches_golden",
