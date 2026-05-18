@@ -1,0 +1,131 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "score",
+      "params": [
+        {
+          "name": "choice",
+          "type": "Choice"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "match",
+              "type": "i32",
+              "target": {
+                "kind": "local",
+                "type": "Choice",
+                "name": "choice"
+              },
+              "match_kind": "enum",
+              "arms": [
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Choice.Empty",
+                    "bindings": []
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "int",
+                            "type": "i32",
+                            "value": 0
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Choice.Value",
+                    "bindings": [
+                      {
+                        "name": "n",
+                        "type": "i32"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "n",
+                            "type": "i32"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "call",
+              "type": "i32",
+              "function": "score",
+              "args": [
+                {
+                  "kind": "enum_variant",
+                  "type": "Choice",
+                  "name": "Choice.Value",
+                  "args": [
+                    {
+                      "kind": "int",
+                      "type": "i32",
+                      "value": 42
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

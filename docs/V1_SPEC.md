@@ -190,8 +190,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   over typed program bodies. The current schema covers locals, returns, calls,
   enum construction, match kind, match arm patterns/bindings, and block result
   summaries, covered by `emit_json_mir_outputs_checked_minimal_function_graph`
-  and `emit_json_mir_outputs_match_arm_schema`. Hand-authored JSON IR
-  inputs to `zen emit-json hir <file>` and `zen emit-json mir <file>` are
+  and `emit_json_mir_outputs_match_arm_schema`. The checked match schema is
+  also pinned by `emit_json_mir_match_schema_matches_golden`. Hand-authored
+  JSON IR inputs to `zen emit-json hir <file>` and `zen emit-json mir <file>` are
   rejected at the compiler-owned schema boundary before any type or layout
   override can be accepted, covered by
   `emit_json_hir_rejects_hand_authored_json_before_ir_override` and
@@ -259,7 +260,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_outputs_enum_function_and_global_declarations` covers enum variants/payloads, function params/returns, and globals, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; golden tests still required |
-| MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_outputs_match_arm_schema` covers match kind, arm patterns/bindings, and block results, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; golden tests still required |
+| MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_outputs_match_arm_schema` covers match kind, arm patterns/bindings, and block results, `emit_json_mir_match_schema_matches_golden` pins the checked match schema, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
 | Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema` checks `schema_version: 0`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |

@@ -7,6 +7,8 @@ mod diagnostics_json;
 mod ir_boundaries;
 #[path = "frontend_json/layout_json.rs"]
 mod layout_json;
+#[path = "frontend_json/mir_golden.rs"]
+mod mir_golden;
 #[path = "frontend_json/module_graph.rs"]
 mod module_graph;
 #[path = "frontend_json/target_yaml.rs"]
