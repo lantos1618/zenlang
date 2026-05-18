@@ -3129,6 +3129,10 @@ checked-in docs, tests, and commits only.
   typechecker diagnostic instead of falling through to ordinary missing-method
   lookup, covered by
   `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
+- Planned task waiting through `.await()` now produces an explicit gated
+  typechecker diagnostic instead of falling through to ordinary missing-method
+  lookup, covered by
+  `typechecker::tests::core_semantics::literals::effect_await_is_rejected_until_async_lowering_exists`.
 - Promoted stdlib sketches no longer use the gated `.raise()` propagation
   operator; they spell Result propagation with explicit matches, guarded by
   `repo_hygiene::promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`.
