@@ -15,6 +15,10 @@ fn parse_ok(src: &str) -> Program {
     })
 }
 
+fn parse_err(src: &str) -> Vec<CompileError> {
+    parse_str(src).expect_err("expected parse to fail")
+}
+
 mod behaviors;
 mod declarations;
 mod examples_types_errors;

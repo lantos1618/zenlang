@@ -60,12 +60,7 @@ impl Parser {
                                     name_span,
                                 );
                             }
-                            return Err(CompileError::Syntax(
-                                format!(
-                                    "gated v1 feature '{keyword}': type association and behavior constraints are specified in docs/V1_SPEC.md but are not implemented"
-                                ),
-                                Some(self.peek_span()),
-                            ));
+                            return self.reject_gated_generic_association_target(keyword);
                         }
 
                         let mut all_type_params = type_params;
@@ -174,6 +169,18 @@ impl Parser {
     }
 
     // ── Function ──────────────────────────────────────────────
+
+    fn reject_gated_generic_association_target<T>(
+        &self,
+        keyword: TypeDeclarationKeyword,
+    ) -> Result<T, CompileError> {
+        Err(CompileError::Syntax(
+            format!(
+                "generic association target `Type<T>.{keyword}` is gated; use non-generic `{keyword}` associations or keep the generic behavior target deferred to docs/V1_SPEC.md"
+            ),
+            Some(self.peek_span()),
+        ))
+    }
 
     fn parse_function_def(
         &mut self,
