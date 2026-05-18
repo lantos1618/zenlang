@@ -35,3 +35,28 @@ fn root_std_runtime_calls_use_owned_intrinsic_enum() {
         );
     }
 }
+
+#[test]
+fn typechecker_boolean_literals_use_owned_keyword_enum() {
+    let simple_forms = read("src/typechecker/expressions/simple_forms.rs");
+
+    for forbidden in [r#"name == "true""#, r#"name == "false""#] {
+        assert!(
+            !simple_forms.contains(forbidden),
+            "typechecker boolean literal identifiers should parse through an owned keyword enum: {forbidden}"
+        );
+    }
+
+    for required in [
+        "enum TypecheckerBoolLiteralKeyword",
+        "const ALL: &[TypecheckerBoolLiteralKeyword]",
+        "impl FromStr for TypecheckerBoolLiteralKeyword",
+        ".find(|keyword| keyword.as_str() == value)",
+        "name.parse::<TypecheckerBoolLiteralKeyword>()",
+    ] {
+        assert!(
+            simple_forms.contains(required),
+            "typechecker boolean literal spelling should live in TypecheckerBoolLiteralKeyword: {required}"
+        );
+    }
+}

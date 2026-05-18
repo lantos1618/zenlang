@@ -4137,6 +4137,13 @@ and do not assume Phase 4 is ready without evidence.
   `emit-json target-yaml` rejects a real `.yaml` file at the schema-validation
   gate before emitting any JSON. Covered by
   `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
+- Typechecker boolean literal identifiers parse `true` and `false` through
+  `TypecheckerBoolLiteralKeyword::ALL` rather than direct spelling checks.
+  Covered by `typechecker_boolean_literals_use_owned_keyword_enum` and parser
+  boolean expression coverage.
+- Dynamic `String` builtin recognition routes through the `GatedBuiltinType`
+  enum table instead of a direct `DYNAMIC_STRING_TYPE_NAME` equality. Covered by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

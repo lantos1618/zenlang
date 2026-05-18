@@ -1,4 +1,43 @@
 use super::*;
+use std::str::FromStr;
+
+#[derive(Clone, Copy)]
+enum TypecheckerBoolLiteralKeyword {
+    True,
+    False,
+}
+
+impl TypecheckerBoolLiteralKeyword {
+    const ALL: &[TypecheckerBoolLiteralKeyword] = &[Self::True, Self::False];
+    const TRUE: &'static str = "true";
+    const FALSE: &'static str = "false";
+
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::True => Self::TRUE,
+            Self::False => Self::FALSE,
+        }
+    }
+
+    const fn value(self) -> bool {
+        match self {
+            Self::True => true,
+            Self::False => false,
+        }
+    }
+}
+
+impl FromStr for TypecheckerBoolLiteralKeyword {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|keyword| keyword.as_str() == value)
+            .ok_or(())
+    }
+}
 
 impl TypeChecker {
     pub(super) fn check_identifier_expr(
@@ -6,16 +45,9 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        if name == "true" {
+        if let Ok(keyword) = name.parse::<TypecheckerBoolLiteralKeyword>() {
             return Ok(TypedExpression {
-                kind: TypedExprKind::BoolLiteral(true),
-                ty: Type::Bool,
-                span,
-            });
-        }
-        if name == "false" {
-            return Ok(TypedExpression {
-                kind: TypedExprKind::BoolLiteral(false),
+                kind: TypedExprKind::BoolLiteral(keyword.value()),
                 ty: Type::Bool,
                 span,
             });
