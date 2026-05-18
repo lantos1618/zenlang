@@ -77,7 +77,8 @@ impl Parser {
                                     name_span,
                                 );
                             }
-                            return self.reject_gated_generic_association_target(keyword);
+                            return self
+                                .reject_gated_generic_association_target(keyword, name_span);
                         }
 
                         let mut all_type_params = type_params;
@@ -195,15 +196,36 @@ impl Parser {
     // ── Function ──────────────────────────────────────────────
 
     fn reject_gated_generic_association_target<T>(
-        &self,
+        &mut self,
         keyword: TypeDeclarationKeyword,
+        name_span: Span,
     ) -> Result<T, CompileError> {
+        let span = self.gated_generic_association_span(name_span);
         Err(CompileError::Syntax(
             format!(
                 "generic association target `Type<T>.{keyword}` is gated; use non-generic `{keyword}` associations or keep the generic behavior target deferred to docs/V1_SPEC.md"
             ),
-            Some(self.peek_span()),
+            Some(span),
         ))
+    }
+
+    fn gated_generic_association_span(&mut self, name_span: Span) -> Span {
+        if !matches!(self.peek(), Token::LParen) {
+            return name_span.merge(self.prev_span());
+        }
+
+        self.advance();
+        let behavior_span = self.expect_identifier().map(|(_, span)| span).ok();
+        if matches!(self.peek(), Token::Lt) {
+            let _ = self.parse_type_arg_list();
+        }
+        self.skip_newlines();
+        match self.expect(&Token::RParen) {
+            Ok(end) => name_span.merge(end),
+            Err(_) => behavior_span
+                .map(|span| name_span.merge(span))
+                .unwrap_or_else(|| name_span.merge(self.prev_span())),
+        }
     }
 
     fn reject_gated_generated_behavior_derive<T>(
