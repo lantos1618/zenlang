@@ -4,46 +4,106 @@ impl TypeChecker {
     pub(super) fn validate_generic_bounds(&mut self, type_params: &[ast::TypeParam]) {
         for param in type_params {
             if let Some(bound) = &param.constraint {
-                if !self.behaviors.contains_key(bound) {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E5002",
-                        format!(
-                            "generic bound `{}` on type parameter `{}` references undefined behavior",
-                            bound, param.name
-                        ),
-                        param.span,
-                    ));
-                } else {
-                    let expected = self
-                        .behaviors
-                        .get(bound)
-                        .map(|info| info.type_params.len())
-                        .unwrap_or(0);
-                    let found = param.constraint_type_args.len();
-                    if expected == 0 && found > 0 {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E5002",
-                            format!(
-                                "non-generic behavior `{}` does not accept type arguments",
-                                bound
-                            ),
-                            param.span,
-                        ));
-                        continue;
-                    }
-                    if expected != found {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E6012",
-                            format!(
-                                "generic behavior `{}` expects {} type arguments, found {}",
-                                bound, expected, found
-                            ),
-                            param.span,
-                        ));
-                    }
-                }
+                self.validate_generic_behavior_bound(
+                    &param.name,
+                    bound,
+                    &param.constraint_type_args,
+                    param.span,
+                );
             }
         }
+    }
+
+    pub(super) fn validate_restored_generic_bounds(
+        &mut self,
+        bounds: &HashMap<String, BehaviorBound>,
+        span: Span,
+        symbols: &SymbolTable,
+    ) {
+        for (param, bound) in bounds {
+            self.validate_generic_behavior_bound_with_symbols(
+                param,
+                &bound.behavior,
+                &bound.type_args,
+                span,
+                Some(symbols),
+            );
+        }
+    }
+
+    fn validate_generic_behavior_bound(
+        &mut self,
+        param: &str,
+        behavior: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) {
+        self.validate_generic_behavior_bound_with_symbols(param, behavior, type_args, span, None);
+    }
+
+    fn validate_generic_behavior_bound_with_symbols(
+        &mut self,
+        param: &str,
+        behavior: &str,
+        type_args: &[AstType],
+        span: Span,
+        symbols: Option<&SymbolTable>,
+    ) {
+        let Some(expected) = self.generic_behavior_type_param_count(behavior, symbols) else {
+            self.diagnostics.push(Diagnostic::error(
+                "E5002",
+                format!(
+                    "generic bound `{}` on type parameter `{}` references undefined behavior",
+                    behavior, param
+                ),
+                span,
+            ));
+            return;
+        };
+
+        let found = type_args.len();
+        if expected == 0 && found > 0 {
+            self.diagnostics.push(Diagnostic::error(
+                "E5002",
+                format!(
+                    "non-generic behavior `{}` does not accept type arguments",
+                    behavior
+                ),
+                span,
+            ));
+            return;
+        }
+        if expected != found {
+            self.diagnostics.push(Diagnostic::error(
+                "E6012",
+                format!(
+                    "generic behavior `{}` expects {} type arguments, found {}",
+                    behavior, expected, found
+                ),
+                span,
+            ));
+        }
+    }
+
+    fn generic_behavior_type_param_count(
+        &self,
+        behavior: &str,
+        symbols: Option<&SymbolTable>,
+    ) -> Option<usize> {
+        symbols
+            .and_then(|symbols| symbols.lookup(Namespace::Behavior, behavior))
+            .and_then(|symbol| {
+                symbol
+                    .type_parameter_names
+                    .as_ref()
+                    .map(Vec::len)
+                    .or(symbol.type_parameter_count)
+            })
+            .or_else(|| {
+                self.behaviors
+                    .get(behavior)
+                    .map(|info| info.type_params.len())
+            })
     }
 
     pub(crate) fn check_generic_bounds(

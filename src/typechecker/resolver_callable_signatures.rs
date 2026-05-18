@@ -1,5 +1,5 @@
 impl TypeChecker {
-    fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str) {
+    fn collect_resolver_value_signature(&mut self, symbols: &SymbolTable, name: &str, span: Span) {
         let Some(symbol) = symbols.lookup(Namespace::Value, name) else {
             self.remove_callable_signature(name);
             return;
@@ -15,6 +15,7 @@ impl TypeChecker {
             signature.parameter_types,
             signature.return_type,
         );
+        self.validate_restored_generic_bounds(&info.type_param_bounds, span, symbols);
         self.insert_callable_signature(name, info);
         let type_parameter_names = resolver_type_param_names(symbol);
         self.collect_resolver_generic_template_signature(
@@ -97,7 +98,7 @@ impl TypeChecker {
         let restored_key =
             Self::resolver_method_signature_name_for(symbols, &ast_key, type_name, span);
 
-        self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
+        self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key, span);
     }
 
     fn collect_resolver_function_signature(
@@ -108,7 +109,7 @@ impl TypeChecker {
     ) {
         let restored_name = Self::resolver_symbol_name_for(symbols, Namespace::Value, name, span);
 
-        self.collect_resolver_callable_signature_for_key(symbols, name, &restored_name);
+        self.collect_resolver_callable_signature_for_key(symbols, name, &restored_name, span);
     }
 
     fn collect_resolver_callable_signature_for_key(
@@ -116,12 +117,13 @@ impl TypeChecker {
         symbols: &SymbolTable,
         ast_key: &str,
         restored_key: &str,
+        span: Span,
     ) {
         if restored_key != ast_key {
             self.rekey_callable_template(ast_key, restored_key);
             self.remove_callable_signature(ast_key);
         }
-        self.collect_resolver_value_signature(symbols, restored_key);
+        self.collect_resolver_value_signature(symbols, restored_key, span);
     }
 
     fn rekey_callable_template(&mut self, old_key: &str, new_key: &str) {
