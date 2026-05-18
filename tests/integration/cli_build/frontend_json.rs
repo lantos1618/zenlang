@@ -3,7 +3,7 @@ use std::process::Command;
 
 #[path = "frontend_json/diagnostics_behavior_association_golden.rs"]
 mod diagnostics_behavior_association_golden;
-#[path = "frontend_json/diagnostics_generic_arity_golden.rs"]
+#[path = "frontend_json/diagnostics_generic_arity_golden/mod.rs"]
 mod diagnostics_generic_arity_golden;
 #[path = "frontend_json/diagnostics_golden.rs"]
 mod diagnostics_golden;
