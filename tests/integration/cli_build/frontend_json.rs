@@ -25,6 +25,7 @@ fn emit_json_typed_command_outputs_checked_program() {
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("emit-json typed stdout is json");
     assert_eq!(json["format"], "zen.typed.v0");
+    assert_eq!(json["semantic_status"], "checked");
 
     let functions = json["program"]["functions"]
         .as_array()
