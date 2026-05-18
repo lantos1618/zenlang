@@ -3621,10 +3621,10 @@ Agent UX deliverables:
   `format: "zen.symbols.v0"`, making resolver-owned metadata distinct from
   unchecked AST JSON and checked typed JSON. Covered by
   `emit_json_symbols_command_outputs_module_symbol_tables`.
-- Build graph JSON now carries `format: "zen.build_graph.v0"` and
-  `semantic_status: "deterministic"` at the top level while preserving the
-  existing target, dependency, feature, and host-effect payload keys. Covered by
-  `emit_json_build_graph_outputs_project_build_graph`.
+- Build graph JSON now carries `format: "zen.build_graph.v0"`,
+  `schema_version: 0`, and `semantic_status: "deterministic"` at the top level
+  while preserving the existing target, dependency, feature, and host-effect
+  payload keys. Covered by `emit_json_build_graph_outputs_project_build_graph`.
 - `emit-json layout` now emits checked compiler-owned layout JSON for the
   stable subset with `schema_version: 0`: primitive sizes, baked
   `StaticString`, pointer-sized views, and struct field offsets. The mode

@@ -19,6 +19,7 @@ fn emit_json_build_graph_outputs_project_build_graph() {
 
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).expect("build graph json");
     assert_eq!(json["format"], "zen.build_graph.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "deterministic");
     assert_eq!(json["targets"][0]["name"], "myapp");
     assert_eq!(json["targets"][0]["kind"]["root_source_file"], "main.zen");
