@@ -1,8 +1,8 @@
 # Learn Zen In Y Minutes
 
 Zen is a systems language built around prefix-first declarations, explicit data
-shapes, pattern matching, generics, behaviors, explicit effects, and predictable
-native output.
+shapes, pattern matching, generics, behaviors, visible ownership, and
+predictable native output.
 
 Runnable examples live in `tests/zen/` and `examples/`. Gated design previews
 are called out explicitly.
@@ -30,6 +30,26 @@ Quick map:
   `String`;
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
   design surfaces, with unstable spellings called out as gated previews.
+
+The core syntax to keep in your head:
+
+```zen
+Name: { field: Type }
+
+Name: Variant, Variant(Payload)
+
+function = (arg: Type) ReturnType {
+    final_expression
+}
+
+Type.method = (self: Type) ReturnType {
+    final_expression
+}
+
+value ?
+    | Pattern { expression }
+    | Other { expression }
+```
 
 ## The Shape
 
@@ -131,7 +151,8 @@ main = () i32 {
 }
 ```
 
-Local bindings are immutable by default.
+Local bindings are immutable by default. Use `::=` when the value is meant to
+change in the current scope.
 
 ## Assignment And Mutation
 
@@ -171,10 +192,10 @@ main = () i32 {
 Numeric conversions are explicit. Mixed numeric widths need casts instead of
 implicit widening.
 
-String literals are `StaticString` values: the bytes are baked into the
-program image, and the value carries a pointer and length known from that
-static data. Dynamic `String` is a separate allocator-backed text type. It can
-own runtime memory, grow, and change contents, so constructing one requires an
+String literals are `StaticString` values. The bytes are baked into the
+program image, and the value carries a pointer plus length for that static
+data. Dynamic `String` is a separate allocator-backed text type. It can own
+runtime memory, grow, and change contents, so constructing one requires an
 allocator path instead of happening implicitly from a literal.
 
 ## Operators And Casts
@@ -263,6 +284,18 @@ main = () i32 {
 Zen does not use a `return` keyword. Function bodies, match arms, and nested
 blocks produce values from their final expression. Use `Result` or `Option`
 when a path can fail or be absent.
+
+```zen
+classify = (value: i32) StaticString {
+    value == 0 ?
+        | true { "zero" }
+        | false {
+            value > 0 ?
+                | true { "positive" }
+                | false { "negative" }
+        }
+}
+```
 
 ## Structs
 
@@ -494,6 +527,19 @@ main = () i32 {
 The compiler monomorphizes reachable generic functions, structs, enums, and
 methods into concrete generated C symbols.
 
+Behavior bounds can appear on generic parameters when a generic function needs
+a capability:
+
+```zen
+Display: behavior {
+    display: (Self) StaticString
+}
+
+show<T: Display> = (value: T) StaticString {
+    value.display()
+}
+```
+
 ## Behaviors
 
 ```zen
@@ -517,7 +563,8 @@ encode<T: Json> = (value: T) StaticString {
 ```
 
 Behaviors describe required methods. Generic functions can use behavior bounds
-with `T: BehaviorName`.
+with `T: BehaviorName`. The bound gives the generic body permission to call the
+required methods.
 
 Behavior association is explicit:
 
@@ -554,8 +601,8 @@ that a type must have a behavior implementation.
 
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
 are explicit calls instead of `break` or `continue`. The spelling is
-prefix-first: call `loop`, pass a loop-control parameter, then choose the next
-step by calling control methods on that parameter.
+prefix-only: call `loop`, pass a loop-control parameter, then choose the next
+step by calling control operations on that parameter.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
 `next` are compiler-owned loop-control operations attached to that handle, so
@@ -608,28 +655,22 @@ count_to = (limit: i32) i32 {
 Nested loops can target an outer label directly:
 
 ```zen
-nested = (stop: bool) i32 {
-    count ::= 0
-
+nested = (stop: bool) void {
     loop((outer) {
         loop((inner) {
             stop ?
                 | true { outer.done() }
                 | false {
-                    count = count + 1
                     inner.next()
                 }
         })
 
         outer.next()
     })
-
-    count
 }
 ```
 
-Loop controls also support UFC form, which is useful when code reads better
-with the operation first:
+Loop controls also support UFC form, which keeps the operation first:
 
 ```zen
 single_step = (ready: bool) i32 {
@@ -672,6 +713,9 @@ loop((label) {
         | false { label.next() }
 })
 ```
+
+There is no expression form that spells the loop after its body. Loop syntax is
+prefix-only.
 
 ## Defer
 
@@ -780,7 +824,7 @@ main = () i32 {
 
 `StaticString` is baked into the program. It points at static storage and keeps
 its length with the value, so a literal can be passed around without allocating
-or changing ownership. Its bytes live in the program image; the value is just a
+or changing ownership. Its bytes live in the program image; the value is a
 stable pointer-and-length view and does not own or free memory.
 
 The allocator-backed String type is dynamic: it owns memory, can grow, can be
@@ -842,6 +886,14 @@ The intended source rule is:
   observe its result.
 - allocator and scheduler APIs should expose their effect mode in the type
   surface instead of hiding it behind a normal call.
+
+This keeps async visible at the type boundary:
+
+```zen
+start = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+```
 
 ### Allocator Preview
 
@@ -908,6 +960,10 @@ The model is:
   typechecked propagation and lowering are implemented.
 - Task chaining and async scheduler APIs are gated until Sync/Async effect
   checking and task lowering are implemented.
+
+The allocator is part of the owner. A buffer or dynamic string is not just a
+pointer and a length; it must also carry the capability that can release or
+grow that storage.
 
 The intended call shape stays ordinary Zen:
 
