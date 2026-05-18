@@ -687,6 +687,9 @@ Agent UX deliverables:
   pinned by
   `emit_json_diagnostics_slice_inner_generic_annotation_missing_args_schema_matches_golden`,
   covering the stable `E5001` payload for `Slice<Box>`.
+- Diagnostics JSON for array inner generic annotation arity is now pinned by
+  `emit_json_diagnostics_array_inner_generic_annotation_arity_schema_matches_golden`,
+  covering the stable `E5001` payload for `[Box<i32, StaticString>; 1]`.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
