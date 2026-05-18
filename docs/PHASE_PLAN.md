@@ -3427,6 +3427,10 @@ checked-in docs, tests, and commits only.
   multi-target, and unselected-target cases under
   `tests/integration/cli_build/declared_env_effects/runner_command/`, avoiding
   ignored `test_*` child paths while preserving the same fallback-arm coverage.
+- `zen emit build.zen` target-selection validation tests now split ambiguous
+  executable graph coverage from no-executable-target coverage under
+  `tests/integration/cli_build/emit_direct_validation/target_selection/`,
+  leaving shared emit-command helpers in the parent module.
 
 ## Current Phase
 
