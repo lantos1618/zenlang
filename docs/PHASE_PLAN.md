@@ -19,6 +19,55 @@ checked-in docs, tests, and commits only.
 - JSON is compiler-owned IR output.
 - YAML is human-authored config/spec input.
 - build.zen is deterministic comptime build graph construction.
+- Dev UX and Agent UX are product requirements, not polish. Zen should grow
+  toward MoonBit-style toolchain integration: one coherent compiler, build
+  system, package graph, language server, VS Code extension, web/editor entry
+  point, and machine-readable surface area rather than disconnected tools.
+
+## Dev UX And Agent UX Track
+
+MoonBit is a useful benchmark because its public tooling story puts the
+compiler, runtime, IDE, and build system together, and its VS Code plugin
+exposes practical language-server commands, quick fixes, code lenses, tests,
+debugging, formatting, snapshot updates, and tracing. Zen should treat that as
+the bar for a serious language experience.
+
+Dev UX deliverables:
+
+- VS Code extension with syntax highlighting, semantic diagnostics,
+  go-to-definition, hover, completion, formatting, code lenses for run/test,
+  and command-palette actions for selecting targets, restarting the language
+  server, showing compiler/toolchain versions, and installing or validating the
+  local toolchain.
+- `zen lsp` backed by the same parser, resolver, typechecker, build graph, and
+  diagnostics used by the CLI, so editor feedback does not drift from builds.
+- Build graph integration for editor workflows: target discovery, test
+  discovery, dependency graph inspection, selected-target run/test/build,
+  declared host-effect visualization, and deterministic error ordering.
+- Quick fixes and structured fix suggestions for missing match arms, generic
+  arity mistakes, removed syntax such as `return`, gated feature explanations,
+  missing imports, and common type mismatches.
+- Package/toolchain UX that makes examples, docs, stdlib sketches, local
+  projects, and future registry/package work discoverable from the editor and
+  CLI without hand-written setup.
+
+Agent UX deliverables:
+
+- Agent-readable diagnostics with stable codes, spans, related locations,
+  suggested edits, gated-feature metadata, and JSON output that matches CLI and
+  editor behavior.
+- Machine-readable project graph and symbol graph output for agents: modules,
+  imports, public/private visibility, targets, dependencies, generated C
+  symbols, test fixtures, examples, and stdlib gates.
+- Deterministic commands for agents: `zen check`, `zen test`, `zen emit-json`,
+  build graph inspection, formatting, and future fix-application commands must
+  be scriptable, stable, and quiet unless data changes.
+- Documentation and examples designed for retrieval: canonical syntax examples,
+  learn-by-example snippets, phase/status docs separated from language docs,
+  and no duplicate public examples that teach divergent syntax.
+- CI and local gates that expose concise machine-readable failure summaries so
+  agents can repair the exact compiler/test/docs surface without scraping noisy
+  logs.
 
 ## Completed Evidence
 
@@ -3842,6 +3891,12 @@ Phase 4 build-driver work still has constrained `build.zen` semantics: normal
   Legacy generic JSON emitters reject
   `build.zen` and point to
   `emit-json build-graph`.
+
+Keep Dev UX and Agent UX on the roadmap alongside compiler semantics. The next
+tooling slices should preserve a MoonBit-style toolchain integration target:
+shared CLI/editor/LSP diagnostics, VS Code extension support, language-server
+target and test discovery, agent-readable diagnostics, machine-readable project
+graph output, and structured fix suggestions.
 
 Do not promote gated v1 features until the relevant positive and negative tests
 exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.

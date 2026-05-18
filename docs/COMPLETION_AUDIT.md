@@ -34,6 +34,11 @@ and do not assume Phase 4 is ready without evidence.
 - YAML is human-authored config/spec input.
 - `build.zen` is a deterministic comptime build graph design goal, not an
   implemented stable feature.
+- Dev UX and Agent UX are explicit roadmap requirements. Zen should grow
+  toward MoonBit-style toolchain integration with shared CLI/editor/LSP
+  diagnostics, VS Code extension support, language-server target/test
+  discovery, agent-readable diagnostics, machine-readable project graph output,
+  and structured fix suggestions.
 
 ## Verified Evidence
 
@@ -4144,6 +4149,12 @@ and do not assume Phase 4 is ready without evidence.
 - Dynamic `String` builtin recognition routes through the `GatedBuiltinType`
   enum table instead of a direct `DYNAMIC_STRING_TYPE_NAME` equality. Covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Dev UX and Agent UX are now tracked as first-class roadmap lanes in
+  `docs/PHASE_PLAN.md`, with MoonBit-style toolchain integration as the
+  benchmark and concrete future surfaces for the VS Code extension,
+  language server, agent-readable diagnostics, machine-readable project graph,
+  and structured fix suggestions. Covered by
+  `phase_plan_records_recovered_progress_and_next_slice`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
