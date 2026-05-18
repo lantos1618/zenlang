@@ -99,7 +99,9 @@ impl EmitJsonMode {
             Self::Mir => Some(
                 "MIR JSON emission is gated until schema and golden tests exist; compiler-owned IR schemas must reject hand-authored overrides",
             ),
-            Self::Layout => Some("type layout JSON emission is gated until ABI layout tests exist"),
+            Self::Layout => Some(
+                "type layout JSON emission is gated until ABI layout tests exist; compiler-owned layout schemas must reject hand-authored overrides",
+            ),
             Self::TargetYaml => Some(
                 "target YAML validation is gated until schemas and negative validation tests exist",
             ),

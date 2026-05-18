@@ -168,7 +168,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `zen emit-json layout <file>`
   is an explicit gated command and rejects until ABI layout tests exist; real
   program inputs are rejected before layout JSON emission, covered by
-  `emit_json_layout_rejects_program_before_layout_json`. AST JSON is explicitly
+  `emit_json_layout_rejects_program_before_layout_json`. Hand-authored layout
+  JSON inputs are rejected at the compiler-owned layout schema boundary before
+  any ABI override can be accepted, covered by
+  `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
+  AST JSON is explicitly
   marked unchecked; symbols JSON is explicitly marked resolved;
   typed JSON is explicitly marked checked; diagnostics JSON is explicitly
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
