@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_enum_constructor_missing_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5001",
+      "message": "generic enum `Option` expects 1 type arguments, found 0",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_enum_constructor_missing_args.zen",
+        "start": 63,
+        "end": 77,
+        "line": 7,
+        "column": 13
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
