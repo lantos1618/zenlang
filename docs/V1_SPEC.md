@@ -95,7 +95,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   rather than unknown-type errors. `@builtin.raw_allocate(...)`,
   `@builtin.raw_deallocate(...)`, and `@builtin.raw_reallocate(...)` currently
   report raw memory operation gates until allocator ownership and effect
-  semantics exist.
+  semantics exist. Byte-memory intrinsics `@builtin.memcpy(...)`,
+  `@builtin.memmove(...)`, `@builtin.memset(...)`, and `@builtin.memcmp(...)`
+  report the same allocator/effect gate.
 - `Type matching`: gated. Comptime type matching operates on typed metadata for
   primitives, structs, enums, fields, variants, behaviors, allocator modes, and
   effect modes. It is separate from runtime value matching.
@@ -167,7 +169,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Target/build YAML validation | gated | Schema and negative validation tests |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`; effect checker positive/negative tests still required |
-| `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`; sync and async allocator tests still required |
+| `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; sync and async allocator tests still required |
 | Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
 | `build.zen` check/emit/build/test/direct execution | constrained | Deterministic graph validation, test and library target graph emission, test target execution, target C emission, dependency-ordered multi-executable build tests, and legacy emit-json rejection tests |
