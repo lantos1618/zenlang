@@ -53,7 +53,7 @@ main = () i32 {
     wide: i64 = cast(signed, i64)
     ratio: f64 = 3.5
     flag: bool = true
-    label: str = "static text"
+    label: StaticString = "static text"
 
     flag ?
         | true { cast(wide, i32) }
@@ -85,7 +85,7 @@ function's final expression must produce that result on every non-error path.
 { io } = std
 
 Person: {
-    name: str,
+    name: StaticString,
     age: i32,
 }
 
@@ -170,7 +170,7 @@ unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
 }
 
 main = () i32 {
-    value = Result<Option<i32>, str>.Ok(Option<i32>.Some(7))
+    value = Result<Option<i32>, StaticString>.Ok(Option<i32>.Some(7))
 
     value ?
         | Ok(option) { option.unwrap_or(0) }
@@ -179,7 +179,7 @@ main = () i32 {
 ```
 
 Nested generic types are written directly, such as
-`Result<Option<i32>, str>`.
+`Result<Option<i32>, StaticString>`.
 
 ## Methods
 
@@ -255,7 +255,7 @@ methods into concrete generated C symbols.
 
 ```zen
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -263,12 +263,12 @@ Point: {
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str {
+    encode = (self: Point) StaticString {
         "point"
     }
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     value.encode()
 }
 ```
@@ -280,11 +280,11 @@ with `T: BehaviorName`.
 
 ```zen
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -349,19 +349,28 @@ Imports use destructuring-style binding from a module path. Local files import
 by module name, and dotted paths resolve through subdirectories. See
 `examples/project/main.zen` for the project-style example.
 
-## Strings
+## Static And Dynamic Strings
 
 ```zen
 { io } = std
 
 main = () i32 {
-    name = "Zen"
+    name: StaticString = "Zen"
     io.println("hello ${name}")
     0
 }
 ```
 
-String interpolation embeds expressions with `${...}`.
+`StaticString` is baked into the program. It points at static storage and keeps
+its length with the value, so a literal can be passed around without allocating
+or changing ownership.
+
+The allocator-backed String type is dynamic: it owns memory, can grow
+or be built at runtime, and must be created through allocator-aware APIs once
+the allocator model is promoted.
+
+String interpolation embeds expressions with `${...}` and currently produces
+the tested static output shape used by the C backend fixtures.
 
 ## Gated Preview: Sync, Async, And Allocators
 
