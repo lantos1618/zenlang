@@ -383,9 +383,10 @@ checked-in docs, tests, and commits only.
 - Typechecker resolver-local tests now keep absent local metadata coverage in a
   focused child module, separate from parameter, scoped binding, closure,
   pattern, and default-body local handoff cases.
-- Generic-specialization integration tests now keep behavior-bound and
-  imported-behavior generated-C checks in a focused child module, separate from
-  direct generic enum, method, worklist, and multi-file type dependency checks.
+- Generic-specialization integration tests now keep behavior-bound generated-C
+  checks under `tests/integration/generic_specializations/behavior_bounds/`,
+  split between local/default, imported behavior, and imported function
+  dependency scenarios.
 - Module-system unit tests now live beside the module-system implementation in
   a dedicated test module, keeping module graph/load entry points compact.
 - Resolver expected-local traversal now lives in a dedicated validation support
@@ -3268,6 +3269,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs`
   and imported method/worklist dependency coverage in
   `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`.
+- Behavior-bound generic specialization generated-C assertions now keep
+  local/default, imported behavior, and imported function dependency coverage in
+  focused child modules under
+  `tests/integration/generic_specializations/behavior_bounds/`.
 - Generic inference conflict diagnostics now keep method conflict coverage in
   focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
   leaving `tests/generic_diagnostics/inference_conflicts.rs` focused on
