@@ -26,6 +26,9 @@ Quick map:
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
 - loops use one prefix form, `loop((label) { ... })`, with explicit
   compiler-owned `label.done()` and `label.next()` control calls;
+- type relationships are receiver-first declarations such as
+  `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
+  `Point.requires(Json)`;
 - static text is `StaticString`; allocator-backed `String` is the dynamic
   owned text shape and is still gated;
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
@@ -213,6 +216,8 @@ Stable Zen is deliberately small. Most code is built from:
 | Loop | `loop((l) { ... l.next() ... l.done() ... })` |
 | Behavior | `Name: behavior { method: (Self) Type }` |
 | Implementation | `Type.implements(Behavior) { ... }` |
+| Required behavior | `Type.requires(Behavior)` |
+| Behavior inheritance | `ChildBehavior.extends(ParentBehavior)` |
 | Generic bound | `name<T: Behavior> = (...) T { ... }` |
 
 If a feature needs hidden allocation, implicit scheduling, exceptions, null, or
@@ -802,6 +807,23 @@ keywords. Zen keeps the left-hand side as the thing being changed:
 | `PrettyJson.extends(Json)` | `PrettyJson` includes `Json` requirements |
 | `Point.requires(Json)` | `Point` is required to have `Json` available |
 
+Read them as declarations attached to the left side:
+
+```zen
+Point.implements(Json) {
+    encode = (self: Point) StaticString {
+        "point"
+    }
+}
+
+PrettyJson.extends(Json)
+Point.requires(PrettyJson)
+```
+
+That keeps the syntax prefix/receiver-first without borrowing an `impl Type for
+Behavior` or `behavior Child extends Parent` form. The relationship is the
+operation, and the receiver is the type or behavior being updated.
+
 ## Loops
 
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
@@ -892,6 +914,46 @@ Loops do not have a hidden result channel. Accumulated values live in explicit
 mutable bindings outside the loop and are read after `done`.
 
 Loop syntax is prefix-only.
+
+Use this recipe when converting `while condition` code:
+
+```zen
+while_like = (limit: i32) i32 {
+    i ::= 0
+
+    loop((l) {
+        i < limit ?
+            | true {
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    i
+}
+```
+
+Use this recipe when converting `for i in 0..limit` code:
+
+```zen
+for_like = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i >= limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+```
 
 That gives Zen one answer for counted loops, sentinel loops, and nested exits:
 
@@ -1225,6 +1287,24 @@ There is no source-level `async` keyword in the stable tour. The preview keeps
 the effect in ordinary Zen types: `Sync`, `Async`, `Task<T>`, and allocator
 capabilities.
 
+That means these are different APIs, not the same function with a hidden
+scheduler decision:
+
+```zen
+load_config = (path: StaticString, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    read_file(path, allocator)
+}
+
+load_config_later =
+    (path: StaticString, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    read_file_async(path, allocator)
+}
+```
+
+The sync version returns checked data. The async version returns a task that
+will eventually produce checked data. A caller can see the difference without
+opening the implementation.
+
 The useful mental model is:
 
 ```zen
@@ -1309,6 +1389,29 @@ The model is:
 The allocator is part of the owner. A buffer or dynamic string is not just a
 pointer and a length; it must also carry the capability that can release or
 grow that storage.
+
+The owner should be the value that keeps those facts together:
+
+```zen
+Bytes<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    allocator: A,
+}
+
+from_raw<T, A: Allocator<T, Sync>> =
+    (ptr: RawPtr<T>, len: usize, allocator: A) Bytes<T, A> {
+    Bytes<T, A> {
+        ptr: ptr,
+        len: len,
+        allocator: allocator
+    }
+}
+```
+
+Passing a raw pointer alone is just an address. Passing `Bytes<T, A>` preserves
+the address, length, and allocator capability together, which is the minimum
+shape needed for later safe deallocation or growth.
 
 Allocator ownership is why `String` is not a widened `StaticString`. A
 `StaticString` can point at baked program bytes. A `String` must know which

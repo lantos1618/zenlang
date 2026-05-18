@@ -134,6 +134,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_generic_association_gate_schema_matches_golden",
         "emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden",
         "emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden",
+        "emit_json_diagnostics_raw_allocate_gate_schema_matches_golden",
         "emit_json_diagnostics_generic_function_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_method_type_arg_annotation_arity_schema_matches_golden",
