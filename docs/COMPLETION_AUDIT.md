@@ -3722,6 +3722,11 @@ and do not assume Phase 4 is ready without evidence.
   `zen build build.zen` coverage from direct `zen build.zen` coverage under
   `tests/integration/cli_build/declared_env_effects/executable/`, preserving
   the same positive coverage while keeping entrypoint assertions focused.
+- `zen build build.zen` declared file-read host-effect tests now split
+  single-target and multi-target positive cases under
+  `tests/integration/cli_build/build_command_host_effects/file_reads/declared/`,
+  preserving declared `.Err`, wildcard, and identifier fallback-arm coverage
+  without one mixed test file.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
