@@ -37,9 +37,12 @@ main = () i32 {
 fn normalized_module_graph_json(mode: &str) -> String {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let main_path = write_subject(&tmp);
+    normalized_json_for_path(mode, &main_path)
+}
 
+fn normalized_json_for_path(mode: &str, path: &Path) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", mode, main_path.to_str().unwrap()])
+        .args(["emit-json", mode, path.to_str().unwrap()])
         .output()
         .unwrap_or_else(|err| panic!("run zen emit-json {mode}: {err}"));
 
@@ -91,6 +94,19 @@ fn emit_json_ast_module_graph_schema_matches_golden() {
 fn emit_json_symbols_module_graph_schema_matches_golden() {
     let actual = normalized_module_graph_json("symbols");
     let expected = normalized_fixture("tests/fixtures/ir_json/symbols_module_graph.golden.json");
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
+fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
+    let actual = normalized_json_for_path(
+        "symbols",
+        &fixture("tests/zen/behavior_json_generic_association.zen"),
+    );
+    let expected = normalized_fixture(
+        "tests/fixtures/ir_json/symbols_generic_behavior_association.golden.json",
+    );
 
     assert_eq!(actual.trim(), expected.trim());
 }

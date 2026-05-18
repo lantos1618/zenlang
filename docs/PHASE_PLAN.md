@@ -3670,6 +3670,10 @@ Agent UX deliverables:
   `format: "zen.symbols.v0"`, making resolver-owned metadata distinct from
   unchecked AST JSON and checked typed JSON. Covered by
   `emit_json_symbols_command_outputs_module_symbol_tables`.
+- Symbols JSON for explicit generic behavior association is now pinned by
+  `emit_json_symbols_generic_behavior_association_schema_matches_golden`,
+  covering `Json<T>` behavior method signatures plus `Point` resolver metadata
+  for `Json<StaticString>` impl and require associations.
 - Build graph JSON now carries `format: "zen.build_graph.v0"`,
   `schema_version: 0`, and `semantic_status: "deterministic"` at the top level
   while preserving the existing target, dependency, feature, and host-effect
