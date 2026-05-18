@@ -1,6 +1,53 @@
 use std::process::Command;
 
 #[test]
+fn emit_json_typed_rejects_hand_authored_json_before_checked_ir_override() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let json_path = tmp.path().join("forged_typed.json");
+    std::fs::write(
+        &json_path,
+        r#"
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "types": [{ "name": "i32", "kind": "forged-pointer" }],
+    "functions": [{ "name": "main", "return_type": "i32" }]
+  }
+}
+"#,
+    )
+    .expect("write forged typed JSON");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "typed", json_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json typed on hand-authored JSON input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json typed should reject hand-authored checked IR before override: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "typed JSON should not emit or accept hand-authored checked IR, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("compiler-owned typed JSON"),
+        "typed gate should name the compiler-owned typed JSON boundary, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("expected function name") && !stderr.contains("unexpected token"),
+        "typed JSON should reject before treating JSON as Zen source, stderr={stderr}"
+    );
+}
+
+#[test]
 fn emit_json_hir_rejects_hand_authored_json_before_ir_override() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let json_path = tmp.path().join("forged_hir.json");

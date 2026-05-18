@@ -157,7 +157,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   symbol table emission, checked typed program emission, and machine-readable
   diagnostics emission through `zen emit-json ast <file>`,
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
-  `zen emit-json diagnostics <file>`. Real program inputs to
+  `zen emit-json diagnostics <file>`. Hand-authored typed JSON inputs are
+  rejected before the frontend treats them as Zen source, covered by
+  `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+  Real program inputs to
   `zen emit-json hir <file>` and `zen emit-json mir <file>` are rejected before
   HIR/MIR JSON emission, covered by
   `emit_json_hir_rejects_program_before_hir_json` and

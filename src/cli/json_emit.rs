@@ -31,6 +31,7 @@ pub(super) fn cmd_emit_json_symbols(path_str: &str) {
 
 pub(super) fn cmd_emit_json_typed(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_typed_emit(path_str);
     let typed = super::graph_frontend(path_str);
     match zen::ir_json::typed_program_to_json(&typed) {
         Ok(json) => println!("{json}"),
