@@ -628,6 +628,10 @@ Agent UX deliverables:
   pinned by `emit_json_diagnostics_generic_impl_arity_schema_matches_golden`,
   covering the stable `E5001` payload when `Point.implements(Json)` omits
   required type arguments.
+- Diagnostics JSON for generic `.extends` behavior-reference arity is now
+  pinned by `emit_json_diagnostics_generic_extends_arity_schema_matches_golden`,
+  covering the stable `E5001` payload when `PrettyJson.extends(Json)` omits
+  required parent behavior type arguments.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits
@@ -1280,7 +1284,9 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_impl_arity_schema_matches_golden`.
 - Imported generic behavior inheritance arity diagnostics are covered through
   the module graph by
-  `integration::imported_generic_behavior_extends_type_arg_arity_is_error`.
+  `integration::imported_generic_behavior_extends_type_arg_arity_is_error`, with
+  public JSON shape pinned by
+  `emit_json_diagnostics_generic_extends_arity_schema_matches_golden`.
 - Generic dispatch through an imported child behavior can call a method inherited
   from that behavior's imported parent, covered by
   `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
