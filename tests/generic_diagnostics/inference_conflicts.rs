@@ -106,3 +106,26 @@ main = () i32 {
         "expected generic function raw-pointer inference conflict diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_function_inference_conflict_through_slice_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_slice<T> = (left: T, items: Slice<T>) T {
+    left
+}
+
+main = () i32 {
+    items = cast("bad", Slice<str>)
+    choose_slice(1, items)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_slice`: inferred `i32` and `str`"
+        )),
+        "expected generic function slice inference conflict diagnostic, got {errors:?}"
+    );
+}
