@@ -3174,6 +3174,11 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/legacy_graph_command_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate
   from executable-target, gated-dependency, and missing-root validation checks.
+- Legacy `zen build-graph build.zen` validation now keeps execution-scope,
+  dependency-shape, target-metadata, gated-dependency, and graph-only-library
+  checks in focused modules under
+  `tests/integration/cli_build/legacy_graph_command_validation/`, preserving
+  the same command behavior coverage while keeping the module index compact.
 - `zen test build.zen` graph-only library validation tests now live in
   `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
   keeping missing source, valid source, and library typecheck coverage separate

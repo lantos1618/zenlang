@@ -2987,10 +2987,10 @@ and do not assume Phase 4 is ready without evidence.
   preserving coverage through
   `cargo test --test integration import_visibility`.
 - Legacy build-graph integration tests now keep graph validation cases in
-  `tests/integration/cli_build/legacy_graph_command_validation.rs`, reducing
-  `tests/integration/cli_build/legacy_graph_command.rs` from 492 to 255 lines
-  while preserving coverage through
-  `cargo test --test integration build_graph_command`.
+  `tests/integration/cli_build/legacy_graph_command_validation/`, split across
+  execution-scope, dependency-shape, target-metadata, gated-dependency, and
+  graph-only-library modules while preserving coverage through
+  `cargo test --test integration legacy_graph_command_validation`.
 - Direct build.zen integration tests now keep graph validation cases in
   `tests/integration/cli_build/direct_build_graph_validation.rs`, reducing
   `tests/integration/cli_build/direct_build_graph_execution.rs` from 417 to

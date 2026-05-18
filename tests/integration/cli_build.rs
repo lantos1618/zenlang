@@ -46,7 +46,7 @@ mod graph_validation_test_command_validation;
 mod legacy_graph_command;
 #[path = "cli_build/legacy_graph_command_host_effects.rs"]
 mod legacy_graph_command_host_effects;
-#[path = "cli_build/legacy_graph_command_validation.rs"]
+#[path = "cli_build/legacy_graph_command_validation/mod.rs"]
 mod legacy_graph_command_validation;
 #[path = "cli_build/library_execution_gates.rs"]
 mod library_execution_gates;
