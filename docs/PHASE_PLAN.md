@@ -225,12 +225,17 @@ Agent UX deliverables:
   `generic_bound_nongeneric_behavior_type_args_are_error`.
 - Generic diagnostics now cover receiver-vs-argument inference conflicts for
   two-parameter `Result<T, E>` enum methods.
+  Diagnostics JSON pins this machine-readable shape through
+  `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden`.
 - Generic diagnostics now cover bound failures on `Result<T, E>` enum methods
   without specializing failed method bodies into followup errors.
   Diagnostics JSON pins this machine-readable shape through
   `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`.
 - Generic diagnostics now also guard plain generic function and method
   inference conflicts against argument/return mismatch followups.
+  The `Result<T, E>` enum-method inference conflict is also pinned in
+  diagnostics JSON by
+  `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden`.
 - Generic diagnostics now reject explicit type arguments on non-generic
   module-qualified calls such as `io.println<i32>(...)`, so import/module call
   syntax no longer silently drops malformed type arguments.
