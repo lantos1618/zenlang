@@ -3626,7 +3626,9 @@ Agent UX deliverables:
 - Build graph JSON now carries `format: "zen.build_graph.v0"`,
   `schema_version: 0`, and `semantic_status: "deterministic"` at the top level
   while preserving the existing target, dependency, feature, and host-effect
-  payload keys. Covered by `emit_json_build_graph_outputs_project_build_graph`.
+  payload keys. Covered by `emit_json_build_graph_outputs_project_build_graph`;
+  the canonical project payload is pinned by
+  `emit_json_build_graph_project_schema_matches_golden`.
 - `emit-json layout` now emits checked compiler-owned layout JSON for the
   stable subset with `schema_version: 0`: primitive sizes, baked
   `StaticString`, pointer-sized views, and struct field offsets. The mode
