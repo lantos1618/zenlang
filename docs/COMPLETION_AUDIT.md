@@ -3476,11 +3476,12 @@ and do not assume Phase 4 is ready without evidence.
   preserving missing source, valid source, and library typecheck coverage while
   keeping executable-target, gated-dependency, and missing-root validation
   checks focused.
-- `zen test build.zen` graph-only library validation tests now live in
-  `tests/integration/cli_build/graph_validation_test_command_validation/graph_only_libraries.rs`,
-  preserving missing source, valid source, and library typecheck coverage while
-  keeping test-target, gated-dependency, and skipped-source validation checks
-  focused.
+- `zen test build.zen` graph validation tests now live in
+  `tests/integration/cli_build/graph_validation_test_command_validation.rs` and
+  `tests/integration/cli_build/graph_validation_test_command_validation/`,
+  preserving execution-scope, dependency-shape, target-metadata,
+  gated-dependency, and graph-only-library validation checks in focused
+  modules.
 - Build-graph JSON validation tests now live in
   `tests/integration/cli_build/build_graph_json/validation.rs`, preserving
   target field, dependency, unsupported target, and gated package/link
