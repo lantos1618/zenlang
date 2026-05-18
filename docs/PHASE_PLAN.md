@@ -1136,6 +1136,9 @@ checked-in docs, tests, and commits only.
 - Imported public generic functions can use behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
+- Imported generic behavior bound arity diagnostics are covered through the
+  module graph by
+  `integration::imported_generic_behavior_bound_type_arg_arity_is_error`.
 - Imported public function signatures now seed public source-module parameter
   and return-type dependencies plus their behavior impl associations even when
   the entry module imports only the functions, covered by

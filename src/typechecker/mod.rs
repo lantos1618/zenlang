@@ -219,7 +219,12 @@ impl TypeChecker {
             };
             let restored_key =
                 resolver_owned_key.unwrap_or_else(|| Self::method_key(type_name, &restored_name));
-            self.collect_resolver_callable_signature_for_key(symbols, &ast_key, &restored_key);
+            self.collect_resolver_callable_signature_for_key(
+                symbols,
+                &ast_key,
+                &restored_key,
+                *span,
+            );
         }
     }
 
