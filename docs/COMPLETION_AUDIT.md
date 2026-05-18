@@ -2743,9 +2743,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration check_command_build_zen_rejects_file_read_without_fallback_before_source_validation`.
   Multi-target graph validation now has the matching positive and negative
   file-read coverage through
-  `cargo test --test integration check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`
+  `cargo test --test integration check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `cargo test --test integration check_command_multi_target_build_zen_rejects_undeclared_file_read_effects`,
   and
-  `cargo test --test integration check_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
+  `cargo test --test integration check_command_multi_target_build_zen_rejects_file_read_without_fallback`.
   Declared deterministic env reads with `.Err`, wildcard, and identifier
   fallback arms are accepted on the same validation path through
   `cargo test --test integration check_command_build_zen_accepts_declared_env_read_with_fallback`,
