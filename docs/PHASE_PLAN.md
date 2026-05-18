@@ -3531,6 +3531,11 @@ checked-in docs, tests, and commits only.
   inherited behavior dispatch, imported behavior associations, and hard
   diagnostics are covered while broader generated/fallback association semantics
   remain in the gated Feature Matrix row.
+- `zen emit-json` usage diagnostics now advertise the complete current JSON
+  boundary surface, including checked `ast`/`symbols`/`typed`/`diagnostics`,
+  deterministic `build-graph`, and gated `hir`/`mir`/`target-yaml` modes.
+  Covered by `emit_json_usage_lists_supported_and_gated_modes`, so the CLI
+  help text cannot hide gated IR/YAML modes from users.
 
 ## Current Phase
 

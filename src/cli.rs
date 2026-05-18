@@ -34,6 +34,9 @@ use json_emit::{
 };
 use usage::print_usage;
 
+const EMIT_JSON_USAGE: &str =
+    "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph|hir|mir|target-yaml> <file.zen>";
+
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
 
@@ -80,7 +83,7 @@ pub fn main() {
         }
         "emit-json" => {
             if args.len() < 4 {
-                eprintln!("Usage: zen emit-json <ast|symbols|typed|diagnostics> <file.zen>");
+                eprintln!("{EMIT_JSON_USAGE}");
                 process::exit(1);
             }
             match args[2].as_str() {
@@ -108,9 +111,7 @@ pub fn main() {
                     process::exit(1);
                 }
                 _ => {
-                    eprintln!(
-                        "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph> <file.zen>"
-                    );
+                    eprintln!("{EMIT_JSON_USAGE}");
                     process::exit(1);
                 }
             }
