@@ -73,3 +73,48 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_build_graph_target_metadata_schema_matches_golden() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let build_path = tmp.path().join("build.zen");
+    std::fs::write(
+        &build_path,
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Library { name: "core", exports: ["src/lib.zen"] })
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        dependencies: ["core"],
+        features: ["release", "lto"],
+    })
+    .Ok(b.config())
+}
+"#,
+    )
+    .expect("write build.zen");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "build-graph", build_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json build-graph");
+
+    assert!(
+        output.status.success(),
+        "emit-json build-graph failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    serde_json::from_slice::<serde_json::Value>(&output.stdout).expect("build graph json");
+
+    let expected = std::fs::read_to_string(fixture(
+        "tests/fixtures/ir_json/build_graph_target_metadata.golden.json",
+    ))
+    .expect("read build graph target metadata golden fixture");
+    let actual = String::from_utf8(output.stdout).expect("utf8 build graph json");
+
+    assert_eq!(actual.trim(), expected.trim());
+}
