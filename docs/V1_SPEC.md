@@ -170,8 +170,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `emit_json_diagnostics_bare_actor_type_gate_schema_matches_golden`.
   Imports of std actor framework sketches are also gated before loading
   aspirational actor source files, covered by
-  `stdlib_actor_framework_import_is_gated_before_loading_sketch` and
-  `module_graph_gates_stdlib_actor_framework_import_before_loading_sketch`.
+  `stdlib_actor_framework_import_is_gated_before_loading_sketch`,
+  `module_graph_gates_stdlib_actor_framework_import_before_loading_sketch`, and
+  `emit_json_diagnostics_actor_import_gate_schema_matches_golden`.
   `Channel` remains an experimental stdlib channel sketch until promoted, so it
   is not a global actor builtin type spelling.
 - `JSON/YAML IR boundaries`: gated. JSON is the machine-readable exchange format
