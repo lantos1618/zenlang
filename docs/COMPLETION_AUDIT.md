@@ -4215,6 +4215,11 @@ and do not assume Phase 4 is ready without evidence.
   `Type.implements(Behavior) { ... }` blocks, keeping generated/fallback
   association work gated while improving editor and agent localization. Covered by
   `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
+- The same `Type.derive(...)` feature-gate diagnostic shape is now pinned by
+  the golden fixture test
+  `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`, covering
+  the stable diagnostics JSON code, span, notes, feature-gate context, and empty
+  suggested-fix array for agent/editor consumers.
 - Gated generic association targets such as `Type<T>.derive(Json<T>)` now
   report diagnostics over the full reserved association target instead of only
   the behavior argument token. They also carry diagnostics JSON `context` with
