@@ -3959,6 +3959,10 @@ and do not assume Phase 4 is ready without evidence.
 - The checked compound layout schema is now pinned by the golden fixture test
   `emit_json_layout_compound_schema_matches_golden`, reducing the IR boundary
   backlog without treating broader ABI schema work as complete.
+- Layout JSON for generic `Result<T, E>` specialization is now pinned by
+  `emit_json_layout_generic_result_schema_matches_golden`, covering concrete
+  `Result_i32_StaticString` enum size, alignment, variants, and payload field
+  offsets.
 - Static string literals no longer implicitly satisfy allocator-backed
   `String`; `String` is recognized as a builtin dynamic text type, but
   allocation must remain explicit. Covered by

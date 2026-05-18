@@ -1,10 +1,20 @@
 # Learn Zen In Y Minutes
 
-Zen is a systems language built around compact declarations, explicit data
+Zen is a systems language built around prefix-first declarations, explicit data
 shapes, pattern matching, generics, behaviors, and predictable native output.
 
 Runnable examples live in `tests/zen/` and `examples/`. Gated design previews
 are called out explicitly.
+
+Read this as two layers:
+
+- stable source forms you can use in examples today;
+- gated design previews that show intended syntax, but currently compile to
+  feature-gate diagnostics instead of pretending the feature exists.
+
+The stable tour avoids `return`, `break`, `continue`, hidden allocation,
+exceptions, and null. Values come from final expressions, loop control is an
+explicit call, and heap ownership has to appear in the type/API surface.
 
 ## The Shape
 
@@ -51,7 +61,8 @@ main = () i32 {
 }
 ```
 
-Top-level declarations use prefix-first forms:
+Top-level declarations use prefix-first forms. The thing being introduced is
+visible first, and the operation follows:
 
 - imports: `{ io } = std`
 - functions: `name = (...) ReturnType { ... }`
@@ -187,7 +198,8 @@ main = () i32 {
 
 Functions have typed parameters and an explicit result type. A non-void
 function's final expression must produce that result on every non-error path.
-Use `void` for functions that only perform effects.
+Use `void` for functions that only perform effects. `return` is not part of
+Zen source.
 
 ## Blocks Return Their Final Expression
 
@@ -482,7 +494,9 @@ that a type must have a behavior implementation.
 ## Loops
 
 Zen has one loop form. There are no `for` or `while` keywords, and loop exits
-are explicit calls instead of `break` or `continue`.
+are explicit calls instead of `break` or `continue`. The spelling is
+prefix-first: call `loop`, pass a loop-control parameter, then call control
+methods on that parameter.
 
 ```zen
 sum_to = (limit: i32) i32 {
@@ -505,7 +519,9 @@ sum_to = (limit: i32) i32 {
 
 Loops use prefix `loop((l) { ... })` with explicit loop-control calls. The
 control parameter names the loop target: `l.done()` exits that target and
-`l.next()` continues it. See `examples/05_loops.zen` for the tutorial version.
+`l.next()` continues it. These are not magic strings; the parser recognizes
+loop-control actions as compiler-owned operations. See `examples/05_loops.zen`
+for the tutorial version.
 
 Nested loops can target an outer label directly:
 
@@ -555,6 +571,16 @@ The same rule applies in nested loops: `done(outer)` exits the outer loop, and
 Loops are expressions in the same block language as the rest of Zen, but the
 loop's purpose is control flow. Accumulated values are usually kept in explicit
 mutable bindings outside the loop and read after `done`.
+
+The shape to remember is:
+
+```zen
+loop((label) {
+    condition ?
+        | true { label.done() }
+        | false { label.next() }
+})
+```
 
 ## Defer
 
@@ -665,10 +691,16 @@ main = () i32 {
 its length with the value, so a literal can be passed around without allocating
 or changing ownership.
 
-The allocator-backed String type is dynamic: it owns memory, can grow
-or be built at runtime, and must be created through allocator-aware APIs once
-the allocator model is promoted. Until that ownership path exists, source-level
+The allocator-backed String type is dynamic: it owns memory, can grow or be
+built at runtime, and must be created through allocator-aware APIs once the
+allocator model is promoted. Until that ownership path exists, source-level
 `String` annotations are gated; use `StaticString` for literal/static text.
+
+That distinction is deliberate:
+
+- `StaticString` is a non-owning view into program storage.
+- `String` is owned dynamic memory and therefore needs allocator ownership.
+- A literal such as `"Zen"` does not allocate a `String`.
 
 String interpolation embeds expressions with `${...}` and currently produces a
 `StaticString`-shaped non-owning view. Interpolated expressions are not baked
@@ -687,7 +719,8 @@ ordinary unknown names.
 ### Sync And Async Preview
 
 `Sync` and `Async` are effect modes. They are part of the type contract, not
-marker-only names:
+marker-only names. The intended rule is that a function either runs in a sync
+context or returns task-shaped async work explicitly:
 
 ```zen
 read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
@@ -699,15 +732,17 @@ read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes
 }
 ```
 
-The rule is that sync code either stays sync or crosses an explicit runtime
-boundary. It does not implicitly await async work. Planned `.await()` and async
-scheduler intrinsics are gated until task lowering and effect checking are
-promoted.
+Sync code either stays sync or crosses an explicit runtime boundary. It does
+not implicitly await async work, schedule tasks behind a call, or hide task
+creation in a normal result type. Planned `.await()` and async scheduler
+intrinsics are gated until task lowering and effect checking are promoted.
 
 ### Allocator Preview
 
 Allocators are typed by the value they allocate and by the effect mode they run
-under. `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct capabilities:
+under. `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct
+capabilities, so the type signature says whether allocation is immediate or
+task-shaped:
 
 ```zen
 Allocator<T, Sync>: behavior {
@@ -750,7 +785,8 @@ make_async_buffer<T, A: Allocator<T, Async>> =
 Raw allocation intrinsics such as `@builtin.raw_allocate(...)`,
 `@builtin.raw_deallocate(...)`, and `@builtin.raw_reallocate(...)` are also
 gated. They exist as compiler-owned names so allocator diagnostics can be
-specific, but stable source code should not call them yet.
+specific, but stable source code should not call them yet. Public code should
+prefer typed allocator capabilities once allocation is promoted.
 
 The model is:
 
@@ -759,6 +795,7 @@ The model is:
 - `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct capabilities.
 - Sync allocation returns `Result` directly.
 - Async allocation returns `Task<Result<...>>`.
+- Dynamic memory ownership is visible in the returned type.
 - Allocation returns explicit `Result` or task-shaped results, not hidden
   exceptions.
 - `.raise()` is the planned Result propagation operator, but it is gated until
