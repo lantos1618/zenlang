@@ -3882,6 +3882,11 @@ and do not assume Phase 4 is ready without evidence.
   allocation must remain explicit. Covered by
   `static_string_literal_does_not_implicitly_allocate_string` and
   `types_compatible_basics`.
+- C runtime layout now keeps the same split: static string literals emit as
+  direct `zen_str` compound literals with `sizeof`-derived compile-time length,
+  while dynamic `zen_string` carries an allocator pointer. Covered by
+  `runtime_separates_static_and_allocator_backed_strings` and
+  `emit_string_literal`.
 - Builtin public type spellings now use shared AST helpers rather than
   duplicated semantic string comparisons, covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.

@@ -10,7 +10,7 @@ impl CEmitter {
             match &parts[0] {
                 TypedStringPart::Literal(s) => {
                     let escaped = c_escape_string(s);
-                    return format!("zen_str_from_literal(\"{}\")", escaped);
+                    return c_static_str_literal(&escaped);
                 }
                 TypedStringPart::Expr(e) => {
                     return self.emit_to_str(e);
@@ -46,7 +46,7 @@ impl CEmitter {
                 arg_exprs.join(", ")
             ));
         }
-        format!("zen_str_from_literal({})", buf)
+        format!("zen_str_from_cstr({})", buf)
     }
 
     pub(super) fn emit_printf_arg(&mut self, expr: &TypedExpression) -> (String, String) {
@@ -87,9 +87,11 @@ impl CEmitter {
                 )
             }
             Type::Bool => {
-                format!("zen_str_from_literal(({}) ? \"true\" : \"false\")", val)
+                let true_str = c_static_str_literal("true");
+                let false_str = c_static_str_literal("false");
+                format!("(({}) ? {} : {})", val, true_str, false_str)
             }
-            _ => format!("zen_str_from_literal(\"<{}>\")", expr.ty.display_name()),
+            _ => c_static_str_literal(&format!("<{}>", expr.ty.display_name())),
         }
     }
 }

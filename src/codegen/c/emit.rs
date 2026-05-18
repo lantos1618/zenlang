@@ -92,7 +92,7 @@ impl CEmitter {
             TypedExprKind::FloatLiteral(v) => format_float(*v).to_string(),
             TypedExprKind::StringLiteral(s) => {
                 let escaped = c_escape_string(s);
-                format!("zen_str_from_literal(\"{}\")", escaped)
+                c_static_str_literal(&escaped)
             }
             TypedExprKind::BoolLiteral(b) => {
                 if *b {

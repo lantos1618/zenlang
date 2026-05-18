@@ -4,10 +4,11 @@ impl CEmitter {
     pub(super) fn emit_runtime_types(&mut self) {
         self.line("/* Runtime types */");
         self.line("typedef struct { const char* ptr; size_t len; } zen_str;");
-        self.line("typedef struct { char* ptr; size_t len; size_t cap; } zen_string;");
+        self.line("typedef struct zen_allocator zen_allocator;");
+        self.line("typedef struct { char* ptr; size_t len; size_t cap; zen_allocator* allocator; } zen_string;");
         self.blank();
 
-        self.emit_string_literal_helper();
+        self.emit_c_string_view_helper();
         self.emit_string_print_helper();
         self.emit_int_string_helper();
         self.emit_float_string_helper();
@@ -32,8 +33,8 @@ impl CEmitter {
         self.blank();
     }
 
-    fn emit_string_literal_helper(&mut self) {
-        self.line("static zen_str zen_str_from_literal(const char* s) {");
+    fn emit_c_string_view_helper(&mut self) {
+        self.line("static zen_str zen_str_from_cstr(const char* s) {");
         self.indent();
         self.line("return (zen_str){ .ptr = s, .len = strlen(s) };");
         self.dedent();

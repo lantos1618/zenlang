@@ -3559,6 +3559,11 @@ checked-in docs, tests, and commits only.
   allocate dynamic `String` values. Covered by
   `static_string_literal_does_not_implicitly_allocate_string` and
   `types_compatible_basics`.
+- C runtime layout now mirrors that public model: static string literals emit
+  as direct `zen_str` compound literals whose length is derived with `sizeof`,
+  while dynamic `zen_string` carries an allocator pointer. Covered by
+  `runtime_separates_static_and_allocator_backed_strings` and
+  `emit_string_literal`.
 - Builtin public type spellings now route through shared AST type helpers
   instead of ad hoc semantic string checks, keeping `String` recognition and
   `StaticString` display spelling tied to one source. Guarded by
