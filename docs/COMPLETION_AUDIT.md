@@ -3907,9 +3907,10 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph JSON now carries `format: "zen.build_graph.v0"` and
   `semantic_status: "deterministic"` while preserving the existing graph
   payload keys, covered by `emit_json_build_graph_outputs_project_build_graph`.
-- `emit-json layout` now has checked compiler-owned layout JSON for the stable
-  subset: primitive sizes, baked `StaticString`, pointer-sized views, and struct
-  field offsets. Covered by `emit_json_layout_outputs_checked_type_layouts`,
+- `emit-json layout` now has checked compiler-owned layout JSON with
+  `schema_version: 0` for the stable subset: primitive sizes, baked
+  `StaticString`, pointer-sized views, and struct field offsets. Covered by
+  `emit_json_layout_outputs_checked_type_layouts`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`.
 - Hand-authored layout JSON inputs to `emit-json layout` reject at the
@@ -4173,11 +4174,12 @@ and do not assume Phase 4 is ready without evidence.
   language server, agent-readable diagnostics, machine-readable project graph,
   and structured fix suggestions. Covered by
   `phase_plan_records_recovered_progress_and_next_slice`.
-- HIR and MIR JSON outputs now include numeric `schema_version: 0` fields next
-  to their `format` tags, so tools and agents can pin the compiler-owned v0
-  schema without parsing the display format string. Covered by
+- HIR, MIR, and layout JSON outputs now include numeric `schema_version: 0`
+  fields next to their `format` tags, so tools and agents can pin the
+  compiler-owned v0 schema without parsing the display format string. Covered by
   `emit_json_hir_outputs_checked_declaration_graph` and
-  `emit_json_mir_outputs_checked_minimal_function_graph`.
+  `emit_json_mir_outputs_checked_minimal_function_graph` plus
+  `emit_json_layout_outputs_checked_type_layouts`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

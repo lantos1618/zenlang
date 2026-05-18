@@ -7,6 +7,7 @@ use crate::ast::typed::{Type, TypeDefKind, TypedProgram, TypedTypeDef};
 #[derive(Serialize)]
 struct LayoutJsonProgram {
     format: &'static str,
+    schema_version: u32,
     semantic_status: &'static str,
     target: LayoutJsonTarget,
     layouts: BTreeMap<String, LayoutJsonType>,
@@ -49,6 +50,7 @@ pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<Stri
     let context = LayoutContext::new(program);
     let graph = LayoutJsonProgram {
         format: "zen.layout.v0",
+        schema_version: 0,
         semantic_status: "checked",
         target: LayoutJsonTarget {
             pointer_size: POINTER_SIZE,
