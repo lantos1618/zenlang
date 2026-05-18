@@ -41,6 +41,7 @@ mod scope_management;
 mod self_type_validation;
 mod semantic_validation;
 mod statements;
+mod std_runtime_calls;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 

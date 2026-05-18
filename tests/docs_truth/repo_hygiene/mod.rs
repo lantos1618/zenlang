@@ -7,3 +7,4 @@ mod module_system;
 mod parser_enums;
 mod removed_syntax;
 mod source_truth;
+mod typechecker_runtime;
