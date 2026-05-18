@@ -167,6 +167,7 @@ fn symbol_json(symbol: &Symbol) -> SymbolJson<'_> {
 #[derive(Serialize)]
 struct DiagnosticsJson<'a> {
     format: &'static str,
+    semantic_status: &'static str,
     files: Vec<DiagnosticJsonFile<'a>>,
     diagnostics: Vec<DiagnosticJson<'a>>,
 }
@@ -209,6 +210,7 @@ pub fn diagnostics_to_json(
 ) -> serde_json::Result<String> {
     let graph = DiagnosticsJson {
         format: "zen.diagnostics.v0",
+        semantic_status: "diagnostic",
         files: diagnostic_json_files(files),
         diagnostics: diagnostics
             .iter()

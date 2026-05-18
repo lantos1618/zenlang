@@ -501,6 +501,10 @@ checked-in docs, tests, and commits only.
 - Typed JSON now carries `semantic_status: "checked"`, covered by
   `emit_json_typed_command_outputs_checked_program`, keeping the checked output
   boundary explicit alongside the unchecked AST marker.
+- Diagnostics JSON now carries `semantic_status: "diagnostic"`, covered by
+  `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
+  machine-readable diagnostics path is distinct from both unchecked AST and
+  accepted typed output.
 - `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
   explicit gated diagnostics tied to the v1 JSON/YAML backlog, covered by
   `emit_json_hir_command_is_explicitly_gated`,
