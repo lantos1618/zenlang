@@ -905,7 +905,9 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/multi_file_imported_behavior_requires/main.zen`. Imported
   `.requires` assertions are also satisfied by inherited child behavior impls
   through `tests/zen/multi_file_imported_behavior_requires_inherited/main.zen`,
-  with missing imported generic behavior impl diagnostics covered by
+  with generated-C assertions proving concrete inherited dispatch emission
+  without unspecialized `T_encode` placeholders. Missing imported generic
+  behavior impl diagnostics are covered by
   `integration::imported_generic_behavior_requires_missing_impl_is_error`.
 - Imported public generic functions preserve behavior bounds whose behavior was
   imported by the source module, covered by
