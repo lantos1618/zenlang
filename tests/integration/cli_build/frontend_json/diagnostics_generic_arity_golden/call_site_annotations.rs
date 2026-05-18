@@ -84,3 +84,25 @@ main = () i32 {
         "tests/fixtures/ir_json/diagnostics_generic_method_type_arg_annotation_missing_args.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_closure_param_annotation_type_arg_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "closure_param_annotation_type_arg_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = () i32 {
+    f = (box: Box<i32, StaticString>) i32 {
+        0
+    }
+    0
+}
+"#,
+        "closure parameter annotation type-argument arity",
+        "closure parameter annotation type-argument arity diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_closure_param_annotation_type_arg_arity.golden.json",
+    );
+}
