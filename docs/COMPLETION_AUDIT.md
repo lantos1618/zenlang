@@ -2797,6 +2797,12 @@ and do not assume Phase 4 is ready without evidence.
   Missing fallback arms on deterministic file reads also reject before C
   emission, covered by
   `cargo test --test integration emit_command_build_zen_rejects_file_read_without_fallback`.
+  Emit graphs with unselected test and library targets keep declared file-read
+  fallback behavior through
+  `cargo test --test integration emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `cargo test --test integration emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  and
+  `cargo test --test integration emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`.
   Emit graphs with unselected test and library targets keep that rejection
   before unselected target source validation through
   `cargo test --test integration emit_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
@@ -2808,7 +2814,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration emit_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Single-executable emit graphs with unselected test and library targets keep
   the same declared env-read fallback behavior through
-  `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`.
+  `cargo test --test integration emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `cargo test --test integration emit_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  and
+  `cargo test --test integration emit_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets`.
   Missing fallback arms on deterministic env reads reject before C emission
   through
   `cargo test --test integration emit_command_build_zen_rejects_env_read_without_fallback`.
@@ -3111,8 +3120,12 @@ and do not assume Phase 4 is ready without evidence.
   `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   `emit_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `emit_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  `emit_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets`,
   `emit_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   `emit_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `emit_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  `emit_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   `emit_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`,
   `emit_command_build_zen_rejects_undeclared_file_read_effects`, and
