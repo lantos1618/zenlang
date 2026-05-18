@@ -79,6 +79,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "semantic_status: \"unchecked\"",
         "typed JSON is explicitly marked checked",
         "diagnostics JSON is explicitly",
+        "context.kind = \"feature_gate\"",
+        "Type.implements(Behavior)",
         "Actors in std",
         "bare_actor_framework_types_are_rejected_as_gated_not_unknown",
         "stdlib_actor_framework_import_is_gated_before_loading_sketch",

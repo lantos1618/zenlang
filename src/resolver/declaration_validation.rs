@@ -316,11 +316,10 @@ impl Resolver {
                 for type_arg in behavior_type_args {
                     self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
                 }
-                diagnostics.push(Diagnostic::error(
-                    "E2000",
-                    GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE,
-                    *span,
-                ));
+                diagnostics.push(
+                    Diagnostic::error("E2000", GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE, *span)
+                        .with_generated_behavior_derive_gate_context(),
+                );
             }
             Declaration::BehaviorExtends {
                 behavior,

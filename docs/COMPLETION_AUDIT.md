@@ -4153,8 +4153,10 @@ and do not assume Phase 4 is ready without evidence.
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - The generated behavior association gate for `Type.derive(...)` now reports a
   diagnostic span over the full gated association call instead of just the
-  receiver token, keeping generated/fallback association work gated while
-  improving editor and agent localization. Covered by
+  receiver token. It also carries diagnostics JSON `context` with
+  `kind: "feature_gate"` and a note directing users to explicit
+  `Type.implements(Behavior) { ... }` blocks, keeping generated/fallback
+  association work gated while improving editor and agent localization. Covered by
   `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
 - Gated generic association targets such as `Type<T>.derive(Json<T>)` now
   report diagnostics over the full reserved association target instead of only

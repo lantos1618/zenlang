@@ -2,6 +2,7 @@ use std::fmt;
 
 use serde::Serialize;
 
+mod diagnostic_enrichment;
 mod file_table;
 
 pub use file_table::{FileId, FileTable};
@@ -97,12 +98,27 @@ impl Label {
 /// What kind of context led to this diagnostic.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContextKind {
+    FeatureGate,
     InFunction,
     InModule,
     InGenericInstantiation,
     InTraitImpl,
     InImport,
     InMacroExpansion,
+}
+
+impl ContextKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::FeatureGate => "feature_gate",
+            Self::InFunction => "in_function",
+            Self::InModule => "in_module",
+            Self::InGenericInstantiation => "in_generic_instantiation",
+            Self::InTraitImpl => "in_trait_impl",
+            Self::InImport => "in_import",
+            Self::InMacroExpansion => "in_macro_expansion",
+        }
+    }
 }
 
 /// A frame in the context stack showing how we reached the error.
@@ -128,6 +144,10 @@ pub const REMOVED_INFIX_AS_CAST_FIX_TITLE: &str =
 pub const REMOVED_INFIX_AS_CAST_REPLACEMENT: &str = "cast(value, Type)";
 pub const GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE: &str =
     "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented";
+pub const GATED_GENERATED_BEHAVIOR_DERIVE_NOTE: &str =
+    "Use an explicit `Type.implements(Behavior) { ... }` block until generated fallback derives are implemented";
+pub const GATED_GENERATED_BEHAVIOR_DERIVE_CONTEXT: &str =
+    "reserved generated/fallback behavior association";
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {
@@ -312,6 +332,7 @@ impl From<CompileError> for Diagnostic {
                     context: Vec::new(),
                     suggested_fixes: Vec::new(),
                 }
+                .with_generated_behavior_derive_gate_context()
             }
             CompileError::Internal(msg) => Diagnostic {
                 severity: Severity::Error,
@@ -324,40 +345,6 @@ impl From<CompileError> for Diagnostic {
                 suggested_fixes: Vec::new(),
             },
         }
-    }
-}
-
-impl Diagnostic {
-    fn with_removed_return_fix(self) -> Self {
-        if self.message != REMOVED_RETURN_KEYWORD_MESSAGE {
-            return self;
-        }
-
-        let Some(span) = self.span else {
-            return self;
-        };
-
-        self.with_suggested_fix(SuggestedFix::new(
-            REMOVED_RETURN_FIX_KIND,
-            REMOVED_RETURN_FIX_TITLE,
-            vec![TextEdit::new(span, "")],
-        ))
-    }
-
-    fn with_removed_infix_as_cast_fix(self) -> Self {
-        if self.message != REMOVED_INFIX_AS_CAST_MESSAGE {
-            return self;
-        }
-
-        let Some(span) = self.span else {
-            return self;
-        };
-
-        self.with_suggested_fix(SuggestedFix::new(
-            REMOVED_INFIX_AS_CAST_FIX_KIND,
-            REMOVED_INFIX_AS_CAST_FIX_TITLE,
-            vec![TextEdit::new(span, REMOVED_INFIX_AS_CAST_REPLACEMENT)],
-        ))
     }
 }
 
