@@ -4239,6 +4239,11 @@ Agent UX deliverables:
   covering `@builtin.memcpy(...)` as a gated allocator surface instead of an
   ordinary unknown-builtin fallback while typed allocator semantics remain in
   the Required Test Backlog.
+- Raw pointer intrinsic gate diagnostics are now pinned at the CLI JSON
+  boundary by `emit_json_diagnostics_raw_pointer_gate_schema_matches_golden`,
+  covering `@builtin.gep(...)` as a gated ownership/layout surface instead of
+  an ordinary unknown-builtin fallback while ownership and pointer provenance
+  semantics remain in the Required Test Backlog.
 
 ## Current Phase
 
