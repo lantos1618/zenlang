@@ -3423,6 +3423,10 @@ checked-in docs, tests, and commits only.
   coverage from gated/unknown executable-field coverage under
   `tests/integration/cli_build/unsupported_targets/`, preserving the same
   command matrix while keeping the parent module to shared helpers.
+- `zen test build.zen` declared env-read positive tests now split single-target,
+  multi-target, and unselected-target cases under
+  `tests/integration/cli_build/declared_env_effects/runner_command/`, avoiding
+  ignored `test_*` child paths while preserving the same fallback-arm coverage.
 
 ## Current Phase
 
