@@ -2554,11 +2554,22 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
   and
   `build_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
+  Build graphs with unselected test and library targets also keep declared
+  file-read fallback behavior through
+  `build_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `build_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  and
+  `build_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`.
   File reads with `?` but no fallback arm reject before multi-target execution
   through
   `build_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
+  Build graphs with unselected test and library targets reject file reads
+  lacking a fallback arm before unselected target source handling through
+  `build_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
   Undeclared file reads reject before target execution through
   `build_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before unselected target source handling through
+  `build_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   and before multi-target execution through
   `build_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
 - Normal `zen check build.zen` validates the same constrained deterministic
