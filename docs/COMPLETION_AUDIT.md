@@ -3996,6 +3996,10 @@ and do not assume Phase 4 is ready without evidence.
   lowering body. Covered by
   `codegen_c_intrinsics_use_owned_name_enum`, `production_rust_files_stay_below_cleanup_threshold`,
   and `codegen::c` tests.
+- Build graph host-effect method recognition now parses build DSL method names
+  through `BuildTargetDslIdent` instead of matching raw method strings.
+  Covered by `build_target_dsl_ident_owns_source_spelling` and
+  `build_graph_host_effect_methods_parse_dsl_ident_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

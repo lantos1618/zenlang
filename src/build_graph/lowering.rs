@@ -265,13 +265,9 @@ fn host_effect(expr: &Expression) -> Option<HostEffect> {
     let [Expression::StringLiteral { value: argument, .. }] = args.as_slice() else {
         return None;
     };
-    match method.as_str() {
-        method if method == BuildTargetDslIdent::Env.as_str() => {
-            Some(HostEffect::ReadEnv(argument.clone()))
-        }
-        method if method == BuildTargetDslIdent::ReadFile.as_str() => {
-            Some(HostEffect::ReadFile(argument.clone()))
-        }
+    match method.parse::<BuildTargetDslIdent>() {
+        Ok(BuildTargetDslIdent::Env) => Some(HostEffect::ReadEnv(argument.clone())),
+        Ok(BuildTargetDslIdent::ReadFile) => Some(HostEffect::ReadFile(argument.clone())),
         _ => None,
     }
 }

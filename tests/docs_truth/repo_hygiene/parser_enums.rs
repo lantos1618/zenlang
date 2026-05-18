@@ -262,6 +262,31 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
 }
 
 #[test]
+fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
+    let lowering = read("src/build_graph/lowering.rs");
+    let dsl = read("src/build_graph/lowering/dsl.rs");
+
+    for forbidden in [
+        "match method.as_str()",
+        "method == BuildTargetDslIdent::Env.as_str()",
+        "method == BuildTargetDslIdent::ReadFile.as_str()",
+    ] {
+        assert!(
+            !lowering.contains(forbidden),
+            "build graph host-effect method dispatch should parse through BuildTargetDslIdent: {forbidden}"
+        );
+    }
+    assert!(
+        lowering.contains("method.parse::<BuildTargetDslIdent>()"),
+        "build graph host-effect method dispatch should parse method names through BuildTargetDslIdent"
+    );
+    assert!(
+        dsl.contains("impl FromStr for BuildTargetDslIdent"),
+        "BuildTargetDslIdent should own parsing for build DSL method names"
+    );
+}
+
+#[test]
 fn cli_emit_json_modes_use_owned_mode_enum() {
     let source = read("src/cli.rs");
 
