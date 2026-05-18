@@ -2462,7 +2462,10 @@ checked-in docs, tests, and commits only.
   `build_graph_command_accepts_declared_file_read_effects`,
   `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects`,
   `build_graph_command_accepts_identifier_fallback_declared_file_read_effects`,
-  and `build_graph_command_accepts_declared_file_read_effects_for_multiple_targets`,
+  `build_graph_command_accepts_declared_file_read_effects_for_multiple_targets`,
+  `build_graph_command_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  and
+  `build_graph_command_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`,
   while undeclared file reads reject before execution through
   `build_graph_command_rejects_undeclared_file_read_effects_before_execution`.
   File reads with `?` but no fallback arm also reject before execution through
@@ -2527,7 +2530,10 @@ checked-in docs, tests, and commits only.
   path through `build_command_build_zen_accepts_declared_file_read_effects`,
   and multi-target executable graph execution keeps the same declared file-read
   fallback behavior through
-  `build_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  `build_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `build_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  and
+  `build_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
   File reads with `?` but no fallback arm reject before multi-target execution
   through
   `build_command_multi_target_build_zen_rejects_file_read_without_fallback_before_execution`.
@@ -2579,7 +2585,10 @@ checked-in docs, tests, and commits only.
   and `check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects`,
   and multi-target graph validation keeps the same declared file-read fallback
   behavior through
-  `check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  `check_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `check_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  and
+  `check_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
   Undeclared file reads reject before source validation through
   `check_command_build_zen_rejects_undeclared_file_read_effects_before_source_validation`
   and before multi-target source validation through
@@ -2637,7 +2646,10 @@ checked-in docs, tests, and commits only.
   path through `test_command_build_zen_accepts_declared_file_read_effects`,
   and multi-target test graph execution keeps the same declared file-read
   fallback behavior through
-  `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  `test_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  and
+  `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
   Undeclared file reads reject before test execution through
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
   and before multi-target test execution through
@@ -2760,7 +2772,10 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_accepts_declared_file_read_effects`, and
   multi-target executable graph execution keeps the same declared file-read
   fallback behavior through
-  `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`.
+  `direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets`,
+  `direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
+  and
+  `direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
   Undeclared file reads reject before execution through
   `direct_file_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
   and before multi-target execution through

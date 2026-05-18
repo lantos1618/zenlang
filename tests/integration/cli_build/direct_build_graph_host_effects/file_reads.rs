@@ -84,19 +84,49 @@ main = () i32 {
 
 #[test]
 fn direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets() {
+    assert_direct_file_command_accepts_declared_file_read_effects_for_multiple_targets(
+        r#"| .Err { "default" }"#,
+        "direct_file_command_build_zen_accepts_declared_file_read_effects_for_multiple_targets",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets(
+) {
+    assert_direct_file_command_accepts_declared_file_read_effects_for_multiple_targets(
+        r#"| _ { "default" }"#,
+        "direct_file_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets(
+) {
+    assert_direct_file_command_accepts_declared_file_read_effects_for_multiple_targets(
+        r#"| err { "default" }"#,
+        "direct_file_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets",
+    );
+}
+
+fn assert_direct_file_command_accepts_declared_file_read_effects_for_multiple_targets(
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     manifest = b.os.read_file("build.targets") ?
-        | .Ok(contents) { contents }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+        | .Ok(contents) {{ contents }}
+        {fallback_arm}
+    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
+    b.add(Executable {{ name: "tool", main: "tool.zen", out_dir: "build/tool/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(tmp.path().join("build.targets"), "app\ntool\n").expect("write manifest");
@@ -127,7 +157,7 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
