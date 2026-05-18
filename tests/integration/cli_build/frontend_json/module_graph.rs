@@ -162,6 +162,7 @@ main = () i32 {
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("emit-json symbols stdout is json");
     assert_eq!(json["format"], "zen.symbols.v0");
+    assert_eq!(json["semantic_status"], "resolved");
     assert_eq!(json["entry_module"], 0);
     assert_eq!(json["modules"].as_array().expect("modules array").len(), 2);
 
