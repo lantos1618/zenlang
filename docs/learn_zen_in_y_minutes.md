@@ -6,6 +6,40 @@ shapes, pattern matching, generics, behaviors, and predictable native output.
 Runnable examples live in `tests/zen/` and `examples/`. Gated design previews
 are called out explicitly.
 
+## The Shape
+
+Zen reads name-first. A declaration starts with the thing being introduced or
+attached, then gives its shape:
+
+```zen
+{ io } = std
+
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.length = (self: Point) i32 {
+    self.x + self.y
+}
+
+main = () i32 {
+    point = Point { x: 20, y: 22 }
+    point.length()
+}
+```
+
+The common forms are:
+
+- `{ name } = module.path` imports names from a module.
+- `Name: { field: Type }` declares a struct.
+- `Name: Variant, Variant(Payload)` declares an enum.
+- `name = (...) ReturnType { ... }` declares a function.
+- `Type.method = (...) ReturnType { ... }` declares an attached method.
+- `Type.impl = { ... }` groups methods for a type.
+- `Name: behavior { ... }` declares a behavior contract.
+- `Type.implements(Behavior) { ... }` gives a type that behavior.
+
 ## Hello
 
 ```zen
@@ -26,6 +60,19 @@ Top-level declarations use prefix-first forms:
 - methods: `Type.method = (...) ReturnType { ... }`
 - impl blocks: `Type.impl = { ... }`
 - behaviors: `Name: behavior { ... }`
+
+Top-level `pub` exposes a declaration across modules:
+
+```zen
+pub Point: {
+    x: i32,
+    y: i32,
+}
+
+pub origin = () Point {
+    Point { x: 0, y: 0 }
+}
+```
 
 ## Comments
 
@@ -97,6 +144,10 @@ main = () i32 {
 Numeric conversions are explicit. Mixed numeric widths need casts instead of
 implicit widening.
 
+String literals are `StaticString` values: the bytes are baked into the
+program, and the value carries a pointer and length. Dynamic `String` is a
+separate allocator-backed text type and is not created implicitly by a literal.
+
 ## Operators And Casts
 
 ```zen
@@ -136,6 +187,7 @@ main = () i32 {
 
 Functions have typed parameters and an explicit result type. A non-void
 function's final expression must produce that result on every non-error path.
+Use `void` for functions that only perform effects.
 
 ## Blocks Return Their Final Expression
 
@@ -306,7 +358,8 @@ main = () i32 {
 ```
 
 Methods are declared as `Type.method = (...) ReturnType { ... }`. Calls use dot
-syntax.
+syntax. A method is still a function with an explicit receiver; Zen does not
+hide data behind classes or an object model.
 
 ## Impl Blocks
 
@@ -331,7 +384,20 @@ main = () i32 {
 }
 ```
 
-Non-behavior `Type.impl = { ... }` groups methods under a type.
+Non-behavior `Type.impl = { ... }` groups methods under a type. Generic impl
+blocks use the same attached shape:
+
+```zen
+Box<T>: {
+    value: T
+}
+
+Box<T>.impl = {
+    get = (self: Box<T>) T {
+        self.value
+    }
+}
+```
 
 ## Generics
 
@@ -381,6 +447,18 @@ encode<T: Json> = (value: T) StaticString {
 
 Behaviors describe required methods. Generic functions can use behavior bounds
 with `T: BehaviorName`.
+
+Behavior association is explicit:
+
+```zen
+Point.implements(Json) {
+    encode = (self: Point) StaticString {
+        "point"
+    }
+}
+```
+
+This keeps capability lookup visible at the type boundary.
 
 ## Behavior Inheritance And Requires
 
@@ -474,6 +552,10 @@ single_step = (ready: bool) i32 {
 The same rule applies in nested loops: `done(outer)` exits the outer loop, and
 `next(inner)` continues only the inner loop.
 
+Loops are expressions in the same block language as the rest of Zen, but the
+loop's purpose is control flow. Accumulated values are usually kept in explicit
+mutable bindings outside the loop and read after `done`.
+
 ## Defer
 
 ```zen
@@ -502,6 +584,20 @@ Imports use destructuring-style binding from a module path. Local files import
 by module name, and dotted paths resolve through subdirectories. See
 `examples/project/main.zen` for the project-style example.
 
+Imported declarations have to be public in the source module:
+
+```zen
+pub clamp = (value: i32, low: i32, high: i32) i32 {
+    value < low ?
+        | true { low }
+        | false {
+            value > high ?
+                | true { high }
+                | false { value }
+        }
+}
+```
+
 ## Memory And Ownership
 
 Allocation is explicit in Zen's language model. The stable subset does not hide
@@ -522,6 +618,10 @@ Values name their shape directly. Static text is a non-owning program value.
 Owned dynamic storage is modeled with allocator-aware types once typed
 allocators are promoted. Until then, the compiler rejects allocator-backed
 source types instead of pretending allocation is free.
+
+The practical rule is simple: if a value needs heap memory, the API must show
+the allocator path. Literals and interpolation do not smuggle allocation into
+ordinary expressions.
 
 ## Pointer, Slice, And Array Types
 
@@ -665,6 +765,17 @@ The model is:
   typechecked propagation and lowering are implemented.
 - Task chaining and async scheduler APIs are gated until Sync/Async effect
   checking and task lowering are implemented.
+
+The intended call shape stays ordinary Zen:
+
+```zen
+work = (allocator: Allocator<u8, Sync>) Result<RawPtr<u8>, AllocError> {
+    allocator.alloc(64)
+}
+```
+
+The effect mode is part of the allocator capability, so the type system can
+distinguish synchronous allocation from task-returning asynchronous allocation.
 
 ### Ownership Preview
 

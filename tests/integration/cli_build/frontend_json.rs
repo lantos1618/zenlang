@@ -21,6 +21,8 @@ mod module_graph;
 mod target_yaml;
 #[path = "frontend_json/target_yaml_golden.rs"]
 mod target_yaml_golden;
+#[path = "frontend_json/typed_golden.rs"]
+mod typed_golden;
 
 #[test]
 fn emit_json_usage_lists_supported_and_gated_modes() {
