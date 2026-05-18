@@ -266,6 +266,10 @@ Generated/fallback behavior association syntax is reserved but not implemented:
 The diagnostics JSON path reports that gate over the full
 `Type.derive(...)` association call, covered by
 `emit_json_diagnostics_spans_full_gated_behavior_derive_association`.
+Gated generic association targets such as `Type<T>.derive(Json<T>)` are also
+localized over the full reserved association target in diagnostics JSON,
+covered by
+`emit_json_diagnostics_spans_full_gated_generic_association_target`.
 
 ## Stdlib Gate
 

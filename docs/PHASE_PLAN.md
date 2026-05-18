@@ -3882,6 +3882,12 @@ Agent UX deliverables:
   `emit_json_diagnostics_spans_full_gated_behavior_derive_association`, while
   the feature remains gated until generated/fallback association semantics have
   positive and negative solver tests.
+- Gated generic association targets such as `Type<T>.derive(Json<T>)` now report
+  diagnostics over the full reserved association target rather than only the
+  behavior argument token. Guarded by
+  `emit_json_diagnostics_spans_full_gated_generic_association_target` and the
+  existing parser gate
+  `generic_type_association_keywords_are_explicitly_gated`.
 
 ## Current Phase
 
