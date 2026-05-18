@@ -3391,6 +3391,11 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads/`,
   keeping the coverage added for deterministic file-read effects out of a
   single large test file.
+- Declared env-read executable graph tests now split normal
+  `zen build build.zen` coverage from direct `zen build.zen` coverage under
+  `tests/integration/cli_build/declared_env_effects/executable/`, keeping the
+  shared multi-target and unselected-target helpers separate from entrypoint
+  assertions.
 
 ## Current Phase
 

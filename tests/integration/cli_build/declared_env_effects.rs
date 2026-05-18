@@ -2,7 +2,7 @@
 mod build_graph;
 #[path = "declared_env_effects/emit.rs"]
 mod emit;
-#[path = "declared_env_effects/executable.rs"]
+#[path = "declared_env_effects/executable/mod.rs"]
 mod executable;
 #[path = "declared_env_effects/rejections/mod.rs"]
 mod rejections;
