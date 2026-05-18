@@ -265,7 +265,7 @@ fn emit_json_hir_rejects_hand_authored_json_before_ir_override() {
 
     assert!(
         !output.status.success(),
-        "zen emit-json hir should gate hand-authored HIR before override: stdout={}, stderr={}",
+        "zen emit-json hir should reject hand-authored HIR before override: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -274,7 +274,7 @@ fn emit_json_hir_rejects_hand_authored_json_before_ir_override() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stdout.trim().is_empty(),
-        "gated HIR should not emit or accept hand-authored HIR JSON, stdout={stdout}"
+        "forged HIR should not emit or accept hand-authored HIR JSON, stdout={stdout}"
     );
     assert!(
         stderr.contains("compiler-owned IR schemas"),

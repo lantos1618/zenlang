@@ -57,6 +57,19 @@ pub(super) fn cmd_emit_json_layout(path_str: &str) {
     }
 }
 
+pub(super) fn cmd_emit_json_hir(path_str: &str) {
+    super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_hir_emit(path_str);
+    let typed = super::graph_frontend(path_str);
+    match zen::ir_json::hir_program_to_json(&typed) {
+        Ok(json) => println!("{json}"),
+        Err(e) => {
+            eprintln!("json emit error: {}", e);
+            process::exit(1);
+        }
+    }
+}
+
 pub(super) fn cmd_emit_json_diagnostics(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
     super::reject_hand_authored_json_for_diagnostics_emit(path_str);

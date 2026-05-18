@@ -214,45 +214,18 @@ fn emit_json_mir_rejects_hand_authored_json_before_ir_override() {
 }
 
 #[test]
-fn emit_json_hir_command_is_explicitly_gated() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "hir",
-            test_dir().join("hello.zen").to_str().unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json hir");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json hir should be gated: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("HIR JSON emission is gated until schema and golden tests exist"),
-        "expected HIR gate diagnostic, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_hir_rejects_program_before_hir_json() {
+fn emit_json_hir_outputs_checked_declaration_graph() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let zen_path = tmp.path().join("hir_subject.zen");
     std::fs::write(
         &zen_path,
         r#"
-Box<T>: {
-    value: T
+Point: {
+    x: i32,
+    label: StaticString
 }
 
-main = () i32 {
-    box = Box<i32> { value: 7 }
-    box.value
-}
+main = () i32 { 0 }
 "#,
     )
     .expect("write HIR subject");
@@ -263,26 +236,39 @@ main = () i32 {
         .expect("run zen emit-json hir on program input");
 
     assert!(
-        !output.status.success(),
-        "zen emit-json hir should be gated before HIR emission: stdout={}, stderr={}",
+        output.status.success(),
+        "zen emit-json hir should emit checked HIR JSON: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "gated HIR should not emit HIR JSON, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("HIR JSON emission is gated until schema and golden tests exist"),
-        "expected HIR gate diagnostic, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "HIR should reject through the schema/golden-test gate, not command/path handling, stderr={stderr}"
-    );
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("HIR stdout is json");
+    assert_eq!(json["format"], "zen.hir.v0");
+    assert_eq!(json["semantic_status"], "checked");
+
+    let types = json["declarations"]["types"]
+        .as_array()
+        .expect("HIR types array");
+    let point = types
+        .iter()
+        .find(|ty| ty["name"] == "Point")
+        .expect("Point type in HIR");
+    assert_eq!(point["kind"], "struct");
+    assert_eq!(point["fields"][0]["name"], "x");
+    assert_eq!(point["fields"][0]["type"], "i32");
+    assert_eq!(point["fields"][1]["name"], "label");
+    assert_eq!(point["fields"][1]["type"], "StaticString");
+
+    let functions = json["declarations"]["functions"]
+        .as_array()
+        .expect("HIR functions array");
+    let main = functions
+        .iter()
+        .find(|function| function["name"] == "main")
+        .expect("main function in HIR");
+    assert_eq!(main["return_type"], "i32");
+    assert!(main["params"].as_array().expect("main params").is_empty());
 }
 
 #[test]

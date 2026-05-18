@@ -470,6 +470,7 @@ zen emit-json symbols main.zen
 zen emit-json typed main.zen
 zen emit-json diagnostics main.zen
 zen emit-json layout main.zen
+zen emit-json hir main.zen
 zen emit-json target-yaml target.yaml
 ```
 
@@ -477,6 +478,8 @@ zen emit-json target-yaml target.yaml
 checked typed program, and `diagnostics` is machine-readable error output.
 `layout` reports checked ABI layout facts for the stable subset, including
 primitive sizes, `StaticString`, pointer-sized views, and struct field offsets.
+`hir` reports checked declaration-level HIR for tools and agents that need a
+stable graph of types, functions, and globals without owning compiler truth.
 `target-yaml` validates a human-authored target description into canonical
 `zen.target.v0` JSON while rejecting attempts to override compiler-owned type
 layouts.

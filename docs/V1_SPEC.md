@@ -154,13 +154,17 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   diagnostics, and deterministic build graphs. YAML is the human-authored
   format for target descriptions, ABI rules, intrinsic tables, allocator
   templates, backend options, and build graphs.
-  Current JSON evidence is limited to resolved AST graph emission, resolver
-  symbol table emission, checked typed program emission, and machine-readable
-  diagnostics emission through `zen emit-json ast <file>`,
-  `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
-  `zen emit-json diagnostics <file>`. Hand-authored AST, symbols, typed, and
-  diagnostics JSON inputs are rejected before the frontend treats them as Zen
-  source or compiler-produced diagnostics, covered by
+  Current JSON evidence includes resolved AST graph emission, resolver symbol
+  table emission, checked typed program emission, machine-readable diagnostics
+  emission, checked declaration-level HIR emission, checked layout emission,
+  deterministic build graph emission, and validated target YAML emission through
+  `zen emit-json ast <file>`, `zen emit-json symbols <file>`,
+  `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`,
+  `zen emit-json hir <file>`, `zen emit-json layout <file>`,
+  `zen emit-json build-graph <file>`, and
+  `zen emit-json target-yaml <file>`. Hand-authored AST, symbols, typed, HIR,
+  and diagnostics JSON inputs are rejected before the frontend treats them as
+  Zen source or compiler-produced diagnostics, covered by
   `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`,
   `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, and
@@ -168,14 +172,15 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   Hand-authored build graph JSON inputs are rejected before generic build.zen
   path validation can stand in for the compiler-owned graph boundary, covered by
   `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
-  Real program inputs to
-  `zen emit-json hir <file>` and `zen emit-json mir <file>` are rejected before
-  HIR/MIR JSON emission, covered by
-  `emit_json_hir_rejects_program_before_hir_json` and
+  `zen emit-json hir <file>` emits `format: "zen.hir.v0"` with
+  `semantic_status: "checked"` and a declaration graph for checked types,
+  functions, and globals, covered by
+  `emit_json_hir_outputs_checked_declaration_graph`. Real program inputs to
+  `zen emit-json mir <file>` are rejected before MIR JSON emission, covered by
   `emit_json_mir_rejects_program_before_mir_json`. Hand-authored JSON IR inputs
-  to `zen emit-json hir <file>` and `zen emit-json mir <file>` are also
-  rejected at the compiler-owned schema
-  boundary before any type or layout override can be accepted, covered by
+  to `zen emit-json hir <file>` and `zen emit-json mir <file>` are rejected at
+  the compiler-owned schema boundary before any type or layout override can be
+  accepted, covered by
   `emit_json_hir_rejects_hand_authored_json_before_ir_override` and
   `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
   `zen emit-json layout <file>` emits checked compiler-owned layout JSON for
@@ -229,7 +234,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Typechecked C backend for tested fixtures | implemented | `cargo test --tests` |
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
-| HIR/MIR JSON emission | gated | Schema and golden tests |
+| HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader HIR schema and golden tests still required |
+| MIR JSON emission | gated | `emit_json_mir_command_is_explicitly_gated`, `emit_json_mir_rejects_program_before_mir_json`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; schema and golden tests still required |
 | Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema`, `emit_json_target_yaml_rejects_layout_overrides`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
