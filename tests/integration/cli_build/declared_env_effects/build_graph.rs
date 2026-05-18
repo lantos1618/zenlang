@@ -34,19 +34,47 @@ fn build_graph_command_accepts_identifier_fallback_declared_env_read() {
 
 #[test]
 fn build_graph_command_accepts_declared_env_read_for_multiple_targets() {
+    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| .Err { "default" }"#,
+        "build_graph_command_accepts_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_wildcard_fallback_declared_env_read_for_multiple_targets() {
+    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| _ { "default" }"#,
+        "build_graph_command_accepts_wildcard_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn build_graph_command_accepts_identifier_fallback_declared_env_read_for_multiple_targets() {
+    assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| err { "default" }"#,
+        "build_graph_command_accepts_identifier_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+fn assert_build_graph_command_accepts_declared_env_read_for_multiple_targets(
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
+    b.add(Executable {{ name: "tool", main: "tool.zen", out_dir: "build/tool/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -76,7 +104,7 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen build-graph build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen build-graph build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

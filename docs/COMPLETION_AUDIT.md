@@ -2589,7 +2589,10 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_env_read`.
   Multi-target executable graphs preserve the same declared env-read behavior
   through
-  `cargo test --test integration build_graph_command_accepts_declared_env_read_for_multiple_targets`.
+  `cargo test --test integration build_graph_command_accepts_declared_env_read_for_multiple_targets`,
+  `cargo test --test integration build_graph_command_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
+  and
+  `cargo test --test integration build_graph_command_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
   Missing fallback arms on deterministic env reads reject before execution
   through
   `cargo test --test integration build_graph_command_rejects_env_read_without_fallback_before_execution`.
