@@ -140,6 +140,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_hir_outputs_checked_declaration_graph",
         "emit_json_hir_outputs_enum_function_and_global_declarations",
         "emit_json_hir_declaration_schema_matches_golden",
+        "emit_json_hir_generic_option_schema_matches_golden",
         "emit_json_hir_generic_result_schema_matches_golden",
         "emit_json_hir_rejects_hand_authored_json_before_ir_override",
         "emit_json_mir_outputs_checked_minimal_function_graph",
