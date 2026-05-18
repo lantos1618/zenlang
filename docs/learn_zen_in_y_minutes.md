@@ -31,6 +31,57 @@ Quick map:
 - sync, async, allocators, owned dynamic memory, and raw memory are explicit
   design surfaces, with unstable spellings called out as gated previews.
 
+If you only remember one page, make it this one:
+
+```zen
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+identity<T> = (value: T) T {
+    value
+}
+
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+
+main = () i32 {
+    label: StaticString = "baked into the program"
+    box = Box<i32> { value: identity(41) }
+    io.println("${label}")
+    box.value + 1
+}
+```
+
+The shape is intentional:
+
+- `StaticString` is literal/static text: pointer plus length into program
+  storage, with no allocator.
+- `String` is runtime-owned dynamic text: pointer, length, capacity, and an
+  allocator capability.
+- `loop((l) { ... })` is the loop form. Exit with `l.done()` or `done(l)`;
+  continue with `l.next()` or `next(l)`.
+- `Sync`, `Async`, and `Allocator<T, Mode>` live in type signatures so effects
+  and ownership are visible.
+- `return`, `break`, `continue`, exceptions, null, and hidden allocation are
+  not the stable source model.
+
 The core syntax to keep in your head:
 
 ```zen
@@ -82,6 +133,10 @@ If a feature needs hidden allocation, implicit scheduling, exceptions, null, or
 statement-level early exits, it is not part of the stable shape. Zen makes
 those things visible with data types, final expressions, loop-control calls,
 and allocator or effect parameters.
+
+Zen has no suffix/body-first control form in the stable tour. Dot syntax and
+UFC are receiver-call spellings; declarations and control forms stay
+prefix-first.
 
 ## The Shape
 
@@ -307,10 +362,11 @@ main = () i32 {
 
 Attached functions can be called with dot syntax or uniform function call
 syntax. Dot syntax keeps the receiver first when the operation reads like a
-method. UFC keeps the operation first when that is clearer. The receiver is
-still an explicit argument in the declared function type.
+method. UFC keeps the operation first when that is clearer. These are call-site
+spellings, not alternate declaration forms. The receiver is still an explicit
+argument in the declared function type.
 
-## Blocks Return Their Final Expression
+## Blocks Produce Their Final Expression
 
 ```zen
 max = (a: i32, b: i32) i32 {
@@ -677,6 +733,9 @@ control parameter names the loop target: `l.done()` exits that target and
 the loop handle here; this is not general user-defined method dispatch. See
 `examples/05_loops.zen` for the tutorial version.
 
+`break` and `continue` are not Zen source forms. Use `l.done()` and `l.next()`
+or their UFC forms instead.
+
 A counted loop is just state plus an explicit control decision:
 
 ```zen
@@ -763,8 +822,7 @@ loop((label) {
 })
 ```
 
-There is no expression form that spells the loop after its body. Loop syntax is
-prefix-only.
+Loop syntax is prefix-only.
 
 That gives Zen one answer for counted loops, sentinel loops, and nested exits:
 
@@ -878,7 +936,8 @@ info = (message: StaticString) LogLine {
 ```
 
 A dynamic value must carry ownership in its type. The intended dynamic form is
-allocator-shaped:
+allocator-shaped. This is not stable source yet; it is the shape Zen is
+promoting through the gated allocator work:
 
 ```zen
 OwnedBytes<T, A>: {
@@ -950,10 +1009,29 @@ That distinction is deliberate:
 - APIs that need to store or mutate text should say so with an allocator-backed
   type rather than accepting a literal and allocating invisibly.
 
-String interpolation embeds expressions with `${...}` and currently produces a
-`StaticString`-shaped non-owning view for the stable examples. Interpolated
-expressions are not baked literals, and interpolation does not implicitly
-construct allocator-backed `String`.
+String interpolation embeds expressions with `${...}`. In stable examples it is
+non-owning and does not allocate a dynamic `String`; only literal bytes are
+guaranteed to be baked into program storage.
+
+A good API makes the choice visible:
+
+```zen
+LogLine: {
+    level: StaticString,
+    message: StaticString,
+}
+
+String<A>: {
+    ptr: RawPtr<u8>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+```
+
+The first shape stores text that already lives in the program. The second
+shape owns runtime bytes, so it must carry the allocator that owns those bytes.
+That is the difference between static text and dynamic text in Zen.
 
 ## Gated Preview: Sync, Async, And Allocators
 
@@ -991,7 +1069,7 @@ The intended source rule is:
 - an `Async` API returns a `Task<...>` that represents work to run later;
 - sync code can call sync code directly;
 - async code needs an explicit task/runtime boundary before sync callers can
-  observe its result.
+  observe its result;
 - allocator and scheduler APIs should expose their effect mode in the type
   surface instead of hiding it behind a normal call.
 
@@ -1018,6 +1096,21 @@ use_async = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<
 There is no source-level `async` keyword in the stable tour. The preview keeps
 the effect in ordinary Zen types: `Sync`, `Async`, `Task<T>`, and allocator
 capabilities.
+
+The useful mental model is:
+
+```zen
+sync_read = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
+}
+
+async_read = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+```
+
+The call site should not need to guess whether work runs now, later, or on a
+scheduler. The result type and allocator mode say that directly.
 
 ### Allocator Preview
 
