@@ -17,6 +17,7 @@ pub fn is_builtin_type_name(name: &str) -> bool {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GatedBuiltinType {
+    DynamicString,
     Allocator,
     SyncEffect,
     AsyncEffect,
@@ -28,6 +29,7 @@ pub enum GatedBuiltinType {
 
 impl GatedBuiltinType {
     pub const ALL: &[GatedBuiltinType] = &[
+        Self::DynamicString,
         Self::Allocator,
         Self::SyncEffect,
         Self::AsyncEffect,
@@ -46,6 +48,7 @@ impl GatedBuiltinType {
 
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::DynamicString => DYNAMIC_STRING_TYPE_NAME,
             Self::Allocator => ALLOCATOR_TYPE_NAME,
             Self::SyncEffect => SYNC_EFFECT_TYPE_NAME,
             Self::AsyncEffect => ASYNC_EFFECT_TYPE_NAME,
@@ -58,6 +61,9 @@ impl GatedBuiltinType {
 
     pub fn gate_message(self) -> &'static str {
         match self {
+            Self::DynamicString => {
+                "`String` is gated until allocator-backed dynamic text ownership is implemented; use `StaticString` for baked literal text"
+            }
             Self::Allocator => {
                 "typed allocators are gated until allocator ownership and effect semantics are implemented"
             }

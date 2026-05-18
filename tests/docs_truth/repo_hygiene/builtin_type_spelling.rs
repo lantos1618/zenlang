@@ -16,6 +16,7 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         "pub const MAILBOX_TYPE_NAME: &str = \"Mailbox\"",
         "pub const SUPERVISOR_TYPE_NAME: &str = \"Supervisor\"",
         "pub enum GatedBuiltinType",
+        "DynamicString",
         "pub const ALL: &[GatedBuiltinType]",
         "pub fn gate_message(self) -> &'static str",
         "pub fn gated_builtin_type_name",

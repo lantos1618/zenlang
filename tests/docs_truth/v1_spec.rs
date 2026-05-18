@@ -82,6 +82,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "baked program storage",
         "interpolation must not imply allocator-backed",
         "allocator-backed `String`",
+        "dynamic_string_type_is_rejected_as_allocator_backed_gate",
+        "Source-level `String` use currently reports a gated",
         "Planned Positive Test",
         "Planned Negative Test",
         "resolver_records_value_symbol_generic_parameter_counts",

@@ -142,6 +142,30 @@ main = (allocator: Allocator<i32, Sync>) void { }
 }
 
 #[test]
+fn dynamic_string_type_is_rejected_as_allocator_backed_gate() {
+    let program = parse_program(
+        r#"
+main = (value: String) void { }
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("dynamic String should stay gated until allocator ownership exists");
+
+    assert!(
+        err.iter().any(|d| d.message.contains("`String` is gated")),
+        "expected dynamic String gate diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .all(|d| !d.message.contains("unknown type symbol")),
+        "dynamic String gate should not be reported as an ordinary unknown type, got {err:?}"
+    );
+}
+
+#[test]
 fn sync_async_effect_modes_are_rejected_as_gated_not_unknown() {
     let program = parse_program(
         r#"
