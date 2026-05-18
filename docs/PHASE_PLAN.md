@@ -633,6 +633,11 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
   `Box<i32, StaticString> { value: 1 }` without field-mismatch followups.
+- Diagnostics JSON for missing generic struct constructor type arguments is now
+  pinned by
+  `emit_json_diagnostics_generic_struct_constructor_missing_args_schema_matches_golden`,
+  covering the stable `E5001` payload for `Box { value: 1 }` without
+  field-mismatch followups.
 - Diagnostics JSON for generic enum constructor arity is now pinned by
   `emit_json_diagnostics_generic_enum_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
