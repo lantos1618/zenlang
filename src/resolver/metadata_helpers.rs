@@ -216,7 +216,7 @@ mod tests {
     fn resolver_behavior_impl_method_key_includes_generic_behavior_specialization() {
         assert_eq!(
             resolver_behavior_impl_method_key("Point", "encode", "Json", &[AstType::Str]),
-            "Point.encode__Json_str"
+            "Point.encode__Json_StaticString"
         );
         assert_eq!(
             resolver_behavior_impl_method_key(

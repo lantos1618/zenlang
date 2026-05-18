@@ -45,13 +45,14 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("generic_method_nested_result.zen"),
     );
-    assert!(c_source.contains("typedef struct Result_Option_i32_str Result_Option_i32_str;"));
-    assert!(c_source.contains("Result_Option_i32_str Box_wrap_result_i32(Box_i32 self)"));
+    assert!(c_source
+        .contains("typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;"));
+    assert!(c_source.contains("Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_wrap_result_i32(box)"));
-    assert!(c_source.contains("unwrap_result_Option_i32_str(wrapped,"));
+    assert!(c_source.contains("unwrap_result_Option_i32_StaticString(wrapped,"));
     assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_str");
+    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_StaticString");
     assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("Option_T"));
@@ -82,11 +83,11 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
 
     let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
-    assert!(c_source.contains("int32_t Vec_len_str(Vec_str self)"));
+    assert!(c_source.contains("int32_t Vec_len_StaticString(Vec_StaticString self)"));
     assert!(c_source.contains("Vec_len_i32(ints)"));
-    assert!(c_source.contains("Vec_len_str(words)"));
+    assert!(c_source.contains("Vec_len_StaticString(words)"));
     assert_c_call_resolves_to_definition(&c_source, "Vec_len_i32");
-    assert_c_call_resolves_to_definition(&c_source, "Vec_len_str");
+    assert_c_call_resolves_to_definition(&c_source, "Vec_len_StaticString");
     assert!(!c_source.contains("Vec_T"));
     assert!(!c_source.contains("T Vec_len"));
 

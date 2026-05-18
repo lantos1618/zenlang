@@ -10,7 +10,7 @@ Json<T>: behavior {
 
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
+Point.implements(Json<StaticString>) {
 }
 "#,
     );
@@ -39,7 +39,7 @@ Point.implements(Json<str>) {
         .collect();
     assert!(
             messages.iter().any(|message| {
-                *message == "type `Point` implementation of `Json_str` is missing required method `encode`"
+                *message == "type `Point` implementation of `Json_StaticString` is missing required method `encode`"
             }),
             "resolver-restored impl metadata should report the validated missing method, got {:?}",
             messages
@@ -61,18 +61,18 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Point: { x: i32 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "point" }
+    pretty = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -112,7 +112,7 @@ Point.implements(PrettyJson) {
     assert!(
             messages.iter().any(|message| {
                 *message
-                    == "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+                    == "overlapping implementations of behaviors `Json_StaticString` and `PrettyJson` for type `Point`"
             }),
             "resolver-restored impl type args should drive overlap diagnostics, got {:?}",
             messages
@@ -133,7 +133,7 @@ Json<T>: behavior {
 }
 Point: { x: i32 }
 
-Point.implements(Json<str>) {
+Point.implements(Json<StaticString>) {
 }
 
 Point.implements(Json<i32>) {
@@ -183,7 +183,7 @@ Point.implements(Json<i32>) {
     );
     assert!(
         tc.behavior_impls
-            .contains(&("Point".to_string(), "Json_str".to_string()))
+            .contains(&("Point".to_string(), "Json_StaticString".to_string()))
             && tc
                 .behavior_impls
                 .contains(&("Point".to_string(), "Json_i32".to_string())),

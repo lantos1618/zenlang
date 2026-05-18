@@ -7,11 +7,11 @@ fn resolver_declaration_semantic_bundle_replays_validation_passes() {
 Point: { x: i32 = true }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -76,11 +76,11 @@ fn resolver_declaration_collection_bundle_replays_metadata_semantics_and_refresh
 Point: { x: i32 = true }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -150,11 +150,11 @@ fn declaration_collection_replay_bundle_collects_ast_and_resolver_tasks_together
 Point: { x: i32 }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -199,11 +199,11 @@ fn resolver_declaration_semantic_tasks_collect_only_semantic_work() {
 Point: { x: i32 = true }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(Json)
@@ -229,11 +229,11 @@ fn resolver_declaration_semantic_bundle_replays_dedicated_semantic_tasks() {
 Point: { x: i32 = true }
 
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (self: Point) str { "point" }
+    encode = (self: Point) StaticString { "point" }
 }
 
 Point.requires(Json)

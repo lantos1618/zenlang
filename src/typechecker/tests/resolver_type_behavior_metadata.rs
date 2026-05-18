@@ -8,7 +8,7 @@ fn check_program_with_symbols_validates_resolver_type_parameter_counts() {
         r#"
 Box<T>: { value: T }
 Serializable<T>: behavior {
-    encode: (T) str
+    encode: (T) StaticString
 }
 "#,
     );
@@ -43,7 +43,7 @@ fn check_program_with_symbols_validates_resolver_type_parameter_names() {
         r#"
 Box<T>: { value: T }
 Serializable<T>: behavior {
-    encode: (T) str
+    encode: (T) StaticString
 }
 "#,
     );
@@ -106,7 +106,7 @@ fn check_program_with_symbols_validates_resolver_behavior_visibility() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 "#,
     );
@@ -133,7 +133,7 @@ fn check_program_with_symbols_validates_resolver_type_parameter_bounds() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 Box<T: Json>: { value: T }
 "#,
@@ -200,7 +200,7 @@ fn check_program_with_symbols_validates_resolver_type_like_absent_value_metadata
         r#"
 Box<T>: { value: T }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 "#,
     );
@@ -255,7 +255,7 @@ fn check_program_with_symbols_validates_resolver_behavior_absent_type_metadata()
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 "#,
     );

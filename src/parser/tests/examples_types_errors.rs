@@ -56,8 +56,8 @@ fn parse_nested_generics() {
     let prog = parse_ok("bar = (x: Vec<Ptr<i32>>) void { }");
     assert_eq!(prog.declarations.len(), 1);
 
-    // Triple-nested: Map<str, Vec<Ptr<f64>>>
-    let prog = parse_ok("baz = (x: Map<str, Vec<Ptr<f64>>>) void { }");
+    // Triple-nested: Map<StaticString, Vec<Ptr<f64>>>
+    let prog = parse_ok("baz = (x: Map<StaticString, Vec<Ptr<f64>>>) void { }");
     assert_eq!(prog.declarations.len(), 1);
 
     // Deeply nested: A<B<C<D<i32>>>>

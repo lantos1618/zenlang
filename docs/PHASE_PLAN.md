@@ -41,12 +41,12 @@ checked-in docs, tests, and commits only.
   no longer stand in for "emitted once" evidence.
 - Nested generic enum specialization is covered by
   `tests/zen/generic_nested_result_enum.zen`, proving
-  `Result<Option<i32>, str>` runtime behavior and generated-C call/definition
+  `Result<Option<i32>, StaticString>` runtime behavior and generated-C call/definition
   consistency for both the outer result unwrap and inner option unwrap.
 - Generic method specialization with nested generic enum returns is covered by
   `tests/zen/generic_method_nested_result.zen`, proving a specialized
   `Box<T>` method can infer `T` from the receiver and return
-  `Result<Option<T>, str>` without leaving unspecialized C symbols or
+  `Result<Option<T>, StaticString>` without leaving unspecialized C symbols or
   unresolved generated calls.
 - Imported generic methods that return source-module generic enum dependencies
   now also rely on receiver inference in
@@ -55,12 +55,12 @@ checked-in docs, tests, and commits only.
 - Imported generic methods returning nested source-module generic enum
   dependencies are covered by
   `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`,
-  proving `Result<Option<T>, str>` return specialization through an imported
+  proving `Result<Option<T>, StaticString>` return specialization through an imported
   public method without undefined generated C calls.
 - Imported generic `Result<T, E>` enum methods now cover multiple concrete
   instantiations from the importing module through
   `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`,
-  preserving `Result_unwrap_or_i32_str` and `Result_unwrap_or_bool_str`
+  preserving `Result_unwrap_or_i32_StaticString` and `Result_unwrap_or_bool_StaticString`
   call/definition pairs without unspecialized `Result_T` symbols.
 - Resolver method symbols carry full value-signature metadata, including
   generic type-parameter names and bounds, and typechecker setup validates
@@ -1104,10 +1104,10 @@ checked-in docs, tests, and commits only.
 - Inherited generic behavior dispatch has executable coverage through
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,
-  such as `Point.implements(Json<str>)`, has parser, typechecker, and executable
+  such as `Point.implements(Json<StaticString>)`, has parser, typechecker, and executable
   coverage through `tests/zen/behavior_json_generic_association.zen`.
 - Generic behavior inheritance in `.extends`, including
-  `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
+  `PrettyJson.extends(Json<StaticString>)`, now has parser, resolver metadata,
   typechecker substitution, local executable coverage, and graph-owned
   multi-file import coverage.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
@@ -1244,7 +1244,7 @@ checked-in docs, tests, and commits only.
 - Resolver type symbols now carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST.
-  Specialized behavior references such as `Json<str>` are included in this
+  Specialized behavior references such as `Json<StaticString>` are included in this
   resolver handoff validation.
   Resolver now rejects duplicate local `.implements` edges before recording
   duplicate metadata, covered by
@@ -1262,7 +1262,7 @@ checked-in docs, tests, and commits only.
   metadata, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_parent_edges`.
 - Concrete generic behavior parent inheritance, such as
-  `PrettyJson.extends(Json<str>)`, now has parser, resolver metadata,
+  `PrettyJson.extends(Json<StaticString>)`, now has parser, resolver metadata,
   typechecker substitution, and executable coverage through
   `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Resolver validation for `.extends(...)` parent type arguments now scopes the
@@ -1275,7 +1275,7 @@ checked-in docs, tests, and commits only.
   generic parameters.
 - Resolver behavior symbols now carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
-  parent references such as `Json<str>` are included in this resolver handoff
+  parent references such as `Json<StaticString>` are included in this resolver handoff
   validation.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
@@ -1419,7 +1419,7 @@ checked-in docs, tests, and commits only.
 - Distinct generic behavior specializations on one concrete type now emit and
   dispatch through behavior-specialized impl method symbols, covered by
   `tests/zen/behavior_distinct_generic_specialization_dispatch.zen` and
-  generated-C assertions for `Point_encode__Json_str` and
+  generated-C assertions for `Point_encode__Json_StaticString` and
   `Point_encode__Json_i32`.
 - Multi-file behavior inheritance fixtures now compile and run through
   graph-owned imports, proving imported child behavior impls carry inherited

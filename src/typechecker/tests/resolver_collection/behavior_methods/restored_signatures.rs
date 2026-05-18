@@ -43,11 +43,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_name_metadata
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -76,11 +76,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_return_presen
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -109,11 +109,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_parameter_cou
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -148,11 +148,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_missing_param
         r#"
 Point: { x: i32 }
 Mapper: behavior {
-    map: (Self, i32) str
+    map: (Self, i32) StaticString
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { "point" }
+    map = (value: Point, input: i32) StaticString { "point" }
 }
 "#,
     );
@@ -185,11 +185,11 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_parameter_nam
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (value: Self) str
+    encode: (value: Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -219,11 +219,11 @@ fn collect_declarations_with_symbols_ignores_stale_behavior_method_parameter_ord
         r#"
 Point: { x: i32 }
 Mapper: behavior {
-    map: (value: Self, input: i32) str
+    map: (value: Self, input: i32) StaticString
 }
 
 Point.implements(Mapper) {
-    map = (value: Point, input: i32) str { "point" }
+    map = (value: Point, input: i32) StaticString { "point" }
 }
 "#,
     );
@@ -255,13 +255,13 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_method_count() {
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
-    describe: (Self) str
+    encode: (Self) StaticString
+    describe: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
-    describe = (value: Point) str { "desc" }
+    encode = (value: Point) StaticString { "point" }
+    describe = (value: Point) StaticString { "desc" }
 }
 "#,
     );

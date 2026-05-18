@@ -59,7 +59,7 @@ fn resolver_enum_variants_from_metadata_uses_owner_scoped_payloads() {
     let program = parse_program(
         r#"
 First: Wrap(i32), None
-Second: Wrap(str)
+Second: Wrap(StaticString)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -237,7 +237,7 @@ fn behavior_impl_refs_from_metadata_restores_type_and_behavior_keys() {
     assert_eq!(
         tc.behavior_impl_refs_from_metadata("Point", &metadata),
         vec![
-            ("Point".to_string(), "Json_str".to_string()),
+            ("Point".to_string(), "Json_StaticString".to_string()),
             ("Point".to_string(), "Debug".to_string()),
         ]
     );

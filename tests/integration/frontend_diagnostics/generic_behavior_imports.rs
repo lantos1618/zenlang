@@ -24,7 +24,7 @@ Point: {
     x: i32
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
 main = () i32 {
     0
@@ -42,7 +42,7 @@ main = () i32 {
         .unwrap_or("<non-string panic>");
 
     assert!(
-        message.contains("type `Point` does not implement required behavior `Json_str`"),
+        message.contains("type `Point` does not implement required behavior `Json_StaticString`"),
         "expected imported generic behavior requires diagnostic, panic={message}"
     );
 }
@@ -72,7 +72,7 @@ Point: {
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
@@ -119,7 +119,7 @@ pub Json<T>: behavior {
 { Json } = traits
 
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json)
@@ -169,7 +169,7 @@ Point: {
     x: i32
 }
 
-Point.requires(Json<i32, str>)
+Point.requires(Json<i32, StaticString>)
 
 main = () i32 {
     0
@@ -212,7 +212,7 @@ pub Json<T>: behavior {
         r#"
 { Json } = traits
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     "encoded"
 }
 
@@ -261,14 +261,14 @@ Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
 
-Point.requires(Json<str>)
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
+Point.requires(Json<StaticString>)
 
 main = () i32 {
     0
@@ -286,7 +286,7 @@ main = () i32 {
         .unwrap_or("<non-string panic>");
 
     assert!(
-        message.contains("duplicate required behavior `Json<str>` for `Point`"),
+        message.contains("duplicate required behavior `Json<StaticString>` for `Point`"),
         "expected imported duplicate behavior requires diagnostic, panic={message}"
     );
 }

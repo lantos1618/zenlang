@@ -5,7 +5,7 @@ fn type_parameter_absence_validation_builds_entries() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 identity<T: Json> = (value: T) T { value }

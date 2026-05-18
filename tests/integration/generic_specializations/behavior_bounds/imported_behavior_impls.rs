@@ -5,10 +5,10 @@ fn imported_behavior_impl_specializations_do_not_emit_unspecialized_c_symbols() 
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_behavior_impl/main.zen"),
     );
-    assert!(c_source.contains("zen_str Point_encode__Json_str(Point value)"));
+    assert!(c_source.contains("zen_str Point_encode__Json_StaticString(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
-    assert!(c_source.contains("Point_encode__Json_str(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_str");
+    assert!(c_source.contains("Point_encode__Json_StaticString(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_StaticString");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
@@ -62,10 +62,10 @@ fn imported_behavior_requires_do_not_emit_unspecialized_c_symbols() {
     let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_imported_behavior_requires/main.zen"),
     );
-    assert!(c_source.contains("zen_str Point_encode__Json_str(Point value)"));
+    assert!(c_source.contains("zen_str Point_encode__Json_StaticString(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
-    assert!(c_source.contains("Point_encode__Json_str(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_str");
+    assert!(c_source.contains("Point_encode__Json_StaticString(value)"));
+    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_StaticString");
     assert_c_call_resolves_to_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 

@@ -140,8 +140,9 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &test_dir().join("multi_file_type_method_nested_result_dependency/main.zen"),
     );
     assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
-    assert!(c_source.contains("typedef struct Result_Option_i32_str Result_Option_i32_str;"));
-    assert!(c_source.contains("Result_Option_i32_str Box_wrap_result_i32(Box_i32 self)"));
+    assert!(c_source
+        .contains("typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;"));
+    assert!(c_source.contains("Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_wrap_result_i32(box)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
     assert!(!c_source.contains("Option_T"));

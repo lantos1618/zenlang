@@ -155,7 +155,7 @@ fn check_program_with_symbols_requires_resolver_behavior_default_locals() {
     let program = parse_program(
         r#"
 Json: behavior {
-    to_json: (Self) str {
+    to_json: (Self) StaticString {
         value = "{}"
         value
     }

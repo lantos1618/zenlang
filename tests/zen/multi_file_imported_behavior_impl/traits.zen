@@ -6,8 +6,8 @@ pub Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "encoded"
     }
 }

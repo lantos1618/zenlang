@@ -1,9 +1,9 @@
 { io } = std
 { Json, Point } = traits
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
-encode<T: Json<str>> = (value: T) str {
+encode<T: Json<StaticString>> = (value: T) StaticString {
     value.encode()
 }
 

@@ -1,7 +1,7 @@
 { io } = std
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point: {
@@ -9,12 +9,12 @@ Point: {
 }
 
 Point.implements(Json) {
-    to_json = (self: Point) str {
+    to_json = (self: Point) StaticString {
         "point"
     }
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     value.to_json()
 }
 

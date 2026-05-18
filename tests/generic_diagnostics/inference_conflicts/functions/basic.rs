@@ -17,7 +17,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic function `choose`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic function `choose`: inferred `i32` and `StaticString`"
         )),
         "expected generic function inference conflict diagnostic, got {errors:?}"
     );

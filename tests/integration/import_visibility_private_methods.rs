@@ -56,7 +56,7 @@ fn imported_private_behavior_impl_methods_are_not_directly_visible() {
         &model_path,
         r#"
 Hidden: behavior {
-    reveal: (Self) str
+    reveal: (Self) StaticString
 }
 
 pub Point: {
@@ -64,7 +64,7 @@ pub Point: {
 }
 
 Point.implements(Hidden) {
-    reveal = (value: Point) str {
+    reveal = (value: Point) StaticString {
         "hidden"
     }
 }

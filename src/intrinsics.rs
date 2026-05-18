@@ -209,8 +209,8 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "call_external",  ("func_ptr" => ptr.clone()) -> AstType::I64, "Call external function pointer", "FFI");
 
     // -- String operations ------------------------------------------------
-    intrinsic!(m, "strlen", ("str" => AstType::StaticString) -> AstType::Usize, "Get length of a static string", "String");
-    intrinsic!(m, "static_string_ptr", ("str" => AstType::StaticString) -> ptr.clone(), "Get pointer to static string data", "String");
+    intrinsic!(m, "strlen", ("value" => AstType::StaticString) -> AstType::Usize, "Get length of a static string", "String");
+    intrinsic!(m, "static_string_ptr", ("value" => AstType::StaticString) -> ptr.clone(), "Get pointer to static string data", "String");
 
     // -- IO operations (libc wrappers) ------------------------------------
     intrinsic!(m, "libc_write", ("fd" => AstType::I32, "buf" => ptr.clone(), "len" => AstType::Usize) -> AstType::I64, "Write via libc", "IO");
@@ -236,4 +236,3 @@ fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
 // ============================================================================
 // Well-Known Types (types with special compiler semantics)
 // ============================================================================
-

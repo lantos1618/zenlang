@@ -5,11 +5,11 @@ Point: {
 }
 
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
 Point.implements(Json) {
-    to_json = (value: Point) str {
+    to_json = (value: Point) StaticString {
         "{\"x\":1}"
     }
 }

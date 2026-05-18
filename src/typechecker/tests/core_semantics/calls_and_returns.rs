@@ -202,7 +202,7 @@ fn function_call_argument_type_mismatch_is_error() {
     assert!(
         errors.iter().any(|d| d
             .message
-            .contains("argument 1 for `takes_i32` expects `i32`, found `str`")),
+            .contains("argument 1 for `takes_i32` expects `i32`, found `StaticString`")),
         "expected argument type diagnostic, got {errors:?}"
     );
 }

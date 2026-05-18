@@ -98,7 +98,9 @@ fn parse_public_behavior_declaration() {
 
 #[test]
 fn parse_behavior_impl_block() {
-    let prog = parse_ok("Point.implements(Json) {\n    to_json = (value: Point) str { \"{}\" }\n}");
+    let prog = parse_ok(
+        "Point.implements(Json) {\n    to_json = (value: Point) StaticString { \"{}\" }\n}",
+    );
     match &prog.declarations[0] {
         Declaration::ImplBlock {
             type_name,
@@ -231,7 +233,7 @@ fn parse_behavior_extends_with_generic_parent_args() {
 
 #[test]
 fn parse_generic_behavior_function_bound_with_type_args() {
-    let prog = parse_ok("encode<T: Json<T>> = (value: T) str { \"\" }");
+    let prog = parse_ok("encode<T: Json<T>> = (value: T) StaticString { \"\" }");
     match &prog.declarations[0] {
         Declaration::Function { type_params, .. } => {
             assert_eq!(type_params.len(), 1);

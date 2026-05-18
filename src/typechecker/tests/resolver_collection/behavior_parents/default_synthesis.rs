@@ -5,17 +5,17 @@ fn collect_declarations_with_symbols_synthesizes_defaults_from_restored_behavior
     let mut program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str { "json" }
+    encode: (Self) StaticString { "json" }
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Point: { x: i32 }
 
 PrettyJson.extends(Json)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "point" }
+    pretty = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -49,14 +49,14 @@ Json<T>: behavior {
     encode: (Self) T { "json" }
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Point: { x: i32 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "point" }
+    pretty = (value: Point) StaticString { "point" }
 }
 "#,
     );

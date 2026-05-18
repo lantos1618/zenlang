@@ -83,7 +83,7 @@ fn parse_enum_variant_payload_expr() {
 #[test]
 fn parse_shorthand_enum_variant_expr_and_pattern() {
     let prog = parse_ok(
-        r#"f = (value: Result<i32, str>) Result<i32, str> {
+        r#"f = (value: Result<i32, StaticString>) Result<i32, StaticString> {
     value ?
         | .Ok(v) { .Ok(v) }
         | .Err(msg) { .Err(msg) }

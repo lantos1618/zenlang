@@ -306,7 +306,7 @@ fn struct_literal_field_type_mismatch_is_error() {
     assert!(
         errors.iter().any(|d| d
             .message
-            .contains("field `x` for struct `Point` expects `i32`, found `str`")),
+            .contains("field `x` for struct `Point` expects `i32`, found `StaticString`")),
         "expected field type diagnostic, got {errors:?}"
     );
 }

@@ -11,8 +11,8 @@ Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
 }
 
 main = () i32 {
-    ok = Result<i32, str>.Ok(21)
-    err = Result<i32, str>.Err("bad")
+    ok = Result<i32, StaticString>.Ok(21)
+    err = Result<i32, StaticString>.Err("bad")
     io.println("${ok.unwrap_or(0)}")
     io.println("${err.unwrap_or(34)}")
     0

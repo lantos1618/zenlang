@@ -84,7 +84,7 @@ add = (a: i32, b: i32) i32 { a + b }
         Some(vec![(
             "encode".to_string(),
             vec!["Self".to_string()],
-            "str".to_string(),
+            "StaticString".to_string(),
         )]),
     );
     symbols.set_behavior_method_types_for_test(

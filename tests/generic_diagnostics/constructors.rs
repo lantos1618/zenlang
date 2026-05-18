@@ -9,7 +9,7 @@ Box<T>: {
 }
 
 main = () i32 {
-    box = Box<i32, str> { value: 1 }
+    box = Box<i32, StaticString> { value: 1 }
     box.value
 }
 "#,
@@ -96,7 +96,7 @@ Option<T>:
     Some(T)
 
 main = () i32 {
-    value = Option<i32, str>.Some(1)
+    value = Option<i32, StaticString>.Some(1)
     0
 }
 "#,

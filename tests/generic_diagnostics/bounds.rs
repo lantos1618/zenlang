@@ -5,7 +5,7 @@ fn generic_struct_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -37,7 +37,7 @@ fn generic_enum_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -69,7 +69,7 @@ fn generic_struct_annotation_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -99,7 +99,7 @@ fn generic_enum_annotation_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -129,7 +129,7 @@ fn generic_struct_local_annotation_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -161,7 +161,7 @@ fn generic_enum_local_annotation_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {

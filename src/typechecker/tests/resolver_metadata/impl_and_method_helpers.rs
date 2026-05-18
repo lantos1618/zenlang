@@ -124,11 +124,11 @@ fn resolver_backed_impl_method_key_requires_resolver_collection() {
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -168,11 +168,11 @@ fn effective_behavior_impl_methods_carry_named_declaration_and_method_name() {
         r#"
 Point: { x: i32 }
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point.implements(Json) {
-    encode = (value: Point) str { "point" }
+    encode = (value: Point) StaticString { "point" }
 }
 "#,
     );

@@ -12,7 +12,7 @@ Option<T>:
     None,
     Some(T)
 
-read = (box: Box<Option<i32, str>>) i32 {
+read = (box: Box<Option<i32, StaticString>>) i32 {
     0
 }
 "#,
@@ -39,7 +39,7 @@ Option<T>:
     Some(T)
 
 main = () i32 {
-    value = Box<Option<i32, str>> { value: Option<i32>.Some(1) }
+    value = Box<Option<i32, StaticString>> { value: Option<i32>.Some(1) }
     0
 }
 "#,
@@ -61,7 +61,7 @@ Box<T>: {
     value: T
 }
 
-call = (f: (Box<i32, str>) i32) i32 {
+call = (f: (Box<i32, StaticString>) i32) i32 {
     0
 }
 "#,
@@ -105,7 +105,7 @@ Box<T>: {
     value: T
 }
 
-read = (ptr: Ptr<Box<i32, str>>) i32 {
+read = (ptr: Ptr<Box<i32, StaticString>>) i32 {
     0
 }
 "#,
@@ -149,7 +149,7 @@ Box<T>: {
     value: T
 }
 
-read = (items: [Box<i32, str>; 1]) i32 {
+read = (items: [Box<i32, StaticString>; 1]) i32 {
     0
 }
 "#,

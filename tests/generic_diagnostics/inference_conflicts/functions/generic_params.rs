@@ -13,7 +13,7 @@ choose_box<T> = (left: T, box: Box<T>) T {
 }
 
 main = () i32 {
-    box = Box<str> { value: "bad" }
+    box = Box<StaticString> { value: "bad" }
     choose_box(1, box)
 }
 "#,
@@ -21,7 +21,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic function `choose_box`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic function `choose_box`: inferred `i32` and `StaticString`"
         )),
         "expected generic function struct inference conflict diagnostic, got {errors:?}"
     );
@@ -40,7 +40,7 @@ choose_option<T> = (left: T, value: Option<T>) T {
 }
 
 main = () i32 {
-    value = Option<str>.Some("bad")
+    value = Option<StaticString>.Some("bad")
     choose_option(1, value)
 }
 "#,
@@ -48,7 +48,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic function `choose_option`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic function `choose_option`: inferred `i32` and `StaticString`"
         )),
         "expected generic function enum inference conflict diagnostic, got {errors:?}"
     );

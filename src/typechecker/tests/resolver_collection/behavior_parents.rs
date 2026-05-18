@@ -11,10 +11,10 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     );
     let symbols = crate::resolver::Resolver::new()
@@ -54,10 +54,10 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()
@@ -87,10 +87,10 @@ fn collect_declarations_with_symbols_avoids_false_duplicate_from_restored_parent
 Marker<T>: behavior {
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Marker<str>)
+PrettyJson.extends(Marker<StaticString>)
 PrettyJson.extends(Marker<i32>)
 "#,
     );
@@ -120,7 +120,7 @@ PrettyJson.extends(Marker<i32>)
         .get("PrettyJson")
         .expect("behavior parents");
     let parent_keys: Vec<_> = parents.iter().map(|parent| parent.key.as_str()).collect();
-    assert_eq!(parent_keys, vec!["Marker_str", "Marker_i32"]);
+    assert_eq!(parent_keys, vec!["Marker_StaticString", "Marker_i32"]);
     assert!(
         tc.diagnostics.iter().all(|diagnostic| !diagnostic
             .message

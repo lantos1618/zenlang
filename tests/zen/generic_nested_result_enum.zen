@@ -21,8 +21,8 @@ unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
 }
 
 main = () i32 {
-    ok = Result<Option<i32>, str>.Ok(Option<i32>.Some(42))
-    err = Result<Option<i32>, str>.Err("bad")
+    ok = Result<Option<i32>, StaticString>.Ok(Option<i32>.Some(42))
+    err = Result<Option<i32>, StaticString>.Err("bad")
     some = unwrap_result(ok, Option<i32>.None)
     fallback = unwrap_result(err, Option<i32>.Some(7))
     io.println("${unwrap_option(some, 0)}")

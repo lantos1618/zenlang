@@ -5,7 +5,7 @@ fn resolver_records_behavior_method_signatures() {
     let program = parse_program(
         r#"
 Serializable: behavior {
-    encode: (Self, i32) str
+    encode: (Self, i32) StaticString
     reset: () void
 }
 "#,
@@ -24,7 +24,7 @@ Serializable: behavior {
                 (
                     "encode".to_string(),
                     vec!["Self".to_string(), "i32".to_string()],
-                    "str".to_string()
+                    "StaticString".to_string()
                 ),
                 ("reset".to_string(), vec![], "void".to_string())
             ][..]
@@ -37,8 +37,8 @@ fn resolver_rejects_duplicate_behavior_method_names() {
     let program = parse_program(
         r#"
 Serializable: behavior {
-    encode: (Self) str
-    encode: (Self, i32) str
+    encode: (Self) StaticString
+    encode: (Self, i32) StaticString
 }
 "#,
     );
@@ -61,7 +61,7 @@ fn resolver_rejects_duplicate_signature_parameter_names() {
     let program = parse_program(
         r#"
 Json: behavior {
-    encode: (value: Self, value: Self) str
+    encode: (value: Self, value: Self) StaticString
 }
 "#,
     );
@@ -190,7 +190,7 @@ fn resolver_records_behavior_default_method_body_locals() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str {
+    stringify: (Self) StaticString {
         label = "json"
         label
     }

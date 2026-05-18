@@ -8,7 +8,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 apply<T: Json<T>> = (callback: (T) T) (T) T {
     callback

@@ -8,14 +8,14 @@ Json<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Point: { x: i32 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str { "point" }
+    pretty = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -67,10 +67,10 @@ Debug<T>: behavior {
     encode: (Self) T
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 PrettyJson.extends(Debug<i32>)
 "#,
     );
@@ -112,7 +112,7 @@ PrettyJson.extends(Debug<i32>)
         .get("PrettyJson")
         .expect("behavior parents");
     let parent_keys: Vec<_> = parents.iter().map(|parent| parent.key.as_str()).collect();
-    assert_eq!(parent_keys, vec!["Json_str", "Debug_i32"]);
+    assert_eq!(parent_keys, vec!["Json_StaticString", "Debug_i32"]);
 }
 
 #[test]
@@ -120,13 +120,13 @@ fn collect_declarations_with_symbols_reports_cycle_from_restored_parent_refs() {
     let mut program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 
 Json.extends(PrettyJson)

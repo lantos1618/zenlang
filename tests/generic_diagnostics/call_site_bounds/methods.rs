@@ -5,7 +5,7 @@ fn generic_method_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -48,7 +48,7 @@ fn generic_receiver_method_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -85,7 +85,7 @@ fn generic_result_enum_method_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
@@ -102,7 +102,7 @@ Result.map<T, E, U: Json> = (self: Self, fallback: U) U {
 }
 
 main = () i32 {
-    value = Result<i32, str>.Ok(1)
+    value = Result<i32, StaticString>.Ok(1)
     point = Point { x: 1 }
     bad = value.map(point)
     0
@@ -129,14 +129,14 @@ fn generic_ufc_function_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
     x: i32
 }
 
-as_json<T: Json> = (value: T) str {
+as_json<T: Json> = (value: T) StaticString {
     value.encode()
 }
 

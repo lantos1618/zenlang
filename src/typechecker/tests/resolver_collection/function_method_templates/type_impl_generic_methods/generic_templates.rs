@@ -52,7 +52,7 @@ Json<T>: behavior {
     encode: (Self) T
 }
 Debug: behavior {
-    debug: (Self) str
+    debug: (Self) StaticString
 }
 Box: { value: i32 }
 

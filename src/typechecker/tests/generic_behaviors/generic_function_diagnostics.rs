@@ -9,7 +9,7 @@ identity<T> = (value: T) T {
 }
 
 main = () i32 {
-    identity<i32, str>(1)
+    identity<i32, StaticString>(1)
 }
 "#,
     );
@@ -109,10 +109,10 @@ fn generic_bound_rejects_unspecialized_generic_behavior() {
     let program = parse_program(
         r#"
 Json<T>: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     "encoded"
 }
 
@@ -140,10 +140,10 @@ fn generic_bound_nongeneric_behavior_type_args_are_error() {
     let program = parse_program(
         r#"
 Json: behavior {
-    to_json: (Self) str
+    to_json: (Self) StaticString
 }
 
-encode<T: Json<i32>> = (value: T) str {
+encode<T: Json<i32>> = (value: T) StaticString {
     "encoded"
 }
 

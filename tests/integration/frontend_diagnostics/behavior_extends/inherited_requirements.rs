@@ -12,10 +12,10 @@ pub Json<T>: behavior {
 }
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     )
     .expect("write traits module");
@@ -31,7 +31,7 @@ Point: {
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "point"
     }
 }
@@ -78,10 +78,10 @@ pub Json<T>: behavior {
 { Json } = base
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     )
     .expect("write traits module");
@@ -97,7 +97,7 @@ Point: {
 }
 
 Point.implements(PrettyJson) {
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "point"
     }
 }
@@ -135,14 +135,14 @@ pub Json<T>: behavior {
 }
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
 pub FancyJson: behavior {
-    fancy: (Self) str
+    fancy: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 FancyJson.extends(PrettyJson)
 "#,
     )
@@ -159,11 +159,11 @@ Point: {
 }
 
 Point.implements(FancyJson) {
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 
-    fancy = (value: Point) str {
+    fancy = (value: Point) StaticString {
         "fancy"
     }
 }

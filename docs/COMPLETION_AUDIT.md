@@ -59,7 +59,7 @@ and do not assume Phase 4 is ready without evidence.
   evidence through `tests/zen/generic_nested_result_enum.zen`,
   `integration::test_generic_nested_result_enum`, and
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
-  proving `Result<Option<i32>, str>` does not leave undefined generated calls.
+  proving `Result<Option<i32>, StaticString>` does not leave undefined generated calls.
 - Generic method specialization preserves concrete `Self` receiver context in
   call-site typing and specialized method bodies for generic struct and enum
   receivers, with executable and generated-C coverage in
@@ -71,7 +71,7 @@ and do not assume Phase 4 is ready without evidence.
   `integration::test_generic_method_nested_result`, and
   `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
   proving `Box<T>.wrap_result` can infer `T` from the concrete receiver and
-  specialize `Result<Option<T>, str>` without unresolved generated C calls.
+  specialize `Result<Option<T>, StaticString>` without unresolved generated C calls.
 - Generic association targets remain gated deliberately. The parser now has
   focused coverage for `Box<T>.implements`, `Box<T>.requires`, and
   `Box<T>.extends` through
@@ -102,14 +102,14 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`,
   `integration::test_multi_file_type_method_nested_result_dependency_imports`,
   and `integration::generated_c_call_definition_scan_reports_missing_generated_calls`,
-  proving `Result<Option<T>, str>` specialization does not leave undefined
+  proving `Result<Option<T>, StaticString>` specialization does not leave undefined
   generated C calls.
 - Imported generic `Result<T, E>` enum methods now cover multiple concrete
   instantiations in the importing module through
   `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`,
   `integration::test_multi_file_generic_result_enum_multi_specialization_imports`,
   and `integration::generic_specializations_do_not_emit_unspecialized_c_symbols`,
-  proving both `Result_unwrap_or_i32_str` and `Result_unwrap_or_bool_str`
+  proving both `Result_unwrap_or_i32_StaticString` and `Result_unwrap_or_bool_StaticString`
   resolve to emitted definitions exactly once without unspecialized `Result_T`
   symbols.
 - Imported generic aggregate constructor arity diagnostics are covered by
@@ -866,7 +866,7 @@ and do not assume Phase 4 is ready without evidence.
 - Resolver type symbols carry behavior impl and `.requires` association
   metadata, and typechecker setup rejects missing or extra association metadata
   before collecting behavior impls/requires from the AST. Specialized behavior
-  references such as `Json<str>` are included in this resolver handoff
+  references such as `Json<StaticString>` are included in this resolver handoff
   validation.
 - Resolver-backed `.requires` conformance checks read validated resolver
   required-behavior refs, so stale AST-only required behavior type arguments
@@ -892,11 +892,11 @@ and do not assume Phase 4 is ready without evidence.
 - Inherited generic behavior dispatch is covered by the executable fixture
   `tests/zen/behavior_inherited_generic_dispatch.zen`.
 - Concrete generic behavior association syntax in `.implements` and `.requires`,
-  such as `Point.implements(Json<str>)`, is parsed, typechecked with substituted
+  such as `Point.implements(Json<StaticString>)`, is parsed, typechecked with substituted
   behavior method signatures, and covered by
   `tests/zen/behavior_json_generic_association.zen`.
 - Generic behavior inheritance in `.extends`, including
-  `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
+  `PrettyJson.extends(Json<StaticString>)`, is parsed, recorded in resolver metadata,
   checked with substituted parent methods, and covered by local and graph-owned
   multi-file fixtures.
 - Unspecialized generic behaviors in `.implements`, `.requires`, and `.extends`
@@ -918,7 +918,7 @@ and do not assume Phase 4 is ready without evidence.
 - Distinct generic behavior specializations implemented by the same concrete
   type dispatch through behavior-specialized impl method symbols, covered by
   `tests/zen/behavior_distinct_generic_specialization_dispatch.zen` and
-  generated-C assertions for `Point_encode__Json_str` and
+  generated-C assertions for `Point_encode__Json_StaticString` and
   `Point_encode__Json_i32`.
 - Imported public types carry source-module behavior impl associations and impl
   methods into graph-owned generic behavior-bound dispatch, covered by
@@ -1029,7 +1029,7 @@ and do not assume Phase 4 is ready without evidence.
   metadata, covered by
   `resolver_phase2::resolver_rejects_duplicate_behavior_parent_edges`.
 - Concrete generic behavior parent inheritance, such as
-  `PrettyJson.extends(Json<str>)`, is parsed, recorded in resolver metadata,
+  `PrettyJson.extends(Json<StaticString>)`, is parsed, recorded in resolver metadata,
   checked with substituted parent method signatures, and covered by
   `tests/zen/behavior_generic_parent_inheritance.zen`.
 - Generic behavior inheritance parent arguments may reference the child
@@ -1042,7 +1042,7 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::check_program_with_symbols_accepts_resolver_behavior_parent_child_type_param_refs`.
 - Resolver behavior symbols carry parent behavior metadata, and typechecker
   setup rejects missing or extra resolver parent-edge metadata. Specialized
-  parent references such as `Json<str>` are included in this resolver handoff
+  parent references such as `Json<StaticString>` are included in this resolver handoff
   validation.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.

@@ -5,13 +5,13 @@ fn check_program_with_symbols_requires_resolver_impl_methods() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { "point" }
+    stringify = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -35,13 +35,13 @@ fn check_program_with_symbols_validates_resolver_impl_method_signature() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str { "point" }
+    stringify = (value: Point) StaticString { "point" }
 }
 "#,
     );
@@ -60,9 +60,11 @@ Point.implements(Json) {
         .expect_err("resolver impl method signature mismatch should fail");
 
     assert!(
-        err.iter().any(|d| d.message.contains(
-            "resolver value symbol 'Point.stringify' has return type 'i32', expected 'str'"
-        )),
+        err.iter().any(|d| {
+            d.message.contains(
+            "resolver value symbol 'Point.stringify' has return type 'i32', expected 'StaticString'"
+        )
+        }),
         "expected resolver impl method signature diagnostic, got {err:?}"
     );
 }
@@ -107,13 +109,13 @@ fn check_program_with_symbols_requires_resolver_impl_method_body_locals() {
     let program = parse_program(
         r#"
 Json: behavior {
-    stringify: (Self) str
+    stringify: (Self) StaticString
 }
 
 Point: { x: i32 }
 
 Point.implements(Json) {
-    stringify = (value: Point) str {
+    stringify = (value: Point) StaticString {
         label = "point"
         label
     }

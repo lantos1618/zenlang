@@ -133,7 +133,7 @@ pub Result<T, E>:
 
 main = () i32 {
     maybe = Option<i32>.Some(7)
-    result = Result<i32, str>.Ok(9)
+    result = Result<i32, StaticString>.Ok(9)
     0
 }
 "#,
@@ -152,7 +152,10 @@ main = () i32 {
         .expect("graph import bindings should seed generic enum templates");
 
     assert!(typed.types.iter().any(|ty| ty.name == "Option_i32"));
-    assert!(typed.types.iter().any(|ty| ty.name == "Result_i32_str"));
+    assert!(typed
+        .types
+        .iter()
+        .any(|ty| ty.name == "Result_i32_StaticString"));
 }
 
 #[test]

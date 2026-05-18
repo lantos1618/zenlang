@@ -120,7 +120,7 @@ fn check_program_with_symbols_requires_resolver_method_receiver_type() {
     let program = parse_program(
         r#"
 Point: { x: i32 }
-Point.label = () str { "point" }
+Point.label = () StaticString { "point" }
 "#,
     );
     let mut symbols = crate::resolver::Resolver::new()

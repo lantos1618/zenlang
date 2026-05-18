@@ -82,7 +82,7 @@ impl AstType {
             AstType::F64 => "f64".into(),
             AstType::Bool => "bool".into(),
             AstType::Void => "void".into(),
-            AstType::Str => "str".into(),
+            AstType::Str => "StaticString".into(),
             AstType::String => "String".into(),
             AstType::Named(n) => n.clone(),
             AstType::Generic { name, type_args } => {
@@ -114,4 +114,14 @@ pub struct Param {
     pub ty: AstType,
     pub mutable: bool,
     pub span: Span,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AstType;
+
+    #[test]
+    fn static_string_display_uses_public_type_name() {
+        assert_eq!(AstType::Str.display_name(), "StaticString");
+    }
 }

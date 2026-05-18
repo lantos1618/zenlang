@@ -46,11 +46,11 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str { "point" }
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 "#,
     );
 
@@ -58,10 +58,10 @@ Point.requires(Json<str>)
     let impl_edge = &expected.impls.edges_for("Point")[0];
     let required_edge = &expected.required.edges_for("Point")[0];
 
-    assert_eq!(impl_edge.display, "Json<str>");
+    assert_eq!(impl_edge.display, "Json<StaticString>");
     assert_eq!(impl_edge.metadata.name, "Json");
     assert_eq!(impl_edge.metadata.type_args, vec![AstType::Str]);
-    assert_eq!(required_edge.display, "Json<str>");
+    assert_eq!(required_edge.display, "Json<StaticString>");
     assert_eq!(required_edge.metadata.name, "Json");
     assert_eq!(required_edge.metadata.type_args, vec![AstType::Str]);
 }

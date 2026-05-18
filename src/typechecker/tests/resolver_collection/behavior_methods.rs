@@ -8,7 +8,7 @@ fn collect_declarations_with_symbols_uses_resolver_behavior_name_metadata() {
     let mut program = parse_program(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 "#,
     );

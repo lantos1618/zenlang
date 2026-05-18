@@ -106,7 +106,7 @@ pub Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
 { Result } = result
 
 main = () i32 {
-    value = Result<i32, str>.Ok(1)
+    value = Result<i32, StaticString>.Ok(1)
     value.unwrap_or<i32>(0)
 }
 "#,
@@ -209,8 +209,8 @@ pub Option<T>:
 { Box, Option } = types
 
 main = () i32 {
-    boxed = Box<i32, str> { value: 1 }
-    value = Option<i32, str>.Some(1)
+    boxed = Box<i32, StaticString> { value: 1 }
+    value = Option<i32, StaticString>.Some(1)
     boxed.value
 }
 "#,

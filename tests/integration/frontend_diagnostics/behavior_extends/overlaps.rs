@@ -12,10 +12,10 @@ pub Json<T>: behavior {
 }
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-PrettyJson.extends(Json<str>)
+PrettyJson.extends(Json<StaticString>)
 "#,
     )
     .expect("write traits module");
@@ -30,18 +30,18 @@ Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "point"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 }
@@ -63,7 +63,7 @@ main = () i32 {
 
     assert!(
         message.contains(
-            "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+            "overlapping implementations of behaviors `Json_StaticString` and `PrettyJson` for type `Point`"
         ),
         "expected imported behavior impl overlap diagnostic, panic={message}"
     );
@@ -81,14 +81,14 @@ pub Json<T>: behavior {
 }
 
 pub CompactJson: behavior {
-    compact: (Self) str
+    compact: (Self) StaticString
 }
 
 pub PrettyJson: behavior {
-    pretty: (Self) str
+    pretty: (Self) StaticString
 }
 
-CompactJson.extends(Json<str>)
+CompactJson.extends(Json<StaticString>)
 PrettyJson.extends(CompactJson)
 "#,
     )
@@ -104,22 +104,22 @@ Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "point"
     }
 
-    compact = (value: Point) str {
+    compact = (value: Point) StaticString {
         "compact"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 }
@@ -141,7 +141,7 @@ main = () i32 {
 
     assert!(
         message.contains(
-            "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+            "overlapping implementations of behaviors `Json_StaticString` and `PrettyJson` for type `Point`"
         ),
         "expected imported transitive behavior impl overlap diagnostic, panic={message}"
     );
@@ -171,14 +171,14 @@ Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point-again"
     }
 }
@@ -199,7 +199,7 @@ main = () i32 {
         .unwrap_or("<non-string panic>");
 
     assert!(
-        message.contains("duplicate behavior implementation `Json<str>` for `Point`"),
+        message.contains("duplicate behavior implementation `Json<StaticString>` for `Point`"),
         "expected imported duplicate behavior impl diagnostic, panic={message}"
     );
 }

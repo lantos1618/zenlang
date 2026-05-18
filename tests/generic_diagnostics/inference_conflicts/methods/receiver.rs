@@ -21,7 +21,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.choose`: inferred `i32` and `StaticString`"
         )),
         "expected generic method inference conflict diagnostic, got {errors:?}"
     );
@@ -58,7 +58,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.replace`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Box.replace`: inferred `i32` and `StaticString`"
         )),
         "expected generic method receiver inference conflict diagnostic, got {errors:?}"
     );
@@ -79,7 +79,7 @@ Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
 }
 
 main = () i32 {
-    value = Result<i32, str>.Ok(1)
+    value = Result<i32, StaticString>.Ok(1)
     value.unwrap_or("bad")
 }
 "#,
@@ -87,7 +87,7 @@ main = () i32 {
 
     assert!(
         errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Result.unwrap_or`: inferred `i32` and `str`"
+            "conflicting inferred type argument `T` for generic method `Result.unwrap_or`: inferred `i32` and `StaticString`"
         )),
         "expected generic Result enum method receiver inference conflict diagnostic, got {errors:?}"
     );

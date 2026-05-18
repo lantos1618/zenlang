@@ -43,7 +43,7 @@ main = () void {
     assert!(
         errors.iter().any(|d| d
             .message
-            .contains("payload for enum variant `Maybe.Some` expects `i32`, found `str`")),
+            .contains("payload for enum variant `Maybe.Some` expects `i32`, found `StaticString`")),
         "expected payload type diagnostic, got {errors:?}"
     );
 }
@@ -107,7 +107,7 @@ main = () void {
     assert!(
         errors.iter().any(|d| d
             .message
-            .contains("assignment to `x` expects `i32`, found `str`")),
+            .contains("assignment to `x` expects `i32`, found `StaticString`")),
         "expected assignment type diagnostic, got {errors:?}"
     );
 }

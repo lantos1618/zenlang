@@ -8,14 +8,14 @@ fn generic_function_behavior_bound_failure_is_error() {
     let errors = typecheck_errors(
         r#"
 Json: behavior {
-    encode: (Self) str
+    encode: (Self) StaticString
 }
 
 Point: {
     x: i32
 }
 
-encode<T: Json> = (value: T) str {
+encode<T: Json> = (value: T) StaticString {
     value.encode()
 }
 

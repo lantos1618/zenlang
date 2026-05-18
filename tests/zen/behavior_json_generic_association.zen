@@ -8,13 +8,13 @@ Point: {
     x: i32
 }
 
-Point.implements(Json<str>) {
-    encode = (self: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (self: Point) StaticString {
         "point"
     }
 }
 
-Point.requires(Json<str>)
+Point.requires(Json<StaticString>)
 
 main = () i32 {
     point = Point { x: 1 }

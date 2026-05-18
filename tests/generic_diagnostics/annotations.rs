@@ -11,7 +11,7 @@ Box<T>: {
     value: T
 }
 
-read = (box: Box<i32, str>) i32 {
+read = (box: Box<i32, StaticString>) i32 {
     0
 }
 "#,
@@ -33,7 +33,7 @@ Option<T>:
     None,
     Some(T)
 
-read = (value: Option<i32, str>) i32 {
+read = (value: Option<i32, StaticString>) i32 {
     0
 }
 "#,

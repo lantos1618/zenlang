@@ -6,16 +6,16 @@ Point: {
 }
 
 Point.implements(PrettyJson) {
-    encode = (value: Point) str {
+    encode = (value: Point) StaticString {
         "encoded"
     }
 
-    pretty = (value: Point) str {
+    pretty = (value: Point) StaticString {
         "pretty"
     }
 }
 
-render<T: PrettyJson> = (value: T) str {
+render<T: PrettyJson> = (value: T) StaticString {
     value.encode()
 }
 

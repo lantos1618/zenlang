@@ -8,8 +8,8 @@ Json<T>: behavior {
     encode: (Self) T
 }
 
-Point.implements(Json<str>) {
-    encode = (value: Point) str {
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString {
         "point"
     }
 }
@@ -20,7 +20,7 @@ Point.implements(Json<i32>) {
     }
 }
 
-encode_str<T: Json<str>> = (value: T) str {
+encode_str<T: Json<StaticString>> = (value: T) StaticString {
     value.encode()
 }
 
