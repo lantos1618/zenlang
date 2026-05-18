@@ -16,6 +16,16 @@ The stable tour avoids `return`, `break`, `continue`, hidden allocation,
 exceptions, and null. Values come from final expressions, loop control is an
 explicit call, and heap ownership has to appear in the type/API surface.
 
+Quick map:
+
+- declarations are prefix-first: the name appears before the operation;
+- branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
+- loops use `loop((label) { ... })`, then `label.done()` or `label.next()`;
+- static text is `StaticString`; dynamic owned text is allocator-backed
+  `String`;
+- sync, async, allocators, owned dynamic memory, and raw memory are explicit
+  design surfaces, with unstable spellings called out as gated previews.
+
 ## The Shape
 
 Zen reads name-first. A declaration starts with the thing being introduced or
@@ -156,8 +166,10 @@ Numeric conversions are explicit. Mixed numeric widths need casts instead of
 implicit widening.
 
 String literals are `StaticString` values: the bytes are baked into the
-program, and the value carries a pointer and length. Dynamic `String` is a
-separate allocator-backed text type and is not created implicitly by a literal.
+program image, and the value carries a pointer and length known from that
+static data. Dynamic `String` is a separate allocator-backed text type. It can
+own runtime memory, grow, and change contents, so constructing one requires an
+allocator path instead of happening implicitly from a literal.
 
 ## Operators And Casts
 
@@ -498,6 +510,11 @@ are explicit calls instead of `break` or `continue`. The spelling is
 prefix-first: call `loop`, pass a loop-control parameter, then call control
 methods on that parameter.
 
+The loop parameter is a control handle, not a user-defined object. `done` and
+`next` are compiler-owned loop-control operations attached to that handle, so
+they can be typechecked and lowered without hard-coded user strings leaking
+into the language model.
+
 ```zen
 sum_to = (limit: i32) i32 {
     total ::= 0
@@ -522,6 +539,25 @@ control parameter names the loop target: `l.done()` exits that target and
 `l.next()` continues it. These are not magic strings; the parser recognizes
 loop-control actions as compiler-owned operations. See `examples/05_loops.zen`
 for the tutorial version.
+
+A counted loop is just state plus an explicit control decision:
+
+```zen
+count_to = (limit: i32) i32 {
+    i ::= 0
+
+    loop((l) {
+        i >= limit ?
+            | true { l.done() }
+            | false {
+                i = i + 1
+                l.next()
+            }
+    })
+
+    i
+}
+```
 
 Nested loops can target an outer label directly:
 
@@ -567,6 +603,14 @@ single_step = (ready: bool) i32 {
 
 The same rule applies in nested loops: `done(outer)` exits the outer loop, and
 `next(inner)` continues only the inner loop.
+
+This is the complete stable loop surface:
+
+- `loop((l) { ... })` starts a loop and binds a control handle.
+- `l.done()` exits that loop.
+- `l.next()` continues that loop.
+- `done(l)` and `next(l)` are the equivalent UFC forms.
+- A nested loop can control an outer loop with `outer.done()` or `done(outer)`.
 
 Loops are expressions in the same block language as the rest of Zen, but the
 loop's purpose is control flow. Accumulated values are usually kept in explicit
@@ -689,9 +733,10 @@ main = () i32 {
 
 `StaticString` is baked into the program. It points at static storage and keeps
 its length with the value, so a literal can be passed around without allocating
-or changing ownership.
+or changing ownership. Its bytes do not move, and the value does not own or
+free memory.
 
-The allocator-backed String type is dynamic: it owns memory, can grow or be
+The allocator-backed String type is dynamic: it owns memory, can grow, can be
 built at runtime, and must be created through allocator-aware APIs once the
 allocator model is promoted. Until that ownership path exists, source-level
 `String` annotations are gated; use `StaticString` for literal/static text.
@@ -700,7 +745,11 @@ That distinction is deliberate:
 
 - `StaticString` is a non-owning view into program storage.
 - `String` is owned dynamic memory and therefore needs allocator ownership.
+- `StaticString` has stable bytes and length; `String` has allocator-managed
+  capacity, length, and storage.
 - A literal such as `"Zen"` does not allocate a `String`.
+- APIs that need to store or mutate text should say so with an allocator-backed
+  type rather than accepting a literal and allocating invisibly.
 
 String interpolation embeds expressions with `${...}` and currently produces a
 `StaticString`-shaped non-owning view. Interpolated expressions are not baked
@@ -736,6 +785,14 @@ Sync code either stays sync or crosses an explicit runtime boundary. It does
 not implicitly await async work, schedule tasks behind a call, or hide task
 creation in a normal result type. Planned `.await()` and async scheduler
 intrinsics are gated until task lowering and effect checking are promoted.
+
+The intended source rule is:
+
+- a `Sync` API returns the result it computed now;
+- an `Async` API returns a `Task<...>` that represents work to run later;
+- sync code can call sync code directly;
+- async code needs an explicit task/runtime boundary before sync callers can
+  observe its result.
 
 ### Allocator Preview
 
@@ -813,6 +870,11 @@ work = (allocator: Allocator<u8, Sync>) Result<RawPtr<u8>, AllocError> {
 
 The effect mode is part of the allocator capability, so the type system can
 distinguish synchronous allocation from task-returning asynchronous allocation.
+
+A dynamic `String` follows the same ownership rule as `Buffer`: it is not just
+bytes, it is bytes plus allocator ownership and an effect mode. In other words,
+`StaticString` is a compile-time program value, while `String` is a runtime
+owned allocation.
 
 ### Ownership Preview
 
