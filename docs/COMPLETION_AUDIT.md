@@ -900,6 +900,9 @@ and do not assume Phase 4 is ready without evidence.
 - Imported duplicate generic behavior impls are rejected through the module
   graph, covered by
   `integration::imported_duplicate_generic_behavior_impl_is_error`.
+- Imported generic behavior impl arity diagnostics are covered through the
+  module graph by
+  `integration::imported_generic_behavior_impl_type_arg_arity_is_error`.
 - Generic dispatch through an imported child behavior can call a method inherited
   from that behavior's imported parent, covered by
   `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
