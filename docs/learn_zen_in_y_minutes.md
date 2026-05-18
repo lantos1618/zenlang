@@ -27,6 +27,21 @@ Top-level declarations use prefix-first forms:
 - impl blocks: `Type.impl = { ... }`
 - behaviors: `Name: behavior { ... }`
 
+## Comments
+
+```zen
+// Line comments use two slashes.
+
+/*
+Block comments can document a whole declaration.
+*/
+main = () i32 {
+    0
+}
+```
+
+Comments are not part of the syntax tree emitted for semantic tools.
+
 ## Values
 
 ```zen
@@ -42,8 +57,26 @@ main = () i32 {
 }
 ```
 
-Local bindings are immutable by default. Use `::=` for a mutable inferred
-binding and `name:: Type = value` for a mutable typed binding.
+Local bindings are immutable by default.
+
+## Assignment And Mutation
+
+```zen
+main = () i32 {
+    immutable = 40
+
+    inferred ::= 1
+    inferred = inferred + 1
+
+    typed: i32 = 1
+
+    immutable + typed
+}
+```
+
+Use `::=` for a mutable inferred binding. After a mutable binding exists,
+plain `=` assigns a new value. Plain `name = value` creates an immutable
+binding, and `name: Type = value` creates an immutable typed binding.
 
 ## Types
 
@@ -63,6 +96,31 @@ main = () i32 {
 
 Numeric conversions are explicit. Mixed numeric widths need casts instead of
 implicit widening.
+
+## Operators And Casts
+
+```zen
+main = () i32 {
+    a = 10
+    b = 3
+
+    sum = a + b
+    diff = a - b
+    product = a * b
+    quotient = a / b
+
+    same = sum == 13
+    ordered = product > quotient
+
+    same && ordered ?
+        | true { cast(product, i32) }
+        | false { cast(diff, i32) }
+}
+```
+
+Arithmetic and comparison operators are ordinary expressions. Casts use prefix
+`cast(value, Type)` syntax so type-changing operations stay visible at the call
+site.
 
 ## Functions
 
@@ -447,6 +505,32 @@ Owned dynamic storage is modeled with allocator-aware types once typed
 allocators are promoted. Until then, the compiler rejects allocator-backed
 source types instead of pretending allocation is free.
 
+## Pointer, Slice, And Array Types
+
+Pointer, slice, and array type syntax exists for signatures and compiler-owned
+layout work:
+
+```zen
+RawPtr<T>: {
+    address: usize,
+}
+
+PointerViews: {
+    raw: RawPtr<i32>,
+    pointer: Ptr<i32>,
+    mutable_pointer: MutPtr<i32>,
+    slice: Slice<i32>,
+    fixed: [i32; 4],
+}
+```
+
+`RawPtr<T>` is the explicit raw-memory spelling used in allocator previews.
+`Ptr<T>`, `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer,
+slice, and fixed-array shapes. The syntax is intentionally separate from
+ownership: raw pointer offset, casts, integer conversion, load, and store
+operations are gated until provenance, layout, and ownership rules are
+promoted.
+
 ## Static And Dynamic Strings
 
 ```zen
@@ -552,6 +636,13 @@ The model is:
   typechecked propagation and lowering are implemented.
 - Task chaining and async scheduler APIs are gated until Sync/Async effect
   checking and task lowering are implemented.
+
+Related gated previews:
+
+- comptime type matching works on typed metadata, not runtime values, and stays
+  gated until the metadata path is promoted.
+- actor framework APIs live in `std` first; Zen has no stable actor syntax yet.
+- host syscalls require explicit host-effect declarations before promotion.
 
 For the current contract and gate status, see `docs/V1_SPEC.md`.
 
