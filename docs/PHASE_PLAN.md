@@ -2514,7 +2514,10 @@ checked-in docs, tests, and commits only.
   `build_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Multi-target executable graph execution keeps the same declared env-read
   fallback behavior through
-  `build_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
+  `build_command_build_zen_accepts_declared_env_read_for_multiple_targets`,
+  `build_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
+  and
+  `build_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before execution through
   `build_command_build_zen_rejects_env_read_without_fallback_before_execution`.
   Multi-target executable graph execution keeps that rejection before target
@@ -2560,7 +2563,10 @@ checked-in docs, tests, and commits only.
   `check_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Multi-target graph validation keeps the same declared env-read fallback
   behavior through
-  `check_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
+  `check_command_build_zen_accepts_declared_env_read_for_multiple_targets`,
+  `check_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
+  and
+  `check_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before source validation
   through
   `check_command_build_zen_rejects_env_read_without_fallback_before_source_validation`
@@ -2619,7 +2625,10 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Multi-target test graph execution keeps the same declared env-read fallback
   behavior through
-  `test_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
+  `test_command_build_zen_accepts_declared_env_read_for_multiple_targets`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
+  and
+  `test_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before test execution through
   `test_command_build_zen_rejects_env_read_without_fallback_before_execution`
   and before multi-target test execution through
@@ -2739,7 +2748,10 @@ checked-in docs, tests, and commits only.
   `direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read`.
   Multi-target executable graph execution keeps the same declared env-read
   fallback behavior through
-  `direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
+  `direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets`,
+  `direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
+  and
+  `direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
   Env reads with `?` but no fallback arm reject before execution through
   `direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`
   and before multi-target direct execution through

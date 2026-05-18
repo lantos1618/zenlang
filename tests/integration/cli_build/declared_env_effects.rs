@@ -39,19 +39,51 @@ fn build_command_build_zen_accepts_identifier_fallback_declared_env_read() {
 
 #[test]
 fn build_command_build_zen_accepts_declared_env_read_for_multiple_targets() {
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build", "build.zen"],
+        r#"| .Err { "default" }"#,
+        "build_command_build_zen_accepts_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn build_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets() {
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build", "build.zen"],
+        r#"| _ { "default" }"#,
+        "build_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn build_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets() {
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build", "build.zen"],
+        r#"| err { "default" }"#,
+        "build_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+fn assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+    args: &[&str],
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
+    b.add(Executable {{ name: "tool", main: "tool.zen", out_dir: "build/tool/" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -74,14 +106,14 @@ main = () i32 {
     .expect("write tool.zen");
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
+        .args(args)
         .current_dir(tmp.path())
         .output()
-        .expect("run zen build build.zen");
+        .expect("run zen executable build graph command");
 
     assert!(
         output.status.success(),
-        "zen build build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen executable build graph command failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -130,63 +162,31 @@ fn direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read()
 
 #[test]
 fn direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("tool.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write tool.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .arg("build.zen")
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build.zen"],
+        r#"| .Err { "default" }"#,
+        "direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets",
     );
+}
 
-    for bin_path in [
-        tmp.path().join("build").join("app").join("app"),
-        tmp.path().join("build").join("tool").join("tool"),
-    ] {
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
-    }
+#[test]
+fn direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets()
+{
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build.zen"],
+        r#"| _ { "default" }"#,
+        "direct_file_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets(
+) {
+    assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+        &["build.zen"],
+        r#"| err { "default" }"#,
+        "direct_file_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets",
+    );
 }
 
 #[test]
@@ -215,19 +215,47 @@ fn test_command_build_zen_accepts_identifier_fallback_declared_env_read() {
 
 #[test]
 fn test_command_build_zen_accepts_declared_env_read_for_multiple_targets() {
+    assert_test_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| .Err { "default" }"#,
+        "test_command_build_zen_accepts_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets() {
+    assert_test_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| _ { "default" }"#,
+        "test_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+#[test]
+fn test_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets() {
+    assert_test_command_accepts_declared_env_read_for_multiple_targets(
+        r#"| err { "default" }"#,
+        "test_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets",
+    );
+}
+
+fn assert_test_command_accepts_declared_env_read_for_multiple_targets(
+    fallback_arm: &str,
+    case_name: &str,
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
     std::fs::write(
         tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
+        format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
     std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) { value }
-        | .Err { "default" }
-    b.add(Test { name: "unit", root: "unit.zen" })
-    b.add(Test { name: "integration", root: "integration.zen" })
+        | .Ok(value) {{ value }}
+        {fallback_arm}
+    b.add(Test {{ name: "unit", root: "unit.zen" }})
+    b.add(Test {{ name: "integration", root: "integration.zen" }})
     .Ok(b.config())
-}
+}}
 "#,
+        ),
     )
     .expect("write build.zen");
     std::fs::write(
@@ -257,7 +285,7 @@ main = () i32 {
 
     assert!(
         output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
+        "{case_name}: zen test build.zen failed: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
