@@ -32,7 +32,7 @@ mod emit_direct_library_dependencies;
 mod emit_direct_validation;
 #[path = "cli_build/frontend_json.rs"]
 mod frontend_json;
-#[path = "cli_build/graph_validation.rs"]
+#[path = "cli_build/graph_validation/mod.rs"]
 mod graph_validation;
 #[path = "cli_build/graph_validation_host_effects.rs"]
 mod graph_validation_host_effects;
