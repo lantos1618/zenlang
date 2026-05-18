@@ -221,17 +221,34 @@ impl<'a> LayoutContext<'a> {
             Type::Enum { name, .. } => self.layout_named(name),
             Type::Array { elem, size } => {
                 let elem_layout = self.layout_type(elem);
-                scalar_layout(
+                self.cache_compound_layout(
+                    ty,
                     "array",
                     elem_layout.size * size.unwrap_or_default() as u32,
                     elem_layout.alignment,
                 )
             }
-            Type::Slice(_) => scalar_layout("slice", POINTER_SIZE + USIZE_SIZE, POINTER_ALIGN),
+            Type::Slice(_) => {
+                self.cache_compound_layout(ty, "slice", POINTER_SIZE + USIZE_SIZE, POINTER_ALIGN)
+            }
             Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) | Type::Function { .. } => {
-                scalar_layout("pointer", POINTER_SIZE, POINTER_ALIGN)
+                self.cache_compound_layout(ty, "pointer", POINTER_SIZE, POINTER_ALIGN)
             }
         }
+    }
+
+    fn cache_compound_layout(
+        &mut self,
+        ty: &Type,
+        kind: &'static str,
+        size: u32,
+        alignment: u32,
+    ) -> LayoutJsonType {
+        let layout = scalar_layout(kind, size, alignment);
+        self.layouts
+            .entry(ty.display_name())
+            .or_insert_with(|| layout.clone());
+        layout
     }
 
     fn layout_named(&mut self, name: &str) -> LayoutJsonType {

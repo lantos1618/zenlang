@@ -3638,6 +3638,10 @@ Agent UX deliverables:
   compiler-owned layout schema boundary before any forged ABI override can be
   accepted. Guarded by
   `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
+- Layout JSON now emits named compound layout entries for checked pointer,
+  raw-pointer, slice, and fixed-array field types, and preserves simple enum
+  variant tag/payload layout facts. Guarded by
+  `emit_json_layout_outputs_compound_type_layout_entries`.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by

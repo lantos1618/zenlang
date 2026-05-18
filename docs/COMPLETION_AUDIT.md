@@ -3918,6 +3918,10 @@ and do not assume Phase 4 is ready without evidence.
   compiler-owned layout schema boundary before any forged ABI override can be
   accepted. Covered by
   `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
+- Layout JSON now emits named compound layout entries for checked pointer,
+  raw-pointer, slice, and fixed-array field types, and preserves simple enum
+  variant tag/payload layout facts. Covered by
+  `emit_json_layout_outputs_compound_type_layout_entries`.
 - Static string literals no longer implicitly satisfy allocator-backed
   `String`; `String` is recognized as a builtin dynamic text type, but
   allocation must remain explicit. Covered by
