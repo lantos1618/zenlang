@@ -2058,6 +2058,9 @@ and do not assume Phase 4 is ready without evidence.
   `generic_diagnostics::generic_function_behavior_bound_failure_is_error`,
   `generic_diagnostics::generic_method_behavior_bound_failure_is_error`, and
   `generic_diagnostics::generic_ufc_function_behavior_bound_failure_is_error`.
+  The diagnostics JSON shape for a hard generic `Result<T, E>` enum-method
+  behavior-bound failure is pinned by
+  `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`.
 - Resolver value-parameter validation now owns its resolver diagnostic code
   mapping, covered by
   `typechecker::tests::value_parameter_validation_uses_resolver_codes`.
@@ -4155,6 +4158,11 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden`,
   including stable code, span, empty fixes/context, and no inference or
   argument-mismatch followup diagnostics.
+- Generic `Result<T, E>` enum-method behavior-bound diagnostics JSON is now
+  pinned by
+  `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`,
+  including stable code, span, empty fixes/context, and no method-body followup
+  diagnostics.
 - Hand-authored build graph JSON inputs to `emit-json build-graph` reject at
   the compiler-owned build graph JSON boundary before generic `build.zen` path
   validation can stand in for deterministic graph provenance. Covered by

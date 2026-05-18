@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_result_method_bound.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E6004",
+      "message": "type `Point` does not implement behavior `Json` required by `U`",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_result_method_bound.zen",
+        "start": 306,
+        "end": 322,
+        "line": 22,
+        "column": 11
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
