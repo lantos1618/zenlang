@@ -3739,6 +3739,11 @@ and do not assume Phase 4 is ready without evidence.
   coverage from gated/unknown executable-field coverage under
   `tests/integration/cli_build/unsupported_targets/`, preserving the same
   command matrix without one mixed rejection file.
+- `zen test build.zen` declared env-read positive tests now split single-target,
+  multi-target, and unselected-target cases under
+  `tests/integration/cli_build/declared_env_effects/runner_command/`, preserving
+  declared `.Err`, wildcard, and identifier fallback-arm coverage without using
+  ignored `test_*` child paths.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
