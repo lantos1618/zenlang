@@ -3731,6 +3731,10 @@ and do not assume Phase 4 is ready without evidence.
   and executable target-metadata diagnostics in focused modules under
   `tests/integration/cli_build/emit_direct_validation/`, preserving the same
   rejection coverage while avoiding a mixed parent validation file.
+- CLI diagnostic integration tests now split check-command diagnostics,
+  diagnostic de-duplication, and emit-command diagnostics under
+  `tests/integration/cli_build/diagnostics/`, preserving imported module
+  resolver/type diagnostic coverage while keeping each module focused.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

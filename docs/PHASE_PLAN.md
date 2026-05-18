@@ -3415,6 +3415,10 @@ checked-in docs, tests, and commits only.
   `tests/integration/cli_build/emit_direct_validation/`, leaving the parent
   file to wire submodules and cover the unrelated gated-test-source positive
   path.
+- CLI diagnostic integration tests now split check-command diagnostics,
+  diagnostic de-duplication, and emit-command diagnostics under
+  `tests/integration/cli_build/diagnostics/`, keeping shared imported-module
+  fixtures in the parent module.
 
 ## Current Phase
 
