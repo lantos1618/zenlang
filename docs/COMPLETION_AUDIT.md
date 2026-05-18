@@ -3796,6 +3796,11 @@ and do not assume Phase 4 is ready without evidence.
   `next(l)` visible in public language docs. Covered by
   `learn_zen_guide_covers_core_tour_and_gated_previews` and
   `public_language_docs_and_examples_do_not_teach_return_keyword`.
+- The Learn Zen guide now teaches final-expression returns explicitly, including
+  the absence of a `return` keyword, and clarifies that allocator, Sync/Async,
+  `.await()`, and raw allocation intrinsic examples are gated compiler-owned
+  names with feature-gate diagnostics rather than stable source APIs. Covered by
+  `learn_zen_guide_covers_core_tour_and_gated_previews`.
 - Legacy `zen build-graph build.zen` file-read host-effect validation now
   matches the unselected-target coverage on `zen build build.zen` and direct
   `zen build.zen`: declared fallback arms allow selected executable targets to
