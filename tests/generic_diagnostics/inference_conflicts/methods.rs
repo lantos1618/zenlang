@@ -190,6 +190,62 @@ main = () i32 {
 }
 
 #[test]
+fn generic_method_inference_conflict_through_pointer_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Box.choose_ptr<T> = (self: Box<T>, ptr: Ptr<T>) T {
+    self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    ptr = cast("bad", Ptr<str>)
+    box.choose_ptr(ptr)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic method `Box.choose_ptr`: inferred `i32` and `str`"
+        )),
+        "expected generic method pointer inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_method_inference_conflict_through_mut_pointer_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+Box<T>: {
+    value: T
+}
+
+Box.choose_mut_ptr<T> = (self: Box<T>, ptr: MutPtr<T>) T {
+    self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 1 }
+    ptr = cast("bad", MutPtr<str>)
+    box.choose_mut_ptr(ptr)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic method `Box.choose_mut_ptr`: inferred `i32` and `str`"
+        )),
+        "expected generic method mutable pointer inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_method_inference_conflict_through_slice_type_is_error() {
     let errors = typecheck_errors(
         r#"
