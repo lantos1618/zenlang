@@ -3398,6 +3398,11 @@ checked-in docs, tests, and commits only.
   `build_graph_command_accepts_identifier_fallback_declared_env_read_with_unselected_targets`,
   and
   `build_graph_command_rejects_env_read_without_fallback_before_unselected_targets`.
+- Legacy `zen build-graph build.zen` declared env-read positive tests now split
+  single-target, multi-target, and unselected-target cases under
+  `tests/integration/cli_build/declared_env_effects/build_graph/`, preserving
+  declared `.Err`, wildcard, and identifier fallback-arm coverage without one
+  mixed test file.
 - Legacy `zen build-graph build.zen` file-read host-effect tests now live in
   focused `declared`, `rejections`, and `unselected_targets` modules under
   `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads/`,
