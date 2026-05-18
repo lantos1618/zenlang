@@ -308,7 +308,7 @@ and do not assume Phase 4 is ready without evidence.
   target source and library graph validation in the root graph-validation file.
 - Check-command build graph host-effect integration tests now split env-read
   declared fallback and rejection-ordering coverage into
-  `tests/integration/cli_build/graph_validation_host_effects/env_reads.rs`,
+  `tests/integration/cli_build/graph_validation_host_effects/env_reads/`,
   leaving the parent host-effect module as env/file module wiring.
 - Build-command host-effect integration tests now split declared file-read
   fallback accept/reject coverage into
