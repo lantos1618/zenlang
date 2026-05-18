@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_behavior_overlap.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E6010",
+      "message": "overlapping implementations of behaviors `Json_StaticString` and `PrettyJson` for type `Point`",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_behavior_overlap.zen",
+        "start": 257,
+        "end": 396,
+        "line": 18,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

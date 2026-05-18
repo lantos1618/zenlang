@@ -608,6 +608,10 @@ Agent UX deliverables:
   `return` keyword, giving agents and editor clients a span-addressed edit to
   remove `return` and use the expression as the block result. Guarded by
   `emit_json_diagnostics_includes_structured_return_keyword_fix`.
+- Diagnostics JSON for generic behavior implementation coherence is now pinned
+  by `emit_json_diagnostics_generic_behavior_overlap_schema_matches_golden`,
+  covering the stable `E6010` payload for overlapping `Json<StaticString>` and
+  `PrettyJson` implementations on `Point`.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits

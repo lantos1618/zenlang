@@ -273,10 +273,13 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "generic type-argument arity",
         "E6004",
         "generic behavior-bound failure",
+        "E6010",
+        "behavior implementation coherence failure",
         "tests/fixtures/ir_json/diagnostics_return.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_behavior_overlap.golden.json",
     ] {
         assert!(
             catalog.contains(required),
