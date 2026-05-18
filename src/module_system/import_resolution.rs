@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
 
+use super::root_prefix::parse_module_root_prefix;
 use super::ModuleSystem;
 
 impl ModuleSystem {
@@ -45,7 +46,7 @@ impl ModuleSystem {
 
             let first = &module_path[0];
 
-            if first == "std" || first == "@std" {
+            if parse_module_root_prefix(first).is_some_and(|prefix| prefix.is_std()) {
                 if module_path.len() == 1 {
                     continue;
                 }
@@ -205,7 +206,7 @@ impl ModuleSystem {
 
         let first = &module_path[0];
 
-        if first == "@std" || first == "std" {
+        if parse_module_root_prefix(first).is_some_and(|prefix| prefix.is_std()) {
             return self.resolve_stdlib_import(&module_path[1..], files);
         }
 

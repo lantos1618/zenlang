@@ -5,6 +5,7 @@ use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
 use crate::resolver::{Namespace, Resolver, SymbolTable};
 
+use super::root_prefix::parse_module_root_prefix;
 use super::{ImportBinding, ModuleId, ModuleSystem, ResolvedModule, ResolvedModuleGraph};
 
 impl ModuleSystem {
@@ -124,13 +125,14 @@ impl ModuleSystem {
             self.reject_duplicate_requested_imports(&names, &module_path, span)?;
 
             let first = &module_path[0];
+            let root_prefix = parse_module_root_prefix(first);
             if first == "@builtin"
-                || ((first == "std" || first == "@std") && module_path.len() == 1)
+                || (root_prefix.is_some_and(|prefix| prefix.is_std()) && module_path.len() == 1)
             {
                 continue;
             }
 
-            let file_path = if first == "std" || first == "@std" {
+            let file_path = if root_prefix.is_some_and(|prefix| prefix.is_std()) {
                 self.resolve_stdlib_file_path(&module_path[1..])?
                     .ok_or_else(|| {
                         vec![CompileError::Resolution(

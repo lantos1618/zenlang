@@ -9,6 +9,7 @@ use crate::resolver::SymbolTable;
 
 mod graph_loading;
 mod import_resolution;
+mod root_prefix;
 
 use import_resolution::find_stdlib_root;
 
