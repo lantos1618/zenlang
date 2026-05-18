@@ -94,3 +94,22 @@ call = (f: (Box<i32, StaticString>) i32) i32 {
         "tests/fixtures/ir_json/diagnostics_function_type_parameter_annotation_arity.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_function_type_return_annotation_missing_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "function_type_return_annotation_missing_args.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+factory = () () Box {
+    0
+}
+"#,
+        "function type return annotation missing generic arguments",
+        "function type return annotation missing-arguments diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_function_type_return_annotation_missing_args.golden.json",
+    );
+}
