@@ -138,6 +138,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_generic_struct_annotation_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_enum_annotation_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_struct_annotation_missing_args_schema_matches_golden",
+        "emit_json_diagnostics_generic_enum_annotation_missing_args_schema_matches_golden",
         "emit_json_diagnostics_generic_result_method_arity_schema_matches_golden",
         "emit_json_diagnostics_generic_result_method_bound_schema_matches_golden",
         "emit_json_diagnostics_generic_result_method_inference_schema_matches_golden",
