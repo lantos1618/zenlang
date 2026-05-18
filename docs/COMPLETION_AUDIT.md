@@ -354,6 +354,11 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_typed_nested_generic_result_schema_matches_golden`, covering
   `Result_Option_i32_StaticString`, dependent `Option_i32`, specialized unwrap
   calls, and nested enum payload typing.
+- Checked typed JSON for explicit generic behavior association dispatch is now
+  pinned by
+  `emit_json_typed_generic_behavior_association_schema_matches_golden`,
+  covering the concrete `Point.encode__Json_StaticString` association function
+  and its typed call site.
 - Diagnostics JSON now carries `semantic_status: "diagnostic"`, covered by
   `emit_json_diagnostics_command_outputs_machine_readable_errors`, so the
   machine-readable diagnostics path is distinct from both unchecked AST and
