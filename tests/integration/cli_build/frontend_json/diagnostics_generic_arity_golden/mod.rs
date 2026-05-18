@@ -2,6 +2,7 @@ use std::path::Path;
 use std::process::Command;
 
 mod annotations;
+mod call_site_annotations;
 mod constructors;
 
 fn fixture(path: &str) -> std::path::PathBuf {
