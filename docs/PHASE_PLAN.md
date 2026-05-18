@@ -494,9 +494,10 @@ checked-in docs, tests, and commits only.
 - Frontend JSON integration tests now keep AST and symbol module-graph
   serialization coverage in a focused child module, leaving typed-program and
   diagnostics JSON checks in the parent module.
-- `emit-json mir` and `emit-json target-yaml` now reject with explicit gated
-  diagnostics tied to the v1 JSON/YAML backlog, covered by
-  `emit_json_mir_command_is_explicitly_gated` and
+- `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
+  explicit gated diagnostics tied to the v1 JSON/YAML backlog, covered by
+  `emit_json_hir_command_is_explicitly_gated`,
+  `emit_json_mir_command_is_explicitly_gated`, and
   `emit_json_target_yaml_command_is_explicitly_gated`.
 - Build-graph JSON host-effect tests now keep declared file-read fallback
   accept/reject cases in a focused child module, leaving env-effect rejection

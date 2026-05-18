@@ -130,6 +130,31 @@ fn emit_json_mir_command_is_explicitly_gated() {
 }
 
 #[test]
+fn emit_json_hir_command_is_explicitly_gated() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "hir",
+            test_dir().join("hello.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json hir");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json hir should be gated: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("HIR JSON emission is gated until schema and golden tests exist"),
+        "expected HIR gate diagnostic, stderr={stderr}"
+    );
+}
+
+#[test]
 fn emit_json_target_yaml_command_is_explicitly_gated() {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args([
