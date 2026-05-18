@@ -187,6 +187,21 @@ main = (actor: Actor) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_actor_import_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "actor_import_gate.zen",
+        r#"
+{ Actor } = @std.concurrency.actor.actor
+
+main = () void { }
+"#,
+        "actor framework import gate",
+        "actor framework import gate should emit one std actor feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_actor_import_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",

@@ -261,6 +261,10 @@ Agent UX deliverables:
   as the same gated actor surface instead of an ordinary unknown-type
   diagnostic. Covered by
   `emit_json_diagnostics_bare_actor_type_gate_schema_matches_golden`.
+- Std actor framework imports now have a pinned CLI diagnostics JSON gate for
+  `@std.concurrency.actor.actor`, proving public import diagnostics report the
+  std actor gate before loading aspirational actor sketches. Covered by
+  `emit_json_diagnostics_actor_import_gate_schema_matches_golden`.
 - Range expressions now have a pinned CLI diagnostics JSON gate for `1..3`,
   proving the public path reports range typing as gated instead of exposing a
   generic type mismatch. Covered by
