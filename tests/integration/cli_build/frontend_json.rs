@@ -103,3 +103,55 @@ main = () i32 {
     assert_eq!(span["line"], 3);
     assert_eq!(span["column"], 5);
 }
+
+#[test]
+fn emit_json_mir_command_is_explicitly_gated() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "mir",
+            test_dir().join("hello.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json mir");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json mir should be gated: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("MIR JSON emission is gated until schema and golden tests exist"),
+        "expected MIR gate diagnostic, stderr={stderr}"
+    );
+}
+
+#[test]
+fn emit_json_target_yaml_command_is_explicitly_gated() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "target-yaml",
+            test_dir().join("hello.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json target-yaml");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json target-yaml should be gated: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(
+            "target YAML validation is gated until schemas and negative validation tests exist"
+        ),
+        "expected target YAML gate diagnostic, stderr={stderr}"
+    );
+}
