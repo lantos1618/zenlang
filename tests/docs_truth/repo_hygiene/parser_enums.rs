@@ -49,3 +49,23 @@ fn parser_loop_control_calls_use_owned_action_enum() {
         "parser loop-control suffix handling should parse through LoopControlAction"
     );
 }
+
+#[test]
+fn typechecker_gated_methods_use_owned_action_enum() {
+    let source = read("src/typechecker/expressions/method_call_support.rs");
+
+    for forbidden in [
+        r#""raise" => Some(Self::ResultRaise)"#,
+        r#""await" => Some(Self::EffectAwait)"#,
+        "from_method_name",
+    ] {
+        assert!(
+            !source.contains(forbidden),
+            "typechecker gated methods should use GatedMethod parsing/display, not raw spelling checks: {forbidden}"
+        );
+    }
+    assert!(
+        source.contains("method.parse::<GatedMethod>()"),
+        "typechecker gated method dispatch should parse through GatedMethod"
+    );
+}

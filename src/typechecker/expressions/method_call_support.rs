@@ -1,5 +1,7 @@
 use super::*;
 use crate::typechecker::FuncInfo;
+use std::fmt;
+use std::str::FromStr;
 
 mod module_calls;
 
@@ -10,11 +12,13 @@ enum GatedMethod {
 }
 
 impl GatedMethod {
-    fn from_method_name(name: &str) -> Option<Self> {
-        match name {
-            "raise" => Some(Self::ResultRaise),
-            "await" => Some(Self::EffectAwait),
-            _ => None,
+    const RAISE: &'static str = "raise";
+    const AWAIT: &'static str = "await";
+
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::ResultRaise => Self::RAISE,
+            Self::EffectAwait => Self::AWAIT,
         }
     }
 
@@ -30,6 +34,26 @@ impl GatedMethod {
                 "`.await()` is gated until Sync/Async effect checking and task lowering are implemented",
                 span,
             ),
+        }
+    }
+}
+
+impl fmt::Display for GatedMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for GatedMethod {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value == Self::ResultRaise.as_str() {
+            Ok(Self::ResultRaise)
+        } else if value == Self::EffectAwait.as_str() {
+            Ok(Self::EffectAwait)
+        } else {
+            Err(())
         }
     }
 }
@@ -51,7 +75,7 @@ impl TypeChecker {
 
         let typed_receiver = self.check_expr(receiver)?;
 
-        if let Some(gated_method) = GatedMethod::from_method_name(method) {
+        if let Ok(gated_method) = method.parse::<GatedMethod>() {
             return Err(gated_method.diagnostic(span));
         }
 

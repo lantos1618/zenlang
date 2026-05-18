@@ -3349,6 +3349,10 @@ and do not assume Phase 4 is ready without evidence.
   a focused Sync/Async effect diagnostic instead of an ordinary unknown-method
   error, covered by
   `typechecker::tests::core_semantics::literals::effect_await_is_rejected_until_async_lowering_exists`.
+- Gated typechecker method spellings for `.raise()` and `.await()` now flow
+  through `GatedMethod` parse/display helpers instead of raw method-name
+  matches, guarded by
+  `repo_hygiene::typechecker_gated_methods_use_owned_action_enum`.
 - Promoted stdlib sketches no longer rely on the gated `.raise()` operator.
   The remaining stdlib propagation examples use explicit `Result` matches and
   are guarded by
