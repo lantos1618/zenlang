@@ -176,6 +176,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   explicit `Type.implements(Behavior) { ... }` blocks. Gated generic
   association targets such as `Type<T>.derive(...)` report the same
   feature-gate context shape with a note to use non-generic explicit behavior associations until generic behavior target templates exist.
+  Removed `return` keyword diagnostics are pinned by
+  `emit_json_diagnostics_removed_return_schema_matches_golden`, including the
+  stable code, span, and structured suggested fix payload for agent/editor
+  consumers.
   Hand-authored build graph JSON inputs are rejected before generic build.zen
   path validation can stand in for the compiler-owned graph boundary, covered by
   `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
@@ -264,6 +268,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Typechecked C backend for tested fixtures | implemented | `cargo test --tests` |
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
+| Diagnostics JSON emission | constrained | `emit_json_diagnostics_command_outputs_machine_readable_errors` checks machine-readable errors, `emit_json_diagnostics_removed_return_schema_matches_golden` pins removed-return suggested fix schema, `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`; broader diagnostic-code catalog still required |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_outputs_enum_function_and_global_declarations` covers enum variants/payloads, function params/returns, and globals, `emit_json_hir_declaration_schema_matches_golden` pins the checked declaration schema, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
 | MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_outputs_match_arm_schema` covers match kind, arm patterns/bindings, and block results, `emit_json_mir_match_schema_matches_golden` pins the checked match schema, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
 | Layout JSON emission | constrained | `emit_json_layout_outputs_checked_type_layouts` checks primitive, `StaticString`, and struct layout facts, `emit_json_layout_outputs_compound_type_layout_entries` covers pointer, raw pointer, slice, array, and enum payload entries, `emit_json_layout_compound_schema_matches_golden` pins the checked compound layout schema, `emit_json_layout_rejects_hand_authored_json_before_layout_override`; broader ABI schemas still required |

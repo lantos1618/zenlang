@@ -1,0 +1,47 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/return_keyword.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E2000",
+      "message": "return keyword has been removed; use the final expression in the block",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/return_keyword.zen",
+        "start": 21,
+        "end": 27,
+        "line": 3,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": [
+        {
+          "kind": "replace_removed_return_with_final_expression",
+          "title": "Remove `return` and use the value as the final expression",
+          "edits": [
+            {
+              "span": {
+                "file_id": 0,
+                "path": "$TMP/return_keyword.zen",
+                "start": 21,
+                "end": 27,
+                "line": 3,
+                "column": 5
+              },
+              "replacement": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

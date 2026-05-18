@@ -3870,6 +3870,9 @@ Agent UX deliverables:
   at the compiler-owned diagnostics JSON boundary before forged diagnostics can
   be treated as Zen source or accepted as compiler diagnostics. Guarded by
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`.
+- Removed `return` keyword diagnostics JSON is now pinned by a golden fixture,
+  including the stable code, span, and structured suggested-fix payload.
+  Guarded by `emit_json_diagnostics_removed_return_schema_matches_golden`.
 - Hand-authored build graph JSON inputs to `emit-json build-graph` now reject
   at the compiler-owned build graph JSON boundary before generic `build.zen`
   path validation can stand in for deterministic graph provenance. Guarded by
