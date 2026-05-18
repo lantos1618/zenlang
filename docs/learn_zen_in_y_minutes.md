@@ -3,8 +3,8 @@
 Zen is a systems language built around compact declarations, explicit data
 shapes, pattern matching, generics, behaviors, and predictable native output.
 
-This guide separates the tested language surface from gated design previews.
-Runnable examples live in `tests/zen/` and `examples/`.
+Runnable examples live in `tests/zen/` and `examples/`. Gated design previews
+are called out explicitly.
 
 ## Hello
 
@@ -180,6 +180,36 @@ main = () i32 {
 
 Nested generic types are written directly, such as
 `Result<Option<i32>, StaticString>`.
+
+## Error Handling
+
+Zen models absence and failure with ordinary data. No exceptions are thrown
+behind a call boundary. No null value exists to check at runtime.
+
+```zen
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+Option<T>:
+    None,
+    Some(T)
+
+divide = (a: f64, b: f64) Result<f64, StaticString> {
+    b == 0.0 ?
+        | true { Result<f64, StaticString>.Err("division by zero") }
+        | false { Result<f64, StaticString>.Ok(a / b) }
+}
+
+ratio_or_zero = (a: f64, b: f64) f64 {
+    divide(a, b) ?
+        | Ok(value) { value }
+        | Err(_) { 0.0 }
+}
+```
+
+Result and option values are handled with the same `?` match form used for
+booleans and enums. The final expression of each arm is the arm result.
 
 ## Methods
 
@@ -396,6 +426,27 @@ Imports use destructuring-style binding from a module path. Local files import
 by module name, and dotted paths resolve through subdirectories. See
 `examples/project/main.zen` for the project-style example.
 
+## Memory And Ownership
+
+Allocation is explicit in Zen's language model. The stable subset does not hide
+heap allocation behind literals, interpolation, method calls, or generic
+containers.
+
+```zen
+Label: {
+    text: StaticString,
+}
+
+from_text = (text: StaticString) Label {
+    Label { text: text }
+}
+```
+
+Values name their shape directly. Static text is a non-owning program value.
+Owned dynamic storage is modeled with allocator-aware types once typed
+allocators are promoted. Until then, the compiler rejects allocator-backed
+source types instead of pretending allocation is free.
+
 ## Static And Dynamic Strings
 
 ```zen
@@ -493,6 +544,8 @@ The model is:
 - `Sync` and `Async` are real effects, not marker-only names.
 - Sync code cannot call async operations without an explicit runtime boundary.
 - `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct capabilities.
+- Sync allocation returns `Result` directly.
+- Async allocation returns `Task<Result<...>>`.
 - Allocation returns explicit `Result` or task-shaped results, not hidden
   exceptions.
 - `.raise()` is the planned Result propagation operator, but it is gated until
