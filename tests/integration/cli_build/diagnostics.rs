@@ -4,6 +4,8 @@ mod check_command;
 mod dedup;
 #[path = "diagnostics/emit_command.rs"]
 mod emit_command;
+#[path = "diagnostics/usage.rs"]
+mod usage;
 
 fn write_imported_module_type_error_fixture(tmp: &tempfile::TempDir) -> std::path::PathBuf {
     let math_path = tmp.path().join("math.zen");

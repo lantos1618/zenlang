@@ -3536,6 +3536,10 @@ checked-in docs, tests, and commits only.
   deterministic `build-graph`, and gated `hir`/`mir`/`target-yaml` modes.
   Covered by `emit_json_usage_lists_supported_and_gated_modes`, so the CLI
   help text cannot hide gated IR/YAML modes from users.
+- The root `zen` usage banner now mirrors that IR/YAML boundary by listing the
+  gated `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` commands
+  as gated instead of omitting them. Covered by
+  `root_usage_lists_supported_and_gated_emit_json_modes`.
 
 ## Current Phase
 
