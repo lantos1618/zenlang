@@ -1,0 +1,599 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "ok",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Ok",
+                        "payload": {
+                          "kind": {
+                            "IntLiteral": 5
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 237,
+                            "end": 238
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "I32"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 208,
+                      "end": 239
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 203,
+                "end": 239
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "err",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Err",
+                        "payload": {
+                          "kind": {
+                            "StringLiteral": "bad"
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 280,
+                            "end": 285
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "I32"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 250,
+                      "end": 286
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 244,
+                "end": 286
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "unwrap_or_i32_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "ok"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_i32_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "I32"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 315,
+                                              "end": 317
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 319,
+                                              "end": 320
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 305,
+                                      "end": 321
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 303,
+                            "end": 322
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 291,
+                    "end": 324
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 291,
+                "end": 324
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "unwrap_or_i32_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "err"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_i32_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "I32"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 353,
+                                              "end": 356
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 9
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 358,
+                                              "end": 359
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 343,
+                                      "end": 360
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 341,
+                            "end": 361
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 329,
+                    "end": 363
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 329,
+                "end": 363
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 368,
+              "end": 369
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 197,
+            "end": 371
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 183,
+          "end": 371
+        }
+      },
+      {
+        "name": "unwrap_or_i32_StaticString",
+        "params": [
+          {
+            "name": "value",
+            "ty": {
+              "Enum": {
+                "name": "Result_i32_StaticString",
+                "variants": [
+                  [
+                    "Ok",
+                    "I32"
+                  ],
+                  [
+                    "Err",
+                    "Str"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 70,
+              "end": 89
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 91,
+              "end": 102
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "value"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 112,
+                    "end": 117
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Ok",
+                        "bindings": [
+                          [
+                            "inner",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "inner"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 142,
+                                "end": 147
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 140,
+                              "end": 149
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 140,
+                          "end": 149
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 140,
+                        "end": 149
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 130,
+                      "end": 149
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Err",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 169,
+                                "end": 177
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 167,
+                              "end": 179
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 167,
+                          "end": 179
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 167,
+                        "end": 179
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 160,
+                      "end": 179
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 112,
+              "end": 179
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 106,
+            "end": 181
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 51,
+          "end": 181
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Result_i32_StaticString",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "Ok",
+                "tag": 0,
+                "payload": [
+                  [
+                    "payload",
+                    "I32"
+                  ]
+                ]
+              },
+              {
+                "name": "Err",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "Str"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 208,
+          "end": 239
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}
