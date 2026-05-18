@@ -1122,7 +1122,9 @@ checked-in docs, tests, and commits only.
   with generated-C assertions proving concrete inherited dispatch emission
   without unspecialized `T_encode` placeholders. Missing imported generic
   behavior impl diagnostics are covered by
-  `integration::imported_generic_behavior_requires_missing_impl_is_error`.
+  `integration::imported_generic_behavior_requires_missing_impl_is_error`, and
+  duplicate imported generic `.requires` edges are covered by
+  `integration::imported_duplicate_generic_behavior_requires_is_error`.
 - Imported public generic functions can use behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.
