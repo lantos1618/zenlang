@@ -3335,6 +3335,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::core_semantics::literals::range_expression_is_rejected_until_range_type_exists`,
   so parser-accepted range syntax no longer succeeds with an unknown typed
   placeholder before range semantics exist.
+- Planned Result propagation through `.raise()` remains gated deliberately. It
+  now has a focused typechecker diagnostic instead of an ordinary unknown-method
+  error, covered by
+  `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
 - Type declaration suffix parsing now uses enum-backed `impl`/`implements`/
   `requires`/`extends` spellings, keeping parser dispatch and diagnostics off
   ad hoc string comparisons. Coverage:

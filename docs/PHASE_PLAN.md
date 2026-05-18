@@ -3119,6 +3119,10 @@ checked-in docs, tests, and commits only.
 - Range expressions now produce an explicit gated typechecker diagnostic until
   a concrete range type is designed, instead of silently carrying an unknown
   placeholder through function return checking.
+- Planned Result propagation through `.raise()` now produces an explicit gated
+  typechecker diagnostic instead of falling through to ordinary missing-method
+  lookup, covered by
+  `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
 - Dead char-literal AST support has been removed because no lexer/parser
   surface produces it. The cleanup removes the stale typechecker `Unknown`
   fallback and is guarded by
