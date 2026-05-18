@@ -127,7 +127,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Local module loading | implemented | Existing integration tests |
 | Typechecked C backend for tested fixtures | implemented | `cargo test --tests` |
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
-| Strict resolver, symbol IDs, privacy | gated | Phase 2 tests |
+| Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR/MIR JSON emission | gated | Schema and golden tests |
 | Target/build YAML validation | gated | Schema and negative validation tests |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
