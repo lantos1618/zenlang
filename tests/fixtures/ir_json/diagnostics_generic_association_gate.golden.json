@@ -1,0 +1,44 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_association_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E2000",
+      "message": "generic association target `Type<T>.derive` is gated; use non-generic `derive` associations or keep the generic behavior target deferred to docs/V1_SPEC.md",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_association_gate.zen",
+        "start": 80,
+        "end": 102,
+        "line": 10,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [
+        "Use a non-generic explicit behavior association until generic behavior target templates are implemented"
+      ],
+      "context": [
+        {
+          "span": {
+            "file_id": 0,
+            "path": "$TMP/generic_association_gate.zen",
+            "start": 80,
+            "end": 102,
+            "line": 10,
+            "column": 1
+          },
+          "kind": "feature_gate",
+          "message": "reserved generic behavior association target"
+        }
+      ],
+      "suggested_fixes": []
+    }
+  ]
+}

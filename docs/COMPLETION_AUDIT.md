@@ -4226,6 +4226,10 @@ and do not assume Phase 4 is ready without evidence.
   `kind: "feature_gate"` and a note directing users to non-generic explicit behavior associations until generic behavior target templates exist. Covered by
   `emit_json_diagnostics_spans_full_gated_generic_association_target` and
   `generic_type_association_keywords_are_explicitly_gated`.
+- The generic association target feature-gate diagnostic shape is now pinned by
+  `emit_json_diagnostics_generic_association_gate_schema_matches_golden`,
+  covering stable diagnostics JSON for `Type<T>.derive(Behavior<T>)` while
+  generic behavior target templates remain gated.
 - Dev UX and Agent UX are now tracked as first-class roadmap lanes in
   `docs/PHASE_PLAN.md`, with MoonBit-style toolchain integration as the
   benchmark and concrete future surfaces for the VS Code extension,
