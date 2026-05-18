@@ -4318,6 +4318,11 @@ and do not assume Phase 4 is ready without evidence.
 - MIR JSON for generic `Option<T>` specialization is now pinned by
   `emit_json_mir_generic_option_schema_matches_golden`, covering concrete
   `Option_i32` enum construction and match-arm lowering.
+- MIR JSON for nested generic `Result<Option<T>, E>` specialization is now
+  pinned by `emit_json_mir_nested_generic_result_schema_matches_golden`,
+  covering nested `Result_Option_i32_StaticString` construction, dependent
+  `Option_i32` values, specialized calls, and match-arm lowering for both
+  unwrap helpers.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
