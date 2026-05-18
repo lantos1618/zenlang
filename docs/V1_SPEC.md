@@ -139,9 +139,14 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Existing broad stdlib files | experimental | Must compile before promotion |
 | Formatter, package manager, alternate backends | removed from v1 claims | Reintroduce only with tests and binaries |
 
+Constrained `build.zen` execution already has positive and negative evidence:
+Deterministic build graph compiles executable and test targets, while build
+scripts using undeclared host side effects are rejected. The remaining backlog
+below is for v1 areas without that minimum positive/negative proof.
+
 ## Required Test Backlog
 
-Every v1 effect/type-match/allocator/actor/build-system claim needs at least one
+Every remaining v1 effect/type-match/allocator/actor/IR claim needs at least one
 planned positive test and one planned negative test before implementation.
 
 | Area | Planned Positive Test | Planned Negative Test |
@@ -153,7 +158,6 @@ planned positive test and one planned negative test before implementation.
 | AST traversal | Tooling can read AST JSON for a parsed source fixture | AST traversal cannot bypass semantic checks for a core language feature |
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
-| `build.zen` | Deterministic build graph compiles executable and test targets | Build script using undeclared host side effects is rejected |
 
 ## Stdlib Gate
 

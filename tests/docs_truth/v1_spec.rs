@@ -218,4 +218,13 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         !spec.contains("Deterministic build graph creates one executable target"),
         "docs/V1_SPEC.md still describes the build.zen backlog as single-executable only"
     );
+
+    let backlog = spec
+        .split("## Required Test Backlog")
+        .nth(1)
+        .expect("V1 spec should contain required test backlog");
+    assert!(
+        !backlog.contains("| `build.zen` |"),
+        "docs/V1_SPEC.md should not list constrained build.zen execution as only planned backlog"
+    );
 }

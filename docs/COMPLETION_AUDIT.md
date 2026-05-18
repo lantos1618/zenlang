@@ -3781,6 +3781,12 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/legacy_graph_command_host_effects/env_reads/`,
   preserving undeclared env-read and validation-order checks while keeping
   file-read coverage wired separately from the parent module.
+- `docs/V1_SPEC.md` now separates constrained `build.zen` execution evidence
+  from the remaining required-test backlog. Deterministic graph execution has
+  positive executable/test coverage and negative undeclared-host-effect
+  coverage, so `build.zen` is no longer listed as only planned backlog. This is
+  guarded by
+  `docs_truth::v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

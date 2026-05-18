@@ -3462,6 +3462,11 @@ checked-in docs, tests, and commits only.
   coverage into focused basic and ordering modules under
   `tests/integration/cli_build/legacy_graph_command_host_effects/env_reads/`,
   leaving file-read coverage wired separately from the parent module.
+- `docs/V1_SPEC.md` now separates constrained `build.zen` evidence from the
+  remaining required-test backlog: deterministic graph execution already has
+  positive executable/test coverage and negative undeclared-host-effect
+  coverage, so the backlog is reserved for v1 areas that still lack minimum
+  positive/negative proof.
 
 ## Current Phase
 
@@ -3487,7 +3492,7 @@ exist and pass through the same compiler path advertised in `docs/V1_SPEC.md`.
 
 ## Next Small Slice
 
-Continue the next smallest build-driver slice by expanding graph execution only
-when a new positive graph fixture and a matching negative deterministic-effect
-fixture exist first. Preserve the constrained accepted `build.zen` subset until
-multi-target or richer build-script semantics are specified and tested.
+Continue the next smallest gated-feature slice with tests first. For
+`build.zen`, expand beyond the constrained subset only when a new positive graph
+fixture and a matching negative deterministic-effect fixture exist first. For
+non-build v1 areas, start with the Required Test Backlog in `docs/V1_SPEC.md`.
