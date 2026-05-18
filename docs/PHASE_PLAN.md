@@ -3626,9 +3626,10 @@ Agent UX deliverables:
   existing target, dependency, feature, and host-effect payload keys. Covered by
   `emit_json_build_graph_outputs_project_build_graph`.
 - `emit-json layout` now emits checked compiler-owned layout JSON for the
-  stable subset: primitive sizes, baked `StaticString`, pointer-sized views, and
-  struct field offsets. The mode remains listed in both root and emit-json
-  usage, and is covered by `emit_json_layout_outputs_checked_type_layouts`,
+  stable subset with `schema_version: 0`: primitive sizes, baked
+  `StaticString`, pointer-sized views, and struct field offsets. The mode
+  remains listed in both root and emit-json usage, and is covered by
+  `emit_json_layout_outputs_checked_type_layouts`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`.
 - Hand-authored layout JSON inputs to `emit-json layout` now reject at the

@@ -292,6 +292,7 @@ main = () i32 { 0 }
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("layout stdout is json");
     assert_eq!(json["format"], "zen.layout.v0");
+    assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");
     assert_eq!(json["target"]["pointer_size"], 8);
     assert_eq!(json["target"]["usize_size"], 8);

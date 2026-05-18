@@ -191,9 +191,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   override can be accepted, covered by
   `emit_json_hir_rejects_hand_authored_json_before_ir_override` and
   `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
-  `zen emit-json layout <file>` emits checked compiler-owned layout JSON for
-  the current stable subset, including primitive sizes, baked `StaticString`,
-  and struct field offsets, covered by
+  `zen emit-json layout <file>` emits checked compiler-owned layout JSON with
+  `schema_version: 0` for the current stable subset, including primitive sizes,
+  baked `StaticString`, and struct field offsets, covered by
   `emit_json_layout_outputs_checked_type_layouts`. Hand-authored layout JSON
   inputs are rejected at the compiler-owned layout schema boundary before any
   ABI override can be accepted, covered by
