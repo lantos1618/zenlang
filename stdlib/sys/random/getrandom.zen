@@ -22,25 +22,29 @@ getrandom = (buf: Ptr<u8>, len: usize, flags: u32) Result<usize, RandomError> {
 // Get random u64
 random_u64 = () Result<u64, RandomError> {
     value: u64 = 0
-    getrandom(compiler.raw_ptr_cast(&value.ref()), 8, 0).raise()
-    Result.Ok(value)
+    getrandom(compiler.raw_ptr_cast(&value.ref()), 8, 0) ?
+        | Ok(_) { Result.Ok(value) }
+        | Err(err) { Result.Err(err) }
 }
 
 // Get random u32
 random_u32 = () Result<u32, RandomError> {
     value: u32 = 0
-    getrandom(compiler.raw_ptr_cast(&value.ref()), 4, 0).raise()
-    Result.Ok(value)
+    getrandom(compiler.raw_ptr_cast(&value.ref()), 4, 0) ?
+        | Ok(_) { Result.Ok(value) }
+        | Err(err) { Result.Err(err) }
 }
 
 // Get random in range [0, max)
 random_range = (max: u64) Result<u64, RandomError> {
-    value = random_u64().raise()
-    Result.Ok(value % max)
+    random_u64() ?
+        | Ok(value) { Result.Ok(value % max) }
+        | Err(err) { Result.Err(err) }
 }
 
 // Fill buffer with random bytes
 fill_random = (buf: Ptr<u8>, len: usize) Result<(), RandomError> {
-    getrandom(buf, len, 0).raise()
-    Result.Ok(())
+    getrandom(buf, len, 0) ?
+        | Ok(_) { Result.Ok(()) }
+        | Err(err) { Result.Err(err) }
 }

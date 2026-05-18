@@ -25,7 +25,7 @@ fn source_ast_no_longer_has_return_expression_nodes() {
 }
 
 #[test]
-fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
+fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
     for path in [
         "stdlib/build.zen",
         "stdlib/collections/char.zen",
@@ -108,6 +108,10 @@ fn promoted_stdlib_modules_do_not_use_removed_return_keyword() {
         assert!(
             !source.contains("return "),
             "{path} still uses the removed return keyword"
+        );
+        assert!(
+            !source.contains(".raise("),
+            "{path} still uses gated .raise() propagation"
         );
     }
 }

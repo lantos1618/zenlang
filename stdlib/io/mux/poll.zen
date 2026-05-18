@@ -53,13 +53,15 @@ poll = (fds: Ptr<Pollfd>, nfds: i32, timeout_ms: i32) Result<i32, PollError> {
 // Poll single fd for read
 poll_read = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
     pfd = Pollfd.new(fd, cast(POLLIN, i16))
-    result = poll(&pfd.ref(), 1, timeout_ms).raise()
-    Result.Ok(result > 0 && pfd.read_ready())
+    poll(&pfd.ref(), 1, timeout_ms) ?
+        | Ok(result) { Result.Ok(result > 0 && pfd.read_ready()) }
+        | Err(err) { Result.Err(err) }
 }
 
 // Poll single fd for write
 poll_write = (fd: i32, timeout_ms: i32) Result<bool, PollError> {
     pfd = Pollfd.new(fd, cast(POLLOUT, i16))
-    result = poll(&pfd.ref(), 1, timeout_ms).raise()
-    Result.Ok(result > 0 && pfd.write_ready())
+    poll(&pfd.ref(), 1, timeout_ms) ?
+        | Ok(result) { Result.Ok(result > 0 && pfd.write_ready()) }
+        | Err(err) { Result.Err(err) }
 }

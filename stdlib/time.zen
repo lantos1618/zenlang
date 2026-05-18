@@ -82,8 +82,9 @@ Instant.now = () Result<Instant, TimeError> {
 }
 
 Instant.elapsed = (self: Instant) Result<Duration, TimeError> {
-    now = Instant.now().raise()
-    Result.Ok(Duration { nanos: now.nanos - self.nanos })
+    Instant.now() ?
+        | Ok(now) { Result.Ok(Duration { nanos: now.nanos - self.nanos }) }
+        | Err(err) { Result.Err(err) }
 }
 
 // Get current time
@@ -111,6 +112,7 @@ sleep_ms = (ms: i64) Result<(), TimeError> {
 
 // Get monotonic time in nanoseconds
 monotonic_nanos = () Result<i64, TimeError> {
-    ts = clock_gettime(CLOCK_MONOTONIC).raise()
-    Result.Ok(ts.to_nanos())
+    clock_gettime(CLOCK_MONOTONIC) ?
+        | Ok(ts) { Result.Ok(ts.to_nanos()) }
+        | Err(err) { Result.Err(err) }
 }

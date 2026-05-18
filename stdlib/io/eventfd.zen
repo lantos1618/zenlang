@@ -59,8 +59,9 @@ Eventfd.signal = (self: MutPtr<Eventfd>) Result<(), EventfdError> {
 
 // Wait (read and discard)
 Eventfd.wait = (self: MutPtr<Eventfd>) Result<(), EventfdError> {
-    self.read().raise()
-    Result.Ok(())
+    self.read() ?
+        | Ok(_) { Result.Ok(()) }
+        | Err(err) { Result.Err(err) }
 }
 
 Eventfd.close = (self: MutPtr<Eventfd>) void {
