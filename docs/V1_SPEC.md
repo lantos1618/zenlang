@@ -170,6 +170,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
   `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, and
   `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+  AST and symbols module-graph schemas are pinned by
+  `emit_json_ast_module_graph_schema_matches_golden` and
+  `emit_json_symbols_module_graph_schema_matches_golden`, covering portable
+  module IDs, canonical path shape, imports, declarations, symbol namespaces,
+  visibility, spans, and function signatures.
   Checked typed JSON for generic method specialization is pinned by
   `emit_json_typed_generic_method_schema_matches_golden`, covering the
   specialized `Box_i32` type and `Box.get_i32` method output.
@@ -282,6 +287,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Typechecked C backend for tested fixtures | implemented | `cargo test --tests` |
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
+| AST/symbols JSON emission | constrained | `emit_json_ast_command_outputs_resolved_module_graph` checks unchecked AST module-graph output, `emit_json_ast_module_graph_schema_matches_golden` pins the unchecked AST module graph schema, `emit_json_symbols_command_outputs_module_symbol_tables` checks resolved symbol table output, `emit_json_symbols_module_graph_schema_matches_golden` pins the resolved symbols module graph schema, `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override` |
 | Diagnostics JSON emission | constrained | `emit_json_diagnostics_command_outputs_machine_readable_errors` checks machine-readable errors, `emit_json_diagnostics_removed_return_schema_matches_golden` pins removed-return suggested fix schema, `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden` pins feature-gate context for reserved generated behavior association, `emit_json_diagnostics_generic_association_gate_schema_matches_golden` pins feature-gate context for reserved generic behavior association targets, `emit_json_diagnostics_generic_result_method_arity_schema_matches_golden` pins a hard generic `Result<T, E>` method arity diagnostic without followups, `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden` pins a hard generic behavior-bound diagnostic without method-body followups, `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden` pins a hard generic inference conflict without argument/return followups, `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`; broader diagnostic-code catalog still required |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_outputs_enum_function_and_global_declarations` covers enum variants/payloads, function params/returns, and globals, `emit_json_hir_declaration_schema_matches_golden` pins the checked declaration schema, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |
 | MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_minimal_function_schema_matches_golden` pins the checked minimal function/block/terminator schema, `emit_json_mir_outputs_match_arm_schema` covers match kind, arm patterns/bindings, and block results, `emit_json_mir_match_schema_matches_golden` pins the checked match schema, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader golden tests still required |

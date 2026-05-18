@@ -1,0 +1,189 @@
+{
+  "format": "zen.ast.v0",
+  "schema_version": 0,
+  "semantic_status": "unchecked",
+  "entry_module": 0,
+  "modules": [
+    {
+      "id": 0,
+      "package_id": 0,
+      "canonical_path": "main.zen",
+      "imports": [
+        {
+          "local_name": "add",
+          "source_module": 1,
+          "source_symbol": "add",
+          "span": {
+            "file_id": 0,
+            "start": 1,
+            "end": 15
+          }
+        }
+      ],
+      "program": {
+        "declarations": [
+          {
+            "Import": {
+              "names": [
+                "add"
+              ],
+              "module_path": [
+                "math"
+              ],
+              "span": {
+                "file_id": 0,
+                "start": 1,
+                "end": 15
+              }
+            }
+          },
+          {
+            "Function": {
+              "name": "main",
+              "type_params": [],
+              "params": [],
+              "return_type": "I32",
+              "body": {
+                "Block": {
+                  "statements": [],
+                  "expr": {
+                    "FunctionCall": {
+                      "name": "add",
+                      "module": null,
+                      "type_args": [],
+                      "args": [
+                        {
+                          "IntLiteral": {
+                            "value": 20,
+                            "span": {
+                              "file_id": 0,
+                              "start": 41,
+                              "end": 43
+                            }
+                          }
+                        },
+                        {
+                          "IntLiteral": {
+                            "value": 22,
+                            "span": {
+                              "file_id": 0,
+                              "start": 45,
+                              "end": 47
+                            }
+                          }
+                        }
+                      ],
+                      "span": {
+                        "file_id": 0,
+                        "start": 37,
+                        "end": 48
+                      }
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 31,
+                    "end": 50
+                  }
+                }
+              },
+              "public": false,
+              "span": {
+                "file_id": 0,
+                "start": 17,
+                "end": 50
+              }
+            }
+          }
+        ],
+        "file_id": 0
+      }
+    },
+    {
+      "id": 1,
+      "package_id": 0,
+      "canonical_path": "math.zen",
+      "imports": [],
+      "program": {
+        "declarations": [
+          {
+            "Function": {
+              "name": "add",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "a",
+                  "ty": "I32",
+                  "mutable": false,
+                  "span": {
+                    "file_id": 1,
+                    "start": 12,
+                    "end": 18
+                  }
+                },
+                {
+                  "name": "b",
+                  "ty": "I32",
+                  "mutable": false,
+                  "span": {
+                    "file_id": 1,
+                    "start": 20,
+                    "end": 26
+                  }
+                }
+              ],
+              "return_type": "I32",
+              "body": {
+                "Block": {
+                  "statements": [],
+                  "expr": {
+                    "BinaryOp": {
+                      "op": "Add",
+                      "left": {
+                        "Identifier": {
+                          "name": "a",
+                          "span": {
+                            "file_id": 1,
+                            "start": 38,
+                            "end": 39
+                          }
+                        }
+                      },
+                      "right": {
+                        "Identifier": {
+                          "name": "b",
+                          "span": {
+                            "file_id": 1,
+                            "start": 42,
+                            "end": 43
+                          }
+                        }
+                      },
+                      "span": {
+                        "file_id": 1,
+                        "start": 38,
+                        "end": 43
+                      }
+                    }
+                  },
+                  "span": {
+                    "file_id": 1,
+                    "start": 32,
+                    "end": 45
+                  }
+                }
+              },
+              "public": true,
+              "span": {
+                "file_id": 1,
+                "start": 5,
+                "end": 45
+              }
+            }
+          }
+        ],
+        "file_id": 1
+      }
+    }
+  ]
+}

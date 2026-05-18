@@ -327,6 +327,11 @@ and do not assume Phase 4 is ready without evidence.
   fixture proves a semantically invalid program can emit AST JSON while
   `emit-json typed` rejects it. Coverage:
   `emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects`.
+- AST and symbols module-graph JSON schemas are now pinned by
+  `emit_json_ast_module_graph_schema_matches_golden` and
+  `emit_json_symbols_module_graph_schema_matches_golden`, covering portable
+  canonical-path shape, imports, declarations, symbol namespaces, visibility,
+  spans, and function signatures.
 - AST traversal is no longer listed in the Required Test Backlog because the
   AST JSON tooling view has positive output evidence and negative semantic
   bypass evidence. Covered by

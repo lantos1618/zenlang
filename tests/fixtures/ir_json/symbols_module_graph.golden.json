@@ -1,0 +1,207 @@
+{
+  "format": "zen.symbols.v0",
+  "semantic_status": "resolved",
+  "entry_module": 0,
+  "modules": [
+    {
+      "id": 0,
+      "package_id": 0,
+      "canonical_path": "main.zen",
+      "symbols": [
+        {
+          "id": 0,
+          "namespace": "Module",
+          "name": "math",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 1,
+            "end": 15
+          }
+        },
+        {
+          "id": 1,
+          "namespace": "Import",
+          "name": "add",
+          "is_public": false,
+          "import_source": "math",
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 1,
+            "end": 15
+          }
+        },
+        {
+          "id": 2,
+          "namespace": "Value",
+          "name": "main",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 0,
+          "parameter_names": [],
+          "parameter_type_names": [],
+          "return_type_name": "i32",
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 17,
+            "end": 50
+          }
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "package_id": 0,
+      "canonical_path": "math.zen",
+      "symbols": [
+        {
+          "id": 0,
+          "namespace": "Value",
+          "name": "add",
+          "is_public": true,
+          "import_source": null,
+          "parameter_count": 2,
+          "parameter_names": [
+            "a",
+            "b"
+          ],
+          "parameter_type_names": [
+            "i32",
+            "i32"
+          ],
+          "return_type_name": "i32",
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 1,
+            "start": 5,
+            "end": 45
+          }
+        },
+        {
+          "id": 1,
+          "namespace": "Local",
+          "name": "a",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 1,
+          "definition_span": {
+            "file_id": 1,
+            "start": 12,
+            "end": 18
+          }
+        },
+        {
+          "id": 2,
+          "namespace": "Local",
+          "name": "b",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 1,
+          "definition_span": {
+            "file_id": 1,
+            "start": 20,
+            "end": 26
+          }
+        }
+      ]
+    }
+  ]
+}
