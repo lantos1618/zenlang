@@ -612,6 +612,10 @@ Agent UX deliverables:
   by `emit_json_diagnostics_generic_behavior_overlap_schema_matches_golden`,
   covering the stable `E6010` payload for overlapping `Json<StaticString>` and
   `PrettyJson` implementations on `Point`.
+- Diagnostics JSON for explicit type association failures is now pinned by
+  `emit_json_diagnostics_generic_requires_missing_impl_schema_matches_golden`,
+  covering the stable `E6007` payload when `Point.requires(Json<StaticString>)`
+  has no matching implementation.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits
@@ -1275,7 +1279,10 @@ Agent UX deliverables:
   without unspecialized `T_encode` placeholders. Missing imported generic
   behavior impl diagnostics are covered by
   `integration::imported_generic_behavior_requires_missing_impl_is_error`,
-  imported generic `.requires` arity diagnostics are covered by
+  The public diagnostics JSON shape for a missing
+  `Point.requires(Json<StaticString>)` implementation is pinned by
+  `emit_json_diagnostics_generic_requires_missing_impl_schema_matches_golden`.
+  Imported generic `.requires` arity diagnostics are covered by
   `integration::imported_generic_behavior_requires_type_arg_arity_is_error`, and
   duplicate imported generic `.requires` edges are covered by
   `integration::imported_duplicate_generic_behavior_requires_is_error`.
