@@ -89,6 +89,12 @@ pub fn main() {
                 "typed" => cmd_emit_json_typed(&args[3]),
                 "diagnostics" => cmd_emit_json_diagnostics(&args[3]),
                 "build-graph" => cmd_emit_json_build_graph(&args[3]),
+                "hir" => {
+                    eprintln!(
+                        "error: HIR JSON emission is gated until schema and golden tests exist"
+                    );
+                    process::exit(1);
+                }
                 "mir" => {
                     eprintln!(
                         "error: MIR JSON emission is gated until schema and golden tests exist"
