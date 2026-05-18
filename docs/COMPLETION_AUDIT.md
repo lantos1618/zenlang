@@ -3887,6 +3887,12 @@ and do not assume Phase 4 is ready without evidence.
   while dynamic `zen_string` carries an allocator pointer. Covered by
   `runtime_separates_static_and_allocator_backed_strings` and
   `emit_string_literal`.
+- `Allocator`, `Sync`, and `Async` type spellings are now owned by AST gated
+  builtin type metadata and produce gated diagnostics rather than ordinary
+  unknown-type errors. Covered by
+  `typed_allocator_type_is_rejected_as_gated_not_unknown`,
+  `sync_async_effect_modes_are_rejected_as_gated_not_unknown`, and
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Builtin public type spellings now use shared AST helpers rather than
   duplicated semantic string comparisons, covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.

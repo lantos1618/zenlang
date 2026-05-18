@@ -7,6 +7,18 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         helper.contains("pub const DYNAMIC_STRING_TYPE_NAME: &str = \"String\""),
         "dynamic String spelling should live in the AST type helper module"
     );
+    for required in [
+        "pub const ALLOCATOR_TYPE_NAME: &str = \"Allocator\"",
+        "pub const SYNC_EFFECT_TYPE_NAME: &str = \"Sync\"",
+        "pub const ASYNC_EFFECT_TYPE_NAME: &str = \"Async\"",
+        "pub enum GatedBuiltinType",
+        "pub fn gated_builtin_type_name",
+    ] {
+        assert!(
+            helper.contains(required),
+            "gated builtin type spelling should live in the AST type helper module: {required}"
+        );
+    }
     assert!(
         helper.contains("pub fn is_builtin_type_name"),
         "builtin type-name recognition should be centralized"

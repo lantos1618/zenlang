@@ -84,6 +84,8 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 - `Typed allocators`: gated. v1 allocators are typed by allocated value and effect
   mode, such as `Allocator<T, Sync>` and `Allocator<T, Async>`. Sync allocation
   returns a direct checked result; async allocation returns a task/effect result.
+  Until allocator lowering exists, these spellings produce gated diagnostics
+  rather than unknown-type errors.
 - `Type matching`: gated. Comptime type matching operates on typed metadata for
   primitives, structs, enums, fields, variants, behaviors, allocator modes, and
   effect modes. It is separate from runtime value matching.

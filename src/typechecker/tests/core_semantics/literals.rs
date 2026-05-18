@@ -85,3 +85,59 @@ main = () i32 {
         "await gate should not be reported as an ordinary missing method, got {err:?}"
     );
 }
+
+#[test]
+fn typed_allocator_type_is_rejected_as_gated_not_unknown() {
+    let program = parse_program(
+        r#"
+main = (allocator: Allocator<i32, Sync>) void { }
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("typed allocator types should stay gated until allocator semantics exist");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("typed allocators are gated")),
+        "expected typed allocator gate diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .all(|d| !d.message.contains("unknown type symbol")),
+        "allocator/effect gate should not be reported as ordinary unknown types, got {err:?}"
+    );
+}
+
+#[test]
+fn sync_async_effect_modes_are_rejected_as_gated_not_unknown() {
+    let program = parse_program(
+        r#"
+use_sync = (mode: Sync) void { }
+use_async = (mode: Async) void { }
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("effect mode types should stay gated until effect semantics exist");
+
+    for expected in [
+        "`Sync` effect mode is gated",
+        "`Async` effect mode is gated",
+    ] {
+        assert!(
+            err.iter()
+                .any(|diagnostic| diagnostic.message.contains(expected)),
+            "expected diagnostic `{expected}`, got {err:?}"
+        );
+    }
+    assert!(
+        err.iter()
+            .all(|d| !d.message.contains("unknown type symbol")),
+        "effect mode gate should not be reported as ordinary unknown types, got {err:?}"
+    );
+}

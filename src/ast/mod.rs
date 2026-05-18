@@ -10,7 +10,7 @@ pub use declarations::{BehaviorMethod, Declaration, EnumVariant, StructField, Ty
 pub use expressions::{BinaryOp, Expression, MatchArm, StringPart, UnaryOp};
 pub use patterns::Pattern;
 pub use statements::Statement;
-pub use types::{is_builtin_type_name, AstType, Param};
+pub use types::{gated_builtin_type_name, is_builtin_type_name, AstType, Param};
 
 use crate::error::FileId;
 use serde::Serialize;

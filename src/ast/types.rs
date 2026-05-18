@@ -3,9 +3,56 @@ use serde::Serialize;
 
 pub const STATIC_STRING_TYPE_NAME: &str = "StaticString";
 pub const DYNAMIC_STRING_TYPE_NAME: &str = "String";
+pub const ALLOCATOR_TYPE_NAME: &str = "Allocator";
+pub const SYNC_EFFECT_TYPE_NAME: &str = "Sync";
+pub const ASYNC_EFFECT_TYPE_NAME: &str = "Async";
 
 pub fn is_builtin_type_name(name: &str) -> bool {
     name == DYNAMIC_STRING_TYPE_NAME
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GatedBuiltinType {
+    Allocator,
+    SyncEffect,
+    AsyncEffect,
+}
+
+impl GatedBuiltinType {
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name {
+            ALLOCATOR_TYPE_NAME => Some(Self::Allocator),
+            SYNC_EFFECT_TYPE_NAME => Some(Self::SyncEffect),
+            ASYNC_EFFECT_TYPE_NAME => Some(Self::AsyncEffect),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Allocator => ALLOCATOR_TYPE_NAME,
+            Self::SyncEffect => SYNC_EFFECT_TYPE_NAME,
+            Self::AsyncEffect => ASYNC_EFFECT_TYPE_NAME,
+        }
+    }
+
+    pub fn gate_message(self) -> std::string::String {
+        match self {
+            Self::Allocator => {
+                "typed allocators are gated until allocator ownership and effect semantics are implemented".into()
+            }
+            Self::SyncEffect | Self::AsyncEffect => {
+                format!(
+                    "`{}` effect mode is gated until Sync/Async effect checking is implemented",
+                    self.as_str()
+                )
+            }
+        }
+    }
+}
+
+pub fn gated_builtin_type_name(name: &str) -> Option<GatedBuiltinType> {
+    GatedBuiltinType::from_name(name)
 }
 
 /// Parser-level type representation.
