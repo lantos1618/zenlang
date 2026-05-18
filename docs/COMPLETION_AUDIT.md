@@ -3735,6 +3735,10 @@ and do not assume Phase 4 is ready without evidence.
   diagnostic de-duplication, and emit-command diagnostics under
   `tests/integration/cli_build/diagnostics/`, preserving imported module
   resolver/type diagnostic coverage while keeping each module focused.
+- Unsupported `build.zen` target tests now split unsupported target-kind
+  coverage from gated/unknown executable-field coverage under
+  `tests/integration/cli_build/unsupported_targets/`, preserving the same
+  command matrix without one mixed rejection file.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

@@ -3419,6 +3419,10 @@ checked-in docs, tests, and commits only.
   diagnostic de-duplication, and emit-command diagnostics under
   `tests/integration/cli_build/diagnostics/`, keeping shared imported-module
   fixtures in the parent module.
+- Unsupported `build.zen` target tests now split unsupported target-kind
+  coverage from gated/unknown executable-field coverage under
+  `tests/integration/cli_build/unsupported_targets/`, preserving the same
+  command matrix while keeping the parent module to shared helpers.
 
 ## Current Phase
 
