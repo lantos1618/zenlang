@@ -34,6 +34,7 @@ struct AstJsonImport<'a> {
 #[derive(Serialize)]
 struct TypedJsonProgram<'a> {
     format: &'static str,
+    semantic_status: &'static str,
     program: &'a TypedProgram,
 }
 
@@ -127,6 +128,7 @@ pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<
 pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     let graph = TypedJsonProgram {
         format: "zen.typed.v0",
+        semantic_status: "checked",
         program,
     };
 

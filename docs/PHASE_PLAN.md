@@ -498,6 +498,9 @@ checked-in docs, tests, and commits only.
   fixture proves a semantically invalid program can emit AST JSON while
   `emit-json typed` rejects it. Covered by
   `emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects`.
+- Typed JSON now carries `semantic_status: "checked"`, covered by
+  `emit_json_typed_command_outputs_checked_program`, keeping the checked output
+  boundary explicit alongside the unchecked AST marker.
 - `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
   explicit gated diagnostics tied to the v1 JSON/YAML backlog, covered by
   `emit_json_hir_command_is_explicitly_gated`,
