@@ -4261,6 +4261,11 @@ and do not assume Phase 4 is ready without evidence.
   structured fix suggestions, and quiet deterministic commands are promotion
   criteria rather than advertised completed features. Covered by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
+- `docs/DIAGNOSTICS.md` now catalogs the currently JSON-stable public
+  diagnostic codes for removed/reserved syntax, generic inference conflicts,
+  generic arity mismatches, and generic behavior-bound failures. The catalog is
+  guarded by `diagnostics_catalog_documents_json_stable_codes` and only lists
+  codes backed by diagnostics JSON golden fixtures.
 - AST, HIR, MIR, layout, target-yaml, and build-graph JSON outputs now include
   numeric `schema_version: 0` fields next to their `format` tags, so tools and
   agents can pin the compiler-owned v0 schema without parsing the display
