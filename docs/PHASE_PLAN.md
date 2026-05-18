@@ -2681,6 +2681,9 @@ checked-in docs, tests, and commits only.
   `emit_command_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before C emission through
   `emit_command_build_zen_rejects_file_read_without_fallback`.
+  Emit graphs with unselected test and library targets reject file reads
+  lacking a fallback arm before unselected target source validation through
+  `emit_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets`.
 - Library-only build graphs remain non-executable across build, direct,
   legacy, emit, and test execution entrypoints through
   `build_command_build_zen_rejects_library_only_graph_execution`,
