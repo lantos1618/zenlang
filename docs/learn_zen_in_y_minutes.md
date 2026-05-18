@@ -321,6 +321,48 @@ Loops use prefix `loop((l) { ... })` with explicit loop-control calls:
 operations can be called in UFC form as `done(l)` and `next(l)`. See
 `examples/05_loops.zen` for the tutorial version.
 
+Nested loops can target an outer label directly:
+
+```zen
+nested = (stop: bool) i32 {
+    count ::= 0
+
+    loop((outer) {
+        loop((inner) {
+            stop ?
+                | true { outer.done() }
+                | false {
+                    count = count + 1
+                    inner.next()
+                }
+        })
+
+        outer.next()
+    })
+
+    count
+}
+```
+
+The loop controls are ordinary calls, so UFC form is equivalent:
+
+```zen
+single_step = (ready: bool) i32 {
+    value ::= 0
+
+    loop((l) {
+        ready ?
+            | true { done(l) }
+            | false {
+                value = value + 1
+                next(l)
+            }
+    })
+
+    value
+}
+```
+
 ## Defer
 
 ```zen

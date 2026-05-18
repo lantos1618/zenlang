@@ -136,6 +136,8 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "l.next()",
         "done(l)",
         "next(l)",
+        "outer.done()",
+        "inner.next()",
         "## Imports And Modules",
         "## Defer",
         "## Gated Preview: Sync, Async, And Allocators",
