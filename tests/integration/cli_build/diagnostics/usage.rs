@@ -15,7 +15,7 @@ fn root_usage_lists_supported_and_gated_emit_json_modes() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     for expected in [
-        "emit-json ast <file>",
+        "emit-json ast <file>   Emit unchecked AST JSON",
         "emit-json symbols <file>",
         "emit-json typed <file>",
         "emit-json diagnostics <file>",
