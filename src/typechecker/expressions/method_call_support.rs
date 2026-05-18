@@ -48,12 +48,10 @@ impl FromStr for GatedMethod {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if value == Self::ResultRaise.as_str() {
-            Ok(Self::ResultRaise)
-        } else if value == Self::EffectAwait.as_str() {
-            Ok(Self::EffectAwait)
-        } else {
-            Err(())
+        match value {
+            Self::RAISE => Ok(Self::ResultRaise),
+            Self::AWAIT => Ok(Self::EffectAwait),
+            _ => Err(()),
         }
     }
 }

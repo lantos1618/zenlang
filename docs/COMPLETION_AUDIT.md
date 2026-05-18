@@ -3885,6 +3885,11 @@ and do not assume Phase 4 is ready without evidence.
 - Builtin public type spellings now use shared AST helpers rather than
   duplicated semantic string comparisons, covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Gated `.raise()` and `.await()` method recognition now routes through
+  `GatedMethod` enum-owned spellings, covered by
+  `typechecker_gated_methods_use_owned_action_enum`,
+  `result_raise_is_rejected_until_propagation_lowering_exists`, and
+  `effect_await_is_rejected_until_async_lowering_exists`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
