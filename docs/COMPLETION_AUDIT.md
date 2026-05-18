@@ -973,8 +973,9 @@ and do not assume Phase 4 is ready without evidence.
   validation.
 - Behavior impl coherence rejects overlapping parent/child behavior impls for
   the same type.
-- Behavior impl coherence is covered for specialized generic parent/child
-  overlap and for distinct generic specializations that must remain independent.
+- Behavior impl coherence is covered for direct and transitive specialized
+  generic parent/child overlap and for distinct generic specializations that
+  must remain independent.
   Resolver-restored generic impl refs also drive overlap diagnostics when
   AST-only impl type arguments are stale, covered by
   `typechecker::tests::collect_declarations_with_symbols_reports_overlap_from_restored_impl_type_args`.

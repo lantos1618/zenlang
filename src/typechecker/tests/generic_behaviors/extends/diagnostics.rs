@@ -39,6 +39,50 @@ Point.implements(PrettyJson) {
 }
 
 #[test]
+fn behavior_impl_transitive_generic_parent_overlap_is_error() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+CompactJson: behavior {
+    compact: (Self) str
+}
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+CompactJson.extends(Json<str>)
+PrettyJson.extends(CompactJson)
+
+Point.implements(Json<str>) {
+    encode = (value: Point) str { "point" }
+}
+
+Point.implements(PrettyJson) {
+    encode = (value: Point) str { "point" }
+    compact = (value: Point) str { "compact" }
+    pretty = (value: Point) str { "pretty" }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("transitive specialized parent and child behavior impls should overlap");
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "overlapping implementations of behaviors `Json_str` and `PrettyJson` for type `Point`"
+        )),
+        "expected transitive specialized behavior impl overlap diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_extends_cycle_is_error() {
     let program = parse_program(
         r#"
