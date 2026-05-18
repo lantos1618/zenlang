@@ -3191,9 +3191,9 @@ checked-in docs, tests, and commits only.
   field, dependency, unsupported target, and gated package/link diagnostics
   separate from successful graph JSON shape fixtures.
 - Imported behavior inheritance frontend diagnostics now live in
-  `tests/integration/frontend_diagnostics/behavior_extends.rs`, keeping
-  direct, imported-parent, and transitive parent-method diagnostics separate
-  from frontend helper and generic arity diagnostics.
+  `tests/integration/frontend_diagnostics/behavior_extends/`, keeping
+  parent-method requirement diagnostics separate from parent/child overlap
+  diagnostics, frontend helper checks, and generic arity diagnostics.
 - Generic explicit arity follow-up suppression diagnostics now live in
   `tests/generic_diagnostics/method_type_args/arity_followups.rs`, keeping
   function and method inference/argument follow-up checks separate from direct
