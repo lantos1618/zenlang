@@ -17,6 +17,8 @@ mod layout_json;
 mod mir_golden;
 #[path = "frontend_json/module_graph.rs"]
 mod module_graph;
+#[path = "frontend_json/module_graph_golden.rs"]
+mod module_graph_golden;
 #[path = "frontend_json/target_yaml.rs"]
 mod target_yaml;
 #[path = "frontend_json/target_yaml_golden.rs"]

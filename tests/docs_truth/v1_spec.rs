@@ -111,6 +111,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "semantic acceptance must use typed",
         "emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override",
         "emit_json_symbols_rejects_hand_authored_json_before_resolver_override",
+        "emit_json_ast_module_graph_schema_matches_golden",
+        "emit_json_symbols_module_graph_schema_matches_golden",
         "emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override",
         "emit_json_diagnostics_removed_return_schema_matches_golden",
         "emit_json_diagnostics_behavior_derive_gate_schema_matches_golden",
