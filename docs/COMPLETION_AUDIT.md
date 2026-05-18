@@ -330,9 +330,9 @@ and do not assume Phase 4 is ready without evidence.
   module.
 - Test-command build graph host-effect integration tests now split declared
   file-read fallback accept/reject coverage into
-  `tests/integration/cli_build/graph_validation_test_command_host_effects/file_reads.rs`,
-  leaving env-effect ordering and unrelated executable skip coverage in the
-  parent module.
+  `tests/integration/cli_build/graph_validation_test_command_host_effects/file_reads.rs`
+  and unselected-target declared/rejection coverage into
+  `tests/integration/cli_build/graph_validation_test_command_host_effects/file_reads/unselected_targets/`.
 - Legacy `build-graph build.zen` host-effect integration tests now split
   declared file-read fallback accept/reject coverage into
   `tests/integration/cli_build/legacy_graph_command_host_effects/file_reads.rs`,
