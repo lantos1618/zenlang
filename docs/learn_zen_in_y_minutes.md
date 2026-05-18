@@ -34,6 +34,8 @@ Quick map:
 The core syntax to keep in your head:
 
 ```zen
+{ name } = module.path
+
 Name: { field: Type }
 
 Name: Variant, Variant(Payload)
@@ -49,7 +51,37 @@ Type.method = (self: Type) ReturnType {
 value ?
     | Pattern { expression }
     | Other { expression }
+
+loop((label) {
+    condition ?
+        | true { label.done() }
+        | false { label.next() }
+})
 ```
+
+Stable Zen is deliberately small. Most code is built from:
+
+| Need | Spell it like this |
+| --- | --- |
+| Import | `{ io } = std` |
+| Immutable local | `name = value` |
+| Mutable inferred local | `name ::= value` |
+| Reassignment | `name = new_value` |
+| Typed local | `name: Type = value` |
+| Function | `name = (arg: Type) ReturnType { expr }` |
+| Method | `Type.method = (self: Type) ReturnType { expr }` |
+| Struct | `Name: { field: Type }` |
+| Enum | `Name: Variant, Variant(Payload)` |
+| Match | `value ? | Pattern { expr }` |
+| Loop | `loop((l) { ... l.next() ... l.done() ... })` |
+| Behavior | `Name: behavior { method: (Self) Type }` |
+| Implementation | `Type.implements(Behavior) { ... }` |
+| Generic bound | `name<T: Behavior> = (...) T { ... }` |
+
+If a feature needs hidden allocation, implicit scheduling, exceptions, null, or
+statement-level early exits, it is not part of the stable shape. Zen makes
+those things visible with data types, final expressions, loop-control calls,
+and allocator or effect parameters.
 
 ## The Shape
 
@@ -173,6 +205,10 @@ Use `::=` for a mutable inferred binding. After a mutable binding exists,
 plain `=` assigns a new value. Plain `name = value` creates an immutable
 binding, and `name: Type = value` creates an immutable typed binding.
 
+The rule is local and visible: mutation starts at the binding site. A reader
+does not have to search for later assignments to learn whether a value can
+change.
+
 ## Types
 
 ```zen
@@ -200,6 +236,10 @@ the bytes live, and using the literal does not allocate.
 Dynamic `String` is different. It is allocator-backed owned text: it can own
 runtime memory, grow, and change contents, so constructing one requires an
 allocator path instead of happening implicitly from a literal.
+
+Use `StaticString` for fixed program text and diagnostics. Use allocator-backed
+`String` only when the API really needs runtime-owned, mutable, or growable
+text.
 
 ## Operators And Casts
 
@@ -726,6 +766,37 @@ loop((label) {
 There is no expression form that spells the loop after its body. Loop syntax is
 prefix-only.
 
+That gives Zen one answer for counted loops, sentinel loops, and nested exits:
+
+```zen
+find_first = (limit: i32, needle: i32) Option<i32> {
+    i ::= 0
+    found ::= Option<i32>.None
+
+    loop((l) {
+        i >= limit ?
+            | true { l.done() }
+            | false {
+                i == needle ?
+                    | true {
+                        found = Option<i32>.Some(i)
+                        l.done()
+                    }
+                    | false {
+                        i = i + 1
+                        l.next()
+                    }
+            }
+    })
+
+    found
+}
+```
+
+There is no hidden loop result channel here. The value that survives the loop is
+an ordinary binding, and every control edge names whether the loop is done or
+continues.
+
 ## Defer
 
 ```zen
@@ -792,6 +863,33 @@ source types instead of pretending allocation is free.
 The practical rule is simple: if a value needs heap memory, the API must show
 the allocator path. Literals and interpolation do not smuggle allocation into
 ordinary expressions.
+
+A static value can be copied around without an owner:
+
+```zen
+LogLine: {
+    level: StaticString,
+    message: StaticString,
+}
+
+info = (message: StaticString) LogLine {
+    LogLine { level: "info", message: message }
+}
+```
+
+A dynamic value must carry ownership in its type. The intended dynamic form is
+allocator-shaped:
+
+```zen
+OwnedBytes<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    allocator: A,
+}
+```
+
+The important part is not the exact container name. The important part is that
+the pointer, length, and allocator capability travel together.
 
 ## Pointer, Slice, And Array Types
 
@@ -905,6 +1003,22 @@ start = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>,
 }
 ```
 
+The caller sees the difference immediately:
+
+```zen
+use_sync = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    read_now(source, allocator)
+}
+
+use_async = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    read_later(source, allocator)
+}
+```
+
+There is no source-level `async` keyword in the stable tour. The preview keeps
+the effect in ordinary Zen types: `Sync`, `Async`, `Task<T>`, and allocator
+capabilities.
+
 ### Allocator Preview
 
 Allocators are typed by the value they allocate and by the effect mode they run
@@ -974,6 +1088,33 @@ The model is:
 The allocator is part of the owner. A buffer or dynamic string is not just a
 pointer and a length; it must also carry the capability that can release or
 grow that storage.
+
+Allocator ownership is why `String` is not a widened `StaticString`. A
+`StaticString` can point at baked program bytes. A `String` must know which
+allocator owns its runtime bytes:
+
+```zen
+String<A>: {
+    ptr: RawPtr<u8>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+
+empty_string<A: Allocator<u8, Sync>> =
+    (allocator: A, capacity: usize) Result<String<A>, AllocError> {
+    allocator.alloc(capacity) ?
+        | Ok(ptr) {
+            Result<String<A>, AllocError>.Ok(String<A> {
+                ptr: ptr,
+                len: 0,
+                capacity: capacity,
+                allocator: allocator
+            })
+        }
+        | Err(error) { Result<String<A>, AllocError>.Err(error) }
+}
+```
 
 The intended call shape stays ordinary Zen:
 
