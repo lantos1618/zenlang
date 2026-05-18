@@ -3441,6 +3441,10 @@ checked-in docs, tests, and commits only.
   focused child modules under
   `tests/integration/cli_build/build_command_validation/`, leaving the parent
   file as module wiring.
+- `zen test build.zen` host-effect tests now split env-read rejection coverage
+  into focused basic and ordering modules under
+  `tests/integration/cli_build/graph_validation_test_command_host_effects/env_reads/`,
+  leaving file-read coverage wired separately from the parent module.
 
 ## Current Phase
 
