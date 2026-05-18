@@ -3133,6 +3133,10 @@ checked-in docs, tests, and commits only.
   typechecker diagnostic instead of falling through to ordinary missing-method
   lookup, covered by
   `typechecker::tests::core_semantics::literals::effect_await_is_rejected_until_async_lowering_exists`.
+- Gated typechecker method spellings for `.raise()` and `.await()` now flow
+  through the `GatedMethod` enum's parse/display helpers instead of raw
+  method-name matches, guarded by
+  `repo_hygiene::typechecker_gated_methods_use_owned_action_enum`.
 - Promoted stdlib sketches no longer use the gated `.raise()` propagation
   operator; they spell Result propagation with explicit matches, guarded by
   `repo_hygiene::promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`.
