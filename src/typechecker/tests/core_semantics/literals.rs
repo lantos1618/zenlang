@@ -53,3 +53,35 @@ main = () i32 {
         "raise gate should not be reported as an ordinary missing method, got {err:?}"
     );
 }
+
+#[test]
+fn effect_await_is_rejected_until_async_lowering_exists() {
+    let program = parse_program(
+        r#"
+Task<T>: {
+    value: T
+}
+
+main = () i32 {
+    task = Task<i32> { value: 1 }
+    task.await()
+}
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("await should stay gated until effect checking and task lowering exist");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("`.await()` is gated")),
+        "expected await gate diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .all(|d| !d.message.contains("has no method `await`")),
+        "await gate should not be reported as an ordinary missing method, got {err:?}"
+    );
+}

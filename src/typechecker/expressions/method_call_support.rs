@@ -3,7 +3,36 @@ use crate::typechecker::FuncInfo;
 
 mod module_calls;
 
-const RESULT_PROPAGATION_METHOD: &str = "raise";
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GatedMethod {
+    ResultRaise,
+    EffectAwait,
+}
+
+impl GatedMethod {
+    fn from_method_name(name: &str) -> Option<Self> {
+        match name {
+            "raise" => Some(Self::ResultRaise),
+            "await" => Some(Self::EffectAwait),
+            _ => None,
+        }
+    }
+
+    fn diagnostic(self, span: Span) -> Diagnostic {
+        match self {
+            Self::ResultRaise => Diagnostic::error(
+                "E3054",
+                "`.raise()` is gated until Result propagation typing and lowering are implemented",
+                span,
+            ),
+            Self::EffectAwait => Diagnostic::error(
+                "E3055",
+                "`.await()` is gated until Sync/Async effect checking and task lowering are implemented",
+                span,
+            ),
+        }
+    }
+}
 
 impl TypeChecker {
     pub(super) fn check_method_call_expr(
@@ -22,12 +51,8 @@ impl TypeChecker {
 
         let typed_receiver = self.check_expr(receiver)?;
 
-        if method == RESULT_PROPAGATION_METHOD {
-            return Err(Diagnostic::error(
-                "E3054",
-                "`.raise()` is gated until Result propagation typing and lowering are implemented",
-                span,
-            ));
+        if let Some(gated_method) = GatedMethod::from_method_name(method) {
+            return Err(gated_method.diagnostic(span));
         }
 
         // Build args: receiver as first arg (for methods/UFC)

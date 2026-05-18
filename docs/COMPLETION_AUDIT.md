@@ -3345,6 +3345,10 @@ and do not assume Phase 4 is ready without evidence.
   now has a focused typechecker diagnostic instead of an ordinary unknown-method
   error, covered by
   `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
+- Planned task waiting through `.await()` remains gated deliberately. It now has
+  a focused Sync/Async effect diagnostic instead of an ordinary unknown-method
+  error, covered by
+  `typechecker::tests::core_semantics::literals::effect_await_is_rejected_until_async_lowering_exists`.
 - Promoted stdlib sketches no longer rely on the gated `.raise()` operator.
   The remaining stdlib propagation examples use explicit `Result` matches and
   are guarded by
