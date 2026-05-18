@@ -1,9 +1,13 @@
 use std::process::Command;
 
+#[path = "emit_direct_validation/dependencies.rs"]
+mod dependencies;
 #[path = "emit_direct_validation/gated_dependencies.rs"]
 mod gated_dependencies;
 #[path = "emit_direct_validation/graph_only_libraries.rs"]
 mod graph_only_libraries;
+#[path = "emit_direct_validation/target_metadata.rs"]
+mod target_metadata;
 #[path = "emit_direct_validation/target_selection.rs"]
 mod target_selection;
 
@@ -51,134 +55,6 @@ main = () i32 {
     assert!(
         !tmp.path().join("build").join("app").exists(),
         "zen emit build.zen should not compile the target binary"
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_unknown_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-        out_dir: "build/app/",
-        dependencies: ["core"],
-    })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    assert_emit_command_rejects_dependency_shape(
-        tmp.path(),
-        "build target `app` depends on unknown target `core`",
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_self_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-        out_dir: "build/app/",
-        dependencies: ["app"],
-    })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    assert_emit_command_rejects_dependency_shape(
-        tmp.path(),
-        "build target `app` cannot depend on itself",
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_cyclic_target_dependencies() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Library {
-        name: "core",
-        exports: ["lib.zen"],
-        dependencies: ["app"],
-    })
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-        out_dir: "build/app/",
-        dependencies: ["core"],
-    })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    assert_emit_command_rejects_dependency_shape(
-        tmp.path(),
-        "build target dependency cycle includes `app`",
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_duplicate_target_fields() {
-    assert_emit_command_rejects_target_metadata(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        name: "tool",
-        main: "app.zen",
-        out_dir: "build/app/",
-    })
-    .Ok(b.config())
-}
-"#,
-        "duplicate field `name` in `Executable` build target",
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_missing_required_target_fields() {
-    assert_emit_command_rejects_target_metadata(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-    })
-    .Ok(b.config())
-}
-"#,
-        "missing required field `out_dir` in `Executable` build target",
-    );
-}
-
-#[test]
-fn emit_command_build_zen_rejects_invalid_target_field_types() {
-    assert_emit_command_rejects_target_metadata(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-        out_dir: 42,
-    })
-    .Ok(b.config())
-}
-"#,
-        "field `out_dir` in `Executable` build target must be a string",
     );
 }
 

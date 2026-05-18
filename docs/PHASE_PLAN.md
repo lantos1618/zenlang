@@ -3410,6 +3410,11 @@ checked-in docs, tests, and commits only.
   single-target and multi-target positive cases under
   `tests/integration/cli_build/build_command_host_effects/file_reads/declared/`,
   preserving the same fallback-arm coverage while keeping each module focused.
+- `zen emit build.zen` validation tests now keep dependency-shape diagnostics
+  and executable target-metadata diagnostics in focused modules under
+  `tests/integration/cli_build/emit_direct_validation/`, leaving the parent
+  file to wire submodules and cover the unrelated gated-test-source positive
+  path.
 
 ## Current Phase
 
