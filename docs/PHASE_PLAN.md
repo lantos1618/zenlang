@@ -3578,6 +3578,13 @@ checked-in docs, tests, and commits only.
   static table, so adding future gated type spellings does not require a
   separate name-to-variant match. Guarded by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Gated builtin type diagnostics now return enum-owned `&'static str` messages
+  rather than allocating formatted `String` values, preserving static compiler
+  diagnostic text for allocator, effect, and actor gates. Covered by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`,
+  `typed_allocator_type_is_rejected_as_gated_not_unknown`,
+  `sync_async_effect_modes_are_rejected_as_gated_not_unknown`, and
+  `actor_framework_types_are_rejected_as_gated_not_unknown`.
 - Builtin public type spellings now route through shared AST type helpers
   instead of ad hoc semantic string checks, keeping `String` recognition and
   `StaticString` display spelling tied to one source. Guarded by

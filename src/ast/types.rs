@@ -56,22 +56,28 @@ impl GatedBuiltinType {
         }
     }
 
-    pub fn gate_message(self) -> std::string::String {
+    pub fn gate_message(self) -> &'static str {
         match self {
             Self::Allocator => {
-                "typed allocators are gated until allocator ownership and effect semantics are implemented".into()
+                "typed allocators are gated until allocator ownership and effect semantics are implemented"
             }
-            Self::SyncEffect | Self::AsyncEffect => {
-                format!(
-                    "`{}` effect mode is gated until Sync/Async effect checking is implemented",
-                    self.as_str()
-                )
+            Self::SyncEffect => {
+                "`Sync` effect mode is gated until Sync/Async effect checking is implemented"
             }
-            Self::Actor | Self::ActorRef | Self::Mailbox | Self::Supervisor => {
-                format!(
-                    "`{}` framework type is gated until std actor scheduling and mailbox semantics are implemented",
-                    self.as_str()
-                )
+            Self::AsyncEffect => {
+                "`Async` effect mode is gated until Sync/Async effect checking is implemented"
+            }
+            Self::Actor => {
+                "`Actor` framework type is gated until std actor scheduling and mailbox semantics are implemented"
+            }
+            Self::ActorRef => {
+                "`ActorRef` framework type is gated until std actor scheduling and mailbox semantics are implemented"
+            }
+            Self::Mailbox => {
+                "`Mailbox` framework type is gated until std actor scheduling and mailbox semantics are implemented"
+            }
+            Self::Supervisor => {
+                "`Supervisor` framework type is gated until std actor scheduling and mailbox semantics are implemented"
             }
         }
     }
