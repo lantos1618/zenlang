@@ -11,6 +11,7 @@ pub enum TypeDeclarationKeyword {
     Implements,
     Requires,
     Extends,
+    Derive,
 }
 
 impl TypeDeclarationKeyword {
@@ -19,11 +20,13 @@ impl TypeDeclarationKeyword {
         TypeDeclarationKeyword::Implements,
         TypeDeclarationKeyword::Requires,
         TypeDeclarationKeyword::Extends,
+        TypeDeclarationKeyword::Derive,
     ];
     pub const IMPL: &'static str = "impl";
     pub const IMPLEMENTS: &'static str = "implements";
     pub const REQUIRES: &'static str = "requires";
     pub const EXTENDS: &'static str = "extends";
+    pub const DERIVE: &'static str = "derive";
 
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -31,6 +34,7 @@ impl TypeDeclarationKeyword {
             Self::Implements => Self::IMPLEMENTS,
             Self::Requires => Self::REQUIRES,
             Self::Extends => Self::EXTENDS,
+            Self::Derive => Self::DERIVE,
         }
     }
 }

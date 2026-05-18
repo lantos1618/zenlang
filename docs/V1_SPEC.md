@@ -260,6 +260,10 @@ planned positive test and one planned negative test before implementation.
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 
+Generated/fallback behavior association syntax is reserved but not implemented:
+`Type.derive(Json)` currently reports an explicit parser gate, covered by
+`parser::tests::generated_behavior_derive_association_is_explicitly_gated`.
+
 ## Stdlib Gate
 
 Files under `stdlib/` are experimental unless a test proves they parse, typecheck,

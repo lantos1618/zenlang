@@ -10,6 +10,7 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         r#"method_name == "implements""#,
         r#"method_name == "requires""#,
         r#"method_name == "extends""#,
+        r#"method_name == "derive""#,
         r#"matches!(method_name.as_str(), "implements" | "requires" | "extends")"#,
     ] {
         assert!(
