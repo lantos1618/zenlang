@@ -204,9 +204,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
   check, build, or test paths. Hand-authored target YAML validates through a
   minimal target schema plus an optional current-backend schema into
-  `zen.target.v0` JSON. The current C backend schema accepts optional
-  `backend.c_flags`, rejects empty C flag entries, and rejects compiler-owned
-  layout overrides or unsupported backend code generators, covered by
+  `zen.target.v0` JSON with `schema_version: 0`. The current C backend schema
+  accepts optional `backend.c_flags`, rejects empty C flag entries, and rejects
+  compiler-owned layout overrides or unsupported backend code generators,
+  covered by
   `emit_json_target_yaml_validates_minimal_target_schema`,
   `emit_json_target_yaml_validates_backend_schema`,
   `emit_json_target_yaml_validates_c_backend_flags`,
@@ -251,7 +252,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR JSON emission | constrained | `emit_json_hir_outputs_checked_declaration_graph` checks `schema_version: 0`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`; broader HIR schema and golden tests still required |
 | MIR JSON emission | constrained | `emit_json_mir_outputs_checked_minimal_function_graph` checks `schema_version: 0`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`; broader MIR lowering, schema, and golden tests still required |
-| Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
+| Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema` checks `schema_version: 0`, `emit_json_target_yaml_validates_backend_schema`, `emit_json_target_yaml_validates_c_backend_flags`, `emit_json_target_yaml_rejects_empty_c_backend_flags`, `emit_json_target_yaml_rejects_layout_overrides`, `emit_json_target_yaml_rejects_unsupported_backend_codegen`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; positive allocator semantics tests still required |

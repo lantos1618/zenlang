@@ -3864,9 +3864,10 @@ Agent UX deliverables:
   Guarded by `emit_json_hir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
   `emit-json target-yaml` now validates a minimal target schema plus the current
-  C backend schema into `zen.target.v0` JSON, accepts optional
-  `backend.c_flags`, rejects empty C flag entries, rejects attempts to override
-  compiler-owned type layouts, and rejects unsupported backend code generators.
+  C backend schema into `zen.target.v0` JSON with `schema_version: 0`, accepts
+  optional `backend.c_flags`, rejects empty C flag entries, rejects attempts to
+  override compiler-owned type layouts, and rejects unsupported backend code
+  generators.
   Guarded by `emit_json_target_yaml_validates_minimal_target_schema`,
   `emit_json_target_yaml_validates_backend_schema`,
   `emit_json_target_yaml_validates_c_backend_flags`,
