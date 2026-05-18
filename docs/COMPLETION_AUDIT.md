@@ -622,6 +622,9 @@ and do not assume Phase 4 is ready without evidence.
   matching compound-shape coverage for function, array, raw-pointer, and slice
   parameter types, plus nested generic struct and enum parameter types, in
   `tests/generic_diagnostics.rs`.
+  The diagnostics JSON shape for a hard generic `Result<T, E>` enum-method
+  inference conflict is pinned by
+  `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden`.
   Resolver rejects duplicate generic type-parameter names across value, type,
   and behavior declarations, covered by
   `resolver_phase2::resolver_rejects_duplicate_type_parameter_names`.
@@ -4163,6 +4166,11 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_diagnostics_generic_result_method_bound_schema_matches_golden`,
   including stable code, span, empty fixes/context, and no method-body followup
   diagnostics.
+- Generic `Result<T, E>` enum-method inference-conflict diagnostics JSON is
+  now pinned by
+  `emit_json_diagnostics_generic_result_method_inference_schema_matches_golden`,
+  including stable code, span, empty fixes/context, and no argument or return
+  followup diagnostics.
 - Hand-authored build graph JSON inputs to `emit-json build-graph` reject at
   the compiler-owned build graph JSON boundary before generic `build.zen` path
   validation can stand in for deterministic graph provenance. Covered by
