@@ -3445,6 +3445,10 @@ checked-in docs, tests, and commits only.
   into focused basic and ordering modules under
   `tests/integration/cli_build/graph_validation_test_command_host_effects/env_reads/`,
   leaving file-read coverage wired separately from the parent module.
+- Legacy `zen build-graph` host-effect tests now split env-read rejection
+  coverage into focused basic and ordering modules under
+  `tests/integration/cli_build/legacy_graph_command_host_effects/env_reads/`,
+  leaving file-read coverage wired separately from the parent module.
 
 ## Current Phase
 
