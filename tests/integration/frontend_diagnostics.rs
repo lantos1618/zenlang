@@ -182,6 +182,65 @@ main = () i32 {
 }
 
 #[test]
+fn imported_generic_aggregate_constructor_type_arg_arity_is_error() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let types_path = tmp.path().join("types.zen");
+    std::fs::write(
+        &types_path,
+        r#"
+pub Box<T>: {
+    value: T
+}
+
+pub Option<T>:
+    Some(T),
+    None
+"#,
+    )
+    .expect("write types module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Box, Option } = types
+
+main = () i32 {
+    boxed = Box<i32, str> { value: 1 }
+    value = Option<i32, str>.Some(1)
+    boxed.value
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported generic constructor arity errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("generic struct `Box` expects 1 type arguments, found 2"),
+        "expected imported generic struct constructor arity diagnostic, panic={message}"
+    );
+    assert!(
+        message.contains("generic enum `Option` expects 1 type arguments, found 2"),
+        "expected imported generic enum constructor arity diagnostic, panic={message}"
+    );
+    assert!(
+        !message.contains("field `value` for struct `Box`"),
+        "imported generic struct constructor arity failure should not also report field mismatch, panic={message}"
+    );
+    assert!(
+        !message.contains("payload for enum variant"),
+        "imported generic enum constructor arity failure should not also report payload mismatch, panic={message}"
+    );
+}
+
+#[test]
 fn imported_generic_behavior_requires_missing_impl_is_error() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let traits_path = tmp.path().join("traits.zen");
