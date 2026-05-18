@@ -616,6 +616,10 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_requires_missing_impl_schema_matches_golden`,
   covering the stable `E6007` payload when `Point.requires(Json<StaticString>)`
   has no matching implementation.
+- Diagnostics JSON for duplicate explicit type association requirements is now
+  pinned by `emit_json_diagnostics_duplicate_generic_requires_schema_matches_golden`,
+  covering the stable `E3500` payload for duplicate
+  `Point.requires(Json<StaticString>)` assertions.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON for
   tools and agents, covered by
   `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir` now emits
@@ -1285,7 +1289,9 @@ Agent UX deliverables:
   Imported generic `.requires` arity diagnostics are covered by
   `integration::imported_generic_behavior_requires_type_arg_arity_is_error`, and
   duplicate imported generic `.requires` edges are covered by
-  `integration::imported_duplicate_generic_behavior_requires_is_error`.
+  `integration::imported_duplicate_generic_behavior_requires_is_error` plus the
+  public JSON golden
+  `emit_json_diagnostics_duplicate_generic_requires_schema_matches_golden`.
 - Imported public generic functions can use behavior bounds whose behavior was
   imported by the source module, covered by
   `tests/zen/multi_file_imported_function_imported_behavior_bound/main.zen`.

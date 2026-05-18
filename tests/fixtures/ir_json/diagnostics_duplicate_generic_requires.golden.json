@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/duplicate_generic_requires.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3500",
+      "message": "duplicate required behavior `Json<StaticString>` for `Point`",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/duplicate_generic_requires.zen",
+        "start": 194,
+        "end": 228,
+        "line": 13,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

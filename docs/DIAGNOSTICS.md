@@ -13,6 +13,7 @@ surface once listed here.
 | Code | Meaning | Stable JSON Evidence |
 |---|---|---|
 | `E2000` | Syntax-level removed syntax or reserved syntax. The removed source keyword path includes the `replace_removed_return_with_final_expression` suggested fix, while gated behavior association paths include `feature_gate` context. | `tests/fixtures/ir_json/diagnostics_return.golden.json`, `tests/fixtures/ir_json/diagnostics_behavior_derive_gate.golden.json`, `tests/fixtures/ir_json/diagnostics_generic_association_gate.golden.json` |
+| `E3500` | resolver validation failure for duplicate explicit type association requirements. | `tests/fixtures/ir_json/diagnostics_duplicate_generic_requires.golden.json` |
 | `E5000` | generic inference conflict, including conflicting inferred type arguments for generic methods. | `tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json` |
 | `E5001` | generic type-argument arity mismatch for functions, methods, structs, enums, annotations, and constructors. | `tests/fixtures/ir_json/diagnostics_generic_result_method_arity.golden.json` |
 | `E6004` | generic behavior-bound failure when a concrete type does not satisfy a required behavior bound. | `tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json` |
