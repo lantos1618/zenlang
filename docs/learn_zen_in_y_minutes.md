@@ -326,7 +326,6 @@ The common forms are:
 - `name = (...) ReturnType { ... }` declares a function.
 - `Type.method = (...) ReturnType { ... }` declares an attached method.
 - `value.method(args)` and `method(value, args)` are the same receiver call.
-- `Type.impl = { ... }` groups methods for a type.
 - `Name: behavior { ... }` declares a behavior contract.
 - `Type.implements(Behavior) { ... }` gives a type that behavior.
 
@@ -349,7 +348,6 @@ visible first, and the operation follows:
 - structs: `Name: { ... }`
 - enums: `Name: Variant, Variant(Payload)`
 - methods: `Type.method = (...) ReturnType { ... }`
-- impl blocks: `Type.impl = { ... }`
 - behaviors: `Name: behavior { ... }`
 
 Top-level `pub` exposes a declaration across modules:
@@ -732,21 +730,19 @@ Methods are declared as `Type.method = (...) ReturnType { ... }`. Calls use dot
 syntax. A method is still a function with an explicit receiver; Zen does not
 hide data behind classes or an object model.
 
-## Impl Blocks
+## Attached Methods
 
 ```zen
 Counter: {
     value: i32,
 }
 
-Counter.impl = {
-    inc = (self: Counter) Counter {
-        Counter { value: self.value + 1 }
-    }
+Counter.inc = (self: Counter) Counter {
+    Counter { value: self.value + 1 }
+}
 
-    get = (self: Counter) i32 {
-        self.value
-    }
+Counter.get = (self: Counter) i32 {
+    self.value
 }
 
 main = () i32 {
@@ -755,18 +751,19 @@ main = () i32 {
 }
 ```
 
-Non-behavior `Type.impl = { ... }` groups methods under a type. Generic impl
-blocks use the same attached shape:
+Prefer direct `Type.method = ...` declarations in public examples. They keep
+the receiver type on the left, avoid extra grouping syntax, and line up with
+dot and UFC calls.
+
+Generic attached methods use the same receiver-first shape:
 
 ```zen
 Box<T>: {
     value: T
 }
 
-Box<T>.impl = {
-    get = (self: Box<T>) T {
-        self.value
-    }
+Box.get<T> = (self: Box<T>) T {
+    self.value
 }
 ```
 
@@ -1385,6 +1382,15 @@ async_read = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes
 
 The call site should not need to guess whether work runs now, later, or on a
 scheduler. The result type and allocator mode say that directly.
+
+Read these preview signatures literally:
+
+| Surface | Shape | Meaning |
+| --- | --- | --- |
+| Sync function | `(args...) Result<T, E>` | the work runs now and returns checked data |
+| Async function | `(args...) Task<Result<T, E>>` | the work is task-shaped and completes later |
+| Sync allocator | `Allocator<T, Sync>` | allocation returns `Result<RawPtr<T>, AllocError>` now |
+| Async allocator | `Allocator<T, Async>` | allocation returns `Task<Result<RawPtr<T>, AllocError>>` later |
 
 ### Allocator Preview
 
