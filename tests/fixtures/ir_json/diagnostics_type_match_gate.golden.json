@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/type_match_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E0203",
+      "message": "comptime type matching is gated until typed metadata and derive lowering are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/type_match_gate.zen",
+        "start": 46,
+        "end": 74,
+        "line": 7,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

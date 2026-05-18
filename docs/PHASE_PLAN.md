@@ -240,6 +240,11 @@ Agent UX deliverables:
   diagnostic through resolver-backed CLI diagnostics instead of falling back to
   ordinary unknown-type errors. Diagnostics JSON pins the public shape through
   `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`.
+- Comptime type-match intrinsics now have a pinned CLI diagnostics JSON gate
+  for `@builtin.type_match<T>()`, proving the public path reports a gated
+  typed-metadata/derive-lowering diagnostic instead of an unknown builtin while
+  comptime type matching remains gated. Covered by
+  `emit_json_diagnostics_type_match_gate_schema_matches_golden`.
 - Async scheduler intrinsics now have a pinned CLI diagnostics JSON gate for
   `@builtin.async_enqueue(...)`, proving the public path reports a gated
   intrinsic instead of an unknown builtin while Sync/Async task lowering
