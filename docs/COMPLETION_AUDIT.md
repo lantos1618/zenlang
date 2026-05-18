@@ -328,7 +328,7 @@ and do not assume Phase 4 is ready without evidence.
   usage and legacy JSON diagnostics in the parent module.
 - Direct `zen build.zen` host-effect integration tests now split declared
   file-read fallback accept/reject coverage into
-  `tests/integration/cli_build/direct_build_graph_host_effects/file_reads.rs`,
+  `tests/integration/cli_build/direct_build_graph_host_effects/file_reads/`,
   leaving env-effect ordering and unrelated test skip coverage in the parent
   module.
 - Emit-command build graph host-effect integration tests now split declared
