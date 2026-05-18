@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/nongeneric_method_type_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5002",
+      "message": "non-generic method `Box.get` does not accept type arguments",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/nongeneric_method_type_args.zen",
+        "start": 119,
+        "end": 133,
+        "line": 12,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
