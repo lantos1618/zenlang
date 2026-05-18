@@ -4193,6 +4193,9 @@ and do not assume Phase 4 is ready without evidence.
   function parameter and return types, and named mutable top-level globals
   instead of anonymous top-level blocks. Covered by
   `emit_json_hir_outputs_enum_function_and_global_declarations`.
+- MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
+  and block result expressions for checked match expressions instead of only
+  reporting the scrutinee. Covered by `emit_json_mir_outputs_match_arm_schema`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

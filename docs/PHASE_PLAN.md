@@ -3845,6 +3845,9 @@ Agent UX deliverables:
   function parameter and return types, and named mutable top-level globals
   instead of anonymous top-level blocks. Guarded by
   `emit_json_hir_outputs_enum_function_and_global_declarations`.
+- MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
+  and block result expressions for checked match expressions instead of only
+  reporting the scrutinee. Guarded by `emit_json_mir_outputs_match_arm_schema`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by
