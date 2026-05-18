@@ -97,6 +97,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "zen emit-json typed <file>",
         "zen emit-json diagnostics <file>",
         "semantic acceptance must use typed",
+        "emit_json_hir_rejects_program_before_hir_json",
+        "emit_json_mir_rejects_program_before_mir_json",
         "emit_json_layout_rejects_program_before_layout_json",
         "emit_json_target_yaml_rejects_hand_authored_yaml_before_validation",
         "build.zen",

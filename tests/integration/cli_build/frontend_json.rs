@@ -171,6 +171,49 @@ fn emit_json_mir_command_is_explicitly_gated() {
 }
 
 #[test]
+fn emit_json_mir_rejects_program_before_mir_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("mir_subject.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+main = () i32 {
+    value = 40 + 2
+    value
+}
+"#,
+    )
+    .expect("write MIR subject");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "mir", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json mir on program input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json mir should be gated before MIR emission: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "gated MIR should not emit MIR JSON, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("MIR JSON emission is gated until schema and golden tests exist"),
+        "expected MIR gate diagnostic, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("unknown command") && !stderr.contains("No such file"),
+        "MIR should reject through the schema/golden-test gate, not command/path handling, stderr={stderr}"
+    );
+}
+
+#[test]
 fn emit_json_hir_command_is_explicitly_gated() {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args([
@@ -192,6 +235,53 @@ fn emit_json_hir_command_is_explicitly_gated() {
     assert!(
         stderr.contains("HIR JSON emission is gated until schema and golden tests exist"),
         "expected HIR gate diagnostic, stderr={stderr}"
+    );
+}
+
+#[test]
+fn emit_json_hir_rejects_program_before_hir_json() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("hir_subject.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = () i32 {
+    box = Box<i32> { value: 7 }
+    box.value
+}
+"#,
+    )
+    .expect("write HIR subject");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "hir", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json hir on program input");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json hir should be gated before HIR emission: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stdout.trim().is_empty(),
+        "gated HIR should not emit HIR JSON, stdout={stdout}"
+    );
+    assert!(
+        stderr.contains("HIR JSON emission is gated until schema and golden tests exist"),
+        "expected HIR gate diagnostic, stderr={stderr}"
+    );
+    assert!(
+        !stderr.contains("unknown command") && !stderr.contains("No such file"),
+        "HIR should reject through the schema/golden-test gate, not command/path handling, stderr={stderr}"
     );
 }
 
