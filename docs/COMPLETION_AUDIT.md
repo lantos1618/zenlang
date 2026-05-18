@@ -3963,6 +3963,9 @@ and do not assume Phase 4 is ready without evidence.
   `emit_json_layout_generic_result_schema_matches_golden`, covering concrete
   `Result_i32_StaticString` enum size, alignment, variants, and payload field
   offsets.
+- Layout JSON for generic `Option<T>` specialization is now pinned by
+  `emit_json_layout_generic_option_schema_matches_golden`, covering concrete
+  `Option_i32` enum size, alignment, variants, and payload field offsets.
 - Static string literals no longer implicitly satisfy allocator-backed
   `String`; `String` is recognized as a builtin dynamic text type, but
   allocation must remain explicit. Covered by
