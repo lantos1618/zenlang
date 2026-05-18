@@ -492,6 +492,9 @@ checked-in docs, tests, and commits only.
 - Check-command build graph host-effect tests now keep declared file-read
   fallback accept/reject cases in a focused child module, leaving env-effect
   ordering coverage in the parent integration module.
+- Check-command build graph host-effect tests now also keep env-read declared
+  fallback and rejection-ordering coverage in a focused child module, leaving
+  the parent integration module as host-effect module wiring only.
 - Build-command host-effect tests now keep declared file-read fallback accept
   and reject cases in a focused child module, leaving env-effect and
   ordering-before-execution cases in the parent integration module.
