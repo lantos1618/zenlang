@@ -19,6 +19,7 @@ mod declaration_types;
 mod declarations;
 mod expressions;
 mod import_declarations;
+mod keywords;
 mod patterns;
 mod precedence;
 mod statements;
