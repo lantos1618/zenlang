@@ -3123,6 +3123,9 @@ checked-in docs, tests, and commits only.
   typechecker diagnostic instead of falling through to ordinary missing-method
   lookup, covered by
   `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
+- Promoted stdlib sketches no longer use the gated `.raise()` propagation
+  operator; they spell Result propagation with explicit matches, guarded by
+  `repo_hygiene::promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`.
 - Dead char-literal AST support has been removed because no lexer/parser
   surface produces it. The cleanup removes the stale typechecker `Unknown`
   fallback and is guarded by
@@ -3391,9 +3394,10 @@ checked-in docs, tests, and commits only.
   longer use the removed `return` keyword. The final sweep includes
   `stdlib/io/net/unix_socket.zen`, `stdlib/io/net/socket.zen`,
   `stdlib/io/files/file.zen`, and `stdlib/sys/process/prctl.zen`, guarded by
-  `promoted_stdlib_modules_do_not_use_removed_return_keyword`, so the first
+  `promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`, so the first
   stdlib compilation cleanup point stays aligned with expression-tail returns
-  before broader stdlib parsing/building is promoted.
+  and explicit Result propagation before broader stdlib parsing/building is
+  promoted.
 - Root smoke fixtures under `tests/test_*.zen` now use expression-tail returns
   instead of the removed `return` keyword, guarded by
   `root_smoke_fixtures_do_not_use_removed_return_keyword`.

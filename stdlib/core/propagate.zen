@@ -4,8 +4,8 @@
 { Result, is_err, unwrap_err } = @std.core.result
 { Option, is_none } = @std.core.option
 
-// Raise helper for Result propagation
-// This is used with the .raise() syntax in expressions
+// Explicit Result propagation helper. The method-style propagation operator is
+// gated until typechecked propagation and lowering exist.
 raise<T, E> = (result: Result<T, E>) Result<T, E> {
     result ?
         | Ok(val) { Result.Ok(val) }

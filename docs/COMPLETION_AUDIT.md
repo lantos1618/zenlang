@@ -3339,6 +3339,10 @@ and do not assume Phase 4 is ready without evidence.
   now has a focused typechecker diagnostic instead of an ordinary unknown-method
   error, covered by
   `typechecker::tests::core_semantics::literals::result_raise_is_rejected_until_propagation_lowering_exists`.
+- Promoted stdlib sketches no longer rely on the gated `.raise()` operator.
+  The remaining stdlib propagation examples use explicit `Result` matches and
+  are guarded by
+  `repo_hygiene::promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`.
 - Type declaration suffix parsing now uses enum-backed `impl`/`implements`/
   `requires`/`extends` spellings, keeping parser dispatch and diagnostics off
   ad hoc string comparisons. Coverage:
@@ -3711,7 +3715,7 @@ and do not assume Phase 4 is ready without evidence.
   longer use the removed `return` keyword. The final sweep includes
   `stdlib/io/net/unix_socket.zen`, `stdlib/io/net/socket.zen`,
   `stdlib/io/files/file.zen`, and `stdlib/sys/process/prctl.zen`, and is
-  guarded by `promoted_stdlib_modules_do_not_use_removed_return_keyword`,
+  guarded by `promoted_stdlib_modules_do_not_use_removed_or_gated_syntax`,
   establishing the first small stdlib cleanup gate before broader stdlib
   compilation is promoted.
 - Root smoke fixtures under `tests/test_*.zen` no longer use the removed
