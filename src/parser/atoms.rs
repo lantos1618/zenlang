@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::keywords::{ParserPrefixKeyword, ParserThisMethod};
+use crate::parser::keywords::{ParserModuleRoot, ParserPrefixKeyword, ParserThisMethod};
 
 mod forms;
 
@@ -152,7 +152,7 @@ impl Parser {
 
                 Ok(Expression::FunctionCall {
                     name: func_name,
-                    module: Some("@builtin".to_string()),
+                    module: Some(ParserModuleRoot::AtBuiltin.as_str().to_string()),
                     type_args,
                     args,
                     span: span.merge(end),
@@ -181,11 +181,7 @@ impl Parser {
 
                 // Last part is the function name
                 let func_name = module_parts.pop().unwrap();
-                let module = if module_parts.is_empty() {
-                    "@std".to_string()
-                } else {
-                    format!("@std.{}", module_parts.join("."))
-                };
+                let module = ParserModuleRoot::AtStd.join_module_parts(&module_parts);
 
                 if matches!(self.peek(), Token::LParen) {
                     self.advance();
