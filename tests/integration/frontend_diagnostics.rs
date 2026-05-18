@@ -339,6 +339,53 @@ main = () i32 {
 }
 
 #[test]
+fn imported_generic_behavior_extends_type_arg_arity_is_error() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let traits_path = tmp.path().join("traits.zen");
+    std::fs::write(
+        &traits_path,
+        r#"
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+"#,
+    )
+    .expect("write traits module");
+
+    let main_path = tmp.path().join("main.zen");
+    std::fs::write(
+        &main_path,
+        r#"
+{ Json } = traits
+
+PrettyJson: behavior {
+    pretty: (Self) str
+}
+
+PrettyJson.extends(Json)
+
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write entry module");
+
+    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
+        .expect_err("compile_to_c should reject imported behavior extends arity errors");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("<non-string panic>");
+
+    assert!(
+        message.contains("generic behavior `Json` expects 1 type arguments, found 0"),
+        "expected imported behavior extends arity diagnostic, panic={message}"
+    );
+}
+
+#[test]
 fn imported_generic_behavior_requires_type_arg_arity_is_error() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let traits_path = tmp.path().join("traits.zen");
