@@ -58,6 +58,26 @@ read = (box: Box) i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_generic_struct_local_annotation_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_struct_local_annotation_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = () i32 {
+    box: Box<i32, StaticString> = Box<i32> { value: 1 }
+    box.value
+}
+"#,
+        "generic struct local annotation arity",
+        "generic struct local annotation arity diagnostics should not emit dependent-use followups",
+        "tests/fixtures/ir_json/diagnostics_generic_struct_local_annotation_arity.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_enum_annotation_missing_args_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_enum_annotation_missing_args.zen",
