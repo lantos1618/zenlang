@@ -3893,6 +3893,11 @@ and do not assume Phase 4 is ready without evidence.
   `typed_allocator_type_is_rejected_as_gated_not_unknown`,
   `sync_async_effect_modes_are_rejected_as_gated_not_unknown`, and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Actor framework type spellings `Actor`, `ActorRef`, `Mailbox`, and
+  `Supervisor` now use AST gated builtin type metadata and produce actor-specific
+  gated diagnostics rather than ordinary unknown-type errors. Covered by
+  `actor_framework_types_are_rejected_as_gated_not_unknown` and
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Builtin public type spellings now use shared AST helpers rather than
   duplicated semantic string comparisons, covered by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
