@@ -26,6 +26,9 @@ checked-in docs, tests, and commits only.
   release, and spec assertions in `tests/docs_truth.rs`.
 - Phase 1 frontend and tested C-backend baseline are implemented for the syntax
   forms listed in `docs/V1_SPEC.md` and covered by `tests/zen`.
+- The archived root `LANGUAGE_SPEC.zen` is now a short quarantine pointer, not
+  a parallel language specification. `tests/docs_truth` guards its size and
+  rejects stale removed-syntax examples there.
 - Generic specialization has positive executable coverage for generic functions,
   structs, enums, methods, and recursive worklist emission. The C-source
   assertions also match generated mangled generic call sites to emitted
