@@ -3501,6 +3501,11 @@ checked-in docs, tests, and commits only.
   undefined-call/duplicate-definition assertions as evidence. Generic syntax
   and behavior-bound metadata remain experimental where association solver work
   is still active.
+- `docs/V1_SPEC.md` now records the explicit behavior association proving
+  ground as implemented: Json-style explicit impls, generic behavior bounds,
+  inherited behavior dispatch, imported behavior associations, and hard
+  diagnostics are covered while broader generated/fallback association semantics
+  remain in the gated Feature Matrix row.
 
 ## Current Phase
 

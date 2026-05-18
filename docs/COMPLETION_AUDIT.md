@@ -3826,6 +3826,11 @@ and do not assume Phase 4 is ready without evidence.
   generated-C assertions for missing mangled calls and duplicate emitted
   definitions. Generic association solver work remains separate from this
   implemented specialization surface.
+- `docs/V1_SPEC.md` now marks the explicit behavior association proving ground
+  as implemented, backed by Json-style explicit impls, generic behavior bounds,
+  inherited behavior dispatch, imported behavior association fixtures, and hard
+  diagnostics. The broader generated/fallback association solver remains gated
+  in the Feature Matrix.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
