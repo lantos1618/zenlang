@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/nongeneric_enum_constructor_type_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5002",
+      "message": "non-generic enum `Direction` does not accept type arguments",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/nongeneric_enum_constructor_type_args.zen",
+        "start": 62,
+        "end": 82,
+        "line": 7,
+        "column": 13
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
