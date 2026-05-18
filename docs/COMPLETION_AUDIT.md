@@ -3985,6 +3985,12 @@ and do not assume Phase 4 is ready without evidence.
   instead of silently typechecking as unknown void builtins. Covered by
   `syscall_intrinsics_are_rejected_as_host_effect_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Typechecker core semantic gate coverage now lives in focused
+  `feature_gates` and `intrinsic_gates` modules instead of the old broad
+  `literals` bucket, keeping the closest file-size risk below the repo hygiene
+  threshold while preserving every gate test name. Covered by
+  `production_rust_files_stay_below_cleanup_threshold` and
+  `typechecker::tests::core_semantics`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,
