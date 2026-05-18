@@ -83,6 +83,86 @@ The shape is intentional:
 - `return`, `break`, `continue`, exceptions, null, and hidden allocation are
   not the stable source model.
 
+At a glance, the major surfaces look like this:
+
+```zen
+// Static text: baked into the program, no allocator.
+name: StaticString = "Zen"
+
+// Dynamic text preview: owned bytes plus the allocator that owns them.
+String<A>: {
+    ptr: RawPtr<u8>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+
+// Counted, sentinel, and infinite loops all use the same prefix form.
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+
+// Nested loop control names the target explicitly.
+nested = (stop: bool) void {
+    loop((outer) {
+        loop((inner) {
+            stop ?
+                | true { outer.done() }
+                | false { inner.next() }
+        })
+
+        outer.next()
+    })
+}
+
+// UFC loop control keeps the verb first.
+step = (done_now: bool) void {
+    loop((l) {
+        done_now ?
+            | true { done(l) }
+            | false { next(l) }
+    })
+}
+```
+
+The gated effect and allocator previews use ordinary type positions rather than
+new control keywords:
+
+```zen
+read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
+}
+
+read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+
+Allocator<T, Sync>: behavior {
+    alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
+}
+
+Allocator<T, Async>: behavior {
+    alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>>
+}
+```
+
+That is the rule of thumb: sync returns a direct checked value, async returns a
+task-shaped checked value, and allocation is visible because allocator
+ownership travels with the pointer-backed value.
+
 The core syntax to keep in your head:
 
 ```zen
