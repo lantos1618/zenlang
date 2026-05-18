@@ -2649,8 +2649,16 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_accepts_wildcard_fallback_declared_env_read_for_multiple_targets`,
   and
   `test_command_build_zen_accepts_identifier_fallback_declared_env_read_for_multiple_targets`.
+  Test graphs with unselected executable and library targets also keep
+  declared env-read fallback behavior through
+  `test_command_build_zen_accepts_declared_env_read_with_unselected_targets`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_env_read_with_unselected_targets`,
+  and
+  `test_command_build_zen_accepts_identifier_fallback_declared_env_read_with_unselected_targets`.
   Env reads with `?` but no fallback arm reject before test execution through
   `test_command_build_zen_rejects_env_read_without_fallback_before_execution`
+  and before unselected executable/library target handling through
+  `test_command_build_zen_rejects_env_read_without_fallback_before_unselected_targets`,
   and before multi-target test execution through
   `test_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
   Declared deterministic file-read effects are accepted on the normal test
