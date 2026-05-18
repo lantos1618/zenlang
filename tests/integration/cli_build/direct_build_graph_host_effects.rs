@@ -1,6 +1,6 @@
 use std::process::Command;
 
-#[path = "direct_build_graph_host_effects/file_reads.rs"]
+#[path = "direct_build_graph_host_effects/file_reads/mod.rs"]
 mod file_reads;
 
 #[path = "direct_build_graph_host_effects/file_reads_unselected_targets.rs"]
