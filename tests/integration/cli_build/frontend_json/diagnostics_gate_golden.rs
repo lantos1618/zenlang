@@ -125,3 +125,18 @@ main = () void {
         "tests/fixtures/ir_json/diagnostics_raw_pointer_gate.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_atomic_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "atomic_gate.zen",
+        r#"
+main = () void {
+    @builtin.atomic_load(0)
+}
+"#,
+        "atomic gate",
+        "atomic gate should emit one gated intrinsic diagnostic",
+        "tests/fixtures/ir_json/diagnostics_atomic_gate.golden.json",
+    );
+}
