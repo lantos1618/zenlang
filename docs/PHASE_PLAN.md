@@ -252,6 +252,10 @@ Agent UX deliverables:
   gate, proving the public path reports propagation typing/lowering as gated
   instead of an ordinary missing-method diagnostic. Covered by
   `emit_json_diagnostics_raise_gate_schema_matches_golden`.
+- Task waiting through `.await()` now has a pinned CLI diagnostics JSON gate,
+  proving the public path reports Sync/Async effect checking and task lowering
+  as gated instead of an ordinary missing-method diagnostic. Covered by
+  `emit_json_diagnostics_await_gate_schema_matches_golden`.
 - Comptime type-match intrinsics now have a pinned CLI diagnostics JSON gate
   for `@builtin.type_match<T>()`, proving the public path reports a gated
   typed-metadata/derive-lowering diagnostic instead of an unknown builtin while
