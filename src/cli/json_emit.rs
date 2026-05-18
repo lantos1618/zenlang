@@ -112,3 +112,13 @@ pub(super) fn cmd_emit_json_build_graph(path_str: &str) {
         }
     }
 }
+
+pub(super) fn cmd_emit_json_target_yaml(path_str: &str) {
+    match zen::target_yaml::target_yaml_file_to_json(Path::new(path_str)) {
+        Ok(json) => println!("{json}"),
+        Err(err) => {
+            eprintln!("error: {err}");
+            process::exit(1);
+        }
+    }
+}

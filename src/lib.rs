@@ -7,4 +7,5 @@ pub mod lexer;
 pub mod module_system;
 pub mod parser;
 pub mod resolver;
+pub mod target_yaml;
 pub mod typechecker;

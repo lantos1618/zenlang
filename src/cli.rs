@@ -31,7 +31,7 @@ use execution_commands::{cmd_build, cmd_build_graph, cmd_run_file, cmd_test};
 use frontend::{graph_frontend, load_module_graph};
 use json_emit::{
     cmd_emit_json_ast, cmd_emit_json_build_graph, cmd_emit_json_diagnostics, cmd_emit_json_layout,
-    cmd_emit_json_symbols, cmd_emit_json_typed,
+    cmd_emit_json_symbols, cmd_emit_json_target_yaml, cmd_emit_json_typed,
 };
 use usage::print_usage;
 
@@ -101,15 +101,13 @@ impl EmitJsonMode {
             Self::Mir => Some(
                 "MIR JSON emission is gated until schema and golden tests exist; compiler-owned IR schemas must reject hand-authored overrides",
             ),
-            Self::TargetYaml => Some(
-                "target YAML validation is gated until schemas and negative validation tests exist",
-            ),
             Self::Ast
             | Self::Symbols
             | Self::Typed
             | Self::Diagnostics
             | Self::BuildGraph
-            | Self::Layout => None,
+            | Self::Layout
+            | Self::TargetYaml => None,
         }
     }
 }
@@ -196,7 +194,8 @@ pub fn main() {
                         EmitJsonMode::Diagnostics => cmd_emit_json_diagnostics(&args[3]),
                         EmitJsonMode::BuildGraph => cmd_emit_json_build_graph(&args[3]),
                         EmitJsonMode::Layout => cmd_emit_json_layout(&args[3]),
-                        EmitJsonMode::Hir | EmitJsonMode::Mir | EmitJsonMode::TargetYaml => {
+                        EmitJsonMode::TargetYaml => cmd_emit_json_target_yaml(&args[3]),
+                        EmitJsonMode::Hir | EmitJsonMode::Mir => {
                             unreachable!("gated emit-json mode exited")
                         }
                     }

@@ -17,6 +17,6 @@ pub(super) fn print_usage() {
     eprintln!("  emit-json hir <file>   Gated HIR JSON");
     eprintln!("  emit-json mir <file>   Gated MIR JSON");
     eprintln!("  emit-json layout <file>   Emit checked type layout JSON");
-    eprintln!("  emit-json target-yaml <file>   Gated target YAML validation");
+    eprintln!("  emit-json target-yaml <file>   Validate target YAML");
     eprintln!("  <file>         Run a .zen file");
 }

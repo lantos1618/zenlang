@@ -340,11 +340,10 @@ and do not assume Phase 4 is ready without evidence.
   `return` keyword, giving agent/editor clients a span-addressed replacement
   edit that removes `return` and leaves the expression as the block result.
   Covered by `emit_json_diagnostics_includes_structured_return_keyword_fix`.
-- `emit-json hir`, `emit-json mir`, and `emit-json target-yaml` now reject with
-  explicit gated diagnostics tied to the v1 JSON/YAML backlog. Coverage:
-  `emit_json_hir_command_is_explicitly_gated`,
-  `emit_json_mir_command_is_explicitly_gated`, and
-  `emit_json_target_yaml_command_is_explicitly_gated`.
+- `emit-json hir` and `emit-json mir` now reject with explicit gated
+  diagnostics tied to the v1 JSON backlog. Coverage:
+  `emit_json_hir_command_is_explicitly_gated` and
+  `emit_json_mir_command_is_explicitly_gated`.
 - Build-graph JSON host-effect tests now split declared file-read fallback
   accept/reject coverage into
   `tests/integration/cli_build/build_graph_json_host_effects/file_reads.rs`,
@@ -3886,12 +3885,13 @@ and do not assume Phase 4 is ready without evidence.
   compiler-path evidence. Covered by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - `zen emit-json` usage diagnostics now list the full checked, deterministic,
-  and gated JSON/YAML mode surface: `ast`, `symbols`, `typed`, `diagnostics`,
-  `build-graph`, `hir`, `mir`, and `target-yaml`. This is covered by
+  validated, and gated JSON/YAML mode surface: `ast`, `symbols`, `typed`,
+  `diagnostics`, `build-graph`, `layout`, `target-yaml`, `hir`, and `mir`. This
+  is covered by
   `emit_json_usage_lists_supported_and_gated_modes`, preserving the IR-boundary
   gate in user-facing CLI errors.
-- The root `zen` usage banner now lists the same gated `emit-json hir`,
-  `emit-json mir`, and `emit-json target-yaml` commands, covered by
+- The root `zen` usage banner now lists the same gated `emit-json hir` and
+  `emit-json mir` commands plus validated `emit-json target-yaml`, covered by
   `root_usage_lists_supported_and_gated_emit_json_modes`, so top-level help
   does not hide the explicitly gated IR/YAML surface.
 - The root `zen` usage banner now labels `emit-json ast` as unchecked AST JSON,
@@ -4102,12 +4102,11 @@ and do not assume Phase 4 is ready without evidence.
   `cli_emit_json_modes_use_owned_mode_enum` and
   `emit_json_usage_lists_supported_and_gated_modes`.
 - Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`, so
-  HIR, MIR, and target YAML gate text stays attached to the enum that owns mode
-  spelling and usage. Covered by
+  HIR and MIR gate text stays attached to the enum that owns mode spelling and
+  usage. Covered by
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_hir_command_is_explicitly_gated`,
-  `emit_json_mir_command_is_explicitly_gated`,
-  `emit_json_target_yaml_command_is_explicitly_gated`.
+  `emit_json_mir_command_is_explicitly_gated`.
 - Real program inputs to `emit-json hir` and `emit-json mir` now reject at the
   schema/golden-test gate before emitting HIR or MIR JSON. Covered by
   `emit_json_hir_rejects_program_before_hir_json` and
@@ -4139,9 +4138,10 @@ and do not assume Phase 4 is ready without evidence.
   compiler-owned schema boundary before forged typed HIR can be accepted.
   Covered by `emit_json_hir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
-  `emit-json target-yaml` rejects a real `.yaml` file at the schema-validation
-  gate before emitting any JSON. Covered by
-  `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
+  `emit-json target-yaml` validates a minimal schema into `zen.target.v0` JSON
+  and rejects attempts to override compiler-owned type layouts. Covered by
+  `emit_json_target_yaml_validates_minimal_target_schema` and
+  `emit_json_target_yaml_rejects_layout_overrides`.
 - Typechecker boolean literal identifiers parse `true` and `false` through
   `TypecheckerBoolLiteralKeyword::ALL` rather than direct spelling checks.
   Covered by `typechecker_boolean_literals_use_owned_keyword_enum` and parser

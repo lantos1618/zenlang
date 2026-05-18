@@ -189,9 +189,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   marked unchecked; symbols JSON is explicitly marked resolved;
   typed JSON is explicitly marked checked; diagnostics JSON is explicitly
   marked diagnostic. semantic acceptance must use typed JSON, diagnostics,
-  check, build, or test paths. Hand-authored target YAML remains gated before
-  validation or JSON emission, covered by
-  `emit_json_target_yaml_rejects_hand_authored_yaml_before_validation`.
+  check, build, or test paths. Hand-authored target YAML validates through a
+  minimal schema into `zen.target.v0` JSON and rejects compiler-owned layout
+  overrides, covered by `emit_json_target_yaml_validates_minimal_target_schema`
+  and `emit_json_target_yaml_rejects_layout_overrides`.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable
@@ -229,7 +230,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | README and contributor truth assertions | implemented | `tests/docs_truth.rs` |
 | Strict resolver, symbol IDs, privacy | implemented | Resolver/module/privacy tests |
 | HIR/MIR JSON emission | gated | Schema and golden tests |
-| Target/build YAML validation | gated | Schema and negative validation tests |
+| Target/build YAML validation | constrained | `emit_json_target_yaml_validates_minimal_target_schema`, `emit_json_target_yaml_rejects_layout_overrides`; broader ABI/backend option schemas still required |
 | Behaviors and type association | gated | Positive/negative behavior solver tests |
 | `Sync/Async effects` | gated | `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `effect_await_is_rejected_until_async_lowering_exists`, `atomic_intrinsics_are_rejected_as_effect_gates`; effect checker positive/negative tests still required |
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; positive allocator semantics tests still required |
