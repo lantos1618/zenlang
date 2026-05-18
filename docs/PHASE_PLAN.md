@@ -549,9 +549,11 @@ Agent UX deliverables:
 - Frontend JSON integration tests now keep AST and symbol module-graph
   serialization coverage in a focused child module, leaving typed-program and
   diagnostics JSON checks in the parent module.
-- AST JSON now carries `semantic_status: "unchecked"`, and the same integration
-  fixture proves a semantically invalid program can emit AST JSON while
+- AST JSON now carries `schema_version: 0` and
+  `semantic_status: "unchecked"`, and the same integration fixture proves a
+  semantically invalid program can emit AST JSON while
   `emit-json typed` rejects it. Covered by
+  `emit_json_ast_command_outputs_resolved_module_graph` and
   `emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects`.
 - AST traversal is no longer listed in the Required Test Backlog because the
   AST JSON tooling view has positive output evidence and negative semantic
