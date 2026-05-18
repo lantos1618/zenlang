@@ -3273,10 +3273,10 @@ checked-in docs, tests, and commits only.
   local/default, imported behavior, and imported function dependency coverage in
   focused child modules under
   `tests/integration/generic_specializations/behavior_bounds/`.
-- Generic inference conflict diagnostics now keep method conflict coverage in
-  focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
-  leaving `tests/generic_diagnostics/inference_conflicts.rs` focused on
-  generic function inference conflicts.
+- Generic inference conflict diagnostics now keep both function and method
+  conflict coverage in focused child modules under
+  `tests/generic_diagnostics/inference_conflicts/`, leaving the parent module
+  as wiring only.
 - Generic call-site bound diagnostics now keep method, receiver, Result enum,
   and UFC bound-failure coverage in
   `tests/generic_diagnostics/call_site_bounds/methods.rs`, leaving the parent
