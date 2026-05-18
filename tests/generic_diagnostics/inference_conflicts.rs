@@ -108,6 +108,52 @@ main = () i32 {
 }
 
 #[test]
+fn generic_function_inference_conflict_through_pointer_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_ptr<T> = (left: T, ptr: Ptr<T>) T {
+    left
+}
+
+main = () i32 {
+    ptr = cast("bad", Ptr<str>)
+    choose_ptr(1, ptr)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_ptr`: inferred `i32` and `str`"
+        )),
+        "expected generic function pointer inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_function_inference_conflict_through_mut_pointer_type_is_error() {
+    let errors = typecheck_errors(
+        r#"
+choose_mut_ptr<T> = (left: T, ptr: MutPtr<T>) T {
+    left
+}
+
+main = () i32 {
+    ptr = cast("bad", MutPtr<str>)
+    choose_mut_ptr(1, ptr)
+}
+"#,
+    );
+
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "conflicting inferred type argument `T` for generic function `choose_mut_ptr`: inferred `i32` and `str`"
+        )),
+        "expected generic function mutable pointer inference conflict diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_function_inference_conflict_through_slice_type_is_error() {
     let errors = typecheck_errors(
         r#"
