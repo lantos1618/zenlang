@@ -314,6 +314,10 @@ and do not assume Phase 4 is ready without evidence.
   fixture proves a semantically invalid program can emit AST JSON while
   `emit-json typed` rejects it. Coverage:
   `emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects`.
+- AST traversal is no longer listed in the Required Test Backlog because the
+  AST JSON tooling view has positive output evidence and negative semantic
+  bypass evidence. Covered by
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - Typed JSON now carries `semantic_status: "checked"`, covered by
   `emit_json_typed_command_outputs_checked_program`, keeping the checked output
   boundary explicit alongside the unchecked AST marker.
