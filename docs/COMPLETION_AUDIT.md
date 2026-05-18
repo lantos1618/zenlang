@@ -3947,6 +3947,11 @@ and do not assume Phase 4 is ready without evidence.
   reject through the same actor gate instead of ordinary unknown-type
   diagnostics. Covered by
   `bare_actor_framework_types_are_rejected_as_gated_not_unknown`.
+- Std actor framework module imports now reject before loading aspirational
+  actor source sketches, so parser diagnostics from mailbox/scheduling/
+  supervisor prototypes do not leak into stable compiler paths. Covered by
+  `stdlib_actor_framework_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_actor_framework_import_before_loading_sketch`.
 - `Channel` remains documented as an experimental stdlib channel sketch rather
   than a global actor builtin type spelling, preserving the importable stdlib
   channel boundary until promotion has compiler-path evidence. Covered by

@@ -7,6 +7,37 @@ use crate::error::{CompileError, FileTable, Span};
 use super::root_prefix::parse_module_root_prefix;
 use super::ModuleSystem;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GatedStdlibModule {
+    ActorFramework,
+}
+
+impl GatedStdlibModule {
+    const CONCURRENCY_SEGMENT: &'static str = "concurrency";
+    const ACTOR_SEGMENT: &'static str = "actor";
+
+    fn from_sub_path(sub_path: &[String]) -> Option<Self> {
+        if sub_path
+            .first()
+            .is_some_and(|segment| segment == Self::CONCURRENCY_SEGMENT)
+            && sub_path
+                .get(1)
+                .is_some_and(|segment| segment == Self::ACTOR_SEGMENT)
+        {
+            return Some(Self::ActorFramework);
+        }
+        None
+    }
+
+    fn gate_message(self) -> &'static str {
+        match self {
+            Self::ActorFramework => {
+                "std actor framework modules are gated until mailbox, scheduling, supervisor, and allocator semantics are implemented"
+            }
+        }
+    }
+}
+
 impl ModuleSystem {
     /// Walk Import declarations in `program` and load their dependencies.
     ///
@@ -50,6 +81,8 @@ impl ModuleSystem {
                 if module_path.len() == 1 {
                     continue;
                 }
+
+                self.reject_gated_stdlib_module(&module_path[1..], Some(span))?;
 
                 let Some(file_path) = self.resolve_stdlib_file_path(&module_path[1..])? else {
                     return Err(vec![CompileError::Resolution(
@@ -235,6 +268,8 @@ impl ModuleSystem {
             });
         }
 
+        self.reject_gated_stdlib_module(sub_path, None)?;
+
         if let Some(file_path) = self.resolve_stdlib_file_path(sub_path)? {
             return self.load_file(&file_path, files);
         }
@@ -284,6 +319,20 @@ impl ModuleSystem {
         }
 
         Ok(None)
+    }
+
+    pub(super) fn reject_gated_stdlib_module(
+        &self,
+        sub_path: &[String],
+        span: Option<Span>,
+    ) -> Result<(), Vec<CompileError>> {
+        if let Some(gated) = GatedStdlibModule::from_sub_path(sub_path) {
+            return Err(vec![CompileError::Resolution(
+                gated.gate_message().into(),
+                span,
+            )]);
+        }
+        Ok(())
     }
 }
 
