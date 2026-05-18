@@ -474,6 +474,10 @@ checked-in docs, tests, and commits only.
 - Build-graph JSON validation tests now keep unsupported target kind and gated
   package/link field diagnostics in a focused child module, leaving target
   field and dependency graph diagnostics in the parent module.
+- Build-graph JSON validation tests now also keep dependency graph diagnostics
+  and deterministic-body rejection coverage in focused child modules, leaving
+  the parent module on target field diagnostics and the shared CLI assertion
+  helper.
 - Emit-command build graph validation tests now keep target-selection
   diagnostics in a focused child module, leaving unrelated gated test source
   skip coverage in the parent module.
