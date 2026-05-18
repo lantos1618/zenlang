@@ -80,6 +80,19 @@ main = (mode: Sync) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_async_effect_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "async_effect_gate.zen",
+        r#"
+main = (mode: Async) void { }
+"#,
+        "async effect gate",
+        "async effect gate should emit one Sync/Async feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_async_effect_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_dynamic_string_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "dynamic_string_gate.zen",
