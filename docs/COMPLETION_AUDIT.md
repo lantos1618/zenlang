@@ -3929,6 +3929,11 @@ and do not assume Phase 4 is ready without evidence.
   prototypes do not leak into stable compiler paths. Covered by
   `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
   `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
+- Std sync runtime module imports now reject before loading aspirational
+  channel source sketches, so parser diagnostics from blocking/channel
+  prototypes do not leak into stable compiler paths. Covered by
+  `stdlib_sync_runtime_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`.
 - C runtime layout now keeps the same split: static string literals emit as
   direct `zen_str` compound literals with `sizeof`-derived compile-time length,
   while dynamic `zen_string` carries an allocator pointer. Covered by

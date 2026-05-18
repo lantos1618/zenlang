@@ -91,6 +91,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   aspirational scheduler/task source files, covered by
   `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
   `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
+  Imports of std sync runtime sketches are likewise gated before loading
+  aspirational channel source files, covered by
+  `stdlib_sync_runtime_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`.
   Atomic compiler intrinsics `@builtin.atomic_load(...)`,
   `@builtin.atomic_store(...)`, `@builtin.atomic_add(...)`,
   `@builtin.atomic_sub(...)`, `@builtin.atomic_cas(...)`,
