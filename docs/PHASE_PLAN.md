@@ -3772,6 +3772,9 @@ checked-in docs, tests, and commits only.
   compiler-owned schema boundary before any forged type or layout override can
   be accepted. Guarded by
   `emit_json_mir_rejects_hand_authored_json_before_ir_override`.
+- Hand-authored JSON IR inputs to `emit-json hir` now reject at the same
+  compiler-owned schema boundary before forged typed HIR can be accepted.
+  Guarded by `emit_json_hir_rejects_hand_authored_json_before_ir_override`.
 - Hand-authored target YAML remains outside the compiler-owned IR path:
   `emit-json target-yaml` now has explicit coverage that a real `.yaml` file is
   rejected at the schema-validation gate before emitting any JSON. Guarded by

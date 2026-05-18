@@ -95,7 +95,9 @@ impl EmitJsonMode {
 
     fn gate_message(self) -> Option<&'static str> {
         match self {
-            Self::Hir => Some("HIR JSON emission is gated until schema and golden tests exist"),
+            Self::Hir => Some(
+                "HIR JSON emission is gated until schema and golden tests exist; compiler-owned IR schemas must reject hand-authored overrides",
+            ),
             Self::Mir => Some(
                 "MIR JSON emission is gated until schema and golden tests exist; compiler-owned IR schemas must reject hand-authored overrides",
             ),
