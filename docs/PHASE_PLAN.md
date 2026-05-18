@@ -3581,6 +3581,12 @@ checked-in docs, tests, and commits only.
   does not implicitly construct allocator-backed `String`. Guarded by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog` and
   `learn_zen_guide_covers_core_tour_and_gated_previews`.
+- Comptime type matching now has an explicit gated intrinsic diagnostic:
+  `@builtin.type_match<T>()` reports that comptime type matching is gated until
+  typed metadata and derive lowering exist, instead of surfacing as an unknown
+  builtin or generic type-argument error. Covered by
+  `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - C runtime layout now mirrors that public model: static string literals emit
   as direct `zen_str` compound literals whose length is derived with `sizeof`,
   while dynamic `zen_string` carries an allocator pointer. Covered by

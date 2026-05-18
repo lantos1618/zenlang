@@ -3905,6 +3905,12 @@ and do not assume Phase 4 is ready without evidence.
   construct allocator-backed `String`. Covered by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog` and
   `learn_zen_guide_covers_core_tour_and_gated_previews`.
+- Comptime type matching now has explicit gated diagnostic coverage:
+  `@builtin.type_match<T>()` is rejected as gated until typed metadata and
+  derive lowering exist, without falling through to unknown-builtin or generic
+  type-argument diagnostics. Covered by
+  `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - C runtime layout now keeps the same split: static string literals emit as
   direct `zen_str` compound literals with `sizeof`-derived compile-time length,
   while dynamic `zen_string` carries an allocator pointer. Covered by

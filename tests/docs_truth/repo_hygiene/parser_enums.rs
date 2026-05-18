@@ -84,6 +84,39 @@ fn typechecker_gated_methods_use_owned_action_enum() {
 }
 
 #[test]
+fn typechecker_gated_intrinsics_use_owned_name_enum() {
+    let gated = read("src/typechecker/gated_intrinsics.rs");
+    let calls = read("src/typechecker/expressions/call_support.rs");
+
+    for forbidden in [
+        r#"name == "type_match""#,
+        r#"match name"#,
+        r#""type_match" =>"#,
+    ] {
+        assert!(
+            !calls.contains(forbidden),
+            "typechecker gated intrinsic dispatch should use GatedIntrinsic, not raw spelling checks: {forbidden}"
+        );
+    }
+    for required in [
+        "enum GatedIntrinsic",
+        "const ALL: &[GatedIntrinsic]",
+        "pub(super) const TYPE_MATCH: &'static str = \"type_match\"",
+        "pub(super) const fn gate_message(self) -> &'static str",
+        ".find(|intrinsic| intrinsic.as_str() == name)",
+    ] {
+        assert!(
+            gated.contains(required),
+            "gated intrinsic spelling should live in GatedIntrinsic: {required}"
+        );
+    }
+    assert!(
+        calls.contains("GatedIntrinsic::from_name(name)") && calls.contains("gated.gate_message()"),
+        "function-call checking should route gated intrinsics through GatedIntrinsic"
+    );
+}
+
+#[test]
 fn cli_emit_json_modes_use_owned_mode_enum() {
     let source = read("src/cli.rs");
 

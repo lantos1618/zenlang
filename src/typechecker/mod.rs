@@ -21,6 +21,7 @@ mod declaration_collection_resolver_semantic_tasks;
 mod declaration_collection_resolver_tasks;
 mod environment;
 mod expressions;
+mod gated_intrinsics;
 mod generic_bound_validation;
 mod generic_type_reference_walker;
 mod generic_type_validation;
