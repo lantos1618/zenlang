@@ -64,6 +64,43 @@ Point.implements(Marker) { }
 }
 
 #[test]
+fn resolver_rejects_duplicate_behavior_impl_without_method_symbol_followup() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
+}
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "again" }
+}
+"#,
+    );
+
+    let err = Resolver::new()
+        .resolve_program(&program)
+        .expect_err("duplicate behavior impl should fail in resolver");
+
+    assert_eq!(
+        err.len(),
+        1,
+        "duplicate behavior impl should not emit duplicate method symbol followups: {err:?}"
+    );
+    assert!(
+        err.iter().any(|d| d
+            .message
+            .contains("duplicate behavior implementation `Json<StaticString>`")),
+        "expected duplicate behavior implementation diagnostic, got {err:?}"
+    );
+}
+
+#[test]
 fn resolver_accepts_non_behavior_impl_blocks_as_method_symbols() {
     let program = parse_program(
         r#"

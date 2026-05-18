@@ -1,5 +1,9 @@
-use crate::ast::Program;
+use std::collections::HashSet;
+
+use crate::ast::{Declaration, Program};
 use crate::error::Diagnostic;
+
+use self::metadata_helpers::behavior_ref_display;
 
 #[cfg(test)]
 mod symbol_table_test_support;
@@ -29,9 +33,28 @@ impl Resolver {
     pub fn resolve_program(&self, program: &Program) -> Result<SymbolTable, Vec<Diagnostic>> {
         let mut table = SymbolTable::default();
         let mut diagnostics = Vec::new();
+        let mut seen_behavior_impls = HashSet::new();
 
         for decl in &program.declarations {
-            if let Err(diagnostic) = self.define_declaration(&mut table, decl) {
+            let skip_duplicate_behavior_impl_methods = match decl {
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: Some(behavior),
+                    behavior_type_args,
+                    ..
+                } => {
+                    let key = format!(
+                        "{}::{}",
+                        type_name,
+                        behavior_ref_display(behavior, behavior_type_args)
+                    );
+                    !seen_behavior_impls.insert(key)
+                }
+                _ => false,
+            };
+            if let Err(diagnostic) =
+                self.define_declaration(&mut table, decl, skip_duplicate_behavior_impl_methods)
+            {
                 diagnostics.push(*diagnostic);
             }
         }

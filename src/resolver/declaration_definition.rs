@@ -14,6 +14,7 @@ impl Resolver {
         &self,
         table: &mut SymbolTable,
         decl: &Declaration,
+        skip_duplicate_behavior_impl_methods: bool,
     ) -> Result<(), Box<Diagnostic>> {
         match decl {
             Declaration::Function {
@@ -128,6 +129,9 @@ impl Resolver {
                 methods,
                 ..
             } => {
+                if skip_duplicate_behavior_impl_methods {
+                    return Ok(());
+                }
                 for method in methods {
                     if let Declaration::Function {
                         name,
