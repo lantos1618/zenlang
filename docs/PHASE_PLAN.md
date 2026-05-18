@@ -634,6 +634,12 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
   `identity<Box<i32, StaticString>>(box)` without argument-mismatch followups.
+- Diagnostics JSON for generic method type-argument annotation arity is now
+  pinned by
+  `emit_json_diagnostics_generic_method_type_arg_annotation_arity_schema_matches_golden`,
+  covering the stable `E5001` payload for
+  `holder.wrap<Box<i32, StaticString>>(box)` without argument-mismatch
+  followups.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
