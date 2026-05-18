@@ -422,6 +422,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "tests/fixtures/ir_json/diagnostics_nongeneric_struct_constructor_type_args.golden.json",
         "tests/fixtures/ir_json/diagnostics_nongeneric_enum_constructor_type_args.golden.json",
         "tests/fixtures/ir_json/diagnostics_nongeneric_function_type_args.golden.json",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_method_type_args.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",

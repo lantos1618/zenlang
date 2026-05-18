@@ -704,6 +704,10 @@ Agent UX deliverables:
   covering the stable `E5001` payload for
   `holder.wrap<Box<i32, StaticString>>(box)` without argument-mismatch
   followups.
+- Diagnostics JSON for non-generic method call type arguments is now pinned by
+  `emit_json_diagnostics_nongeneric_method_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `box.get<i32>()` without argument
+  followups.
 - Diagnostics JSON for missing generic method type-argument annotation
   arguments is now pinned by
   `emit_json_diagnostics_generic_method_type_arg_annotation_missing_args_schema_matches_golden`,

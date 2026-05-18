@@ -259,6 +259,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   payload mismatch followups. Non-generic function call type arguments are
   pinned by `emit_json_diagnostics_nongeneric_function_type_args_schema_matches_golden`,
   covering the stable `E5002` payload for `id<i32>(1)` without argument
+  followups. Non-generic method call type arguments are pinned by
+  `emit_json_diagnostics_nongeneric_method_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `box.get<i32>()` without argument
   followups. `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes
   only after a golden fixture pins the code and diagnostic shape.
   Hand-authored build graph JSON inputs are rejected before generic build.zen
