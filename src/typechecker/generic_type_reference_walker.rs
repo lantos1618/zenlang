@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::is_builtin_type_name;
+use crate::ast::{gated_builtin_type_name, is_builtin_type_name};
 
 mod expressions;
 
@@ -76,6 +76,12 @@ impl TypeChecker {
                     return;
                 }
 
+                if let Some(gated) = gated_builtin_type_name(name) {
+                    self.diagnostics
+                        .push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    return;
+                }
+
                 if !self.is_known_named_type(name) {
                     if reject_unknown {
                         self.diagnostics.push(Diagnostic::error(
@@ -110,6 +116,12 @@ impl TypeChecker {
                 }
             }
             AstType::Generic { name, type_args } => {
+                if let Some(gated) = gated_builtin_type_name(name) {
+                    self.diagnostics
+                        .push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    return;
+                }
+
                 self.validate_generic_type_arg_refs_with_unknowns(
                     type_args,
                     scoped_type_params,
