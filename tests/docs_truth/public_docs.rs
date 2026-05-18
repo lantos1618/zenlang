@@ -38,6 +38,8 @@ fn readme_is_language_first_and_links_reference_docs() {
         "Prefix-first declarations",
         "pattern matching",
         "behaviors",
+        "StaticString",
+        "allocator-backed String",
         "docs/learn_zen_in_y_minutes.md",
         "examples/README.md",
         "docs/V1_SPEC.md",
@@ -124,6 +126,10 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
     let guide = read("docs/learn_zen_in_y_minutes.md");
 
     for required in [
+        "## Static And Dynamic Strings",
+        "StaticString",
+        "baked into the program",
+        "allocator-backed String",
         "## Loops",
         "loop",
         "l.done()",

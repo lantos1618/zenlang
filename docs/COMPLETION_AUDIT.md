@@ -3736,6 +3736,12 @@ and do not assume Phase 4 is ready without evidence.
   `return` keyword or stale allocator/effect claims. The remaining root smoke
   fixtures are guarded by
   `root_smoke_fixtures_do_not_use_removed_or_gated_syntax`.
+- Public docs now preserve the `StaticString` versus allocator-backed `String`
+  model: `StaticString` is baked into program storage with a stable length,
+  while dynamic `String` depends on allocator-backed ownership. The distinction
+  is guarded by `learn_zen_guide_covers_core_tour_and_gated_previews`,
+  `readme_is_language_first_and_links_reference_docs`, and
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - Legacy `zen build-graph build.zen` file-read host-effect validation now
   matches the unselected-target coverage on `zen build build.zen` and direct
   `zen build.zen`: declared fallback arms allow selected executable targets to

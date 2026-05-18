@@ -58,7 +58,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | Field access and struct literals | implemented | `parser::tests::parse_struct_literal`, `tests/zen/nested_structs.zen` |
 | UFC-style method calls | implemented | `parser::tests::parse_ufc_chain`, `tests/zen/ufc.zen` |
 | Cast expressions `cast(value, Type)` | implemented | `parser::tests::parse_cast_expr`, `tests/zen/cast.zen` |
-| String literals and interpolation | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen` |
+| String literals and interpolation as `StaticString` | implemented | `parser::tests::parse_string_interpolation`, `tests/zen/strings.zen` |
 | Pointer and slice type syntax accepted by parser | implemented | `parser::tests::parse_pointer_types`, `parser::tests::parse_slice_type` |
 | Generic specialization for functions, structs, enums, and methods | implemented | `tests/zen/generic_identity.zen`, `tests/zen/generic_struct.zen`, `tests/zen/generic_enum_option.zen`, `tests/zen/generic_result_enum.zen`, `tests/zen/generic_method.zen`, `tests/zen/generic_method_worklist.zen`, `tests/zen/generic_method_nested_result.zen`, `tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen`, `tests/zen/multi_file_type_method_nested_result_dependency/main.zen`, `integration::generic_specializations_emit_each_generated_c_definition_once`, `generic_specializations::enum_generated_c::enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::method_worklist_generated_c::method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::enum_dependencies::multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols`, `generic_specializations::multifile_generated_c::method_worklist_dependencies::multi_file_generic_method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols` |
 | Explicit behavior association proving ground | implemented | `tests/zen/behavior_json_explicit_impl.zen`, `tests/zen/behavior_json_generic_association.zen`, `tests/zen/behavior_distinct_generic_specialization_dispatch.zen`, `tests/zen/behavior_json_generic_bound_ufcs.zen`, `tests/zen/multi_file_imported_behavior_requires/main.zen`, `tests/zen/multi_file_behavior_inheritance/main.zen`, `generic_diagnostics::behavior_impl_for_unspecialized_generic_type_is_error`, `generic_diagnostics::generic_behavior_bound_unknown_method_is_error` |
@@ -70,6 +70,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 
+- `StaticString` is baked into the program. It denotes literal/static text with
+  stable storage and length. The allocator-backed `String` type is owned,
+  dynamic text and depends on the typed allocator model before it can be
+  promoted as a stable construction target.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,

@@ -43,6 +43,8 @@ main = () i32 {
   fluent without requiring class-based design.
 - Behaviors describe required capabilities directly, so generic code can state
   the operations it needs.
+- `StaticString` names text baked into the program, while allocator-backed String
+  is the owned, dynamic text type.
 - The language is designed for predictable native programs: explicit types,
   explicit imports, and no hidden object model.
 
@@ -62,7 +64,7 @@ unwrap_or<T> = (value: Option<T>, fallback: T) T {
 }
 
 Display: behavior {
-    display: (Self) str
+    display: (Self) StaticString
 }
 ```
 
