@@ -671,6 +671,10 @@ Agent UX deliverables:
   `emit_json_diagnostics_nested_generic_instantiation_inner_arity_schema_matches_golden`,
   covering the stable `E5001` payload for
   `Box<Option<i32, StaticString>> { ... }` without field-mismatch followups.
+- Diagnostics JSON for function type parameter generic annotation arity is now
+  pinned by
+  `emit_json_diagnostics_function_type_parameter_annotation_arity_schema_matches_golden`,
+  covering the stable `E5001` payload for `(Box<i32, StaticString>) i32`.
 - Diagnostics JSON for generic struct constructor arity is now pinned by
   `emit_json_diagnostics_generic_struct_constructor_arity_schema_matches_golden`,
   covering the stable `E5001` payload for

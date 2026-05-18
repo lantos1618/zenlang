@@ -75,3 +75,22 @@ read = (value: Option) i32 {
         "tests/fixtures/ir_json/diagnostics_generic_enum_annotation_missing_args.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_function_type_parameter_annotation_arity_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "function_type_parameter_annotation_arity.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+call = (f: (Box<i32, StaticString>) i32) i32 {
+    0
+}
+"#,
+        "function type parameter annotation arity",
+        "function type parameter annotation arity diagnostics should be stable",
+        "tests/fixtures/ir_json/diagnostics_function_type_parameter_annotation_arity.golden.json",
+    );
+}
