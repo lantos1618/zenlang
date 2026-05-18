@@ -11,11 +11,13 @@ use super::ModuleSystem;
 enum GatedStdlibModule {
     ActorFramework,
     AllocatorFramework,
+    AsyncRuntime,
 }
 
 impl GatedStdlibModule {
     const CONCURRENCY_SEGMENT: &'static str = "concurrency";
     const ACTOR_SEGMENT: &'static str = "actor";
+    const ASYNC_SEGMENT: &'static str = "async";
     const MEMORY_SEGMENT: &'static str = "memory";
     const ALLOCATOR_SEGMENT: &'static str = "allocator";
 
@@ -28,6 +30,15 @@ impl GatedStdlibModule {
                 .is_some_and(|segment| segment == Self::ACTOR_SEGMENT)
         {
             return Some(Self::ActorFramework);
+        }
+        if sub_path
+            .first()
+            .is_some_and(|segment| segment == Self::CONCURRENCY_SEGMENT)
+            && sub_path
+                .get(1)
+                .is_some_and(|segment| segment == Self::ASYNC_SEGMENT)
+        {
+            return Some(Self::AsyncRuntime);
         }
         if sub_path
             .first()
@@ -48,6 +59,9 @@ impl GatedStdlibModule {
             }
             Self::AllocatorFramework => {
                 "std allocator modules are gated until allocator ownership and effect semantics are implemented"
+            }
+            Self::AsyncRuntime => {
+                "std async runtime modules are gated until Sync/Async effect checking and task lowering are implemented"
             }
         }
     }
