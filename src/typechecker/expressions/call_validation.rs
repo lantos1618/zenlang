@@ -311,7 +311,8 @@ impl TypeChecker {
 
     pub(super) fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {
         self.is_root_std_import(module)
-            && matches!((module, function), ("io", "print") | ("io", "println"))
+            && crate::typechecker::std_runtime_calls::parse_std_runtime_call(module, function)
+                .is_some()
     }
 
     pub(super) fn block_satisfies_return(&self, block: &TypedBlock, ret_type: &Type) -> bool {
