@@ -21,3 +21,35 @@ main = () i32 {
         "expected range diagnostic, got {err:?}"
     );
 }
+
+#[test]
+fn result_raise_is_rejected_until_propagation_lowering_exists() {
+    let program = parse_program(
+        r#"
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+main = () i32 {
+    value = Result<i32, str>.Ok(1)
+    value.raise()
+}
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("raise propagation should stay gated until lowering exists");
+
+    assert!(
+        err.iter()
+            .any(|d| d.message.contains("`.raise()` is gated")),
+        "expected raise gate diagnostic, got {err:?}"
+    );
+    assert!(
+        err.iter()
+            .all(|d| !d.message.contains("has no method `raise`")),
+        "raise gate should not be reported as an ordinary missing method, got {err:?}"
+    );
+}

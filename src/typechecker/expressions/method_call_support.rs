@@ -3,6 +3,8 @@ use crate::typechecker::FuncInfo;
 
 mod module_calls;
 
+const RESULT_PROPAGATION_METHOD: &str = "raise";
+
 impl TypeChecker {
     pub(super) fn check_method_call_expr(
         &mut self,
@@ -19,6 +21,14 @@ impl TypeChecker {
         }
 
         let typed_receiver = self.check_expr(receiver)?;
+
+        if method == RESULT_PROPAGATION_METHOD {
+            return Err(Diagnostic::error(
+                "E3054",
+                "`.raise()` is gated until Result propagation typing and lowering are implemented",
+                span,
+            ));
+        }
 
         // Build args: receiver as first arg (for methods/UFC)
         let mut typed_args = vec![typed_receiver.clone()];
