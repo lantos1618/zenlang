@@ -20,6 +20,7 @@ fn generic_specializations_emit_each_generated_c_definition_once() {
         "generic_method_nested_result.zen",
         "generic_method_self.zen",
         "generic_method_worklist.zen",
+        "generic_type_impl_methods.zen",
         "generic_nested_result_enum.zen",
         "generic_result_enum.zen",
         "generic_result_enum_method.zen",

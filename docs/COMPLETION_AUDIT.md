@@ -1974,6 +1974,12 @@ and do not assume Phase 4 is ready without evidence.
   covered by `generic_enum_multi_specialization`,
   `generic_result_enum_multi_specialization`, and the generated-C assertions in
   `generic_specializations_do_not_emit_unspecialized_c_symbols`.
+- Generic non-behavior impl blocks now parse as `Type<T>.impl = { ... }` and
+  hoist receiver type parameters into contained method templates, covered by
+  `parser::tests::parse_generic_impl_block_hoists_receiver_type_params_to_methods`,
+  `tests/zen/generic_type_impl_methods.zen`,
+  `integration::test_generic_type_impl_methods`, and generated-C assertions in
+  `generic_specializations_do_not_emit_unspecialized_c_symbols`.
 - Explicit generic function and method type-argument arity failures now stop
   before specialization emits misleading follow-up inference diagnostics,
   covered by

@@ -68,6 +68,18 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T Point_keep"));
     assert!(!c_source.contains("Point_keep(point"));
 
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_type_impl_methods.zen"));
+    assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_i32 Box_replace_i32(Box_i32 self, int32_t value)"));
+    assert!(c_source.contains("Box_get_i32(next)"));
+    assert!(c_source.contains("Box_replace_i32(box, 42LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_replace_i32");
+    assert!(!c_source.contains("Box_T"));
+    assert!(!c_source.contains("T Box_get"));
+    assert!(!c_source.contains("T Box_replace"));
+
     let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_vec.zen"));
     assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
     assert!(c_source.contains("int32_t Vec_len_str(Vec_str self)"));

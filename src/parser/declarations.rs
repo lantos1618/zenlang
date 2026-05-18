@@ -54,10 +54,11 @@ impl Parser {
 
                         if let Ok(keyword) = method_name.parse::<TypeDeclarationKeyword>() {
                             if matches!(keyword, TypeDeclarationKeyword::Impl) {
-                                return Err(CompileError::Syntax(
-                                    "generic impl blocks are not implemented".to_string(),
-                                    Some(self.peek_span()),
-                                ));
+                                return self.parse_impl_block_with_type_params(
+                                    name,
+                                    type_params,
+                                    name_span,
+                                );
                             }
                             return Err(CompileError::Syntax(
                                 format!(
