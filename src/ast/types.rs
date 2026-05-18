@@ -27,17 +27,21 @@ pub enum GatedBuiltinType {
 }
 
 impl GatedBuiltinType {
+    pub const ALL: &[GatedBuiltinType] = &[
+        Self::Allocator,
+        Self::SyncEffect,
+        Self::AsyncEffect,
+        Self::Actor,
+        Self::ActorRef,
+        Self::Mailbox,
+        Self::Supervisor,
+    ];
+
     pub fn from_name(name: &str) -> Option<Self> {
-        match name {
-            ALLOCATOR_TYPE_NAME => Some(Self::Allocator),
-            SYNC_EFFECT_TYPE_NAME => Some(Self::SyncEffect),
-            ASYNC_EFFECT_TYPE_NAME => Some(Self::AsyncEffect),
-            ACTOR_TYPE_NAME => Some(Self::Actor),
-            ACTOR_REF_TYPE_NAME => Some(Self::ActorRef),
-            MAILBOX_TYPE_NAME => Some(Self::Mailbox),
-            SUPERVISOR_TYPE_NAME => Some(Self::Supervisor),
-            _ => None,
-        }
+        GatedBuiltinType::ALL
+            .iter()
+            .copied()
+            .find(|ty| ty.as_str() == name)
     }
 
     pub fn as_str(self) -> &'static str {

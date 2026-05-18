@@ -16,6 +16,7 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         "pub const MAILBOX_TYPE_NAME: &str = \"Mailbox\"",
         "pub const SUPERVISOR_TYPE_NAME: &str = \"Supervisor\"",
         "pub enum GatedBuiltinType",
+        "pub const ALL: &[GatedBuiltinType]",
         "pub fn gated_builtin_type_name",
     ] {
         assert!(
@@ -23,6 +24,13 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
             "gated builtin type spelling should live in the AST type helper module: {required}"
         );
     }
+    assert!(
+        helper.contains("GatedBuiltinType::ALL")
+            && helper.contains(".iter()")
+            && helper.contains(".copied()")
+            && helper.contains(".find(|ty| ty.as_str() == name)"),
+        "gated builtin type lookup should use the enum-owned static table"
+    );
     assert!(
         helper.contains("pub fn is_builtin_type_name"),
         "builtin type-name recognition should be centralized"
