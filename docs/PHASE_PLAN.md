@@ -2661,8 +2661,16 @@ checked-in docs, tests, and commits only.
   `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_for_multiple_targets`,
   and
   `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_for_multiple_targets`.
+  Test graphs with unselected executable and library targets also keep
+  declared file-read fallback behavior through
+  `test_command_build_zen_accepts_declared_file_read_effects_with_unselected_targets`,
+  `test_command_build_zen_accepts_wildcard_fallback_declared_file_read_effects_with_unselected_targets`,
+  and
+  `test_command_build_zen_accepts_identifier_fallback_declared_file_read_effects_with_unselected_targets`.
   Undeclared file reads reject before test execution through
   `test_command_build_zen_rejects_undeclared_file_read_effects_before_execution`
+  and before unselected executable/library target handling through
+  `test_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets`,
   and before multi-target test execution through
   `test_command_multi_target_build_zen_rejects_undeclared_file_read_effects`.
   File reads with `?` but no fallback arm also reject before test execution
