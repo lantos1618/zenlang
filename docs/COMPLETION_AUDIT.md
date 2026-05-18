@@ -4093,6 +4093,10 @@ and do not assume Phase 4 is ready without evidence.
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Covered by
   `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
+- Hand-authored symbols JSON inputs to `emit-json symbols` reject at the
+  compiler-owned symbols JSON boundary before forged resolver metadata can be
+  treated as Zen source or accepted as symbol evidence. Covered by
+  `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`.
 - Hand-authored JSON IR inputs to `emit-json mir` reject at the compiler-owned
   schema boundary before any forged type or layout override can be accepted.
   Covered by `emit_json_mir_rejects_hand_authored_json_before_ir_override`.

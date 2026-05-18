@@ -19,6 +19,7 @@ pub(super) fn cmd_emit_json_ast(path_str: &str) {
 
 pub(super) fn cmd_emit_json_symbols(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_symbols_emit(path_str);
     let (graph, _files) = super::load_module_graph(path_str);
     match zen::ir_json::symbols_graph_to_json(&graph) {
         Ok(json) => println!("{json}"),
