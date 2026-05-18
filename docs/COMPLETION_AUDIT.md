@@ -3872,6 +3872,16 @@ and do not assume Phase 4 is ready without evidence.
 - Build graph JSON now carries `format: "zen.build_graph.v0"` and
   `semantic_status: "deterministic"` while preserving the existing graph
   payload keys, covered by `emit_json_build_graph_outputs_project_build_graph`.
+- `emit-json layout` now has an explicit gated command and usage entry for type
+  layout JSON, covered by `emit_json_layout_command_is_explicitly_gated`,
+  `emit_json_usage_lists_supported_and_gated_modes`, and
+  `root_usage_lists_supported_and_gated_emit_json_modes`, while ABI layout JSON
+  remains gated until layout tests exist.
+- Static string literals no longer implicitly satisfy allocator-backed
+  `String`; `String` is recognized as a builtin dynamic text type, but
+  allocation must remain explicit. Covered by
+  `static_string_literal_does_not_implicitly_allocate_string` and
+  `types_compatible_basics`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

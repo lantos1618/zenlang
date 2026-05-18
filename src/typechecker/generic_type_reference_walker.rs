@@ -222,6 +222,9 @@ impl TypeChecker {
     }
 
     fn is_known_named_type(&self, name: &str) -> bool {
+        if name == "String" {
+            return true;
+        }
         self.structs.contains_key(name)
             || self.enums.contains_key(name)
             || self.imports.contains_key(name)

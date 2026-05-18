@@ -17,9 +17,46 @@ fn types_compatible_basics() {
         &Type::Named("OrderId".into())
     ));
     assert!(!tc.types_compatible(&Type::Str, &Type::Named("StaticString".into())));
+    assert!(!tc.types_compatible(&Type::String, &Type::Str));
+    assert!(!tc.types_compatible(&Type::Str, &Type::String));
     // Clear mismatch
     assert!(!tc.types_compatible(&Type::I32, &Type::Str));
     assert!(!tc.types_compatible(&Type::Bool, &Type::I32));
+}
+
+#[test]
+fn static_string_literal_does_not_implicitly_allocate_string() {
+    let program = parse_program(
+        r#"
+takes_string = (value: String) void { }
+
+returns_string = () String {
+    "literal"
+}
+
+main = () void {
+    local: String = "literal"
+    takes_string("literal")
+}
+"#,
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program(&program)
+        .expect_err("static string literals should not implicitly satisfy dynamic String");
+
+    for expected in [
+        "return type mismatch: expected `String`, found `StaticString`",
+        "variable `local` expects `String`, found `StaticString`",
+        "argument 1 for `takes_string` expects `String`, found `StaticString`",
+    ] {
+        assert!(
+            err.iter()
+                .any(|diagnostic| diagnostic.message.contains(expected)),
+            "expected diagnostic `{expected}`, got {err:?}"
+        );
+    }
 }
 
 #[test]

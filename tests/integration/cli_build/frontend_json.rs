@@ -33,7 +33,7 @@ fn emit_json_usage_lists_supported_and_gated_modes() {
     );
 
     let expected_usage =
-        "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph|hir|mir|target-yaml> <file.zen>";
+        "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml> <file.zen>";
     for output in [&missing_mode_output, &unknown_mode_output] {
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
@@ -219,5 +219,30 @@ fn emit_json_target_yaml_command_is_explicitly_gated() {
             "target YAML validation is gated until schemas and negative validation tests exist"
         ),
         "expected target YAML gate diagnostic, stderr={stderr}"
+    );
+}
+
+#[test]
+fn emit_json_layout_command_is_explicitly_gated() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "layout",
+            test_dir().join("hello.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json layout");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json layout should be gated: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("type layout JSON emission is gated until ABI layout tests exist"),
+        "expected layout gate diagnostic, stderr={stderr}"
     );
 }

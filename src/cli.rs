@@ -35,7 +35,7 @@ use json_emit::{
 use usage::print_usage;
 
 const EMIT_JSON_USAGE: &str =
-    "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph|hir|mir|target-yaml> <file.zen>";
+    "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml> <file.zen>";
 
 pub fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -101,6 +101,12 @@ pub fn main() {
                 "mir" => {
                     eprintln!(
                         "error: MIR JSON emission is gated until schema and golden tests exist"
+                    );
+                    process::exit(1);
+                }
+                "layout" => {
+                    eprintln!(
+                        "error: type layout JSON emission is gated until ABI layout tests exist"
                     );
                     process::exit(1);
                 }

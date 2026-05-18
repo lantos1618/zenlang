@@ -171,6 +171,9 @@ impl Resolver {
         type_params: &[TypeParam],
         name: &str,
     ) -> bool {
+        if name == "String" {
+            return true;
+        }
         table.lookup(Namespace::Type, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || type_params.iter().any(|type_param| type_param.name == name)
