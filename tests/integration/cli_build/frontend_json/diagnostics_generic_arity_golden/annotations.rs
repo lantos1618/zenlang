@@ -20,6 +20,25 @@ read = (box: Box<i32, StaticString>) i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_nongeneric_struct_annotation_type_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nongeneric_struct_annotation_type_args.zen",
+        r#"
+Point: {
+    x: i32
+}
+
+read = (point: Point<i32>) i32 {
+    point.x
+}
+"#,
+        "non-generic struct annotation type arguments",
+        "non-generic struct annotation type-argument diagnostics should not emit dependent-use followups",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_struct_annotation_type_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_enum_annotation_arity_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_enum_annotation_arity.zen",

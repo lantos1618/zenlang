@@ -791,6 +791,11 @@ Agent UX deliverables:
   `emit_json_diagnostics_generic_struct_annotation_arity_schema_matches_golden`,
   covering the stable `E5001` payload for `Box<i32, StaticString>` in a
   function parameter type without dependent-use followups.
+- Diagnostics JSON for non-generic struct annotation type arguments is now
+  pinned by
+  `emit_json_diagnostics_nongeneric_struct_annotation_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `Point<i32>` in a function parameter
+  type without dependent-use followups.
 - Diagnostics JSON for generic enum annotation arity is now pinned by
   `emit_json_diagnostics_generic_enum_annotation_arity_schema_matches_golden`,
   covering the stable `E5001` payload for `Option<i32, StaticString>` in a

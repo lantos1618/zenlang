@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/nongeneric_struct_annotation_type_args.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5002",
+      "message": "non-generic struct `Point` does not accept type arguments",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/nongeneric_struct_annotation_type_args.zen",
+        "start": 24,
+        "end": 70,
+        "line": 6,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
