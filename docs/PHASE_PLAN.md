@@ -3685,6 +3685,10 @@ checked-in docs, tests, and commits only.
   `TypeDeclarationKeyword::ALL`, so `impl`, `implements`, `requires`, and
   `extends` stay in one enum-owned static spelling table. Guarded by
   `parser_type_declaration_suffixes_use_owned_keyword_enum`.
+- Parser prefix keyword dispatch now parses `true`, `false`, `return`, `break`,
+  `continue`, `loop`, and `cast` through `ParserPrefixKeyword` instead of a raw
+  `name.as_str()` match. Guarded by
+  `parser_prefix_keywords_use_owned_keyword_enum` and parser expression tests.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

@@ -1,4 +1,5 @@
 use super::*;
+use crate::parser::keywords::ParserPrefixKeyword;
 
 mod forms;
 
@@ -68,46 +69,35 @@ impl Parser {
             // String interpolation
             Token::StringChunk(_) | Token::InterpolationStart => self.parse_string_interpolation(),
 
-            // Identifier (or keyword-like: true, false, break, continue, loop, cast)
-            Token::Identifier(ref name) => match name.as_str() {
-                "true" => {
+            // Identifier or parser-owned prefix keyword.
+            Token::Identifier(ref name) => {
+                if let Ok(keyword) = name.parse::<ParserPrefixKeyword>() {
                     let (_, span) = self.advance();
-                    Ok(Expression::BoolLiteral { value: true, span })
-                }
-                "false" => {
-                    let (_, span) = self.advance();
-                    Ok(Expression::BoolLiteral { value: false, span })
-                }
-                "return" => {
-                    let (_, span) = self.advance();
-                    Err(CompileError::Syntax(
-                        "return keyword has been removed; use the final expression in the block"
-                            .into(),
-                        Some(span),
-                    ))
-                }
-                "break" => {
-                    let (_, span) = self.advance();
-                    Ok(Expression::Break { span })
-                }
-                "continue" => {
-                    let (_, span) = self.advance();
-                    Ok(Expression::Continue { span })
-                }
-                "loop" => {
-                    let (_, span) = self.advance();
-                    self.parse_loop(span)
-                }
-                "cast" => {
-                    let (_, span) = self.advance();
-                    self.parse_cast(span)
-                }
-                _ => {
+                    match keyword {
+                        ParserPrefixKeyword::True => Ok(Expression::BoolLiteral {
+                            value: true,
+                            span,
+                        }),
+                        ParserPrefixKeyword::False => Ok(Expression::BoolLiteral {
+                            value: false,
+                            span,
+                        }),
+                        ParserPrefixKeyword::Return => Err(CompileError::Syntax(
+                            "return keyword has been removed; use the final expression in the block"
+                                .into(),
+                            Some(span),
+                        )),
+                        ParserPrefixKeyword::Break => Ok(Expression::Break { span }),
+                        ParserPrefixKeyword::Continue => Ok(Expression::Continue { span }),
+                        ParserPrefixKeyword::Loop => self.parse_loop(span),
+                        ParserPrefixKeyword::Cast => self.parse_cast(span),
+                    }
+                } else {
                     let name = name.clone();
                     let (_, span) = self.advance();
                     Ok(Expression::Identifier { name, span })
                 }
-            },
+            }
 
             // @this.defer(expr) or other @ tokens
             Token::AtThis => {
