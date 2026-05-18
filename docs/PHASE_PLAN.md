@@ -3223,8 +3223,8 @@ checked-in docs, tests, and commits only.
   `tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs`
   and imported method/worklist dependency coverage in
   `tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs`.
-- Generic inference conflict diagnostics now keep method and receiver conflict
-  coverage in `tests/generic_diagnostics/inference_conflicts/methods.rs`,
+- Generic inference conflict diagnostics now keep method conflict coverage in
+  focused `tests/generic_diagnostics/inference_conflicts/methods/` modules,
   leaving `tests/generic_diagnostics/inference_conflicts.rs` focused on
   generic function inference conflicts.
 - Generic call-site bound diagnostics now keep method, receiver, Result enum,
