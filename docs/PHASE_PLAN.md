@@ -3948,6 +3948,10 @@ Agent UX deliverables:
   covering nested `Result_Option_i32_StaticString` construction, dependent
   `Option_i32` values, specialized calls, and match-arm lowering for both
   unwrap helpers.
+- MIR JSON for explicit generic behavior association dispatch is now pinned by
+  `emit_json_mir_generic_behavior_association_schema_matches_golden`, covering
+  `Point.encode__Json_StaticString` return lowering and the typed association
+  call nested inside `io_println`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by
