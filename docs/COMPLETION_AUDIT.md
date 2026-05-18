@@ -4267,6 +4267,10 @@ and do not assume Phase 4 is ready without evidence.
 - The checked HIR declaration schema is now pinned by the golden fixture test
   `emit_json_hir_declaration_schema_matches_golden`, reducing the IR boundary
   backlog without treating broader JSON/YAML schema work as complete.
+- HIR JSON for generic `Result<T, E>` specialization is now pinned by
+  `emit_json_hir_generic_result_schema_matches_golden`, covering the concrete
+  `Result_i32_StaticString` enum payloads and specialized
+  `unwrap_or_i32_StaticString` function signature.
 - MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
   and block result expressions for checked match expressions instead of only
   reporting the scrutinee. Covered by `emit_json_mir_outputs_match_arm_schema`.
