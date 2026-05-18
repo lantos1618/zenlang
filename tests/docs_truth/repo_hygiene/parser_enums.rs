@@ -91,10 +91,16 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
     for forbidden in [
         r#"name == "async_enqueue""#,
         r#"name == "async_yield""#,
+        r#"name == "raw_allocate""#,
+        r#"name == "raw_deallocate""#,
+        r#"name == "raw_reallocate""#,
         r#"name == "type_match""#,
         r#"match name"#,
         r#""async_enqueue" =>"#,
         r#""async_yield" =>"#,
+        r#""raw_allocate" =>"#,
+        r#""raw_deallocate" =>"#,
+        r#""raw_reallocate" =>"#,
         r#""type_match" =>"#,
     ] {
         assert!(
@@ -107,6 +113,9 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         "const ALL: &[GatedIntrinsic]",
         "pub(super) const ASYNC_ENQUEUE: &'static str = \"async_enqueue\"",
         "pub(super) const ASYNC_YIELD: &'static str = \"async_yield\"",
+        "pub(super) const RAW_ALLOCATE: &'static str = \"raw_allocate\"",
+        "pub(super) const RAW_DEALLOCATE: &'static str = \"raw_deallocate\"",
+        "pub(super) const RAW_REALLOCATE: &'static str = \"raw_reallocate\"",
         "pub(super) const TYPE_MATCH: &'static str = \"type_match\"",
         "pub(super) const fn gate_message(self) -> &'static str",
         ".find(|intrinsic| intrinsic.as_str() == name)",
