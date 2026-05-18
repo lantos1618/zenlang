@@ -3956,6 +3956,10 @@ Agent UX deliverables:
   `emit_json_mir_generic_behavior_association_schema_matches_golden`, covering
   `Point.encode__Json_StaticString` return lowering and the typed association
   call nested inside `io_println`.
+- MIR JSON for generic behavior-bound UFCS dispatch is now pinned by
+  `emit_json_mir_generic_behavior_bound_ufcs_schema_matches_golden`, covering
+  `encode_Point` lowering and its concrete call to
+  `Point.encode__Json_Point`.
 - Typed JSON for generic behavior-bound UFCS dispatch is now pinned by
   `emit_json_typed_generic_behavior_bound_ufcs_schema_matches_golden`, covering
   `encode_Point` specialization and the body call to

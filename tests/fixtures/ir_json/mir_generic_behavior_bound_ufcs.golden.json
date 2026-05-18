@@ -1,0 +1,136 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "Point.encode__Json_Point",
+      "params": [
+        {
+          "name": "value",
+          "type": "Point"
+        }
+      ],
+      "return_type": "Point",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "local",
+              "type": "Point",
+              "name": "value"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "point",
+              "type": "Point",
+              "mutable": false,
+              "value": {
+                "kind": "struct",
+                "type": "Point",
+                "name": "Point",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "let",
+              "name": "encoded",
+              "type": "Point",
+              "mutable": false,
+              "value": {
+                "kind": "call",
+                "type": "Point",
+                "function": "encode_Point",
+                "args": [
+                  {
+                    "kind": "local",
+                    "type": "Point",
+                    "name": "point"
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "encode_Point",
+      "params": [
+        {
+          "name": "value",
+          "type": "Point"
+        }
+      ],
+      "return_type": "Point",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "call",
+              "type": "Point",
+              "function": "Point.encode__Json_Point",
+              "args": [
+                {
+                  "kind": "local",
+                  "type": "Point",
+                  "name": "value"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
