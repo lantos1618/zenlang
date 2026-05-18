@@ -3945,7 +3945,9 @@ Agent UX deliverables:
   behavior argument token. They also carry diagnostics JSON `context` with
   `kind: "feature_gate"` and a note directing users to non-generic explicit behavior associations until generic behavior target templates exist. Guarded by
   `emit_json_diagnostics_spans_full_gated_generic_association_target` and the
-  existing parser gate
+  golden fixture test
+  `emit_json_diagnostics_generic_association_gate_schema_matches_golden`, plus
+  the existing parser gate
   `generic_type_association_keywords_are_explicitly_gated`.
 
 ## Current Phase
