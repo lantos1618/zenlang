@@ -3727,6 +3727,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/integration/cli_build/build_command_host_effects/file_reads/declared/`,
   preserving declared `.Err`, wildcard, and identifier fallback-arm coverage
   without one mixed test file.
+- `zen emit build.zen` validation tests now keep dependency-shape diagnostics
+  and executable target-metadata diagnostics in focused modules under
+  `tests/integration/cli_build/emit_direct_validation/`, preserving the same
+  rejection coverage while avoiding a mixed parent validation file.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
