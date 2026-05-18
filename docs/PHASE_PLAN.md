@@ -3496,6 +3496,11 @@ checked-in docs, tests, and commits only.
   positive executable/test coverage and negative undeclared-host-effect
   coverage, so the backlog is reserved for v1 areas that still lack minimum
   positive/negative proof.
+- `docs/V1_SPEC.md` now records generic specialization for functions, structs,
+  enums, and methods as implemented, with executable fixtures and generated-C
+  undefined-call/duplicate-definition assertions as evidence. Generic syntax
+  and behavior-bound metadata remain experimental where association solver work
+  is still active.
 
 ## Current Phase
 
