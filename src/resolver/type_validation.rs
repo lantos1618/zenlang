@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::ast::{AstType, Param, TypeParam};
+use crate::ast::{is_builtin_type_name, AstType, Param, TypeParam};
 use crate::error::{Diagnostic, Span};
 
 use super::{Namespace, Resolver, SymbolTable};
@@ -171,7 +171,7 @@ impl Resolver {
         type_params: &[TypeParam],
         name: &str,
     ) -> bool {
-        if name == "String" {
+        if is_builtin_type_name(name) {
             return true;
         }
         table.lookup(Namespace::Type, name).is_some()

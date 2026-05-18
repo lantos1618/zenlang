@@ -1,3 +1,4 @@
+use crate::ast::types::{DYNAMIC_STRING_TYPE_NAME, STATIC_STRING_TYPE_NAME};
 use serde::Serialize;
 
 // Fully resolved types — no generics, no inference variables.
@@ -84,8 +85,8 @@ impl Type {
             Type::F64 => "f64".into(),
             Type::Bool => "bool".into(),
             Type::Void => "void".into(),
-            Type::Str => "StaticString".into(),
-            Type::String => "String".into(),
+            Type::Str => STATIC_STRING_TYPE_NAME.into(),
+            Type::String => DYNAMIC_STRING_TYPE_NAME.into(),
             Type::Named(n) => n.clone(),
             Type::Struct { name, .. } => name.clone(),
             Type::Enum { name, .. } => name.clone(),

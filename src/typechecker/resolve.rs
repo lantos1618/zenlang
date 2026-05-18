@@ -3,7 +3,7 @@
 
 use crate::ast::expressions::BinaryOp;
 use crate::ast::typed::Type;
-use crate::ast::AstType;
+use crate::ast::{is_builtin_type_name, AstType};
 use crate::error::{Diagnostic, Span};
 
 use super::TypeChecker;
@@ -36,7 +36,7 @@ impl TypeChecker {
                 {
                     return concrete.clone();
                 }
-                if name == "String" {
+                if is_builtin_type_name(name) {
                     return Type::String;
                 }
                 if let Some(info) = self.structs.get(name) {

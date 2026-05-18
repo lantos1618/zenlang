@@ -1,6 +1,13 @@
 use crate::error::Span;
 use serde::Serialize;
 
+pub const STATIC_STRING_TYPE_NAME: &str = "StaticString";
+pub const DYNAMIC_STRING_TYPE_NAME: &str = "String";
+
+pub fn is_builtin_type_name(name: &str) -> bool {
+    name == DYNAMIC_STRING_TYPE_NAME
+}
+
 /// Parser-level type representation.
 ///
 /// These types may be unresolved — `Named("Point")` hasn't been looked up yet,
@@ -82,8 +89,8 @@ impl AstType {
             AstType::F64 => "f64".into(),
             AstType::Bool => "bool".into(),
             AstType::Void => "void".into(),
-            AstType::Str => "StaticString".into(),
-            AstType::String => "String".into(),
+            AstType::Str => STATIC_STRING_TYPE_NAME.into(),
+            AstType::String => DYNAMIC_STRING_TYPE_NAME.into(),
             AstType::Named(n) => n.clone(),
             AstType::Generic { name, type_args } => {
                 let args: Vec<_> = type_args.iter().map(|a| a.display_name()).collect();
