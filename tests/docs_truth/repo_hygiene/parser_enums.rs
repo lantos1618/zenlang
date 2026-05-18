@@ -109,6 +109,32 @@ fn parser_prefix_keywords_use_owned_keyword_enum() {
 }
 
 #[test]
+fn parser_pattern_keywords_use_owned_keyword_enum() {
+    let patterns = read("src/parser/patterns.rs");
+    let keywords = read("src/parser/keywords.rs");
+
+    for forbidden in [r#"name == "true""#, r#"name == "false""#, r#"name == "_""#] {
+        assert!(
+            !patterns.contains(forbidden),
+            "parser pattern keyword dispatch should use ParserPatternKeyword, not raw spelling checks: {forbidden}"
+        );
+    }
+
+    for required in [
+        "enum ParserPatternKeyword",
+        "const ALL: &[ParserPatternKeyword]",
+        "impl FromStr for ParserPatternKeyword",
+        ".find(|keyword| keyword.as_str() == value)",
+        "name.parse::<ParserPatternKeyword>()",
+    ] {
+        assert!(
+            patterns.contains(required) || keywords.contains(required),
+            "parser pattern keyword spelling should live in ParserPatternKeyword: {required}"
+        );
+    }
+}
+
+#[test]
 fn parser_type_names_use_owned_type_name_enums() {
     let parser_types = read("src/parser/types.rs");
     let type_names = read("src/parser/type_names.rs");

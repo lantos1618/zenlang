@@ -4012,6 +4012,9 @@ and do not assume Phase 4 is ready without evidence.
   `continue`, `loop`, and `cast` through `ParserPrefixKeyword` instead of a raw
   `name.as_str()` match. Covered by
   `parser_prefix_keywords_use_owned_keyword_enum` and parser expression tests.
+- Parser pattern keyword dispatch now parses `true`, `false`, and `_` through
+  `ParserPatternKeyword` instead of raw identifier spelling guards. Covered by
+  `parser_pattern_keywords_use_owned_keyword_enum` and parser pattern tests.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,
