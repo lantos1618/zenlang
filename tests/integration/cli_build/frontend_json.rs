@@ -98,32 +98,7 @@ fn emit_json_typed_command_outputs_checked_program() {
 }
 
 #[test]
-fn emit_json_mir_command_is_explicitly_gated() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "mir",
-            test_dir().join("hello.zen").to_str().unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json mir");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json mir should be gated: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("MIR JSON emission is gated until schema and golden tests exist"),
-        "expected MIR gate diagnostic, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_mir_rejects_program_before_mir_json() {
+fn emit_json_mir_outputs_checked_minimal_function_graph() {
     let tmp = tempfile::tempdir().expect("create temp dir");
     let zen_path = tmp.path().join("mir_subject.zen");
     std::fs::write(
@@ -143,26 +118,36 @@ main = () i32 {
         .expect("run zen emit-json mir on program input");
 
     assert!(
-        !output.status.success(),
-        "zen emit-json mir should be gated before MIR emission: stdout={}, stderr={}",
+        output.status.success(),
+        "zen emit-json mir should emit checked minimal MIR JSON: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "gated MIR should not emit MIR JSON, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("MIR JSON emission is gated until schema and golden tests exist"),
-        "expected MIR gate diagnostic, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "MIR should reject through the schema/golden-test gate, not command/path handling, stderr={stderr}"
-    );
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("MIR stdout is json");
+    assert_eq!(json["format"], "zen.mir.v0");
+    assert_eq!(json["semantic_status"], "checked");
+    assert_eq!(json["lowering_status"], "minimal");
+
+    let functions = json["functions"].as_array().expect("MIR functions array");
+    let main = functions
+        .iter()
+        .find(|function| function["name"] == "main")
+        .expect("main function in MIR");
+    assert_eq!(main["return_type"], "i32");
+
+    let entry = &main["blocks"][0];
+    assert_eq!(entry["label"], "entry");
+    assert_eq!(entry["statements"][0]["kind"], "let");
+    assert_eq!(entry["statements"][0]["name"], "value");
+    assert_eq!(entry["statements"][0]["type"], "i32");
+    assert_eq!(entry["statements"][0]["value"]["kind"], "binary");
+    assert_eq!(entry["statements"][0]["value"]["op"], "+");
+    assert_eq!(entry["terminator"]["kind"], "return");
+    assert_eq!(entry["terminator"]["value"]["kind"], "local");
+    assert_eq!(entry["terminator"]["value"]["name"], "value");
+    assert_eq!(entry["terminator"]["value"]["type"], "i32");
 }
 
 #[test]
