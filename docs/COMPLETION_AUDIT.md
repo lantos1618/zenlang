@@ -3882,6 +3882,9 @@ and do not assume Phase 4 is ready without evidence.
   allocation must remain explicit. Covered by
   `static_string_literal_does_not_implicitly_allocate_string` and
   `types_compatible_basics`.
+- Builtin public type spellings now use shared AST helpers rather than
+  duplicated semantic string comparisons, covered by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

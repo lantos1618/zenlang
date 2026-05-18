@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::is_builtin_type_name;
 
 mod expressions;
 
@@ -222,7 +223,7 @@ impl TypeChecker {
     }
 
     fn is_known_named_type(&self, name: &str) -> bool {
-        if name == "String" {
+        if is_builtin_type_name(name) {
             return true;
         }
         self.structs.contains_key(name)

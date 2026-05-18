@@ -3559,6 +3559,10 @@ checked-in docs, tests, and commits only.
   allocate dynamic `String` values. Covered by
   `static_string_literal_does_not_implicitly_allocate_string` and
   `types_compatible_basics`.
+- Builtin public type spellings now route through shared AST type helpers
+  instead of ad hoc semantic string checks, keeping `String` recognition and
+  `StaticString` display spelling tied to one source. Guarded by
+  `semantic_builtin_type_checks_use_shared_spelling_helper`.
 
 ## Current Phase
 
