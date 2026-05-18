@@ -89,6 +89,14 @@ fn cli_emit_json_modes_use_owned_mode_enum() {
         "emit-json usage should be generated from EmitJsonMode"
     );
     assert!(
+        source.contains("fn gate_message(self) -> Option<&'static str>"),
+        "emit-json gated diagnostics should be owned by EmitJsonMode"
+    );
+    assert!(
+        source.contains("mode.gate_message()"),
+        "emit-json command routing should read gated diagnostics from EmitJsonMode"
+    );
+    assert!(
         !source.contains("<ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml>"),
         "emit-json usage should not duplicate the mode list as a raw string"
     );

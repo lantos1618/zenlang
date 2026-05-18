@@ -3594,6 +3594,14 @@ checked-in docs, tests, and commits only.
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `emit_json_layout_command_is_explicitly_gated`.
+- Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`,
+  keeping HIR, MIR, layout, and target YAML gate text attached to the same enum
+  that owns mode spelling and usage. Guarded by
+  `cli_emit_json_modes_use_owned_mode_enum`,
+  `emit_json_hir_command_is_explicitly_gated`,
+  `emit_json_mir_command_is_explicitly_gated`,
+  `emit_json_layout_command_is_explicitly_gated`, and
+  `emit_json_target_yaml_command_is_explicitly_gated`.
 
 ## Current Phase
 

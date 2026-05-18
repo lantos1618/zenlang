@@ -3914,6 +3914,14 @@ and do not assume Phase 4 is ready without evidence.
   `cli_emit_json_modes_use_owned_mode_enum`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `emit_json_layout_command_is_explicitly_gated`.
+- Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`, so
+  HIR, MIR, layout, and target YAML gate text stays attached to the enum that
+  owns mode spelling and usage. Covered by
+  `cli_emit_json_modes_use_owned_mode_enum`,
+  `emit_json_hir_command_is_explicitly_gated`,
+  `emit_json_mir_command_is_explicitly_gated`,
+  `emit_json_layout_command_is_explicitly_gated`, and
+  `emit_json_target_yaml_command_is_explicitly_gated`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.
