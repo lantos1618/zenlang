@@ -74,6 +74,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "typed JSON is explicitly marked checked",
         "diagnostics JSON is explicitly",
         "Actors in std",
+        "bare_actor_framework_types_are_rejected_as_gated_not_unknown",
         "JSON/YAML IR boundaries",
         "comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown",
         "primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown",

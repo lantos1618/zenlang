@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::type_names::{ParserBuiltinGenericTypeName, ParserBuiltinTypeName};
+use crate::ast::{BuiltinGenericTypeName, BuiltinTypeName};
 
 impl Parser {
     // ── Types ─────────────────────────────────────────────────
@@ -57,7 +57,7 @@ impl Parser {
     }
 
     fn resolve_type_name(&mut self, name: &str) -> Result<AstType, CompileError> {
-        if let Ok(builtin) = name.parse::<ParserBuiltinTypeName>() {
+        if let Ok(builtin) = name.parse::<BuiltinTypeName>() {
             return Ok(builtin.ast_type());
         }
 
@@ -81,7 +81,7 @@ impl Parser {
             self.expect_gt()?;
 
             // Handle well-known generic types
-            if let Ok(builtin) = base.parse::<ParserBuiltinGenericTypeName>() {
+            if let Ok(builtin) = base.parse::<BuiltinGenericTypeName>() {
                 return Ok(builtin.ast_type(type_args).unwrap_or_else(|type_args| {
                     AstType::Generic {
                         name: base,

@@ -3943,6 +3943,10 @@ and do not assume Phase 4 is ready without evidence.
   gated diagnostics rather than ordinary unknown-type errors. Covered by
   `actor_framework_types_are_rejected_as_gated_not_unknown` and
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Bare actor framework type spellings `Actor`, `ActorRef`, and `Mailbox` now
+  reject through the same actor gate instead of ordinary unknown-type
+  diagnostics. Covered by
+  `bare_actor_framework_types_are_rejected_as_gated_not_unknown`.
 - `Channel` remains documented as an experimental stdlib channel sketch rather
   than a global actor builtin type spelling, preserving the importable stdlib
   channel boundary until promotion has compiler-path evidence. Covered by
