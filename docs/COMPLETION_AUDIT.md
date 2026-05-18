@@ -3991,6 +3991,11 @@ and do not assume Phase 4 is ready without evidence.
   threshold while preserving every gate test name. Covered by
   `production_rust_files_stay_below_cleanup_threshold` and
   `typechecker::tests::core_semantics`.
+- C backend intrinsic lowering now parses through a `CIntrinsic` enum with
+  enum-owned static spellings instead of matching raw builtin strings in the
+  lowering body. Covered by
+  `codegen_c_intrinsics_use_owned_name_enum`, `production_rust_files_stay_below_cleanup_threshold`,
+  and `codegen::c` tests.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

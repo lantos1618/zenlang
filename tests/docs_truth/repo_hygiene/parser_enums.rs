@@ -210,6 +210,58 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
 }
 
 #[test]
+fn codegen_c_intrinsics_use_owned_name_enum() {
+    let lowering = read("src/codegen/c/intrinsics.rs");
+    let names = read("src/codegen/c/intrinsics/names.rs");
+    let source = format!("{lowering}\n{names}");
+
+    for forbidden in [
+        "match name",
+        r#""raw_allocate" =>"#,
+        r#""raw_deallocate" =>"#,
+        r#""raw_reallocate" =>"#,
+        r#""memcpy" =>"#,
+        r#""memmove" =>"#,
+        r#""memset" =>"#,
+        r#""memcmp" =>"#,
+        r#""atomic_load" =>"#,
+        r#""atomic_store" =>"#,
+        r#""atomic_add" =>"#,
+        r#""atomic_sub" =>"#,
+        r#""atomic_cas" =>"#,
+        r#""atomic_xchg" =>"#,
+        r#""syscall0" =>"#,
+        r#""syscall1" =>"#,
+        r#""syscall2" =>"#,
+        r#""syscall3" =>"#,
+        r#""syscall4" =>"#,
+        r#""syscall5" =>"#,
+        r#""syscall6" =>"#,
+    ] {
+        assert!(
+            !lowering.contains(forbidden),
+            "C intrinsic lowering should parse through CIntrinsic, not raw spelling dispatch: {forbidden}"
+        );
+    }
+
+    for required in [
+        "enum CIntrinsic",
+        "const ALL: &[CIntrinsic]",
+        "impl fmt::Display for CIntrinsic",
+        "impl FromStr for CIntrinsic",
+        "name.parse::<CIntrinsic>()",
+        "Self::RAW_ALLOCATE",
+        "Self::ATOMIC_LOAD",
+        "Self::SYSCALL6",
+    ] {
+        assert!(
+            source.contains(required),
+            "C intrinsic spelling should live in CIntrinsic: {required}"
+        );
+    }
+}
+
+#[test]
 fn cli_emit_json_modes_use_owned_mode_enum() {
     let source = read("src/cli.rs");
 
