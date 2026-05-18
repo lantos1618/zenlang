@@ -45,6 +45,24 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_nongeneric_module_function_type_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nongeneric_module_function_type_args.zen",
+        r#"
+{ io } = std
+
+main = () i32 {
+    io.println<i32>("bad")
+    0
+}
+"#,
+        "non-generic module function type arguments",
+        "non-generic module function type-argument diagnostics should not emit argument followups",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_module_function_type_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_method_type_arg_annotation_arity_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_method_type_arg_annotation_arity.zen",
