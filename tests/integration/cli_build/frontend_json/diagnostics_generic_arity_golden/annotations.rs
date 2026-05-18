@@ -78,6 +78,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_generic_struct_local_annotation_missing_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_struct_local_annotation_missing_args.zen",
+        r#"
+Box<T>: {
+    value: T
+}
+
+main = () i32 {
+    box: Box = Box<i32> { value: 1 }
+    0
+}
+"#,
+        "generic struct local annotation missing arguments",
+        "generic struct local annotation missing-arguments diagnostics should not emit dependent-use followups",
+        "tests/fixtures/ir_json/diagnostics_generic_struct_local_annotation_missing_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_enum_local_annotation_arity_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_enum_local_annotation_arity.zen",
