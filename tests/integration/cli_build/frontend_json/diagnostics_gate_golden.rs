@@ -155,3 +155,22 @@ main = () void {
         "tests/fixtures/ir_json/diagnostics_syscall_gate.golden.json",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_type_match_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "type_match_gate.zen",
+        r#"
+Point: {
+    x: i32,
+}
+
+main = () void {
+    @builtin.type_match<Point>()
+}
+"#,
+        "type match gate",
+        "type match gate should emit one gated intrinsic diagnostic",
+        "tests/fixtures/ir_json/diagnostics_type_match_gate.golden.json",
+    );
+}
