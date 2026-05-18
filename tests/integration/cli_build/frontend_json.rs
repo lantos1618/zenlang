@@ -17,6 +17,8 @@ mod mir_golden;
 mod module_graph;
 #[path = "frontend_json/target_yaml.rs"]
 mod target_yaml;
+#[path = "frontend_json/target_yaml_golden.rs"]
+mod target_yaml_golden;
 
 #[test]
 fn emit_json_usage_lists_supported_and_gated_modes() {
