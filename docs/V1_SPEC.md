@@ -164,8 +164,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 
 Constrained `build.zen` execution already has positive and negative evidence:
 Deterministic build graph compiles executable and test targets, while build
-scripts using undeclared host side effects are rejected. The remaining backlog
-below is for v1 areas without that minimum positive/negative proof.
+scripts using undeclared host side effects are rejected. AST traversal also has
+minimum boundary evidence: AST JSON emits a parsed tooling view and
+semantically invalid programs still fail through typed JSON. The remaining
+backlog below is for v1 areas without that minimum positive/negative proof.
 
 ## Required Test Backlog
 
@@ -178,7 +180,6 @@ planned positive test and one planned negative test before implementation.
 | `Typed allocators` | `Allocator<i32, Sync>` returns a checked pointer result and propagates into a container | `Allocator<i32, Sync>` cannot satisfy an `Allocator<i32, Async>` parameter |
 | Type matching | `to_json<T>` derive branches on struct and enum metadata | Ambiguous or unreachable type-match arm is diagnosed |
 | Behavior association | Explicit `Json<T>` impl takes precedence over generated derive fallback | Missing or ambiguous associated behavior impl is rejected |
-| AST traversal | Tooling can read AST JSON for a parsed source fixture | AST traversal cannot bypass semantic checks for a core language feature |
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked MIR JSON and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 

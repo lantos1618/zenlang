@@ -254,6 +254,10 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "docs/V1_SPEC.md should not list constrained build.zen execution as only planned backlog"
     );
     assert!(
+        !backlog.contains("| AST traversal |"),
+        "docs/V1_SPEC.md should not list AST traversal in the no-minimum-proof backlog after AST JSON boundary tests exist"
+    );
+    assert!(
         !spec.contains("| Strict resolver, symbol IDs, privacy | gated |"),
         "docs/V1_SPEC.md should not describe implemented resolver/module privacy evidence as gated"
     );
