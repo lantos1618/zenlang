@@ -507,8 +507,9 @@ checked-in docs, tests, and commits only.
   and typecheck cases in a focused child module, separating them from
   executable target and gated test dependency validation.
 - Test-command build graph host-effect tests now keep declared file-read
-  fallback accept/reject cases in a focused child module, leaving env-effect
-  ordering and unrelated executable skip coverage in the parent module.
+  fallback accept/reject cases in focused child modules, with unselected-target
+  declared and rejection-ordering coverage split under
+  `tests/integration/cli_build/graph_validation_test_command_host_effects/file_reads/unselected_targets/`.
 - Legacy `build-graph build.zen` host-effect tests now keep declared file-read
   fallback accept/reject cases in a focused child module, leaving env-effect
   ordering and unrelated test skip coverage in the parent module.
