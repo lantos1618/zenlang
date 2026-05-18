@@ -4254,6 +4254,13 @@ and do not assume Phase 4 is ready without evidence.
   language server, agent-readable diagnostics, machine-readable project graph,
   and structured fix suggestions. Covered by
   `phase_plan_records_recovered_progress_and_next_slice`.
+- `docs/V1_SPEC.md` now records the Developer UX and Agent UX contract as a
+  constrained/gated v1 surface: the VS Code extension remains a constrained
+  CLI/editor wrapper, `zen lsp` remains gated until tested against the same
+  compiler pipeline, and agent-readable diagnostics, project/symbol graphs,
+  structured fix suggestions, and quiet deterministic commands are promotion
+  criteria rather than advertised completed features. Covered by
+  `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - AST, HIR, MIR, layout, target-yaml, and build-graph JSON outputs now include
   numeric `schema_version: 0` fields next to their `format` tags, so tools and
   agents can pin the compiler-owned v0 schema without parsing the display
