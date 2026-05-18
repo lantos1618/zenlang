@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/allocator_import_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3500",
+      "message": "std allocator modules are gated until allocator ownership and effect semantics are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/allocator_import_gate.zen",
+        "start": 1,
+        "end": 38,
+        "line": 2,
+        "column": 1
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
