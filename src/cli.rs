@@ -237,3 +237,16 @@ fn reject_build_zen_for_emit_json_mode(path_str: &str) {
         process::exit(1);
     }
 }
+
+fn reject_hand_authored_json_for_typed_emit(path_str: &str) {
+    let is_json = Path::new(path_str)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("json"));
+    if is_json {
+        eprintln!(
+            "error: compiler-owned typed JSON emission rejects hand-authored JSON IR before it can override checked types or layouts"
+        );
+        process::exit(1);
+    }
+}

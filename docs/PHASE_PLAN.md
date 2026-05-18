@@ -3768,6 +3768,10 @@ checked-in docs, tests, and commits only.
   schema/golden-test gate before emitting HIR or MIR JSON. Guarded by
   `emit_json_hir_rejects_program_before_hir_json` and
   `emit_json_mir_rejects_program_before_mir_json`.
+- Hand-authored typed JSON inputs to `emit-json typed` now reject at the
+  compiler-owned typed JSON boundary before forged checked IR can be treated as
+  Zen source or accepted as semantic evidence. Guarded by
+  `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`.
 - Hand-authored JSON IR inputs to `emit-json mir` now reject at the
   compiler-owned schema boundary before any forged type or layout override can
   be accepted. Guarded by
