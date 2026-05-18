@@ -120,6 +120,26 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_nongeneric_enum_constructor_type_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nongeneric_enum_constructor_type_args.zen",
+        r#"
+Direction:
+    North,
+    South
+
+main = () i32 {
+    value = Direction<i32>.North
+    0
+}
+"#,
+        "non-generic enum constructor type arguments",
+        "non-generic enum constructor type-argument diagnostics should not emit payload mismatch followups",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_enum_constructor_type_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_nested_generic_instantiation_inner_arity_schema_matches_golden() {
     assert_diagnostics_golden(
         "nested_generic_instantiation_inner_arity.zen",
