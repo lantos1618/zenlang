@@ -61,40 +61,45 @@ impl Parser {
             return Ok(builtin.ast_type());
         }
 
-        let base = name.to_string();
-
-        // Check for generic args: Name<T, U>
         if matches!(self.peek(), Token::Lt) {
-            self.advance(); // consume <
-            let mut type_args = Vec::new();
-            loop {
-                self.skip_newlines();
-                if matches!(self.peek(), Token::Gt | Token::ShiftRight) {
-                    break;
-                }
-                type_args.push(self.parse_type()?);
-                self.skip_newlines();
-                if matches!(self.peek(), Token::Comma) {
-                    self.advance();
-                }
-            }
-            self.expect_gt()?;
+            let type_args = self.parse_generic_type_args()?;
+            return Ok(Self::resolve_generic_type_name(name, type_args));
+        }
 
-            // Handle well-known generic types
-            if let Ok(builtin) = base.parse::<BuiltinGenericTypeName>() {
-                return Ok(builtin.ast_type(type_args).unwrap_or_else(|type_args| {
-                    AstType::Generic {
-                        name: base,
-                        type_args,
-                    }
-                }));
+        Ok(AstType::Named(name.to_string()))
+    }
+
+    fn parse_generic_type_args(&mut self) -> Result<Vec<AstType>, CompileError> {
+        self.expect(&Token::Lt)?;
+        let mut type_args = Vec::new();
+        loop {
+            self.skip_newlines();
+            if matches!(self.peek(), Token::Gt | Token::ShiftRight) {
+                break;
             }
-            Ok(AstType::Generic {
-                name: base,
-                type_args,
-            })
-        } else {
-            Ok(AstType::Named(base))
+            type_args.push(self.parse_type()?);
+            self.skip_newlines();
+            if matches!(self.peek(), Token::Comma) {
+                self.advance();
+            }
+        }
+        self.expect_gt()?;
+        Ok(type_args)
+    }
+
+    fn resolve_generic_type_name(base: &str, type_args: Vec<AstType>) -> AstType {
+        if let Ok(builtin) = base.parse::<BuiltinGenericTypeName>() {
+            return builtin
+                .ast_type(type_args)
+                .unwrap_or_else(|type_args| AstType::Generic {
+                    name: base.to_string(),
+                    type_args,
+                });
+        }
+
+        AstType::Generic {
+            name: base.to_string(),
+            type_args,
         }
     }
 }
