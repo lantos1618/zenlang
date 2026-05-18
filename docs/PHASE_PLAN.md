@@ -3876,7 +3876,10 @@ Agent UX deliverables:
   equality. Guarded by `semantic_builtin_type_checks_use_shared_spelling_helper`.
 - The generated behavior association gate for `Type.derive(...)` now reports a
   machine-readable diagnostic span over the full gated association call instead
-  of only the receiver name. Guarded by
+  of only the receiver name. It also emits diagnostics JSON `context` with
+  `kind: "feature_gate"` and a note directing users to explicit
+  `Type.implements(Behavior) { ... }` blocks, improving editor and agent UX
+  while generated fallback semantics remain gated. Guarded by
   `emit_json_diagnostics_spans_full_gated_behavior_derive_association`, while
   the feature remains gated until generated/fallback association semantics have
   positive and negative solver tests.

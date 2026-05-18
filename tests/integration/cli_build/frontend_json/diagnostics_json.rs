@@ -240,6 +240,15 @@ Point.derive(Json)
             .contains("generated behavior association `Type.derive(...)` is gated"),
         "unexpected diagnostic payload: {diagnostic}"
     );
+    assert_eq!(
+        diagnostic["notes"][0],
+        "Use an explicit `Type.implements(Behavior) { ... }` block until generated fallback derives are implemented"
+    );
+    assert_eq!(diagnostic["context"][0]["kind"], "feature_gate");
+    assert_eq!(
+        diagnostic["context"][0]["message"],
+        "reserved generated/fallback behavior association"
+    );
     assert!(diagnostic["span"]["path"]
         .as_str()
         .expect("diagnostic span path")

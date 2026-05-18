@@ -204,12 +204,20 @@ struct DiagnosticJson<'a> {
     span: Option<DiagnosticJsonSpan<'a>>,
     labels: Vec<DiagnosticJsonLabel<'a>>,
     notes: &'a [String],
+    context: Vec<DiagnosticJsonContext<'a>>,
     suggested_fixes: Vec<DiagnosticJsonSuggestedFix<'a>>,
 }
 
 #[derive(Serialize)]
 struct DiagnosticJsonLabel<'a> {
     span: DiagnosticJsonSpan<'a>,
+    message: &'a str,
+}
+
+#[derive(Serialize)]
+struct DiagnosticJsonContext<'a> {
+    span: DiagnosticJsonSpan<'a>,
+    kind: &'a str,
     message: &'a str,
 }
 
@@ -255,6 +263,7 @@ pub fn diagnostics_to_json(
                     .and_then(|span| diagnostic_json_span(span, files)),
                 labels: diagnostic_json_labels(&diagnostic.labels, files),
                 notes: &diagnostic.notes,
+                context: diagnostic_json_context(&diagnostic.context, files),
                 suggested_fixes: diagnostic_json_suggested_fixes(diagnostic, files),
             })
             .collect(),
@@ -296,6 +305,22 @@ fn diagnostic_json_labels<'a>(
             diagnostic_json_span(label.span, files).map(|span| DiagnosticJsonLabel {
                 span,
                 message: label.message.as_str(),
+            })
+        })
+        .collect()
+}
+
+fn diagnostic_json_context<'a>(
+    context: &'a [crate::error::ContextFrame],
+    files: &'a FileTable,
+) -> Vec<DiagnosticJsonContext<'a>> {
+    context
+        .iter()
+        .filter_map(|frame| {
+            diagnostic_json_span(frame.span, files).map(|span| DiagnosticJsonContext {
+                span,
+                kind: frame.kind.as_str(),
+                message: frame.message.as_str(),
             })
         })
         .collect()
