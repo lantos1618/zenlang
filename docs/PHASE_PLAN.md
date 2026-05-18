@@ -3431,6 +3431,11 @@ checked-in docs, tests, and commits only.
   executable graph coverage from no-executable-target coverage under
   `tests/integration/cli_build/emit_direct_validation/target_selection/`,
   leaving shared emit-command helpers in the parent module.
+- Build-driver executable graph execution tests now share canonical single,
+  multi-target, and dependency-ordered fixtures through
+  `tests/integration/cli_build/support.rs`, preserving normal `zen build
+  build.zen`, direct `zen build.zen`, and legacy `zen build-graph` coverage
+  without triplicated graph setup.
 
 ## Current Phase
 

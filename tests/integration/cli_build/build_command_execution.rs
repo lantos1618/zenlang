@@ -1,169 +1,35 @@
-use std::process::Command;
-
 #[test]
 fn build_command_routes_build_zen_through_deterministic_graph() {
+    let args = ["build", "build.zen"];
     let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("main.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write main.zen");
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build build.zen");
+    super::support::write_single_executable_graph(&tmp);
+    let output = super::support::run_zen_in(&tmp, &args);
+    super::support::assert_zen_success(&args, &output);
 
-    assert!(
-        output.status.success(),
-        "zen build build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let bin_path = tmp.path().join("build").join("myapp");
-    assert!(
-        bin_path.exists(),
-        "expected {} to exist",
-        bin_path.display()
-    );
-    let run = Command::new(&bin_path).output().expect("run built binary");
-    assert!(
-        run.status.success(),
-        "built binary exited with {}",
-        run.status
-    );
+    super::support::assert_built_binaries_run(&[tmp.path().join("build").join("myapp")]);
 }
 
 #[test]
 fn build_command_build_zen_compiles_multiple_executable_targets() {
+    let args = ["build", "build.zen"];
     let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("tool.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write tool.zen");
+    super::support::write_multiple_executable_graph(&tmp);
+    let output = super::support::run_zen_in(&tmp, &args);
+    super::support::assert_zen_success(&args, &output);
 
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    for bin_path in [
+    super::support::assert_built_binaries_run(&[
         tmp.path().join("build").join("app").join("app"),
         tmp.path().join("build").join("tool").join("tool"),
-    ] {
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
-        let run = Command::new(&bin_path).output().expect("run built binary");
-        assert!(
-            run.status.success(),
-            "built binary {} exited with {}",
-            bin_path.display(),
-            run.status
-        );
-    }
+    ]);
 }
 
 #[test]
 fn build_command_build_zen_compiles_executable_dependencies_first() {
+    let args = ["build", "build.zen"];
     let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable {
-        name: "app",
-        main: "app.zen",
-        out_dir: "build/app/",
-        dependencies: ["tool"],
-    })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("tool.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write tool.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen build build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen build build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    super::support::write_dependent_executable_graph(&tmp);
+    let output = super::support::run_zen_in(&tmp, &args);
+    super::support::assert_zen_success(&args, &output);
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let tool_emit = stdout
@@ -177,21 +43,8 @@ main = () i32 {
         "expected dependency target to compile before dependent target, stdout={stdout}"
     );
 
-    for bin_path in [
+    super::support::assert_built_binaries_run(&[
         tmp.path().join("build").join("tool").join("tool"),
         tmp.path().join("build").join("app").join("app"),
-    ] {
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
-        let run = Command::new(&bin_path).output().expect("run built binary");
-        assert!(
-            run.status.success(),
-            "built binary {} exited with {}",
-            bin_path.display(),
-            run.status
-        );
-    }
+    ]);
 }
