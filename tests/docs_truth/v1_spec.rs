@@ -131,6 +131,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_mir_match_schema_matches_golden",
         "emit_json_mir_rejects_hand_authored_json_before_ir_override",
         "emit_json_layout_outputs_checked_type_layouts",
+        "emit_json_layout_basic_schema_matches_golden",
         "emit_json_layout_outputs_compound_type_layout_entries",
         "emit_json_layout_compound_schema_matches_golden",
         "emit_json_layout_rejects_hand_authored_json_before_layout_override",
