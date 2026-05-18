@@ -3658,6 +3658,9 @@ Agent UX deliverables:
   `emit_json_layout_outputs_checked_type_layouts`,
   `emit_json_usage_lists_supported_and_gated_modes`, and
   `root_usage_lists_supported_and_gated_emit_json_modes`.
+- The checked basic layout schema for primitive types, `StaticString`, dynamic
+  `String`, and struct field offsets is now pinned by
+  `emit_json_layout_basic_schema_matches_golden`.
 - Hand-authored layout JSON inputs to `emit-json layout` now reject at the
   compiler-owned layout schema boundary before any forged ABI override can be
   accepted. Guarded by
