@@ -1,4 +1,5 @@
 use super::*;
+use crate::parser::keywords::ParserBehaviorKeyword;
 
 impl Parser {
     pub(super) fn consume_mutability_keyword(&mut self) -> bool {
@@ -39,7 +40,10 @@ impl Parser {
 
         match self.peek() {
             // Behavior: `Name: behavior { method: (Self) Return }`
-            Token::Colon if self.colon_is_followed_by_identifier("behavior") => {
+            Token::Colon
+                if self
+                    .colon_is_followed_by_identifier(ParserBehaviorKeyword::Behavior.as_str()) =>
+            {
                 self.parse_behavior_def(name, Vec::new(), public, name_span)
             }
 
@@ -101,7 +105,11 @@ impl Parser {
                     Token::Colon if self.is_struct_def() => {
                         self.parse_struct_def_with_params(name, type_params, public, name_span)
                     }
-                    Token::Colon if self.colon_is_followed_by_identifier("behavior") => {
+                    Token::Colon
+                        if self.colon_is_followed_by_identifier(
+                            ParserBehaviorKeyword::Behavior.as_str(),
+                        ) =>
+                    {
                         self.parse_behavior_def(name, type_params, public, name_span)
                     }
                     Token::Colon => {

@@ -4062,6 +4062,10 @@ and do not assume Phase 4 is ready without evidence.
 - Parser mutability markers now parse `mut` through `ParserMutabilityKeyword`
   and a shared parser helper for fields and parameters. Covered by
   `parser_mutability_keywords_use_owned_keyword_enum`.
+- Parser behavior declaration dispatch now parses `behavior` through
+  `ParserBehaviorKeyword` instead of raw declaration spelling checks. Covered by
+  `parser_behavior_declaration_keyword_uses_owned_keyword_enum` and parser
+  behavior declaration tests.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

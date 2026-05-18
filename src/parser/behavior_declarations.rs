@@ -1,5 +1,6 @@
 use super::*;
 use crate::ast::BehaviorMethod;
+use crate::parser::keywords::ParserBehaviorKeyword;
 
 type BehaviorMethodSignature = (Vec<Param>, Option<AstType>, Option<Expression>);
 
@@ -14,7 +15,7 @@ impl Parser {
         self.expect(&Token::Colon)?;
         self.skip_newlines();
         let (keyword, keyword_span) = self.expect_identifier()?;
-        if keyword != "behavior" {
+        if keyword.parse::<ParserBehaviorKeyword>() != Ok(ParserBehaviorKeyword::Behavior) {
             return Err(CompileError::Syntax(
                 format!("expected behavior declaration, found `{keyword}`"),
                 Some(keyword_span),
