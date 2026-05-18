@@ -15,7 +15,7 @@ mod phase_audit;
 mod phase_audit_manifest;
 #[path = "docs_truth/public_docs.rs"]
 mod public_docs;
-#[path = "docs_truth/repo_hygiene.rs"]
+#[path = "docs_truth/repo_hygiene/mod.rs"]
 mod repo_hygiene;
 #[path = "docs_truth/v1_spec.rs"]
 mod v1_spec;
