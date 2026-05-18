@@ -1,5 +1,7 @@
 use std::process::Command;
 
+#[path = "build_graph_json/golden.rs"]
+mod golden;
 #[path = "build_graph_json/validation.rs"]
 mod validation;
 

@@ -2603,6 +2603,9 @@ and do not assume Phase 4 is ready without evidence.
   covered by
   `cargo test --test integration emit_json_build_graph_outputs_target_dependencies_and_features`
   and `cargo test --test integration emit_json_build_graph_rejects_undeclared_host_effects_before_target_metadata_lowering`.
+- `emit-json build-graph` pins the canonical public project graph JSON schema,
+  covered by
+  `cargo test --test integration emit_json_build_graph_project_schema_matches_golden`.
 - `emit-json build-graph` emits declared deterministic file-read effects
   through `.Err`, wildcard, and identifier fallback arms, and rejects
   undeclared file reads through the advertised graph command, covered by
