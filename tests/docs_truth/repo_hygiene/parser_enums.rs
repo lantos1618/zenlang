@@ -51,6 +51,55 @@ fn parser_loop_control_calls_use_owned_action_enum() {
 }
 
 #[test]
+fn parser_type_names_use_owned_type_name_enums() {
+    let parser_types = read("src/parser/types.rs");
+    let type_names = read("src/parser/type_names.rs");
+
+    for forbidden in [
+        r#""i8" =>"#,
+        r#""i16" =>"#,
+        r#""i32" =>"#,
+        r#""i64" =>"#,
+        r#""u8" =>"#,
+        r#""u16" =>"#,
+        r#""u32" =>"#,
+        r#""u64" =>"#,
+        r#""usize" =>"#,
+        r#""f32" =>"#,
+        r#""f64" =>"#,
+        r#""bool" =>"#,
+        r#""void" =>"#,
+        r#""str" =>"#,
+        r#""StaticString" =>"#,
+        r#""Self" =>"#,
+        r#""Ptr" if"#,
+        r#""MutPtr" if"#,
+        r#""RawPtr" if"#,
+        r#""Slice" if"#,
+        "match base.as_str()",
+    ] {
+        assert!(
+            !parser_types.contains(forbidden),
+            "parser type-name resolution should parse through owned parser type-name enums: {forbidden}"
+        );
+    }
+
+    for required in [
+        "enum ParserBuiltinTypeName",
+        "enum ParserBuiltinGenericTypeName",
+        "impl FromStr for ParserBuiltinTypeName",
+        "impl FromStr for ParserBuiltinGenericTypeName",
+        "name.parse::<ParserBuiltinTypeName>()",
+        "base.parse::<ParserBuiltinGenericTypeName>()",
+    ] {
+        assert!(
+            type_names.contains(required) || parser_types.contains(required),
+            "parser type-name spelling should live in parser type-name enums: {required}"
+        );
+    }
+}
+
+#[test]
 fn typechecker_gated_methods_use_owned_action_enum() {
     let source = read("src/typechecker/expressions/method_call_support.rs");
 

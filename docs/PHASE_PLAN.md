@@ -3677,6 +3677,10 @@ checked-in docs, tests, and commits only.
   through `BuildTargetDslIdent` instead of matching raw method strings.
   Guarded by `build_target_dsl_ident_owns_source_spelling` and
   `build_graph_host_effect_methods_parse_dsl_ident_enum`.
+- Parser type-name resolution now routes primitive, `StaticString`, `Self`, and
+  builtin generic wrapper spellings through focused parser type-name enums
+  instead of matching raw strings in `resolve_type_name`. Guarded by
+  `parser_type_names_use_owned_type_name_enums` and parser type examples.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

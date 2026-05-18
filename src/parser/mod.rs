@@ -22,6 +22,7 @@ mod import_declarations;
 mod patterns;
 mod precedence;
 mod statements;
+mod type_names;
 mod types;
 
 #[cfg(test)]

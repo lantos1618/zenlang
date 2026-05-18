@@ -4000,6 +4000,10 @@ and do not assume Phase 4 is ready without evidence.
   through `BuildTargetDslIdent` instead of matching raw method strings.
   Covered by `build_target_dsl_ident_owns_source_spelling` and
   `build_graph_host_effect_methods_parse_dsl_ident_enum`.
+- Parser type-name resolution now routes primitive, `StaticString`, `Self`, and
+  builtin generic wrapper spellings through focused parser type-name enums
+  instead of matching raw strings in `resolve_type_name`. Covered by
+  `parser_type_names_use_owned_type_name_enums` and parser type examples.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

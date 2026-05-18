@@ -1,4 +1,5 @@
 use super::*;
+use crate::parser::type_names::{ParserBuiltinGenericTypeName, ParserBuiltinTypeName};
 
 impl Parser {
     // ── Types ─────────────────────────────────────────────────
@@ -7,7 +8,7 @@ impl Parser {
         self.skip_newlines();
         let (tok, span) = self.advance();
         match tok {
-            Token::Identifier(name) => self.resolve_type_name(&name, span),
+            Token::Identifier(name) => self.resolve_type_name(&name),
             Token::LParen => {
                 // Function type: `(i32, i32) i32`
                 let mut params = Vec::new();
@@ -55,26 +56,12 @@ impl Parser {
         }
     }
 
-    fn resolve_type_name(&mut self, name: &str, _span: Span) -> Result<AstType, CompileError> {
-        let base = match name {
-            "i8" => return Ok(AstType::I8),
-            "i16" => return Ok(AstType::I16),
-            "i32" => return Ok(AstType::I32),
-            "i64" => return Ok(AstType::I64),
-            "u8" => return Ok(AstType::U8),
-            "u16" => return Ok(AstType::U16),
-            "u32" => return Ok(AstType::U32),
-            "u64" => return Ok(AstType::U64),
-            "usize" => return Ok(AstType::Usize),
-            "f32" => return Ok(AstType::F32),
-            "f64" => return Ok(AstType::F64),
-            "bool" => return Ok(AstType::Bool),
-            "void" => return Ok(AstType::Void),
-            "str" => return Ok(AstType::Str),
-            "StaticString" => return Ok(AstType::Str),
-            "Self" => return Ok(AstType::SelfType),
-            _ => name.to_string(),
-        };
+    fn resolve_type_name(&mut self, name: &str) -> Result<AstType, CompileError> {
+        if let Ok(builtin) = name.parse::<ParserBuiltinTypeName>() {
+            return Ok(builtin.ast_type());
+        }
+
+        let base = name.to_string();
 
         // Check for generic args: Name<T, U>
         if matches!(self.peek(), Token::Lt) {
@@ -94,22 +81,18 @@ impl Parser {
             self.expect_gt()?;
 
             // Handle well-known generic types
-            match base.as_str() {
-                "Ptr" if type_args.len() == 1 => Ok(AstType::Ptr(Box::new(type_args.remove(0)))),
-                "MutPtr" if type_args.len() == 1 => {
-                    Ok(AstType::MutPtr(Box::new(type_args.remove(0))))
-                }
-                "RawPtr" if type_args.len() == 1 => {
-                    Ok(AstType::RawPtr(Box::new(type_args.remove(0))))
-                }
-                "Slice" if type_args.len() == 1 => {
-                    Ok(AstType::Slice(Box::new(type_args.remove(0))))
-                }
-                _ => Ok(AstType::Generic {
-                    name: base,
-                    type_args,
-                }),
+            if let Ok(builtin) = base.parse::<ParserBuiltinGenericTypeName>() {
+                return Ok(builtin.ast_type(type_args).unwrap_or_else(|type_args| {
+                    AstType::Generic {
+                        name: base,
+                        type_args,
+                    }
+                }));
             }
+            Ok(AstType::Generic {
+                name: base,
+                type_args,
+            })
         } else {
             Ok(AstType::Named(base))
         }
