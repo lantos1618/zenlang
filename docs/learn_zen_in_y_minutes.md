@@ -39,6 +39,42 @@ value can allocate, grow, or escape with heap ownership, the allocator appears
 in the type that owns it. If control flow exits early, the source says so with a
 data value, a final expression, or a loop-control call.
 
+## Use This Mental Model
+
+Zen keeps the important program edges visible:
+
+- Control is explicit. Functions, matches, and blocks produce values from final
+  expressions. Loops enter through `loop((l) { ... })` and leave through
+  compiler-owned `done`/`next` calls.
+- Text ownership is explicit. `StaticString` is baked program text. Dynamic
+  `String<A>` is allocator-backed owned text and remains gated until allocator
+  ownership is promoted.
+- Effects are explicit. Sync work returns a direct value such as
+  `Result<T, E>`. Async work returns a task-shaped value such as
+  `Task<Result<T, E>>`.
+- Behavior relationships are explicit. Use `Type.implements(Behavior)`,
+  `Type.requires(Behavior)`, and `Child.extends(Parent)`.
+- Tooling truth comes from the compiler. JSON views are emitted from source;
+  hand-authored JSON is not accepted as checked program state.
+
+No in-between keyword phrases are part of the stable tutorial syntax. If a
+form reads like a borrowed phrase from another language, translate it into the
+receiver-first or prefix-first Zen form.
+
+## Translation Cheat Sheet
+
+| If you reach for | Use |
+| --- | --- |
+| `return` plus a value | put the value in the final expression |
+| `while condition { ... }` | `loop((l) { condition ? | true { ... l.next() } | false { l.done() } })` |
+| `for item in items { ... }` | explicit state plus `loop((l) { ... })` |
+| `break` | `l.done()` or `done(l)` |
+| `continue` | `l.next()` or `next(l)` |
+| `impl Type for Behavior` | `Type.implements(Behavior) { ... }` |
+| `async fn` | a function returning `Task<Result<T, E>>` or another task-shaped type |
+| string literal as owned text | `StaticString` |
+| growable owned text | `String<A>` with allocator ownership |
+
 ## Copy These Forms First
 
 Zen is prefix-first at declaration and control boundaries. Use these spellings
@@ -1314,6 +1350,20 @@ language shape: allocation is explicit, async work is effect-aware, and sync
 code cannot accidentally call async operations. Current compiler paths reject
 these spellings with feature-gate diagnostics instead of treating them as
 ordinary unknown names.
+
+### Sync/Async/Allocator Quick Rules
+
+- `Sync` APIs compute now and produce direct checked data.
+- `Async` APIs describe later work and produce a task-shaped value.
+- `Allocator<T, Sync>` allocates now and returns `Result<RawPtr<T>, AllocError>`.
+- `Allocator<T, Async>` allocates later and returns
+  `Task<Result<RawPtr<T>, AllocError>>`.
+- allocator-backed owners keep the allocator with the pointer, length, and
+  capacity facts.
+- async work returns a task-shaped value instead of hiding scheduler work inside
+  an ordinary result.
+- loop handles are compiler-owned; their control verbs are `done` and `next`,
+  not arbitrary user methods.
 
 ### Sync And Async Preview
 
