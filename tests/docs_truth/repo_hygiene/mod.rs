@@ -1,5 +1,6 @@
 use super::*;
 
+mod build_graph_dsl;
 mod builtin_type_spelling;
 mod ci_configs;
 mod file_size;
