@@ -564,22 +564,28 @@ behavior yet. They are included here because they are central to the intended
 language shape: allocation is explicit, async work is effect-aware, and sync
 code cannot accidentally call async operations.
 
+### Sync And Async Preview
+
 `Sync` and `Async` are effect modes. They are part of the type contract, not
 marker-only names:
 
 ```zen
-read_now = (file: File, allocator: Allocator<u8, Sync>) Result<Buffer<u8>, IoError> {
-    bytes = file.read_all(allocator).raise()
-    Result<Buffer<u8>, IoError>.Ok(bytes)
+read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
 }
 
-read_later = (file: File, allocator: Allocator<u8, Async>) Task<Result<Buffer<u8>, IoError>> {
-    file.read_all_async(allocator)
+read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
 }
 ```
 
 The intended rule is that sync code either stays sync or crosses an explicit
 runtime boundary. It does not implicitly await async work.
+
+### Allocator Preview
+
+Allocators are typed by the value they allocate and by the effect mode they run
+under. `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct capabilities:
 
 ```zen
 Allocator<T, Sync>: behavior {
@@ -597,29 +603,25 @@ Buffer<T, A: Allocator<T, Sync>>: {
 }
 
 make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
-    ptr = allocator.alloc(len).raise()
-    Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
-        ptr: ptr,
-        len: len,
-        allocator: allocator
-    })
+    allocator.alloc(len) ?
+        | Ok(ptr) {
+            Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
+                ptr: ptr,
+                len: len,
+                allocator: allocator
+            })
+        }
+        | Err(error) { Result<Buffer<T, A>, AllocError>.Err(error) }
 }
 ```
 
-Allocators are typed by the value they allocate and by the effect mode they run
-under. A sync allocator returns a direct checked result. An async allocator
-returns a task-shaped result:
+A sync allocator returns a direct checked result. An async allocator returns a
+task-shaped result and has to stay in async-capable code:
 
 ```zen
 make_async_buffer<T, A: Allocator<T, Async>> =
     (allocator: A, len: usize) Task<Result<Buffer<T, A>, AllocError>> {
-    allocator.alloc(len).then((ptr) {
-        Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
-            ptr: ptr,
-            len: len,
-            allocator: allocator
-        })
-    })
+    allocator.alloc(len)
 }
 ```
 
@@ -636,6 +638,14 @@ The model is:
   typechecked propagation and lowering are implemented.
 - Task chaining and async scheduler APIs are gated until Sync/Async effect
   checking and task lowering are implemented.
+
+### Ownership Preview
+
+The ownership rule matches the string model above: static data is a baked,
+non-owning value, while dynamic storage is allocator-backed. A dynamic buffer
+keeps both the pointer and the allocator capability that owns the allocation.
+That shape makes allocation, deallocation, and effect mode visible in the type
+instead of hiding it behind a literal or method call.
 
 Related gated previews:
 

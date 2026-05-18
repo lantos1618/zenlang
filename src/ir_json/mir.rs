@@ -1,8 +1,8 @@
 use serde::Serialize;
 
 use crate::ast::typed::{
-    TypedBlock, TypedExprKind, TypedExpression, TypedFunction, TypedParam, TypedProgram,
-    TypedStatement, TypedStatementKind,
+    MatchKind, TypedBlock, TypedExprKind, TypedExpression, TypedFunction, TypedMatchArm,
+    TypedParam, TypedPattern, TypedProgram, TypedStatement, TypedStatementKind,
 };
 
 #[derive(Serialize)]
@@ -76,8 +76,35 @@ struct MirExpression {
     field: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     function: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    match_kind: Option<&'static str>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     args: Vec<MirExpression>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    arms: Vec<MirMatchArm>,
+}
+
+#[derive(Serialize)]
+struct MirMatchArm {
+    pattern: MirPattern,
+    body: MirBlock,
+}
+
+#[derive(Serialize)]
+struct MirPattern {
+    kind: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<serde_json::Value>,
+    bindings: Vec<MirPatternBinding>,
+}
+
+#[derive(Serialize)]
+struct MirPatternBinding {
+    name: String,
+    #[serde(rename = "type")]
+    ty: String,
 }
 
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
@@ -149,6 +176,52 @@ fn mir_statement(statement: &TypedStatement) -> MirStatement {
     }
 }
 
+fn mir_match_arm(arm: &TypedMatchArm) -> MirMatchArm {
+    MirMatchArm {
+        pattern: mir_pattern(&arm.pattern),
+        body: mir_entry_block(&arm.body),
+    }
+}
+
+fn mir_pattern(pattern: &TypedPattern) -> MirPattern {
+    match pattern {
+        TypedPattern::Bool(value) => MirPattern {
+            kind: "bool",
+            name: None,
+            value: Some(serde_json::json!(value)),
+            bindings: Vec::new(),
+        },
+        TypedPattern::EnumVariant {
+            type_name,
+            variant,
+            bindings,
+        } => MirPattern {
+            kind: "enum_variant",
+            name: Some(format!("{type_name}.{variant}")),
+            value: None,
+            bindings: bindings
+                .iter()
+                .map(|(name, ty)| MirPatternBinding {
+                    name: name.clone(),
+                    ty: ty.display_name(),
+                })
+                .collect(),
+        },
+        TypedPattern::Wildcard => MirPattern {
+            kind: "wildcard",
+            name: None,
+            value: None,
+            bindings: Vec::new(),
+        },
+        TypedPattern::Value(value) => MirPattern {
+            kind: "value",
+            name: None,
+            value: Some(serde_json::to_value(mir_expression(value)).unwrap_or_default()),
+            bindings: Vec::new(),
+        },
+    }
+}
+
 fn mir_expression(expr: &TypedExpression) -> MirExpression {
     let mut lowered = MirExpression {
         kind: mir_expression_kind(expr),
@@ -161,7 +234,9 @@ fn mir_expression(expr: &TypedExpression) -> MirExpression {
         target: None,
         field: None,
         function: None,
+        match_kind: None,
         args: Vec::new(),
+        arms: Vec::new(),
     };
 
     match &expr.kind {
@@ -221,8 +296,14 @@ fn mir_expression(expr: &TypedExpression) -> MirExpression {
         TypedExprKind::ArrayLiteral { elements } => {
             lowered.args = elements.iter().map(mir_expression).collect();
         }
-        TypedExprKind::Match { scrutinee, .. } => {
+        TypedExprKind::Match {
+            scrutinee,
+            arms,
+            kind,
+        } => {
             lowered.target = Some(Box::new(mir_expression(scrutinee)));
+            lowered.match_kind = Some(mir_match_kind(kind));
+            lowered.arms = arms.iter().map(mir_match_arm).collect();
         }
         TypedExprKind::Cast {
             expr,
@@ -254,9 +335,14 @@ fn mir_expression(expr: &TypedExpression) -> MirExpression {
             lowered.value = Some(serde_json::to_value(mir_expression(value)).unwrap_or_default());
         }
         TypedExprKind::Block(block) => {
+            let result = block
+                .expr
+                .as_ref()
+                .map(|expr| serde_json::to_value(mir_expression(expr)).unwrap_or_default());
             lowered.value = Some(serde_json::json!({
                 "statement_count": block.statements.len(),
                 "has_result": block.expr.is_some(),
+                "result": result,
             }));
         }
         TypedExprKind::LoopControl { action, label } => {
@@ -267,6 +353,17 @@ fn mir_expression(expr: &TypedExpression) -> MirExpression {
     }
 
     lowered
+}
+
+fn mir_match_kind(kind: &MatchKind) -> &'static str {
+    match kind {
+        MatchKind::ConditionalElse => "conditional_else",
+        MatchKind::Conditional => "conditional",
+        MatchKind::WhileLoop => "while_loop",
+        MatchKind::ControlledLoop { .. } => "controlled_loop",
+        MatchKind::EnumMatch => "enum",
+        MatchKind::ValueMatch => "value",
+    }
 }
 
 fn mir_expression_kind(expr: &TypedExpression) -> &'static str {
