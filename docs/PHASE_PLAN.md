@@ -3693,6 +3693,10 @@ Agent UX deliverables:
 - Layout JSON for generic `Option<T>` specialization is now pinned by
   `emit_json_layout_generic_option_schema_matches_golden`, covering concrete
   `Option_i32` enum size, alignment, variants, and payload field offsets.
+- Layout JSON for nested generic `Result<Option<T>, E>` specialization is now
+  pinned by `emit_json_layout_nested_generic_result_schema_matches_golden`,
+  covering `Result_Option_i32_StaticString` size/alignment and payload offsets
+  for both the `Option_i32` and `StaticString` payload variants.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by
