@@ -158,6 +158,11 @@ fn c_escape_string(s: &str) -> String {
     out
 }
 
+/// Build a static string view from a C string literal expression.
+fn c_static_str_literal(escaped_literal: &str) -> String {
+    format!("(zen_str){{ .ptr = \"{escaped_literal}\", .len = sizeof(\"{escaped_literal}\") - 1 }}")
+}
+
 /// Format a float for C source code.
 fn format_float(v: f64) -> String {
     let s = format!("{}", v);

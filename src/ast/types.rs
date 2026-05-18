@@ -35,8 +35,8 @@ pub enum AstType {
     Void,
 
     // Strings
-    Str,    // static string: { ptr, len }
-    String, // heap string: { ptr, len, cap, alloc }
+    Str,    // static string view over baked program storage: { ptr, len }
+    String, // allocator-backed dynamic string: { ptr, len, cap, allocator }
 
     // User-defined / unresolved named type
     Named(std::string::String),

@@ -32,7 +32,10 @@ fn emit_bool_literal() {
 fn emit_string_literal() {
     let mut e = CEmitter::new();
     let expr = texpr(TypedExprKind::StringLiteral("hi".into()), Type::Str);
-    assert_eq!(e.emit_expr_inline(&expr), "zen_str_from_literal(\"hi\")");
+    assert_eq!(
+        e.emit_expr_inline(&expr),
+        "(zen_str){ .ptr = \"hi\", .len = sizeof(\"hi\") - 1 }"
+    );
 }
 
 #[test]

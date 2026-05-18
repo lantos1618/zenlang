@@ -59,6 +59,21 @@ fn generates_function() {
 }
 
 #[test]
+fn runtime_separates_static_and_allocator_backed_strings() {
+    let backend = CBackend;
+    let output = backend.generate(&make_simple_program()).unwrap();
+
+    assert!(output.contains("typedef struct { const char* ptr; size_t len; } zen_str;"));
+    assert!(output.contains("typedef struct zen_allocator zen_allocator;"));
+    assert!(output.contains(
+        "typedef struct { char* ptr; size_t len; size_t cap; zen_allocator* allocator; } zen_string;"
+    ));
+    assert!(output.contains("static zen_str zen_str_from_cstr(const char* s)"));
+    assert!(!output.contains("zen_str_from_literal"));
+    assert!(!output.contains("#define ZEN_STATIC_STR"));
+}
+
+#[test]
 fn generates_struct() {
     let backend = CBackend;
     let program = TypedProgram {

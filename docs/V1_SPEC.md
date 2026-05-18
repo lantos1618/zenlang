@@ -71,11 +71,12 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 
 - `StaticString` is baked into the program. It denotes literal/static text with
-  stable storage and length. The allocator-backed `String` type is owned,
-  dynamic text and depends on the typed allocator model before it can be
-  promoted as a stable construction target. Static string literals do not
-  implicitly allocate or coerce into `String`; dynamic `String` construction
-  must go through an explicit allocator-aware path once that path is promoted.
+  stable storage and compile-time length in the generated runtime layout. The
+  allocator-backed `String` type is owned, dynamic text and carries allocator
+  identity before it can be promoted as a stable construction target. Static
+  string literals do not implicitly allocate or coerce into `String`; dynamic
+  `String` construction must go through an explicit allocator-aware path once
+  that path is promoted.
 - `Sync/Async effects`: gated. `Sync` and `Async` are real effects in v1, not
   marker-only types. Sync code must not call async operations except through an
   explicit runtime blocking boundary. Async operations lower through checked task,

@@ -26,8 +26,8 @@ pub enum Type {
     Void,
 
     // Strings
-    Str,    // static string: { ptr, len }
-    String, // heap string: { ptr, len, cap, alloc }
+    Str,    // static string view over baked program storage: { ptr, len }
+    String, // allocator-backed dynamic string: { ptr, len, cap, allocator }
 
     // Named type — struct/enum by mangled name
     Named(std::string::String),
