@@ -1,6 +1,8 @@
 use crate::support::*;
 use std::process::Command;
 
+#[path = "frontend_json/ir_boundaries.rs"]
+mod ir_boundaries;
 #[path = "frontend_json/module_graph.rs"]
 mod module_graph;
 

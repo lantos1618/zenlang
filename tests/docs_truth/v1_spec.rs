@@ -110,6 +110,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_mir_rejects_program_before_mir_json",
         "emit_json_mir_rejects_hand_authored_json_before_ir_override",
         "emit_json_layout_rejects_program_before_layout_json",
+        "emit_json_layout_rejects_hand_authored_json_before_layout_override",
         "emit_json_target_yaml_rejects_hand_authored_yaml_before_validation",
         "build.zen",
         "zen test build.zen",

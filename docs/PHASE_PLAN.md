@@ -3574,6 +3574,10 @@ checked-in docs, tests, and commits only.
 - Real program inputs to `emit-json layout` now reject at the ABI-layout gate
   before emitting type layout JSON. Guarded by
   `emit_json_layout_rejects_program_before_layout_json`.
+- Hand-authored layout JSON inputs to `emit-json layout` now reject at the
+  compiler-owned layout schema boundary before any forged ABI override can be
+  accepted. Guarded by
+  `emit_json_layout_rejects_hand_authored_json_before_layout_override`.
 - `StaticString` and allocator-backed `String` are no longer type-compatible:
   static string literals stay baked into program storage and cannot implicitly
   allocate dynamic `String` values. Covered by
