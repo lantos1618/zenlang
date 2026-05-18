@@ -67,6 +67,19 @@ main = (allocator: Allocator<i32, Sync>) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_dynamic_string_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "dynamic_string_gate.zen",
+        r#"
+main = (value: String) void { }
+"#,
+        "dynamic string gate",
+        "dynamic string gate should emit one allocator-backed text diagnostic",
+        "tests/fixtures/ir_json/diagnostics_dynamic_string_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_async_intrinsic_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "async_intrinsic_gate.zen",
