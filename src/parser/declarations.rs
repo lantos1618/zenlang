@@ -140,6 +140,9 @@ impl Parser {
                         TypeDeclarationKeyword::Extends => {
                             self.parse_behavior_extends(name, name_span)
                         }
+                        TypeDeclarationKeyword::Derive => {
+                            self.reject_gated_generated_behavior_derive(name_span)
+                        }
                     };
                 }
 
@@ -199,6 +202,14 @@ impl Parser {
                 "generic association target `Type<T>.{keyword}` is gated; use non-generic `{keyword}` associations or keep the generic behavior target deferred to docs/V1_SPEC.md"
             ),
             Some(self.peek_span()),
+        ))
+    }
+
+    fn reject_gated_generated_behavior_derive<T>(&self, span: Span) -> Result<T, CompileError> {
+        Err(CompileError::Syntax(
+            "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented"
+                .to_string(),
+            Some(span),
         ))
     }
 

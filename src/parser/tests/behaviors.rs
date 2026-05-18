@@ -7,6 +7,7 @@ fn type_declaration_keyword_owns_text_spelling() {
     assert_eq!(TypeDeclarationKeyword::Implements.as_str(), "implements");
     assert_eq!(TypeDeclarationKeyword::Requires.as_str(), "requires");
     assert_eq!(TypeDeclarationKeyword::Extends.as_str(), "extends");
+    assert_eq!(TypeDeclarationKeyword::Derive.as_str(), "derive");
     assert_eq!(
         "impl".parse::<TypeDeclarationKeyword>(),
         Ok(TypeDeclarationKeyword::Impl)
@@ -22,6 +23,10 @@ fn type_declaration_keyword_owns_text_spelling() {
     assert_eq!(
         "extends".parse::<TypeDeclarationKeyword>(),
         Ok(TypeDeclarationKeyword::Extends)
+    );
+    assert_eq!(
+        "derive".parse::<TypeDeclarationKeyword>(),
+        Ok(TypeDeclarationKeyword::Derive)
     );
     assert!("implement".parse::<TypeDeclarationKeyword>().is_err());
     assert_eq!(TypeDeclarationKeyword::Implements.to_string(), "implements");
@@ -165,6 +170,7 @@ fn generic_type_association_keywords_are_explicitly_gated() {
         ("implements", "Box<T>.implements(Json<T>) { }"),
         ("requires", "Box<T>.requires(Json<T>)"),
         ("extends", "Box<T>.extends(Json<T>)"),
+        ("derive", "Box<T>.derive(Json<T>)"),
     ] {
         let errors = parse_err(source);
         let message = errors
@@ -179,6 +185,20 @@ fn generic_type_association_keywords_are_explicitly_gated() {
             "expected explicit generic association gate for {keyword}, got {errors:?}"
         );
     }
+}
+
+#[test]
+fn generated_behavior_derive_association_is_explicitly_gated() {
+    let errors = parse_err("Point.derive(Json)");
+    let message = errors
+        .first()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "missing parser error".to_string());
+
+    assert!(
+        message.contains("generated behavior association `Type.derive(...)` is gated"),
+        "expected explicit generated behavior association gate, got {errors:?}"
+    );
 }
 
 #[test]

@@ -100,6 +100,11 @@ checked-in docs, tests, and commits only.
   `parser::tests::generic_type_association_keywords_are_explicitly_gated`,
   keeping the unsupported behavior-solver boundary separate from supported
   generic non-behavior `Type<T>.impl` blocks.
+- Generated/fallback behavior association syntax such as `Type.derive(Json)`
+  is now reserved and explicitly gated through the same enum-owned type
+  declaration suffix table, guarded by
+  `parser::tests::generated_behavior_derive_association_is_explicitly_gated`
+  and `parser_type_declaration_suffixes_use_owned_keyword_enum`.
 - Resolver symbol table data-model definitions now live in a focused core
   include, leaving symbol-table lookup and definition behavior in the parent
   implementation file.
