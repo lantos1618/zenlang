@@ -89,6 +89,18 @@ pub fn main() {
                 "typed" => cmd_emit_json_typed(&args[3]),
                 "diagnostics" => cmd_emit_json_diagnostics(&args[3]),
                 "build-graph" => cmd_emit_json_build_graph(&args[3]),
+                "mir" => {
+                    eprintln!(
+                        "error: MIR JSON emission is gated until schema and golden tests exist"
+                    );
+                    process::exit(1);
+                }
+                "target-yaml" => {
+                    eprintln!(
+                        "error: target YAML validation is gated until schemas and negative validation tests exist"
+                    );
+                    process::exit(1);
+                }
                 _ => {
                     eprintln!(
                         "Usage: zen emit-json <ast|symbols|typed|diagnostics|build-graph> <file.zen>"
