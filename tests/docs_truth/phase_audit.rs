@@ -42,6 +42,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "build_graph_rejects_self_target_dependencies",
         "build_program_lowering_rejects_self_target_dependencies",
         "emit_json_hir_outputs_checked_declaration_graph",
+        "schema_version: 0",
         "emit_json_mir_outputs_checked_minimal_function_graph",
         "emit_json_target_yaml_validates_minimal_target_schema",
         "emit_json_target_yaml_validates_backend_schema",

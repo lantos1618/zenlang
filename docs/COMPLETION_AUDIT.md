@@ -4173,6 +4173,11 @@ and do not assume Phase 4 is ready without evidence.
   language server, agent-readable diagnostics, machine-readable project graph,
   and structured fix suggestions. Covered by
   `phase_plan_records_recovered_progress_and_next_slice`.
+- HIR and MIR JSON outputs now include numeric `schema_version: 0` fields next
+  to their `format` tags, so tools and agents can pin the compiler-owned v0
+  schema without parsing the display format string. Covered by
+  `emit_json_hir_outputs_checked_declaration_graph` and
+  `emit_json_mir_outputs_checked_minimal_function_graph`.
 - Effect checking, typed allocator semantics, actors in std integration,
   JSON/YAML IR boundaries, and broader build graph execution remain gated by
   `docs/V1_SPEC.md`.

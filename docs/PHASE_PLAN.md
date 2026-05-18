@@ -3829,9 +3829,11 @@ Agent UX deliverables:
   `EmitJsonMode`, keeping mode text attached to the enum that owns parsing and
   usage. Guarded by `cli_emit_json_modes_use_owned_mode_enum`.
 - Real program inputs to `emit-json hir` now emit checked declaration-level HIR
-  JSON, guarded by `emit_json_hir_outputs_checked_declaration_graph`. Real
-  program inputs to `emit-json mir` now emit checked minimal function/block MIR
-  JSON. Guarded by `emit_json_mir_outputs_checked_minimal_function_graph`.
+  JSON with `schema_version: 0`, guarded by
+  `emit_json_hir_outputs_checked_declaration_graph`. Real program inputs to
+  `emit-json mir` now emit checked minimal function/block MIR JSON with
+  `schema_version: 0`. Guarded by
+  `emit_json_mir_outputs_checked_minimal_function_graph`.
 - Hand-authored typed JSON inputs to `emit-json typed` now reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Guarded by
