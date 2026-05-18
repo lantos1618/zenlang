@@ -342,8 +342,8 @@ and do not assume Phase 4 is ready without evidence.
   Covered by `emit_json_diagnostics_includes_structured_return_keyword_fix`.
 - `emit-json hir` now emits checked declaration-level `zen.hir.v0` JSON.
   Coverage: `emit_json_hir_outputs_checked_declaration_graph`. `emit-json mir`
-  still rejects with an explicit gated diagnostic tied to the v1 JSON backlog.
-  Coverage: `emit_json_mir_command_is_explicitly_gated`.
+  now emits checked minimal `zen.mir.v0` JSON for typed function bodies.
+  Coverage: `emit_json_mir_outputs_checked_minimal_function_graph`.
 - Build-graph JSON host-effect tests now split declared file-read fallback
   accept/reject coverage into
   `tests/integration/cli_build/build_graph_json_host_effects/file_reads.rs`,
@@ -3885,15 +3885,15 @@ and do not assume Phase 4 is ready without evidence.
   compiler-path evidence. Covered by
   `v1_spec_records_phase_one_feature_gates_and_test_backlog`.
 - `zen emit-json` usage diagnostics now list the full checked, deterministic,
-  validated, and gated JSON/YAML mode surface: `ast`, `symbols`, `typed`,
+  validated, and constrained JSON/YAML mode surface: `ast`, `symbols`, `typed`,
   `diagnostics`, `build-graph`, `layout`, `target-yaml`, `hir`, and `mir`. This
   is covered by
   `emit_json_usage_lists_supported_and_gated_modes`, preserving the IR-boundary
-  gate in user-facing CLI errors.
+  surface in user-facing CLI errors.
 - The root `zen` usage banner now lists the checked `emit-json hir` command,
-  gated `emit-json mir` command, and validated `emit-json target-yaml`, covered by
+  checked minimal `emit-json mir` command, and validated `emit-json target-yaml`, covered by
   `root_usage_lists_supported_and_gated_emit_json_modes`, so top-level help
-  does not hide the checked or gated IR/YAML surface.
+  does not hide the checked or constrained IR/YAML surface.
 - The root `zen` usage banner now labels `emit-json ast` as unchecked AST JSON,
   matching its `semantic_status: "unchecked"` payload instead of implying
   semantic acceptance. Covered by
@@ -4101,15 +4101,13 @@ and do not assume Phase 4 is ready without evidence.
   as usage generation instead of a second parse-mode branch list, covered by
   `cli_emit_json_modes_use_owned_mode_enum` and
   `emit_json_usage_lists_supported_and_gated_modes`.
-- Gated `emit-json` diagnostics now live on `EmitJsonMode::gate_message`, so
-  MIR gate text stays attached to the enum that owns mode spelling and usage.
-  Covered by `cli_emit_json_modes_use_owned_mode_enum` and
-  `emit_json_mir_command_is_explicitly_gated`.
+- `emit-json` mode spelling and any future gated diagnostics live on
+  `EmitJsonMode`, so mode text stays attached to the enum that owns parsing and
+  usage. Covered by `cli_emit_json_modes_use_owned_mode_enum`.
 - Real program inputs to `emit-json hir` now emit checked declaration-level HIR
   JSON. Covered by `emit_json_hir_outputs_checked_declaration_graph`. Real
-  program inputs to `emit-json mir` still reject at the schema/golden-test gate
-  before emitting MIR JSON. Covered by
-  `emit_json_mir_rejects_program_before_mir_json`.
+  program inputs to `emit-json mir` now emit checked minimal function/block MIR
+  JSON. Covered by `emit_json_mir_outputs_checked_minimal_function_graph`.
 - Hand-authored typed JSON inputs to `emit-json typed` reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Covered by

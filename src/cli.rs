@@ -31,7 +31,8 @@ use execution_commands::{cmd_build, cmd_build_graph, cmd_run_file, cmd_test};
 use frontend::{graph_frontend, load_module_graph};
 use json_emit::{
     cmd_emit_json_ast, cmd_emit_json_build_graph, cmd_emit_json_diagnostics, cmd_emit_json_hir,
-    cmd_emit_json_layout, cmd_emit_json_symbols, cmd_emit_json_target_yaml, cmd_emit_json_typed,
+    cmd_emit_json_layout, cmd_emit_json_mir, cmd_emit_json_symbols, cmd_emit_json_target_yaml,
+    cmd_emit_json_typed,
 };
 use usage::print_usage;
 
@@ -95,15 +96,13 @@ impl EmitJsonMode {
 
     fn gate_message(self) -> Option<&'static str> {
         match self {
-            Self::Mir => Some(
-                "MIR JSON emission is gated until schema and golden tests exist; compiler-owned IR schemas must reject hand-authored overrides",
-            ),
             Self::Ast
             | Self::Symbols
             | Self::Typed
             | Self::Diagnostics
             | Self::BuildGraph
             | Self::Hir
+            | Self::Mir
             | Self::Layout
             | Self::TargetYaml => None,
         }
@@ -192,9 +191,9 @@ pub fn main() {
                         EmitJsonMode::Diagnostics => cmd_emit_json_diagnostics(&args[3]),
                         EmitJsonMode::BuildGraph => cmd_emit_json_build_graph(&args[3]),
                         EmitJsonMode::Hir => cmd_emit_json_hir(&args[3]),
+                        EmitJsonMode::Mir => cmd_emit_json_mir(&args[3]),
                         EmitJsonMode::Layout => cmd_emit_json_layout(&args[3]),
                         EmitJsonMode::TargetYaml => cmd_emit_json_target_yaml(&args[3]),
-                        EmitJsonMode::Mir => unreachable!("gated emit-json mode exited"),
                     }
                 }
                 Err(()) => {
@@ -237,6 +236,7 @@ enum CompilerOwnedJsonBoundary {
     Diagnostics,
     BuildGraph,
     Hir,
+    Mir,
     Layout,
 }
 
@@ -249,6 +249,7 @@ impl CompilerOwnedJsonBoundary {
             Self::Diagnostics => "compiler-owned diagnostics JSON emission rejects hand-authored diagnostic IR before it can override compiler diagnostics",
             Self::BuildGraph => "compiler-owned build graph JSON emission rejects hand-authored graph IR before it can override deterministic build metadata",
             Self::Hir => "compiler-owned IR schemas reject hand-authored HIR JSON before it can override checked types or layouts",
+            Self::Mir => "compiler-owned IR schemas reject hand-authored MIR JSON before it can override checked types or layouts",
             Self::Layout => "compiler-owned layout schemas reject hand-authored layout IR before it can override compiler-owned types or layouts",
         }
     }
@@ -283,6 +284,10 @@ fn reject_hand_authored_json_for_build_graph_emit(path_str: &str) {
 
 fn reject_hand_authored_json_for_hir_emit(path_str: &str) {
     reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Hir);
+}
+
+fn reject_hand_authored_json_for_mir_emit(path_str: &str) {
+    reject_hand_authored_json_for_emit(path_str, CompilerOwnedJsonBoundary::Mir);
 }
 
 fn reject_hand_authored_json_for_layout_emit(path_str: &str) {

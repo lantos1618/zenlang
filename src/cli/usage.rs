@@ -15,7 +15,7 @@ pub(super) fn print_usage() {
     eprintln!("  emit-json diagnostics <file>   Emit diagnostics JSON");
     eprintln!("  emit-json build-graph <build.zen>   Emit deterministic build graph JSON");
     eprintln!("  emit-json hir <file>   Emit checked HIR JSON");
-    eprintln!("  emit-json mir <file>   Gated MIR JSON");
+    eprintln!("  emit-json mir <file>   Emit checked minimal MIR JSON");
     eprintln!("  emit-json layout <file>   Emit checked type layout JSON");
     eprintln!("  emit-json target-yaml <file>   Validate target YAML");
     eprintln!("  <file>         Run a .zen file");

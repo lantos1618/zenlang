@@ -2,6 +2,7 @@ use serde::Serialize;
 
 mod hir;
 mod layout;
+mod mir;
 
 use crate::ast::typed::TypedProgram;
 use crate::ast::Program;
@@ -146,6 +147,10 @@ pub fn hir_program_to_json(program: &TypedProgram) -> serde_json::Result<String>
 
 pub fn layout_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     layout::program_to_json(program)
+}
+
+pub fn mir_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
+    mir::program_to_json(program)
 }
 
 fn symbol_json(symbol: &Symbol) -> SymbolJson<'_> {
