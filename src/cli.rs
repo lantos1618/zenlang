@@ -239,14 +239,26 @@ fn reject_build_zen_for_emit_json_mode(path_str: &str) {
 }
 
 fn reject_hand_authored_json_for_typed_emit(path_str: &str) {
-    let is_json = Path::new(path_str)
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| extension.eq_ignore_ascii_case("json"));
-    if is_json {
+    if has_json_extension(path_str) {
         eprintln!(
             "error: compiler-owned typed JSON emission rejects hand-authored JSON IR before it can override checked types or layouts"
         );
         process::exit(1);
     }
+}
+
+fn reject_hand_authored_json_for_symbols_emit(path_str: &str) {
+    if has_json_extension(path_str) {
+        eprintln!(
+            "error: compiler-owned symbols JSON emission rejects hand-authored resolver IR before it can override symbol metadata"
+        );
+        process::exit(1);
+    }
+}
+
+fn has_json_extension(path_str: &str) -> bool {
+    Path::new(path_str)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("json"))
 }
