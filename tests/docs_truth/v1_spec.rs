@@ -59,6 +59,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "raw_memory_intrinsics_are_rejected_as_allocator_gates",
         "byte_memory_intrinsics_are_rejected_as_allocator_gates",
         "sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown",
+        "stdlib_allocator_import_is_gated_before_loading_sketch",
+        "module_graph_gates_stdlib_allocator_import_before_loading_sketch",
         "@builtin.raw_allocate",
         "@builtin.raw_deallocate",
         "@builtin.raw_reallocate",

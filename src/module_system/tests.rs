@@ -180,6 +180,42 @@ fn stdlib_actor_framework_import_is_gated_before_loading_sketch() {
 }
 
 #[test]
+fn stdlib_allocator_import_is_gated_before_loading_sketch() {
+    let tmp = setup_temp_dir();
+    let memory_dir = tmp.path().join("stdlib/memory");
+    fs::create_dir_all(&memory_dir).unwrap();
+    fs::write(memory_dir.join("allocator.zen"), "this is not valid zen\n").unwrap();
+
+    let main_path = tmp.path().join("main.zen");
+    fs::write(
+        &main_path,
+        "{ Allocator } = @std.memory.allocator\n\nmain = () i32 { 0 }\n",
+    )
+    .unwrap();
+
+    let mut files = FileTable::new();
+    let mut ms = ModuleSystem::with_stdlib_root(tmp.path().join("stdlib"));
+
+    let errors = ms
+        .load_with_imports(&main_path, &mut files)
+        .expect_err("allocator stdlib imports should be gated before parsing sketches");
+    let messages = errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        messages.contains("std allocator modules are gated"),
+        "expected allocator stdlib gate diagnostic, got {messages}"
+    );
+    assert!(
+        !messages.contains("expected") && !messages.contains("unexpected token"),
+        "allocator stdlib gate should not leak parser diagnostics from sketches, got {messages}"
+    );
+}
+
+#[test]
 fn cached_module_not_reloaded() {
     let tmp = setup_temp_dir();
 
