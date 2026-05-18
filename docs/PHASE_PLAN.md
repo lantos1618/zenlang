@@ -625,6 +625,10 @@ Agent UX deliverables:
   covering the stable `E3500` payload for duplicate
   `Point.implements(Json<StaticString>)` blocks without duplicate method-symbol
   followups.
+- Diagnostics JSON for generic function call arity is now pinned by
+  `emit_json_diagnostics_generic_function_arity_schema_matches_golden`,
+  covering the stable `E5001` payload for `identity<i32, StaticString>(1)`
+  without inference or argument-mismatch followups.
 - Diagnostics JSON for generic `.requires` behavior-reference arity is now
   pinned by `emit_json_diagnostics_generic_requires_arity_schema_matches_golden`,
   covering the stable `E5001` payload when `Json<T>` is referenced as
