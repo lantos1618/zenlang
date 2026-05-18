@@ -45,6 +45,8 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "removed",
         "Sync/Async effects",
         "async_scheduler_intrinsics_are_rejected_as_gated_not_unknown",
+        "stdlib_async_runtime_import_is_gated_before_loading_sketch",
+        "module_graph_gates_stdlib_async_runtime_import_before_loading_sketch",
         "async task enqueue",
         "async yield",
         "atomic_intrinsics_are_rejected_as_effect_gates",

@@ -223,6 +223,42 @@ fn module_graph_gates_stdlib_allocator_import_before_loading_sketch() {
 }
 
 #[test]
+fn module_graph_gates_stdlib_async_runtime_import_before_loading_sketch() {
+    let tmp = setup_temp_dir();
+    let async_dir = tmp.path().join("stdlib/concurrency/async");
+    fs::create_dir_all(&async_dir).unwrap();
+    fs::write(async_dir.join("scheduler.zen"), "this is not valid zen\n").unwrap();
+
+    let main_path = tmp.path().join("main.zen");
+    fs::write(
+        &main_path,
+        "{ Scheduler } = @std.concurrency.async.scheduler\n\nmain = () i32 { 0 }\n",
+    )
+    .unwrap();
+
+    let mut files = FileTable::new();
+    let mut ms = ModuleSystem::with_stdlib_root(tmp.path().join("stdlib"));
+
+    let errors = ms
+        .load_module_graph(&main_path, &mut files)
+        .expect_err("async stdlib imports should be gated before graph loading sketches");
+    let messages = errors
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        messages.contains("std async runtime modules are gated"),
+        "expected async stdlib gate diagnostic, got {messages}"
+    );
+    assert!(
+        !messages.contains("expected") && !messages.contains("unexpected token"),
+        "async stdlib gate should not leak parser diagnostics from sketches, got {messages}"
+    );
+}
+
+#[test]
 fn module_graph_detects_circular_imports() {
     let tmp = setup_temp_dir();
 

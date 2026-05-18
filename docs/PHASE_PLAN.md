@@ -3600,6 +3600,11 @@ checked-in docs, tests, and commits only.
   builtins. Covered by
   `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Std async runtime module imports now reject before loading aspirational
+  scheduler/task source sketches, so parser diagnostics from Sync/Async
+  prototypes do not leak into stable compiler paths. Guarded by
+  `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
 - C runtime layout now mirrors that public model: static string literals emit
   as direct `zen_str` compound literals whose length is derived with `sizeof`,
   while dynamic `zen_string` carries an allocator pointer. Covered by

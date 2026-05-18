@@ -87,7 +87,11 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   queue, scheduler, yield, and await-like APIs. `@builtin.async_enqueue(...)`
   and `@builtin.async_yield()` currently report that async task enqueue and
   async yield are gated until Sync/Async effect checking and task lowering
-  exist. Atomic compiler intrinsics `@builtin.atomic_load(...)`,
+  exist. Imports of std async runtime sketches are gated before loading
+  aspirational scheduler/task source files, covered by
+  `stdlib_async_runtime_import_is_gated_before_loading_sketch` and
+  `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`.
+  Atomic compiler intrinsics `@builtin.atomic_load(...)`,
   `@builtin.atomic_store(...)`, `@builtin.atomic_add(...)`,
   `@builtin.atomic_sub(...)`, `@builtin.atomic_cas(...)`,
   `@builtin.atomic_xchg(...)`, and `@builtin.fence()` report gated diagnostics
