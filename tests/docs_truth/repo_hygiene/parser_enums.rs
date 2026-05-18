@@ -57,6 +57,8 @@ fn typechecker_gated_methods_use_owned_action_enum() {
     for forbidden in [
         r#""raise" => Some(Self::ResultRaise)"#,
         r#""await" => Some(Self::EffectAwait)"#,
+        "value == Self::ResultRaise.as_str()",
+        "value == Self::EffectAwait.as_str()",
         "from_method_name",
     ] {
         assert!(

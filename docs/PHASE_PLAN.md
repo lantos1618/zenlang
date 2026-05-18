@@ -3563,6 +3563,12 @@ checked-in docs, tests, and commits only.
   instead of ad hoc semantic string checks, keeping `String` recognition and
   `StaticString` display spelling tied to one source. Guarded by
   `semantic_builtin_type_checks_use_shared_spelling_helper`.
+- Gated `.raise()` and `.await()` method recognition now dispatches through the
+  `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
+  preserving the focused Result propagation and Sync/Async effect gates. Guarded
+  by `typechecker_gated_methods_use_owned_action_enum`,
+  `result_raise_is_rejected_until_propagation_lowering_exists`, and
+  `effect_await_is_rejected_until_async_lowering_exists`.
 
 ## Current Phase
 
