@@ -3657,6 +3657,11 @@ checked-in docs, tests, and commits only.
   and Sync/Async effect gates instead of silently typechecking as unknown void
   builtins. Guarded by `atomic_intrinsics_are_rejected_as_effect_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Raw syscall compiler intrinsics `@builtin.syscall0(...)` through
+  `@builtin.syscall6(...)` now reject as host-effect and syscall ABI gates
+  instead of silently typechecking as unknown void builtins. Guarded by
+  `syscall_intrinsics_are_rejected_as_host_effect_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

@@ -114,6 +114,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   `@builtin.gep_struct(...)`, `@builtin.raw_ptr_cast(...)`,
   `@builtin.ptr_to_int(...)`, `@builtin.int_to_ptr(...)`,
   `@builtin.load<T>(...)`, and `@builtin.store<T>(...)` report ownership gates.
+- `Host syscalls`: gated. Raw `@builtin.syscall0(...)` through
+  `@builtin.syscall6(...)` require explicit host effect declarations and syscall
+  ABI semantics before promotion, so they currently report host-effect gates.
 - `Behavior association`: gated. Associated operations resolve by explicit impl,
   then generated impl, then declared fallback where the spec allows it. Ambiguity
   is a hard diagnostic.
@@ -183,6 +186,7 @@ Generic behavior inheritance with child type-parameter parent args is covered by
 | `Typed allocators` | gated | `dynamic_string_type_is_rejected_as_allocator_backed_gate`, `typed_allocator_type_is_rejected_as_gated_not_unknown`, `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`; sync and async allocator tests still required |
 | Comptime type matching | gated | `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown`; type metadata and derive tests still required |
 | Ownership and raw pointer operations | gated | `raw_pointer_intrinsics_are_rejected_as_ownership_gates`; ownership/resource tests still required |
+| Host syscalls | gated | `syscall_intrinsics_are_rejected_as_host_effect_gates`; host-effect declaration and ABI tests still required |
 | Actors in std | gated | Mailbox, scheduling, supervisor tests |
 | `build.zen` check/emit/build/test/direct execution | constrained | Deterministic graph validation, test and library target graph emission, test target execution, target C emission, dependency-ordered multi-executable build tests, and legacy emit-json rejection tests |
 | Existing broad stdlib files | experimental | Must compile before promotion |
