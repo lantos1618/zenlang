@@ -89,8 +89,12 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
     let calls = read("src/typechecker/expressions/call_support.rs");
 
     for forbidden in [
+        r#"name == "async_enqueue""#,
+        r#"name == "async_yield""#,
         r#"name == "type_match""#,
         r#"match name"#,
+        r#""async_enqueue" =>"#,
+        r#""async_yield" =>"#,
         r#""type_match" =>"#,
     ] {
         assert!(
@@ -101,6 +105,8 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
     for required in [
         "enum GatedIntrinsic",
         "const ALL: &[GatedIntrinsic]",
+        "pub(super) const ASYNC_ENQUEUE: &'static str = \"async_enqueue\"",
+        "pub(super) const ASYNC_YIELD: &'static str = \"async_yield\"",
         "pub(super) const TYPE_MATCH: &'static str = \"type_match\"",
         "pub(super) const fn gate_message(self) -> &'static str",
         ".find(|intrinsic| intrinsic.as_str() == name)",

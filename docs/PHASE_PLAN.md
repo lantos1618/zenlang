@@ -3587,6 +3587,12 @@ checked-in docs, tests, and commits only.
   builtin or generic type-argument error. Covered by
   `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Planned async scheduler entry points now have explicit gated intrinsic
+  diagnostics: `@builtin.async_enqueue(...)` and `@builtin.async_yield()` report
+  Sync/Async effect gates instead of silently typechecking as unknown void
+  builtins. Covered by
+  `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - C runtime layout now mirrors that public model: static string literals emit
   as direct `zen_str` compound literals whose length is derived with `sizeof`,
   while dynamic `zen_string` carries an allocator pointer. Covered by
