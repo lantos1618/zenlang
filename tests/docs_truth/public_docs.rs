@@ -287,6 +287,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "tests/fixtures/ir_json/diagnostics_duplicate_generic_requires.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_requires_arity.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_impl_arity.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",
