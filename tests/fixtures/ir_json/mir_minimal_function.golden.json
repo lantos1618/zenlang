@@ -1,0 +1,49 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "value",
+              "type": "i32",
+              "mutable": false,
+              "value": {
+                "kind": "binary",
+                "type": "i32",
+                "op": "+",
+                "left": {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 40
+                },
+                "right": {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 2
+                }
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "local",
+              "type": "i32",
+              "name": "value"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

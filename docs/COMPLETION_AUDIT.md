@@ -4142,6 +4142,9 @@ and do not assume Phase 4 is ready without evidence.
   JSON. Covered by `emit_json_hir_outputs_checked_declaration_graph`. Real
   program inputs to `emit-json mir` now emit checked minimal function/block MIR
   JSON. Covered by `emit_json_mir_outputs_checked_minimal_function_graph`.
+- The checked minimal MIR function/block/terminator schema is now pinned by
+  `emit_json_mir_minimal_function_schema_matches_golden`, covering let
+  statements, typed binary expressions, and return terminators.
 - Hand-authored typed JSON inputs to `emit-json typed` reject at the
   compiler-owned typed JSON boundary before forged checked IR can be treated as
   Zen source or accepted as semantic evidence. Covered by
