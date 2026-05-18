@@ -20,6 +20,8 @@ explicit call, and heap ownership has to appear in the type/API surface.
 Quick map:
 
 - declarations are prefix-first: the name appears before the operation;
+- calls are ordinary prefix calls, with dot and UFC spellings where a receiver
+  makes the code clearer;
 - values come from final expressions, not `return`;
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
 - loops use one prefix form, `loop((label) { ... })`, with explicit
@@ -59,6 +61,7 @@ The common forms are:
 - `Name: Variant, Variant(Payload)` declares an enum.
 - `name = (...) ReturnType { ... }` declares a function.
 - `Type.method = (...) ReturnType { ... }` declares an attached method.
+- `value.method(args)` and `method(value, args)` are the same receiver call.
 - `Type.impl = { ... }` groups methods for a type.
 - `Name: behavior { ... }` declares a behavior contract.
 - `Type.implements(Behavior) { ... }` gives a type that behavior.
@@ -216,6 +219,33 @@ function's final expression must produce that result on every non-error path.
 Use `void` for functions that only perform effects. `return` is not part of
 Zen source.
 
+## Calls And UFC
+
+```zen
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
+
+main = () i32 {
+    point = Point { x: 20, y: 22 }
+
+    dot = point.sum()
+    ufc = sum(point)
+
+    dot + ufc
+}
+```
+
+Attached functions can be called with dot syntax or uniform function call
+syntax. Dot syntax keeps the receiver first when the operation reads like a
+method. UFC keeps the operation first when that is clearer. The receiver is
+still an explicit argument in the declared function type.
+
 ## Blocks Return Their Final Expression
 
 ```zen
@@ -283,6 +313,20 @@ opposite = (d: Direction) Direction {
 
 The `?` operator is the main pattern-match form. Enum and bool matches are
 checked for missing and duplicate arms.
+
+Pattern arms are blocks, so nested decisions still stay expression-oriented:
+
+```zen
+sign = (value: i32) StaticString {
+    value == 0 ?
+        | true { "zero" }
+        | false {
+            value > 0 ?
+                | true { "positive" }
+                | false { "negative" }
+        }
+}
+```
 
 ## Payload Enums
 
@@ -796,6 +840,8 @@ The intended source rule is:
 - sync code can call sync code directly;
 - async code needs an explicit task/runtime boundary before sync callers can
   observe its result.
+- allocator and scheduler APIs should expose their effect mode in the type
+  surface instead of hiding it behind a normal call.
 
 ### Allocator Preview
 
@@ -878,6 +924,15 @@ A dynamic `String` follows the same ownership rule as `Buffer`: it is not just
 bytes, it is bytes plus allocator ownership and an effect mode. In other words,
 `StaticString` is a compile-time program value, while `String` is a runtime
 owned allocation.
+
+Read allocator signatures from left to right:
+
+- `Allocator<T, Sync>` can allocate `T` now and returns `Result<..., E>`.
+- `Allocator<T, Async>` can allocate `T` later and returns
+  `Task<Result<..., E>>`.
+- `Buffer<T, A>` owns memory only because `A` is kept with the buffer.
+- `String` is the text-shaped version of the same rule: owned bytes plus an
+  allocator capability, not a widened `StaticString`.
 
 ### Ownership Preview
 
