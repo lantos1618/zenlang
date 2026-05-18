@@ -58,6 +58,25 @@ read = (value: Option<i32, StaticString>) i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_nongeneric_enum_annotation_type_args_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "nongeneric_enum_annotation_type_args.zen",
+        r#"
+Direction:
+    North,
+    South
+
+read = (value: Direction<i32>) i32 {
+    0
+}
+"#,
+        "non-generic enum annotation type arguments",
+        "non-generic enum annotation type-argument diagnostics should not emit dependent-use followups",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_enum_annotation_type_args.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_struct_annotation_missing_args_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_struct_annotation_missing_args.zen",
