@@ -159,3 +159,54 @@ main = () i32 {
 
     assert_eq!(normalized.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_diagnostics_generic_struct_annotation_arity_schema_matches_golden() {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    let zen_path = tmp.path().join("generic_struct_annotation_arity.zen");
+    std::fs::write(
+        &zen_path,
+        r#"
+Box<T>: {
+    value: T
+}
+
+read = (box: Box<i32, StaticString>) i32 {
+    0
+}
+"#,
+    )
+    .expect("write generic struct annotation arity source");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(["emit-json", "diagnostics", zen_path.to_str().unwrap()])
+        .output()
+        .expect("run zen emit-json diagnostics");
+
+    assert!(
+        !output.status.success(),
+        "zen emit-json diagnostics should fail on generic struct annotation arity: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual = String::from_utf8(output.stdout).expect("diagnostics stdout is UTF-8");
+    let json: serde_json::Value =
+        serde_json::from_str(&actual).expect("diagnostics stdout is JSON");
+    assert_eq!(
+        json["diagnostics"]
+            .as_array()
+            .expect("diagnostics array")
+            .len(),
+        1,
+        "generic struct annotation arity diagnostics should not emit dependent-use followups: {json}"
+    );
+
+    let normalized = actual.replace(tmp.path().to_str().expect("tmp path is UTF-8"), "$TMP");
+    let expected_path =
+        fixture("tests/fixtures/ir_json/diagnostics_generic_struct_annotation_arity.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(normalized.trim(), expected.trim());
+}
