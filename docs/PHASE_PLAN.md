@@ -240,6 +240,10 @@ Agent UX deliverables:
   diagnostic through resolver-backed CLI diagnostics instead of falling back to
   ordinary unknown-type errors. Diagnostics JSON pins the public shape through
   `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`.
+- Direct Sync effect mode spelling now has a pinned CLI diagnostics JSON gate
+  for `Sync`, proving the public path reports Sync/Async effect checking as
+  gated instead of an ordinary unknown-type diagnostic. Covered by
+  `emit_json_diagnostics_sync_effect_gate_schema_matches_golden`.
 - Source-level dynamic `String` annotations now have a pinned CLI diagnostics
   JSON gate, proving the public path reports allocator-backed dynamic text as a
   gated reserved type and points users to `StaticString` for baked literal text.

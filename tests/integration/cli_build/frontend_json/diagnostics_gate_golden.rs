@@ -67,6 +67,19 @@ main = (allocator: Allocator<i32, Sync>) void { }
 }
 
 #[test]
+fn emit_json_diagnostics_sync_effect_gate_schema_matches_golden() {
+    assert_gate_diagnostics_golden(
+        "sync_effect_gate.zen",
+        r#"
+main = (mode: Sync) void { }
+"#,
+        "sync effect gate",
+        "sync effect gate should emit one Sync/Async feature-gate diagnostic",
+        "tests/fixtures/ir_json/diagnostics_sync_effect_gate.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_dynamic_string_gate_schema_matches_golden() {
     assert_gate_diagnostics_golden(
         "dynamic_string_gate.zen",
