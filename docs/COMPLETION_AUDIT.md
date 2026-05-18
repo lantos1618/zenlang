@@ -2839,7 +2839,9 @@ and do not assume Phase 4 is ready without evidence.
   `cargo test --test integration direct_file_command_build_zen_accepts_declared_env_read_for_multiple_targets`.
   Missing fallback arms on deterministic env reads reject before execution
   through
-  `cargo test --test integration direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`.
+  `cargo test --test integration direct_file_command_build_zen_rejects_env_read_without_fallback_before_execution`
+  and before multi-target direct execution through
+  `cargo test --test integration direct_file_command_multi_target_build_zen_rejects_env_read_without_fallback_before_execution`.
 - Direct `zen build.zen` validates and typechecks graph-only library exports
   before execution, covered by
   `cargo test --test integration direct_file_command_build_zen_accepts_valid_graph_only_library_sources`,
