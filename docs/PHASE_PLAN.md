@@ -3638,6 +3638,11 @@ checked-in docs, tests, and commits only.
   unknown void builtins. Guarded by
   `raw_memory_intrinsics_are_rejected_as_allocator_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Byte-memory compiler intrinsics `@builtin.memcpy(...)`,
+  `@builtin.memmove(...)`, `@builtin.memset(...)`, and `@builtin.memcmp(...)`
+  now reject through the same allocator ownership/effect gate path. Guarded by
+  `byte_memory_intrinsics_are_rejected_as_allocator_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now dispatches through the
   `GatedMethod` enum-owned spellings rather than hand-rolled comparisons,
   preserving the focused Result propagation and Sync/Async effect gates. Guarded

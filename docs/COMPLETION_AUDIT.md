@@ -3961,6 +3961,11 @@ and do not assume Phase 4 is ready without evidence.
   unknown void builtins. Covered by
   `raw_memory_intrinsics_are_rejected_as_allocator_gates` and
   `typechecker_gated_intrinsics_use_owned_name_enum`.
+- Byte-memory compiler intrinsics `@builtin.memcpy(...)`,
+  `@builtin.memmove(...)`, `@builtin.memset(...)`, and `@builtin.memcmp(...)`
+  now reject through the same allocator ownership/effect gate path. Covered by
+  `byte_memory_intrinsics_are_rejected_as_allocator_gates` and
+  `typechecker_gated_intrinsics_use_owned_name_enum`.
 - Gated `.raise()` and `.await()` method recognition now routes through
   `GatedMethod` enum-owned spellings, covered by
   `typechecker_gated_methods_use_owned_action_enum`,

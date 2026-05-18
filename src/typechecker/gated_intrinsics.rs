@@ -2,6 +2,10 @@
 pub(super) enum GatedIntrinsic {
     AsyncEnqueue,
     AsyncYield,
+    Memcmp,
+    Memcpy,
+    Memmove,
+    Memset,
     RawAllocate,
     RawDeallocate,
     RawReallocate,
@@ -12,6 +16,10 @@ impl GatedIntrinsic {
     pub(super) const INTRINSIC_MODULE: &'static str = "@builtin";
     pub(super) const ASYNC_ENQUEUE: &'static str = "async_enqueue";
     pub(super) const ASYNC_YIELD: &'static str = "async_yield";
+    pub(super) const MEMCMP: &'static str = "memcmp";
+    pub(super) const MEMCPY: &'static str = "memcpy";
+    pub(super) const MEMMOVE: &'static str = "memmove";
+    pub(super) const MEMSET: &'static str = "memset";
     pub(super) const RAW_ALLOCATE: &'static str = "raw_allocate";
     pub(super) const RAW_DEALLOCATE: &'static str = "raw_deallocate";
     pub(super) const RAW_REALLOCATE: &'static str = "raw_reallocate";
@@ -19,6 +27,10 @@ impl GatedIntrinsic {
     const ALL: &[GatedIntrinsic] = &[
         Self::AsyncEnqueue,
         Self::AsyncYield,
+        Self::Memcmp,
+        Self::Memcpy,
+        Self::Memmove,
+        Self::Memset,
         Self::RawAllocate,
         Self::RawDeallocate,
         Self::RawReallocate,
@@ -36,6 +48,10 @@ impl GatedIntrinsic {
         match self {
             Self::AsyncEnqueue => Self::ASYNC_ENQUEUE,
             Self::AsyncYield => Self::ASYNC_YIELD,
+            Self::Memcmp => Self::MEMCMP,
+            Self::Memcpy => Self::MEMCPY,
+            Self::Memmove => Self::MEMMOVE,
+            Self::Memset => Self::MEMSET,
             Self::RawAllocate => Self::RAW_ALLOCATE,
             Self::RawDeallocate => Self::RAW_DEALLOCATE,
             Self::RawReallocate => Self::RAW_REALLOCATE,
@@ -50,6 +66,18 @@ impl GatedIntrinsic {
             }
             Self::AsyncYield => {
                 "async yield is gated until Sync/Async effect checking and task lowering are implemented"
+            }
+            Self::Memcmp => {
+                "raw memory compare is gated until allocator ownership and effect semantics are implemented"
+            }
+            Self::Memcpy => {
+                "raw memory copy is gated until allocator ownership and effect semantics are implemented"
+            }
+            Self::Memmove => {
+                "raw memory move is gated until allocator ownership and effect semantics are implemented"
+            }
+            Self::Memset => {
+                "raw memory set is gated until allocator ownership and effect semantics are implemented"
             }
             Self::RawAllocate => {
                 "raw allocation is gated until allocator ownership and effect semantics are implemented"
