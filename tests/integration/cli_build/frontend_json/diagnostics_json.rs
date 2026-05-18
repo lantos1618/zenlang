@@ -304,6 +304,15 @@ Box<T>.derive(Json<T>)
             .contains("generic association target `Type<T>.derive` is gated"),
         "unexpected diagnostic payload: {diagnostic}"
     );
+    assert_eq!(
+        diagnostic["notes"][0],
+        "Use a non-generic explicit behavior association until generic behavior target templates are implemented"
+    );
+    assert_eq!(diagnostic["context"][0]["kind"], "feature_gate");
+    assert_eq!(
+        diagnostic["context"][0]["message"],
+        "reserved generic behavior association target"
+    );
     assert!(diagnostic["span"]["path"]
         .as_str()
         .expect("diagnostic span path")
