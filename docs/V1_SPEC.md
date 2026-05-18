@@ -250,7 +250,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   consumers. Non-generic enum annotation type arguments are pinned by
   `emit_json_diagnostics_nongeneric_enum_annotation_type_args_schema_matches_golden`,
   covering the stable `E5002` payload for `Direction<i32>` without dependent
-  followups. `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes
+  followups. Non-generic struct constructor type arguments are pinned by
+  `emit_json_diagnostics_nongeneric_struct_constructor_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `Point<i32> { x: 1 }` without field
+  mismatch followups. `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes
   only after a golden fixture pins the code and diagnostic shape.
   Hand-authored build graph JSON inputs are rejected before generic build.zen
   path validation can stand in for the compiler-owned graph boundary, covered by
