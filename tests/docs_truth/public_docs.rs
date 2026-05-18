@@ -237,3 +237,32 @@ fn stale_generated_tooling_directories_are_removed() {
         );
     }
 }
+
+#[test]
+fn diagnostics_catalog_documents_json_stable_codes() {
+    let catalog = read("docs/DIAGNOSTICS.md");
+
+    for required in [
+        "# Zen Diagnostics Catalog",
+        "JSON-Stable Codes",
+        "E2000",
+        "removed syntax or reserved syntax",
+        "replace_removed_return_with_final_expression",
+        "feature_gate",
+        "E5000",
+        "generic inference conflict",
+        "E5001",
+        "generic type-argument arity",
+        "E6004",
+        "generic behavior-bound failure",
+        "tests/fixtures/ir_json/diagnostics_return.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_result_method_arity.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",
+    ] {
+        assert!(
+            catalog.contains(required),
+            "docs/DIAGNOSTICS.md is missing diagnostic catalog text: {required}"
+        );
+    }
+}
