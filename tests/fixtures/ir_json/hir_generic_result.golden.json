@@ -1,0 +1,58 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Result_i32_StaticString",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "StaticString"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "unwrap_or_i32_StaticString",
+        "params": [
+          {
+            "name": "value",
+            "type": "Result_i32_StaticString"
+          },
+          {
+            "name": "fallback",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}

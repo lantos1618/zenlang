@@ -3884,6 +3884,10 @@ Agent UX deliverables:
   `emit_json_hir_outputs_enum_function_and_global_declarations`.
 - The same checked HIR declaration schema is now pinned by a golden JSON
   fixture, guarded by `emit_json_hir_declaration_schema_matches_golden`.
+- HIR JSON for generic `Result<T, E>` specialization is now pinned by
+  `emit_json_hir_generic_result_schema_matches_golden`, covering the concrete
+  `Result_i32_StaticString` enum payloads and specialized
+  `unwrap_or_i32_StaticString` function signature.
 - MIR JSON now exposes match kind, enum-pattern arm names, pattern bindings,
   and block result expressions for checked match expressions instead of only
   reporting the scrutinee. Guarded by `emit_json_mir_outputs_match_arm_schema`.
