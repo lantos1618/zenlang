@@ -104,8 +104,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   diagnostics emission through `zen emit-json ast <file>`,
   `zen emit-json symbols <file>`, `zen emit-json typed <file>`, and
   `zen emit-json diagnostics <file>`. AST JSON is explicitly marked unchecked;
-  typed JSON is explicitly marked checked; semantic acceptance must use typed
-  JSON, diagnostics, check, build, or test paths.
+  typed JSON is explicitly marked checked; diagnostics JSON is explicitly
+  marked diagnostic; semantic acceptance must use typed JSON, diagnostics,
+  check, build, or test paths.
 - `build.zen`: constrained. `zen check build.zen` validates the deterministic
   graph and verifies declared target sources exist, `zen emit build.zen` emits
   target C for one graph target, `zen build build.zen` compiles executable

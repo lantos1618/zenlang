@@ -83,6 +83,7 @@ main = () i32 {
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("diagnostics stdout is json");
     assert_eq!(json["format"], "zen.diagnostics.v0");
+    assert_eq!(json["semantic_status"], "diagnostic");
     assert_eq!(json["files"].as_array().expect("files array").len(), 1);
 
     let diagnostic = &json["diagnostics"][0];

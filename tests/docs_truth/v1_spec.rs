@@ -50,6 +50,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "AST traversal",
         "semantic_status: \"unchecked\"",
         "typed JSON is explicitly marked checked",
+        "diagnostics JSON is explicitly",
         "Actors in std",
         "JSON/YAML IR boundaries",
         "zen emit-json ast <file>",
