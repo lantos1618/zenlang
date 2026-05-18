@@ -286,6 +286,13 @@ and do not assume Phase 4 is ready without evidence.
   package/link field diagnostics into
   `tests/integration/cli_build/build_graph_json/validation/unsupported_targets.rs`,
   leaving target field and dependency graph diagnostics in the parent module.
+- Build-graph JSON validation tests now split dependency graph diagnostics and
+  deterministic-body rejection coverage into
+  `tests/integration/cli_build/build_graph_json/validation/dependencies.rs`
+  and
+  `tests/integration/cli_build/build_graph_json/validation/deterministic_body.rs`,
+  leaving the parent module on target field diagnostics and the shared CLI
+  assertion helper.
 - Emit-command build graph validation tests now split target-selection
   diagnostics into
   `tests/integration/cli_build/emit_direct_validation/target_selection.rs`,
