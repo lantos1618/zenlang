@@ -898,8 +898,10 @@ and do not assume Phase 4 is ready without evidence.
   `tests/zen/multi_file_imported_child_parent_dispatch/main.zen`.
 - Entry-module `.requires` assertions over imported public types and imported
   generic behaviors are covered by
-  `tests/zen/multi_file_imported_behavior_requires/main.zen`, with missing
-  imported generic behavior impl diagnostics covered by
+  `tests/zen/multi_file_imported_behavior_requires/main.zen`. Imported
+  `.requires` assertions are also satisfied by inherited child behavior impls
+  through `tests/zen/multi_file_imported_behavior_requires_inherited/main.zen`,
+  with missing imported generic behavior impl diagnostics covered by
   `integration::imported_generic_behavior_requires_missing_impl_is_error`.
 - Imported public generic functions preserve behavior bounds whose behavior was
   imported by the source module, covered by

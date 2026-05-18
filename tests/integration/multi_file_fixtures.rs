@@ -176,6 +176,13 @@ fn test_multi_file_imported_behavior_requires() {
 }
 
 #[test]
+fn test_multi_file_imported_behavior_requires_inherited() {
+    let zen_path = test_dir().join("multi_file_imported_behavior_requires_inherited/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "inherited-required\n");
+}
+
+#[test]
 fn test_multi_file_imported_function_imported_behavior_bound() {
     let zen_path = test_dir().join("multi_file_imported_function_imported_behavior_bound/main.zen");
     let actual = compile_and_run(&zen_path);
