@@ -1782,9 +1782,10 @@ checked-in docs, tests, and commits only.
 - Resolver-backed generic template refresh now uses the same complete
   type-parameter metadata as callable info, so incomplete typed bound refs do
   not leave stale function or method template type parameters behind.
-- The docs truth gate now locks the quiet draft-PR CI trigger shape: no
-  `pull_request.synchronize`, manual dispatch retained, and fmt/clippy/test
-  jobs guarded by the draft-PR condition.
+- The docs truth gate now locks the quiet CI trigger shape: normal branch pushes
+  do not run Actions, `pull_request.synchronize` is absent, manual
+  dispatch is retained, and fmt/clippy/test jobs are guarded by the draft-PR
+  condition.
 - Resolver variant payload expectations now pass the paired typed/display
   payload metadata directly to validation instead of wrapping it in a redundant
   intermediate object.

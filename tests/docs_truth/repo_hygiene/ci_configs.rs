@@ -21,6 +21,10 @@ fn ci_and_release_only_advertise_existing_targets() {
         "CI pull_request triggers must avoid draft-open and synchronize spam while still running when PRs leave draft"
     );
     assert!(
+        !ci.contains("\n  push:"),
+        "CI workflow should not run on normal branch pushes; use PR ready-for-review checks or manual dispatch"
+    );
+    assert!(
         !ci.contains("types: [opened") && !ci.contains(", opened") && !ci.contains("- opened"),
         "CI workflow should not create skipped runs for draft PR creation"
     );
@@ -38,6 +42,18 @@ fn ci_and_release_only_advertise_existing_targets() {
         ci.contains("workflow_dispatch"),
         "CI must keep a manual dispatch path when draft PR pushes do not run checks"
     );
+
+    let phase_plan = read("docs/PHASE_PLAN.md");
+    let completion_audit = read("docs/COMPLETION_AUDIT.md");
+    for (path, contents) in [
+        ("docs/PHASE_PLAN.md", phase_plan),
+        ("docs/COMPLETION_AUDIT.md", completion_audit),
+    ] {
+        assert!(
+            contents.contains("normal branch pushes"),
+            "{path} should record that CI stays quiet on normal branch pushes"
+        );
+    }
 
     for unsupported in ["LLVM", "zen-lsp", "aarch64-apple-darwin"] {
         assert!(

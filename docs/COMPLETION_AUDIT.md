@@ -1670,9 +1670,10 @@ and do not assume Phase 4 is ready without evidence.
   `typechecker::tests::collect_declarations_with_symbols_clears_generic_function_template_type_params_when_resolver_bounds_missing`
   and
   `typechecker::tests::collect_declarations_with_symbols_clears_generic_method_template_type_params_when_resolver_bounds_missing`.
-- The docs truth gate now covers the quiet draft-PR CI trigger shape by
-  rejecting `pull_request.synchronize`, requiring manual dispatch, and requiring
-  the draft-PR guard on fmt, clippy, and test jobs.
+- The docs truth gate now covers the quiet CI trigger shape by ensuring normal branch pushes
+  do not run Actions, rejecting `pull_request.synchronize`,
+  requiring manual dispatch, and requiring the draft-PR guard on fmt, clippy,
+  and test jobs.
 - Resolver variant payload expectations now pass paired typed/display payload
   metadata directly to validation instead of wrapping it in a redundant
   intermediate object.
