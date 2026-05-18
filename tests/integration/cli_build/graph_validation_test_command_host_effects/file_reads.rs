@@ -1,5 +1,17 @@
 use std::process::Command;
 
+fn write_zero_main(path: impl AsRef<std::path::Path>) {
+    std::fs::write(
+        path,
+        r#"
+main = () i32 {
+    0
+}
+"#,
+    )
+    .expect("write zero main");
+}
+
 #[test]
 fn test_command_build_zen_accepts_declared_file_read_effects() {
     assert_test_command_accepts_declared_file_read_effect(
@@ -42,15 +54,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {{
     )
     .expect("write build.zen");
     std::fs::write(tmp.path().join("test.targets"), "unit\n").expect("write manifest");
-    std::fs::write(
-        tmp.path().join("test.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write test.zen");
+    write_zero_main(tmp.path().join("test.zen"));
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args(["test", "build.zen"])
@@ -126,24 +130,8 @@ build = (b: Builder) Result<BuildConfig, BuildError> {{
     )
     .expect("write build.zen");
     std::fs::write(tmp.path().join("test.targets"), "unit\nintegration\n").expect("write manifest");
-    std::fs::write(
-        tmp.path().join("unit.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write unit.zen");
-    std::fs::write(
-        tmp.path().join("integration.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write integration.zen");
+    write_zero_main(tmp.path().join("unit.zen"));
+    write_zero_main(tmp.path().join("integration.zen"));
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args(["test", "build.zen"])
@@ -222,15 +210,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {{
     )
     .expect("write build.zen");
     std::fs::write(tmp.path().join("test.targets"), "unit\n").expect("write manifest");
-    std::fs::write(
-        tmp.path().join("unit.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write unit.zen");
+    write_zero_main(tmp.path().join("unit.zen"));
     std::fs::write(
         tmp.path().join("lib.zen"),
         r#"
@@ -308,9 +288,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn test_command_build_zen_rejects_undeclared_file_read_effects_before_unselected_targets() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
+    assert_test_command_rejects_file_read_before_unselected_targets(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     manifest = b.os.read_file("test.targets")
@@ -320,17 +298,34 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("unit.zen"),
+        "undeclared",
+    );
+}
+
+#[test]
+fn test_command_build_zen_rejects_file_read_without_fallback_before_unselected_targets() {
+    assert_test_command_rejects_file_read_before_unselected_targets(
         r#"
-main = () i32 {
-    0
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("test.targets") ?
+        | .Ok(contents) { contents }
+    b.add(Executable { name: "app", main: "missing_app.zen", out_dir: "build/app/" })
+    b.add(Test { name: "unit", root: "unit.zen" })
+    b.add(Library { name: "core", exports: ["lib.zen"] })
+    .Ok(b.config())
 }
 "#,
-    )
-    .expect("write unit.zen");
+        "missing-fallback",
+    );
+}
+
+fn assert_test_command_rejects_file_read_before_unselected_targets(
+    build_source: &str,
+    diagnostic_case: &str,
+) {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    std::fs::write(tmp.path().join("build.zen"), build_source).expect("write build.zen");
+    write_zero_main(tmp.path().join("unit.zen"));
     std::fs::write(
         tmp.path().join("lib.zen"),
         r#"
@@ -356,7 +351,7 @@ value = () i32 {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("undeclared host effect: read file `test.targets`"),
-        "expected undeclared file read diagnostic, stderr={stderr}"
+        "expected {diagnostic_case} file read diagnostic, stderr={stderr}"
     );
     assert!(
         !stderr.contains("missing_app.zen"),
