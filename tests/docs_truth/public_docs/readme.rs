@@ -20,6 +20,8 @@ fn readme_is_language_first_and_links_reference_docs() {
         "status",
         "gates",
         "audit details live",
+        "docs/PHASE_PLAN.md",
+        "docs/COMPLETION_AUDIT.md",
         "cargo fmt --check",
         "cargo clippy -- -D warnings",
         "cargo test --lib",
@@ -43,8 +45,6 @@ fn readme_is_language_first_and_links_reference_docs() {
         "docs/learn_zen_in_y_minutes.md",
         "examples/README.md",
         "docs/V1_SPEC.md",
-        "docs/PHASE_PLAN.md",
-        "docs/COMPLETION_AUDIT.md",
     ] {
         assert!(
             readme.contains(required),

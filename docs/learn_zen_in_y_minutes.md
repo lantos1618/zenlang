@@ -77,8 +77,7 @@ count known after compilation. Passing it around copies a pointer-and-length
 view into program storage. It does not allocate, resize, free, or transfer heap
 ownership.
 
-Use `StaticString` for literal text and other text that is part of the program
-image.
+Use `StaticString` for literal text and other text that is part of the program image.
 
 ## Dynamic String Preview
 
@@ -91,8 +90,8 @@ construction belongs on an allocator-aware API.
 ## Calls, Structs, And Data
 
 `value.method(args)` and `method(value, args)` are call-site spellings for the
-same attached function. They are not alternate declaration forms. Struct
-literals name fields explicitly, and field access uses dot syntax.
+same attached function, not alternate declaration forms. Struct literals name
+fields explicitly, and field access uses dot syntax.
 
 ## Enums And Matching
 
@@ -157,16 +156,14 @@ show<T: Display> = (value: T) StaticString {
 }
 ```
 
-Relationship declarations keep the changed type or behavior on the left:
+Relationship declarations keep the changed type or behavior on the left.
+There is no `impl Type for Behavior` spelling and no separate `extends` keyword block.
 
 ```zen
 Point.implements(Display)
 Point.requires(Display)
 PrettyDisplay.extends(Display)
 ```
-
-There is no `impl Type for Behavior` spelling and no separate `extends`
-keyword block.
 
 ## Loops
 
@@ -237,14 +234,14 @@ the loop and are read after `done`.
 
 ## Imports And Modules
 
-Imports use destructuring-style binding from a module path. Local files import
+Imports use destructuring-style binding from a module path; local files import
 by module name, and dotted paths resolve through subdirectories.
 
 ## Memory And Ownership
 
-Stable Zen does not hide heap allocation behind literals, interpolation,
-method calls, or generic containers. If a value needs heap memory, the API must
-show the owner and allocator path.
+Stable Zen does not hide heap allocation behind literals, interpolation, method
+calls, or generic containers. If a value needs heap memory, the API must show
+the owner and allocator path.
 
 ```zen
 OwnedBytes<T, A>: {
@@ -411,5 +408,3 @@ static text, and explicit loop control.
 - `README.md` for the language pitch.
 - `examples/README.md` for canonical runnable examples.
 - `docs/V1_SPEC.md` for the full v1 contract and gated design inventory.
-- `docs/PHASE_PLAN.md` for implementation sequencing.
-- `docs/COMPLETION_AUDIT.md` for audit details.
