@@ -2,6 +2,7 @@ use super::*;
 use names::CIntrinsic;
 
 mod names;
+mod syscalls;
 
 impl CEmitter {
     // ── Intrinsics ────────────────────────────────────────────
@@ -18,6 +19,8 @@ impl CEmitter {
         };
 
         match intrinsic {
+            _ if intrinsic.is_syscall() => intrinsic.emit_syscall(self, args),
+
             // -- Memory allocation ----------------------------------------
             CIntrinsic::RawAllocate => {
                 let size = self.emit_expr_inline(&args[0]);
@@ -170,60 +173,6 @@ impl CEmitter {
             }
             CIntrinsic::Fence => "(__atomic_thread_fence(__ATOMIC_SEQ_CST), (void)0)".into(),
 
-            // -- Syscalls -------------------------------------------------
-            CIntrinsic::Syscall0 => {
-                let num = self.emit_expr_inline(&args[0]);
-                format!("syscall({})", num)
-            }
-            CIntrinsic::Syscall1 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                format!("syscall({}, {})", num, a0)
-            }
-            CIntrinsic::Syscall2 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                let a1 = self.emit_expr_inline(&args[2]);
-                format!("syscall({}, {}, {})", num, a0, a1)
-            }
-            CIntrinsic::Syscall3 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                let a1 = self.emit_expr_inline(&args[2]);
-                let a2 = self.emit_expr_inline(&args[3]);
-                format!("syscall({}, {}, {}, {})", num, a0, a1, a2)
-            }
-            CIntrinsic::Syscall4 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                let a1 = self.emit_expr_inline(&args[2]);
-                let a2 = self.emit_expr_inline(&args[3]);
-                let a3 = self.emit_expr_inline(&args[4]);
-                format!("syscall({}, {}, {}, {}, {})", num, a0, a1, a2, a3)
-            }
-            CIntrinsic::Syscall5 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                let a1 = self.emit_expr_inline(&args[2]);
-                let a2 = self.emit_expr_inline(&args[3]);
-                let a3 = self.emit_expr_inline(&args[4]);
-                let a4 = self.emit_expr_inline(&args[5]);
-                format!("syscall({}, {}, {}, {}, {}, {})", num, a0, a1, a2, a3, a4)
-            }
-            CIntrinsic::Syscall6 => {
-                let num = self.emit_expr_inline(&args[0]);
-                let a0 = self.emit_expr_inline(&args[1]);
-                let a1 = self.emit_expr_inline(&args[2]);
-                let a2 = self.emit_expr_inline(&args[3]);
-                let a3 = self.emit_expr_inline(&args[4]);
-                let a4 = self.emit_expr_inline(&args[5]);
-                let a5 = self.emit_expr_inline(&args[6]);
-                format!(
-                    "syscall({}, {}, {}, {}, {}, {}, {})",
-                    num, a0, a1, a2, a3, a4, a5
-                )
-            }
-
             // -- Debug / trap / panic -------------------------------------
             CIntrinsic::Trap => "(__builtin_trap(), (void)0)".into(),
             CIntrinsic::Debugtrap => "(__builtin_debugtrap(), (void)0)".into(),
@@ -366,6 +315,7 @@ impl CEmitter {
                     ptr, payload
                 )
             }
+            _ => unreachable!("syscall intrinsic should be handled before category lowering"),
         }
     }
 
