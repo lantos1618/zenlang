@@ -156,6 +156,8 @@ pub const GATED_GENERIC_ASSOCIATION_TARGET_NOTE: &str =
     "Use a non-generic explicit behavior association until generic behavior target templates are implemented";
 pub const GATED_GENERIC_ASSOCIATION_TARGET_CONTEXT: &str =
     "reserved generic behavior association target";
+pub const MISSING_BOOL_MATCH_ARM_FIX_KIND: &str = "add_missing_bool_match_arm";
+pub const MISSING_BOOL_MATCH_ARM_FIX_TITLE: &str = "Add missing bool match arm";
 
 #[derive(Debug, Clone)]
 pub struct TextEdit {

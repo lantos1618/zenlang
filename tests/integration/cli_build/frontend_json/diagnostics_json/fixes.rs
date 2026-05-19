@@ -108,3 +108,50 @@ main = (x: i32) i64 {
     assert_eq!(edit["span"]["column"], 5);
     assert_eq!(edit["replacement"], "cast(value, Type)");
 }
+
+#[test]
+fn emit_json_diagnostics_includes_structured_missing_bool_match_arm_fix() {
+    let source = r#"
+main = (flag: bool) i32 {
+    flag ?
+        | true { 1 }
+}
+"#;
+    let json = emit_diagnostics_json(source, "missing_bool_arm.zen", "missing bool match arm");
+
+    let diagnostic = &json["diagnostics"][0];
+    assert_eq!(diagnostic["code"], "E4006");
+    assert!(
+        diagnostic["message"]
+            .as_str()
+            .expect("diagnostic message")
+            .contains("non-exhaustive bool match: missing `false`"),
+        "unexpected diagnostic payload: {diagnostic}"
+    );
+
+    let suggestions = diagnostic["suggested_fixes"]
+        .as_array()
+        .expect("diagnostic should carry structured suggested fixes");
+    assert_eq!(
+        suggestions.len(),
+        1,
+        "unexpected suggestions: {suggestions:?}"
+    );
+
+    let fix = &suggestions[0];
+    assert_eq!(fix["kind"], "add_missing_bool_match_arm");
+    assert_eq!(fix["title"], "Add missing bool match arm");
+
+    let edit = &fix["edits"][0];
+    assert_eq!(
+        fix["edits"].as_array().expect("fix edits array").len(),
+        1,
+        "missing bool arm fix should carry exactly one text edit: {fix}"
+    );
+    assert!(edit["span"]["path"]
+        .as_str()
+        .expect("edit span path")
+        .ends_with("missing_bool_arm.zen"));
+    assert_eq!(edit["span"]["start"], edit["span"]["end"]);
+    assert_eq!(edit["replacement"], "\n        | false { <expression> }");
+}
