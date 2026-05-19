@@ -1,50 +1,16 @@
 use std::collections::BTreeMap;
 
-use serde::Serialize;
-
 use crate::ast::typed::{Type, TypeDefKind, TypedProgram, TypedTypeDef};
 
-#[derive(Serialize)]
-struct LayoutJsonProgram {
-    format: &'static str,
-    schema_version: u32,
-    semantic_status: &'static str,
-    target: LayoutJsonTarget,
-    layouts: BTreeMap<String, LayoutJsonType>,
-}
+#[path = "layout/metrics.rs"]
+mod metrics;
+#[path = "layout/schema.rs"]
+mod schema;
 
-#[derive(Serialize)]
-struct LayoutJsonTarget {
-    pointer_size: u32,
-    pointer_alignment: u32,
-    usize_size: u32,
-}
-
-#[derive(Clone, Serialize)]
-struct LayoutJsonType {
-    kind: &'static str,
-    size: u32,
-    alignment: u32,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    fields: Vec<LayoutJsonField>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    variants: Vec<LayoutJsonVariant>,
-}
-
-#[derive(Clone, Serialize)]
-struct LayoutJsonField {
-    name: String,
-    r#type: String,
-    offset: u32,
-}
-
-#[derive(Clone, Serialize)]
-struct LayoutJsonVariant {
-    name: String,
-    tag: u32,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    payload_fields: Vec<LayoutJsonField>,
-}
+use metrics::{align_to, scalar_layout, POINTER_ALIGN, POINTER_SIZE, USIZE_SIZE};
+use schema::{
+    LayoutJsonField, LayoutJsonProgram, LayoutJsonTarget, LayoutJsonType, LayoutJsonVariant,
+};
 
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     let context = LayoutContext::new(program);
@@ -62,10 +28,6 @@ pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<Stri
 
     serde_json::to_string_pretty(&graph)
 }
-
-const POINTER_SIZE: u32 = 8;
-const POINTER_ALIGN: u32 = 8;
-const USIZE_SIZE: u32 = 8;
 
 struct LayoutContext<'a> {
     types: BTreeMap<&'a str, &'a TypedTypeDef>,
@@ -266,23 +228,5 @@ impl<'a> LayoutContext<'a> {
             .get(name)
             .cloned()
             .unwrap_or_else(|| scalar_layout("opaque", 0, 1))
-    }
-}
-
-fn scalar_layout(kind: &'static str, size: u32, alignment: u32) -> LayoutJsonType {
-    LayoutJsonType {
-        kind,
-        size,
-        alignment,
-        fields: Vec::new(),
-        variants: Vec::new(),
-    }
-}
-
-fn align_to(value: u32, alignment: u32) -> u32 {
-    if alignment <= 1 {
-        value
-    } else {
-        value.div_ceil(alignment) * alignment
     }
 }

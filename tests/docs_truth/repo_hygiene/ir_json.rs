@@ -70,3 +70,35 @@ fn diagnostics_json_schema_types_live_in_focused_helper() {
         "diagnostics JSON helper should own diagnostics serialization entry point"
     );
 }
+
+#[test]
+fn layout_json_schema_types_live_in_focused_helper() {
+    let layout = read("src/ir_json/layout.rs");
+    let schema = read("src/ir_json/layout/schema.rs");
+
+    for moved_schema_type in [
+        "struct LayoutJsonProgram",
+        "struct LayoutJsonTarget",
+        "struct LayoutJsonType",
+        "struct LayoutJsonField",
+        "struct LayoutJsonVariant",
+    ] {
+        assert!(
+            !layout.contains(moved_schema_type),
+            "layout JSON lowering should not own schema type definitions: {moved_schema_type}"
+        );
+        assert!(
+            schema.contains(moved_schema_type),
+            "layout JSON schema definitions should live in the focused schema helper: {moved_schema_type}"
+        );
+    }
+
+    assert!(
+        schema.contains("use serde::Serialize"),
+        "layout JSON schema helper should own serialization derives"
+    );
+    assert!(
+        layout.lines().count() < 240,
+        "layout JSON lowering should stay focused on layout calculation"
+    );
+}
