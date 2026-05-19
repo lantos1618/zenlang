@@ -33,6 +33,7 @@ mod monomorphize_specialized_types;
 mod monomorphize_types;
 mod patterns;
 mod program_checking;
+mod program_module_graph;
 mod resolve;
 mod resolver_backed_collection;
 mod resolver_lookup;
