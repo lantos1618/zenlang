@@ -4,9 +4,9 @@ Zen is a systems language built around prefix-first declarations, explicit data
 shapes, pattern matching, generics, behaviors, visible ownership, and
 predictable native output.
 
-Runnable examples live in `examples/` and `tests/zen/`. This guide is a fast
-tour of the source shape: what stable examples should look like today, and how
-the reserved preview surfaces are intended to read once promoted.
+Runnable examples live in `examples/` and `tests/zen/`. This guide is the
+short source tour: copy the stable forms for real examples today, and read the
+preview forms only as the intended shape of gated language work.
 
 The guide has two layers:
 
@@ -30,8 +30,9 @@ Quick map:
 - type relationships are receiver-first declarations such as
   `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
   `Point.requires(Json)`;
-- `StaticString` is baked into the program as static bytes plus length; it is
-  not allocator-backed String or other dynamic text;
+- `StaticString` is baked into the program as static bytes plus length; it is a
+  static pointer-and-length view, not allocator-backed String or other owned
+  dynamic text;
 - allocator-backed `String<A>` is owned runtime memory and must carry the
   allocator that can grow or release it;
 - sync, async, allocator, raw-memory, actor, and comptime type-matching
@@ -152,8 +153,9 @@ its type/API surface.
 Zen keeps important edges visible:
 
 - Control is explicit. Functions, matches, and blocks produce values from final
-  expressions. loop control is prefix-only: enter with `loop((l) { ... })`,
+  expressions. Loop control is prefix-only: enter with `loop((l) { ... })`,
   then call `l.done()`, `l.next()`, `done(l)`, or `next(l)`.
+  The phrase to remember is simple: loop control is prefix-only.
 - Text ownership is explicit. StaticString is not a String. `StaticString` is
   not `String<A>`. Static text and dynamic text are different types, and a
   literal never silently allocates dynamic text.
@@ -186,6 +188,49 @@ no `extends Behavior` keyword block, no `return`, and no body-first loop.
 | `async fn` | a function whose type is `Task<Result<T, E>>` or another task-shaped type |
 | string literal text | `StaticString` |
 | growable owned text | `String<A>` or another owner that carries allocator ownership |
+
+## Read Static And Dynamic Text Correctly
+
+Text in Zen has two different ownership shapes:
+
+| Text shape | What it means |
+| --- | --- |
+| `StaticString` | static bytes plus length baked into the program image |
+| `String<A>` | owned dynamic bytes whose storage is managed by allocator `A` |
+
+`StaticString` is the type of string literals. The compiled program knows where
+the bytes live and how long they are. Passing a `StaticString` copies that
+pointer-and-length view; it does not allocate, grow, free, or transfer
+ownership.
+
+`String<A>` is a dynamic owner. It can be built at runtime, can have capacity,
+and can grow, so the allocator must be visible in the type. A literal such as
+`"Zen"` never silently becomes `String<A>`.
+
+## Read Effects And Allocators Correctly
+
+`Sync` and `Async` are effect modes in type surfaces. They are not function
+keywords and they are not decorative marker names:
+
+```zen
+read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
+}
+
+read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+```
+
+The outer result type tells you whether work is complete. Sync work returns a
+checked value now, such as `Result<T, E>`. Async work returns task-shaped work,
+such as `Task<Result<T, E>>`. There is no source-level `async fn` syntax in the
+stable tour.
+
+Allocators follow the same rule. `Allocator<T, Sync>` and
+`Allocator<T, Async>` are different capabilities because they allocate under
+different effect modes. Any dynamic owner that stores heap memory must carry
+the allocator that can later grow or release that memory.
 
 ## What Is Stable Right Now
 
