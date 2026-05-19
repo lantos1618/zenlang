@@ -115,6 +115,14 @@ fn emit_json_symbols_generic_option_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_symbols_generic_result_schema_matches_golden() {
+    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_result_enum.zen"));
+    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_generic_result.golden.json");
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
 fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
     let actual = normalized_json_for_path(
         "symbols",
