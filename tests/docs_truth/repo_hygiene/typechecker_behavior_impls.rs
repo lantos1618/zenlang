@@ -62,3 +62,35 @@ fn behavior_association_declaration_tasks_live_in_focused_helper() {
         "declaration tasks should include focused behavior association tasks"
     );
 }
+
+#[test]
+fn behavior_association_inheritance_lives_in_focused_helper() {
+    let root = read("src/typechecker/behavior_associations.rs");
+    let focused = read("src/typechecker/behavior_associations/inheritance.rs");
+
+    for helper in [
+        "validate_behavior_extends_cycles",
+        "behavior_extends_has_cycle",
+        "validate_behavior_method_coherence",
+        "collect_behavior_method_coherence_errors",
+        "type_implements_behavior",
+        "behavior_inherits_from",
+        "behavior_inherits_from_inner",
+        "behavior_extends_parent_matches",
+        "behavior_ref_inherits_from_inner",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "behavior_associations.rs should not own inheritance/coherence helper: {helper}"
+        );
+        assert!(
+            focused.contains(&format!("fn {helper}")),
+            "behavior association inheritance/coherence helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("mod inheritance;"),
+        "behavior associations should load the focused inheritance/coherence helper"
+    );
+}
