@@ -136,6 +136,35 @@ fn typechecker_resolver_pattern_local_traversal_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_variant_metadata_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let types = read("src/typechecker/resolver_validation/metadata_types.rs");
+    let variants = read("src/typechecker/resolver_validation/metadata_variants.rs");
+
+    for helper in [
+        "validate_resolver_variant_names",
+        "validate_resolver_variant_payload",
+        "validate_resolver_variant_owner_name",
+        "validate_resolver_variant_visibility",
+        "validate_resolver_variant_absent_other_metadata",
+    ] {
+        assert!(
+            !types.contains(&format!("fn {helper}")),
+            "resolver type metadata should not own variant metadata helper: {helper}"
+        );
+        assert!(
+            variants.contains(&format!("fn {helper}")),
+            "resolver variant metadata helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"resolver_validation/metadata_variants.rs\");"),
+        "resolver validation should include focused variant metadata helper"
+    );
+}
+
+#[test]
 fn typechecker_resolver_type_behavior_metadata_tests_live_in_focused_modules() {
     let root = read("src/typechecker/tests/resolver_type_behavior_metadata.rs");
     let type_metadata =
