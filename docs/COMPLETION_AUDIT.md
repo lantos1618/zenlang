@@ -14,7 +14,7 @@ not assume completion without evidence.
 |---|---|---|
 | Verify repo state | Check `git status --short --branch`. | required each slice |
 | Verify tests before pushing | Run `cargo fmt --check`, `git diff --check`, focused tests, `cargo clippy -- -D warnings`, `cargo test --lib`, and `cargo test --tests`. | required each slice |
-| Keep CI quiet on normal branch pushes | Normal branch pushes should not fan out GitHub Actions; PR checks are the ready-review path. | active |
+| Keep CI quiet on normal branch pushes | normal branch pushes should not fan out GitHub Actions; PR checks are the ready-review path. | active |
 | Recover from `183d140c` | `docs/PHASE_PLAN.md` records the recovery point. | satisfied |
 | Reconstruct missing plan | `docs/PHASE_PLAN.md` records design decisions, compressed evidence, current phase, and next slice. | satisfied |
 | Continue TDD-first | New language/compiler behavior starts with a failing or tightened test. | ongoing |
@@ -29,10 +29,10 @@ first; AST/HIR traversal remains tooling/metaprogramming; type matching and
 behavior association remain separate; JSON is compiler-owned IR output; YAML is
 human-authored config/spec input; `build.zen` is deterministic comptime build
 graph construction; `StaticString` is baked program data; allocator-backed `String`
-is dynamic memory; `Type.implements(Behavior)` covers non-generic explicit behavior associations;
-Dev UX and Agent UX target MoonBit-style toolchain integration with a VS Code extension,
-language server, agent-readable diagnostics, project graph output, and
-structured fix suggestions.
+is dynamic memory; `Type.implements(Behavior)` covers non-generic explicit behavior associations.
+Dev UX and Agent UX target MoonBit-style toolchain integration with a VS Code extension, language server,
+agent-readable diagnostics, project graph output, and structured fix
+suggestions.
 
 ## Compressed Evidence Summary
 
@@ -88,13 +88,7 @@ Do not mark the objective complete while these gaps remain.
 
 ## Evidence Pointers
 
-- `docs/PHASE_PLAN.md`: recovery point, design decisions, evidence map, phase,
-  and next slice.
-- `docs/V1_SPEC.md`: current language/spec surface.
-- `docs/DIAGNOSTICS.md`: stable diagnostics catalog.
-- `docs/learn_zen_in_y_minutes.md`: concise public language tour.
-- `tests/docs_truth`: documentation, repo hygiene, and status truth gates.
-- `tests/integration`: CLI, JSON, diagnostics, build graph, and generated-C.
-- `tests/resolver_phase2.rs`: resolver Phase 2 semantic evidence.
-- `tests/zen`: executable language fixtures.
-- Git history: implementation detail that should stay out of compact Markdown.
+Use `docs/PHASE_PLAN.md`, `docs/V1_SPEC.md`, `docs/DIAGNOSTICS.md`,
+`docs/learn_zen_in_y_minutes.md`, `tests/docs_truth`, `tests/integration`,
+`tests/resolver_phase2.rs`, `tests/zen`, and git history. Keep implementation
+detail in tests, fixtures, and commits instead of expanding compact Markdown.
