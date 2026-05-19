@@ -55,3 +55,31 @@ fn build_graph_dependency_order_lives_in_focused_helper() {
         "build graph root should include focused dependency ordering module"
     );
 }
+
+#[test]
+fn build_target_field_extraction_lives_in_focused_helper() {
+    let targets = read("src/build_graph/lowering/targets.rs");
+    let fields = read("src/build_graph/lowering/target_fields.rs");
+
+    assert!(
+        targets.lines().count() < 220,
+        "build target construction should stay focused on target shapes"
+    );
+    for helper in [
+        "required_string_field",
+        "required_one_of_string_fields",
+        "optional_string_field",
+        "required_string_array_field",
+        "optional_string_array_field",
+        "field_value",
+    ] {
+        assert!(
+            !targets.contains(&format!("fn {helper}")),
+            "build target field extraction should live in target_fields.rs: {helper}"
+        );
+        assert!(
+            fields.contains(&format!("fn {helper}")),
+            "target_fields.rs should own build target field extraction: {helper}"
+        );
+    }
+}
