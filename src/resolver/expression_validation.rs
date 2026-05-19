@@ -1,4 +1,4 @@
-use crate::ast::{Expression, StringPart, TypeParam};
+use crate::ast::{Expression, TypeParam};
 use crate::error::Diagnostic;
 
 use super::expression_validation_constructs::{
@@ -8,7 +8,9 @@ use super::symbol_table::ScopeStack;
 use super::{Resolver, SymbolTable};
 
 mod calls;
+mod traversal;
 use calls::{FunctionCallRef, MethodCallRef};
+use traversal::{BinaryExprRef, IfOrWhileExprRef, IndexExprRef, RangeExprRef};
 
 impl Resolver {
     pub(super) fn validate_expr_refs(
@@ -68,18 +70,10 @@ impl Resolver {
                 );
             }
             Expression::BinaryOp { left, right, .. } => {
-                self.validate_expr_refs(
+                self.validate_binary_expr_refs(
                     table,
                     type_params,
-                    left,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    right,
+                    BinaryExprRef { left, right },
                     locals,
                     allow_self_type,
                     diagnostics,
@@ -89,7 +83,7 @@ impl Resolver {
             | Expression::MemberAccess {
                 object: operand, ..
             } => {
-                self.validate_expr_refs(
+                self.validate_unary_expr_refs(
                     table,
                     type_params,
                     operand,
@@ -99,18 +93,10 @@ impl Resolver {
                 );
             }
             Expression::IndexAccess { object, index, .. } => {
-                self.validate_expr_refs(
+                self.validate_index_expr_refs(
                     table,
                     type_params,
-                    object,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    index,
+                    IndexExprRef { object, index },
                     locals,
                     allow_self_type,
                     diagnostics,
@@ -198,36 +184,22 @@ impl Resolver {
                 then_body: body,
                 ..
             } => {
-                self.validate_expr_refs(
+                let else_body = match expr {
+                    Expression::If { else_body, .. } => else_body.as_deref(),
+                    _ => None,
+                };
+                self.validate_if_or_while_expr_refs(
                     table,
                     type_params,
-                    condition,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_child_scope_expr_refs(
-                    table,
-                    type_params,
-                    body,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                if let Expression::If {
-                    else_body: Some(else_body),
-                    ..
-                } = expr
-                {
-                    self.validate_child_scope_expr_refs(
-                        table,
-                        type_params,
+                    IfOrWhileExprRef {
+                        condition,
+                        body,
                         else_body,
-                        locals,
-                        allow_self_type,
-                        diagnostics,
-                    );
-                }
+                    },
+                    locals,
+                    allow_self_type,
+                    diagnostics,
+                );
             }
             Expression::Loop { body, .. } => {
                 self.validate_child_scope_expr_refs(
@@ -297,39 +269,27 @@ impl Resolver {
                 );
             }
             Expression::StringInterpolation { parts, .. } => {
-                for part in parts {
-                    if let StringPart::Expr(expr) = part {
-                        self.validate_expr_refs(
-                            table,
-                            type_params,
-                            expr,
-                            locals,
-                            allow_self_type,
-                            diagnostics,
-                        );
-                    }
-                }
-            }
-            Expression::Range { start, end, .. } => {
-                self.validate_expr_refs(
+                self.validate_string_interpolation_refs(
                     table,
                     type_params,
-                    start,
+                    parts,
                     locals,
                     allow_self_type,
                     diagnostics,
                 );
-                self.validate_expr_refs(
+            }
+            Expression::Range { start, end, .. } => {
+                self.validate_range_expr_refs(
                     table,
                     type_params,
-                    end,
+                    RangeExprRef { start, end },
                     locals,
                     allow_self_type,
                     diagnostics,
                 );
             }
             Expression::Defer { expr, .. } => {
-                self.validate_expr_refs(
+                self.validate_defer_expr_refs(
                     table,
                     type_params,
                     expr,
