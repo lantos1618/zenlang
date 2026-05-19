@@ -13,7 +13,8 @@ layers:
 
 Stable Zen avoids hidden allocation, exceptions, null, `break`, `continue`,
 and keyword exits. Values come from final expressions. Loops use explicit
-control calls. Heap ownership has to appear in the type/API surface.
+control calls. Heap ownership has to appear in the type/API surface. The
+guide below teaches the canonical source spelling, not transitional aliases.
 
 Quick map:
 
@@ -46,7 +47,8 @@ Zen keeps important edges visible:
 
 No in-between keyword phrases are part of the stable tutorial syntax. If a
 form reads like a borrowed phrase from another language, translate it into the
-receiver-first or prefix-first Zen form.
+receiver-first or prefix-first Zen form. That means no `impl ... for ...`,
+no `extends Behavior` keyword block, no `return`, and no body-first loop.
 
 ## Translation Cheat Sheet
 
@@ -59,7 +61,7 @@ receiver-first or prefix-first Zen form.
 | `continue` | `l.next()` or `next(l)` |
 | `impl Type for Behavior` | `Type.implements(Behavior) { ... }` |
 | `async fn` | a function whose type is `Task<Result<T, E>>` or another task-shaped type |
-| string literal as owned text | `StaticString` |
+| string literal text | `StaticString` |
 | growable owned text | `String<A>` with allocator ownership |
 
 ## Copy These Forms First
@@ -141,6 +143,17 @@ There is no `impl Type for Behavior` spelling. There is no source-level
 `async` keyword. There is no `async fn` spelling. Sync, async, and allocator
 behavior is visible through types such as `Allocator<T, Sync>`,
 `Allocator<T, Async>`, `Result<T, E>`, and `Task<Result<T, E>>`.
+
+Behavior declarations also stay receiver-first. Use:
+
+```zen
+Type.implements(Behavior) { ... }
+ChildBehavior.extends(ParentBehavior)
+Type.requires(Behavior)
+```
+
+Those forms keep the thing being changed on the left. There is no separate
+`impl` keyword, no `extend` keyword, and no hidden trait-relationship syntax.
 
 ## Control Flow At A Glance
 
@@ -679,6 +692,16 @@ step = (done_now: bool) void {
 }
 ```
 
+The UFC spelling is still loop-control syntax. It does not introduce ordinary
+functions named `done` or `next`:
+
+```zen
+loop((l) {
+    done(l)
+    next(l)
+})
+```
+
 The complete stable loop surface is:
 
 - `loop((l) { ... })` starts a loop and binds a control handle.
@@ -791,21 +814,23 @@ main = () i32 {
 ```
 
 `StaticString` is baked into the program. It points at static storage and keeps
-its length with the value, so a literal can be passed around without allocating
-or changing ownership. Its bytes live in the program image; the value is a
-stable pointer-and-length view and does not own or free memory.
+its fixed length with the value, so a literal can be passed around without
+allocating or changing ownership. Its bytes live in the program image; the
+value is a stable pointer-and-length view and does not own or free memory.
+The location and byte count are known from the compiled program, so the value
+cannot grow.
 
-The allocator-backed String type is dynamic: it owns memory, carries
-allocator-managed capacity, length, and storage. It can grow, can be built at
-runtime, and must be created through allocator-aware APIs once the allocator
-model is promoted.
+The allocator-backed `String<A>` type is dynamic: it owns memory, carries
+allocator-managed capacity, length, and storage. It also carries allocator
+ownership. It can grow, can be built at runtime, and must be created through
+allocator-aware APIs once the allocator model is promoted.
 Until that ownership path exists, source-level `String` annotations
 are gated; use `StaticString` for literal/static text.
 
 That distinction is deliberate:
 
 - `StaticString` is a non-owning view into program storage.
-- `String` is owned dynamic memory and therefore needs allocator ownership.
+- `String<A>` is owned dynamic memory and therefore needs allocator ownership.
 - A literal such as `"Zen"` does not allocate a dynamic `String`.
 - String interpolation is non-owning in stable examples; only literal bytes are
 guaranteed to be baked into program storage.
