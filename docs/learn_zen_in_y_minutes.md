@@ -158,6 +158,44 @@ No in-between loop syntax exists. There is no `while (...) { ... }`, no
 forms to `loop((l) { ... })` with explicit state and explicit `done`/`next`
 edges.
 
+The important part is that every edge is visible:
+
+```zen
+count_down = (start: i32) i32 {
+    current ::= start
+
+    loop((l) {
+        current == 0 ?
+            | true { l.done() }
+            | false {
+                current = current - 1
+                l.next()
+            }
+    })
+
+    current
+}
+```
+
+That same rule replaces both `break` and `continue`:
+
+```zen
+skip_until_positive = (value: i32) i32 {
+    seen ::= 0
+
+    loop((l) {
+        value > 0 ?
+            | true { l.done() }
+            | false {
+                seen = seen + 1
+                l.next()
+            }
+    })
+
+    seen
+}
+```
+
 The core syntax to keep in your head:
 
 ```zen
@@ -758,9 +796,9 @@ or changing ownership. Its bytes live in the program image; the value is a
 stable pointer-and-length view and does not own or free memory.
 
 The allocator-backed String type is dynamic: it owns memory, carries
-allocator-managed
-  capacity, length, and storage. It can grow, can be built at runtime, and must
-be created through allocator-aware APIs once the allocator model is promoted.
+allocator-managed capacity, length, and storage. It can grow, can be built at
+runtime, and must be created through allocator-aware APIs once the allocator
+model is promoted.
 Until that ownership path exists, source-level `String` annotations
 are gated; use `StaticString` for literal/static text.
 
@@ -780,6 +818,22 @@ String<A>: {
     allocator: A,
 }
 ```
+
+APIs should say which kind of text they accept:
+
+```zen
+identity_static = (message: StaticString) StaticString {
+    message
+}
+
+identity_dynamic<A> = (message: String<A>) String<A> {
+    message
+}
+```
+
+The first function accepts baked program text. The second accepts owned text
+whose storage is managed by `A`; that allocator relationship is part of the
+type instead of being hidden behind a plain `string`.
 
 ## Gated Preview: Sync, Async, And Allocators
 
@@ -819,6 +873,18 @@ read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, Io
 
 read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
     source.read_all_async(allocator)
+}
+```
+
+The call site stays honest about timing:
+
+```zen
+load_config = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    read_now(source, allocator)
+}
+
+start_config_load = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    read_later(source, allocator)
 }
 ```
 
@@ -870,8 +936,28 @@ Buffer<T, A: Allocator<T, Sync>>: {
 }
 ```
 
-Sync allocation returns `Result` directly. Async allocation returns `Task<Result<...>>`. Dynamic memory ownership is visible in the returned type:
+Sync allocation returns `Result` directly. Async allocation returns
+`Task<Result<...>>`. Dynamic memory ownership is visible in the returned type:
 bytes plus allocator ownership and an effect mode.
+
+Allocator-backed construction carries the allocator through the resulting
+owner:
+
+```zen
+make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
+    allocator.alloc(len) ?
+        | Ok(ptr) {
+            Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
+                ptr: ptr,
+                len: len,
+                allocator: allocator,
+            })
+        }
+        | Err(error) {
+            Result<Buffer<T, A>, AllocError>.Err(error)
+        }
+}
+```
 
 `Buffer<T, A>` owns memory only because `A` is kept with the buffer. Passing a
 raw pointer alone is just an address.
