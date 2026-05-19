@@ -1,17 +1,14 @@
 # Zen v1 Specification Draft
 
 Status: v1 draft. This document is normative for intended v1 behavior, but the
-feature matrix below controls what the rewrite compiler may currently advertise.
+feature matrix controls what the rewrite compiler may currently advertise.
 Exhaustive proof belongs in tests, golden fixtures, and git history; this spec
 keeps representative Test Evidence only.
 
 ## Baseline
 
 The active implementation is the rewrite compiler:
-
-```text
-source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc
-```
+`source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
 
 Compiler-owned semantic data is the source of truth. Serialized JSON and YAML are
 interface formats only; they must be generated from or validated against checked
@@ -21,8 +18,8 @@ compiler data.
 
 Implemented syntax forms are limited to the forms covered by `tests/zen` and Rust
 unit/integration tests: declarations, calls, imports, bindings, structs, enums,
-field access, method-style calls, final-expression results, prefix loops, `defer`,
-casts, string interpolation, and parser/codegen-supported `?` arms.
+field access, method-style calls, final-expression results, prefix loops,
+`defer`, casts, string interpolation, and parser/codegen-supported `?` arms.
 
 Unsupported spec-like constructs must stay gated until parser, resolver,
 typechecker, codegen, diagnostics, JSON, and public examples agree on the shape.
@@ -33,24 +30,17 @@ execution beyond the constrained deterministic graph surface.
 Developer UX and Agent UX are product requirements, not polish. The v1 language
 surface should grow toward MoonBit-style toolchain integration, but the compiler
 must not advertise unsupported language-server binaries or editor features as
-implemented. The current contract:
-
-- the VS Code extension remains a constrained editor wrapper until language
-  server tests exist;
-- `zen lsp` remains gated until it is backed by the same parser, resolver,
-  typechecker, build graph, and diagnostics as the CLI;
-- Agent-readable diagnostics keep stable codes, spans, related locations,
-  suggested fixes, feature_gate metadata, and JSON output aligned with CLI and
-  editor behavior;
-- the machine-readable project graph and symbol graph remain compiler-owned
-  outputs for modules, imports, visibility, targets, dependencies, generated
-  symbols, examples, and stdlib gates;
-- structured fix suggestions are planned for missing match arms, generic arity
-  mistakes, removed syntax such as `return`, gated features, missing imports, and
-  common type mismatches;
-- quiet deterministic commands such as `zen check`, `zen test`, and
-  `zen emit-json` are required for agents and editors before automated fix or
-  package workflows can be promoted.
+implemented. The current contract: VS Code extension remains a constrained editor wrapper until language server tests exist; `zen lsp` remains gated until
+it is backed by the same parser, resolver, typechecker, build graph, and
+diagnostics as the CLI; Agent-readable diagnostics keep stable codes, spans,
+related locations, suggested fixes, feature_gate metadata, and JSON output
+aligned with CLI and editor behavior; the machine-readable project graph and
+symbol graph remain compiler-owned outputs for modules, imports, visibility,
+targets, dependencies, generated symbols, examples, and stdlib gates; structured fix suggestions are planned for missing match arms, generic arity mistakes,
+removed syntax such as `return`, gated features, missing imports, and common type
+mismatches; quiet deterministic commands such as `zen check`, `zen test`, and
+`zen emit-json` are required for agents and editors before automated fix or
+package workflows can be promoted.
 
 ## Accepted Syntax Forms
 
@@ -171,25 +161,8 @@ Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is ex
 
 Representative golden anchors:
 
-- hand-authored IR rejection:
-  `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`,
-  `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`,
-  `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`,
-  `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`,
-  `emit_json_hir_rejects_hand_authored_json_before_ir_override`,
-  `emit_json_mir_rejects_hand_authored_json_before_ir_override`,
-  `emit_json_layout_rejects_hand_authored_json_before_layout_override`, and
-  `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
-- symbols/typed/HIR/MIR/layout generics:
-  `emit_json_ast_module_graph_schema_matches_golden`,
-  `emit_json_symbols_module_graph_schema_matches_golden`,
-  `emit_json_symbols_generic_method_schema_matches_golden`,
-  `emit_json_typed_generic_method_schema_matches_golden`,
-  `emit_json_hir_generic_method_worklist_schema_matches_golden`,
-  `emit_json_mir_generic_method_worklist_schema_matches_golden`,
-  `emit_json_layout_generic_option_schema_matches_golden`,
-  `emit_json_layout_generic_result_schema_matches_golden`, and
-  `emit_json_layout_nested_generic_result_schema_matches_golden`.
+- hand-authored IR rejection: `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`, `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`, `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`, `emit_json_layout_rejects_hand_authored_json_before_layout_override`, and `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
+- symbols/typed/HIR/MIR/layout generics: `emit_json_ast_module_graph_schema_matches_golden`, `emit_json_symbols_module_graph_schema_matches_golden`, `emit_json_symbols_generic_method_schema_matches_golden`, `emit_json_typed_generic_method_schema_matches_golden`, `emit_json_hir_generic_method_worklist_schema_matches_golden`, `emit_json_mir_generic_method_worklist_schema_matches_golden`, `emit_json_layout_generic_option_schema_matches_golden`, `emit_json_layout_generic_result_schema_matches_golden`, and `emit_json_layout_nested_generic_result_schema_matches_golden`.
 - generic names pinned by golden fixtures: `Box.get<T>`, `Box.replace<T>`,
   `Box<T>.impl`, `Box.copy<T>`, `Option.copy<T>`, `inner<T>`, `id<T>`,
   `12.id<i32>()`, `id_i32`, `Box.get_inner<T>`, `Box.get_inner_i32`,
