@@ -193,6 +193,12 @@ Agent UX deliverables:
   `emit_json_mir_generic_option_multi_schema_matches_golden`, covering
   distinct `Option_i32` and `Option_bool` declarations plus concrete
   `Option.unwrap_or_i32` and `Option.unwrap_or_bool` match lowering.
+- Generic Result multi-specialization is now pinned in HIR and MIR JSON by
+  `emit_json_hir_generic_result_multi_schema_matches_golden` and
+  `emit_json_mir_generic_result_multi_schema_matches_golden`, covering
+  distinct `Result_i32_StaticString` and `Result_bool_StaticString`
+  declarations plus concrete `Result.unwrap_or_i32_StaticString` and
+  `Result.unwrap_or_bool_StaticString` match lowering.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
   Diagnostics JSON pins this machine-readable shape through

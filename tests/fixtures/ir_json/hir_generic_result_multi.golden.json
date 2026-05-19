@@ -1,0 +1,99 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Result_i32_StaticString",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "StaticString"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Result_bool_StaticString",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "StaticString"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Result.unwrap_or_i32_StaticString",
+        "params": [
+          {
+            "name": "self",
+            "type": "Result_i32_StaticString"
+          },
+          {
+            "name": "fallback",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "Result.unwrap_or_bool_StaticString",
+        "params": [
+          {
+            "name": "self",
+            "type": "Result_bool_StaticString"
+          },
+          {
+            "name": "fallback",
+            "type": "bool"
+          }
+        ],
+        "return_type": "bool"
+      }
+    ],
+    "globals": []
+  }
+}
