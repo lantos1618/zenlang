@@ -1,0 +1,105 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "direct",
+              "type": "i32",
+              "mutable": false,
+              "value": {
+                "kind": "call",
+                "type": "i32",
+                "function": "id_i32",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 12
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "let",
+              "name": "chained",
+              "type": "i32",
+              "mutable": false,
+              "value": {
+                "kind": "call",
+                "type": "i32",
+                "function": "id_i32",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 30
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "id_i32",
+      "params": [
+        {
+          "name": "value",
+          "type": "i32"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "local",
+              "type": "i32",
+              "name": "value"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

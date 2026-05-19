@@ -208,6 +208,11 @@ Agent UX deliverables:
   `emit_json_hir_generic_function_worklist_schema_matches_golden` and
   `emit_json_mir_generic_function_worklist_schema_matches_golden`, covering
   concrete `outer_i32` plus its reachable `inner_i32` calls.
+- Generic direct-call and UFC-call deduplication for the same function
+  instantiation is now pinned in HIR and MIR JSON by
+  `emit_json_hir_generic_ufc_dedup_schema_matches_golden` and
+  `emit_json_mir_generic_ufc_dedup_schema_matches_golden`, covering one
+  concrete `id_i32` specialization reused by both call spellings.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
   Diagnostics JSON pins this machine-readable shape through
@@ -3388,7 +3393,8 @@ Agent UX deliverables:
 - Generic direct-call and UFC-call deduplication for the same function
   instantiation is now covered by `tests/zen/generic_ufc_dedup.zen` and
   generated-C assertions proving both calls resolve to one `id_i32`
-  definition.
+  definition, plus HIR/MIR JSON golden tests proving both frontend JSON views
+  reuse the same concrete specialization.
 - The removed source `return` keyword no longer leaves dead source or typed AST
   return-expression nodes behind. Final expressions remain the function result
   path, and `repo_hygiene::source_ast_no_longer_has_return_expression_nodes`
