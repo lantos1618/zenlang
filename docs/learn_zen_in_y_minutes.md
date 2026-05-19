@@ -167,16 +167,7 @@ PrettyDisplay.extends(Display)
 
 ## Loops
 
-Zen has one loop entry form:
-
-```zen
-loop((label) {
-    condition ?
-        | true { label.done() }
-        | false { label.next() }
-})
-```
-
+Zen has one loop entry form.
 The loop handle is compiler-owned. `done` and `next` are closed loop-control
 verbs for that handle, not arbitrary user methods and not stringly names.
 
@@ -260,17 +251,13 @@ alone is just an address.
 `Sync` and `Async` are effect modes in type surfaces. They are not source
 keywords and there is no `async fn` spelling.
 
-Sync work returns checked data now:
+Sync work returns checked data now; Async work returns task-shaped data.
 
 ```zen
 read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
     source.read_all(allocator)
 }
-```
 
-Async work returns task-shaped data:
-
-```zen
 read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
     source.read_all_async(allocator)
 }
