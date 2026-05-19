@@ -7,6 +7,7 @@ mod file_size;
 mod ir_json;
 mod module_system;
 mod parser_enums;
+mod parser_function_forms;
 mod parser_keywords;
 mod removed_syntax;
 mod resolver_validation;
