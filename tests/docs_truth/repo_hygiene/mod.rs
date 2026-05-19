@@ -16,4 +16,5 @@ mod resolver_validation;
 mod source_truth;
 mod typechecker_behavior_impls;
 mod typechecker_imports;
+mod typechecker_resolver_validation;
 mod typechecker_runtime;
