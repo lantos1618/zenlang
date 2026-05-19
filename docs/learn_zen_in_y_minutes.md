@@ -19,6 +19,12 @@ They give the public spelling for functions, final expressions, static text,
 dynamic text previews, loops, sync/async effect previews, and allocator-backed
 ownership. The rest of the guide expands those same rules with more examples.
 
+The tour is ordered for learning, not for implementation status. Start with
+stable code, then read the preview signatures as language syntax you should be
+able to recognize: `String<A>` owns runtime text, `Allocator<T, Sync>` allocates
+now, `Allocator<T, Async>` allocates later, and `Task<Result<T, E>>` names async
+work without adding an `async fn` keyword.
+
 Quick map:
 
 - declarations are prefix-first: the name appears before the operation;
@@ -60,6 +66,26 @@ The smallest useful rule set is:
    `l.done()`, `next(l)`, or `done(l)` control edges.
 5. Sync and async are visible in types. Sync returns a checked value now;
    async returns task-shaped work such as `Task<Result<T, E>>`.
+
+## Tour Checklist
+
+Read Zen in this order:
+
+| Learn | What to look for |
+| --- | --- |
+| Imports | `{ name } = module.path` binds module exports explicitly |
+| Values | immutable locals use `=`, mutable inferred locals use `::=` |
+| Functions | the name comes first, and the final expression is the result |
+| Types | structs and enums are named before their fields or variants |
+| Methods | `Type.method = ...` attaches a function to a receiver type |
+| Behaviors | `Type.implements(Behavior)` keeps the changed type on the left |
+| Matching | `value ? | Pattern { expr }` handles bools, enums, options, and results |
+| Loops | `loop((l) { ... })` is the one loop entry shape |
+| Static text | literals are `StaticString`, static bytes plus length |
+| Dynamic text | `String<A>` is runtime-owned text with allocator ownership |
+| Allocation | owners carry pointer, length, capacity, and allocator facts |
+| Sync work | sync APIs produce checked values directly |
+| Async work | async APIs produce task-shaped values explicitly |
 
 ## The Whole Shape In One Page
 
@@ -155,6 +181,7 @@ This is the shortest useful version of the language:
 | Async effect preview | produce `Task<Result<T, E>>` |
 | Sync allocator preview | `Allocator<T, Sync>` returns allocation results now |
 | Async allocator preview | `Allocator<T, Async>` returns task-shaped allocation results |
+| Dynamic owner preview | keep `ptr`, `len`, `capacity`, and `allocator` together |
 
 Stable code should look like this:
 
@@ -180,6 +207,13 @@ sum_to = (limit: i32) i32 {
 The matching preview shape for allocator-backed work is:
 
 ```zen
+Bytes<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+
 make_now<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<RawPtr<T>, AllocError> {
     allocator.alloc(len)
 }
@@ -193,6 +227,10 @@ Read the outer type first. `Result<...>` means the checked value is available
 now. `Task<Result<...>>` means the checked value belongs to scheduled work.
 `StaticString` is static program storage; `String<A>` is dynamic owned storage
 and must keep allocator ownership visible.
+
+The same rule applies to every heap owner. `RawPtr<T>` alone is not ownership;
+ownership starts when the pointer travels with length, capacity, and the
+allocator capability that can grow or release it.
 
 ### Copy-Paste Loop Forms
 
@@ -299,6 +337,30 @@ The practical reading is:
 | `Task<Result<T, E>>` | checked data belongs to scheduled work |
 | `Allocator<T, Sync>` | allocation returns now |
 | `Allocator<T, Async>` | allocation returns as task-shaped work |
+
+Allocator-backed owners should make ownership visible:
+
+```zen
+Buffer<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+
+buffer_from_ptr<T, A> = (ptr: RawPtr<T>, len: usize, allocator: A) Buffer<T, A> {
+    Buffer<T, A> {
+        ptr: ptr,
+        len: len,
+        capacity: len,
+        allocator: allocator,
+    }
+}
+```
+
+That is the shape to remember for dynamic text too. `String<A>` is not a
+larger `StaticString`; it is a `Buffer<u8, A>`-like owner for bytes created at
+runtime.
 
 ## Stable Vs Preview Surface
 
