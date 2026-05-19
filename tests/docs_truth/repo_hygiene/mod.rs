@@ -11,5 +11,6 @@ mod parser_keywords;
 mod removed_syntax;
 mod resolver_validation;
 mod source_truth;
+mod typechecker_behavior_impls;
 mod typechecker_imports;
 mod typechecker_runtime;
