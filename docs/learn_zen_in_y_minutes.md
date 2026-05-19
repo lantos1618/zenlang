@@ -12,26 +12,8 @@ actors, and comptime type matching.
 
 ## The Shape
 
-```zen
-{ io } = std
-
-Point: {
-    x: i32,
-    y: i32,
-}
-
-Point.sum = (self: Point) i32 {
-    self.x + self.y
-}
-
-main = () i32 {
-    point = Point { x: 20, y: 22 }
-    io.println("sum: ${point.sum()}")
-    0
-}
-```
-
-The name being introduced or changed comes first:
+Declarations are prefix-first. The name being introduced or changed comes
+first:
 
 | Need | Spell it like this |
 | --- | --- |
@@ -100,41 +82,13 @@ image.
 
 ## Dynamic String Preview
 
-`String<A>` is preview syntax for owned runtime text. It is different from
-`StaticString` because it has memory that can grow or be released, so the owner
-must carry allocator state.
-
-```zen
-String<A>: {
-    ptr: RawPtr<u8>,
-    len: usize,
-    capacity: usize,
-    allocator: A,
-}
-```
+`String<A>` is preview syntax for owned runtime text. It has memory that can
+grow or be released, so the owner must carry allocator state.
 
 A literal such as `"Zen"` never silently becomes `String<A>`. Runtime text
 construction belongs on an allocator-aware API.
 
 ## Calls, Structs, And Data
-
-```zen
-Point: {
-    x: i32,
-    y: i32,
-}
-
-Point.sum = (self: Point) i32 {
-    self.x + self.y
-}
-
-main = () i32 {
-    point = Point { x: 20, y: 22 }
-    dot = point.sum()
-    ufc = sum(point)
-    dot + ufc
-}
-```
 
 `value.method(args)` and `method(value, args)` are call-site spellings for the
 same attached function. They are not alternate declaration forms. Struct
@@ -279,27 +233,9 @@ the loop and are read after `done`.
 
 ## Defer
 
-```zen
-{ io } = std
-
-main = () i32 {
-    @this.defer(io.println("leaving main"))
-    io.println("inside main")
-    0
-}
-```
-
 `defer` runs cleanup expressions before leaving the current scope.
 
 ## Imports And Modules
-
-```zen
-{ clamp, factorial } = math_utils
-
-main = () i32 {
-    clamp(factorial(4), 0, 100)
-}
-```
 
 Imports use destructuring-style binding from a module path. Local files import
 by module name, and dotted paths resolve through subdirectories.
@@ -378,14 +314,9 @@ Buffer<T, A: Allocator<T, Sync>>: {
 
 make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
     allocator.alloc(len) ?
-        | Ok(ptr) {
-            Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
-                ptr: ptr,
-                len: len,
-                capacity: len,
-                allocator: allocator,
-            })
-        }
+        | Ok(ptr) { Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
+            ptr: ptr, len: len, capacity: len, allocator: allocator,
+        }) }
         | Err(error) {
             Result<Buffer<T, A>, AllocError>.Err(error)
         }
@@ -397,16 +328,6 @@ Raw allocation intrinsics such as `@builtin.raw_allocate`,
 preview names. Stable source should not call them directly.
 
 ## Pointer, Slice, Array, Actor, And Comptime Preview
-
-```zen
-PointerViews: {
-    raw: RawPtr<i32>,
-    pointer: Ptr<i32>,
-    mutable_pointer: MutPtr<i32>,
-    slice: Slice<i32>,
-    fixed: [i32; 4],
-}
-```
 
 `RawPtr<T>` is the explicit raw-memory spelling used in allocator previews.
 `Ptr<T>`, `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer,
@@ -450,9 +371,7 @@ Point.sum = (self: Point) i32 {
 }
 
 Point.implements(Display) {
-    display = (self: Point) StaticString {
-        "Point"
-    }
+    display = (self: Point) StaticString { "Point" }
 }
 
 sum_to = (limit: i32) i32 {
@@ -478,9 +397,7 @@ show<T: Display> = (value: T) StaticString {
 
 main = () i32 {
     point = Point { x: 20, y: 22 }
-    name: StaticString = show(point)
-
-    io.println("${name}: ${point.sum()}")
+    io.println("${show(point)}: ${point.sum()}")
     sum_to(10)
 }
 ```
