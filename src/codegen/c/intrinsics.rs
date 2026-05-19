@@ -1,6 +1,7 @@
 use super::*;
 use names::CIntrinsic;
 
+mod memory;
 mod names;
 mod syscalls;
 
@@ -18,85 +19,14 @@ impl CEmitter {
             return "(void)0".into();
         };
 
+        if intrinsic.is_syscall() {
+            return intrinsic.emit_syscall(self, args);
+        }
+        if let Some(emitted) = intrinsic.emit_memory(self, args, result_ty) {
+            return emitted;
+        }
+
         match intrinsic {
-            _ if intrinsic.is_syscall() => intrinsic.emit_syscall(self, args),
-
-            // -- Memory allocation ----------------------------------------
-            CIntrinsic::RawAllocate => {
-                let size = self.emit_expr_inline(&args[0]);
-                format!("malloc({})", size)
-            }
-            CIntrinsic::RawDeallocate => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                format!("free({})", ptr)
-            }
-            CIntrinsic::RawReallocate => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let new_size = self.emit_expr_inline(&args[2]);
-                format!("realloc({}, {})", ptr, new_size)
-            }
-
-            // -- Memory operations ----------------------------------------
-            CIntrinsic::Memcpy => {
-                let dest = self.emit_expr_inline(&args[0]);
-                let src = self.emit_expr_inline(&args[1]);
-                let n = self.emit_expr_inline(&args[2]);
-                format!("memcpy({}, {}, {})", dest, src, n)
-            }
-            CIntrinsic::Memmove => {
-                let dest = self.emit_expr_inline(&args[0]);
-                let src = self.emit_expr_inline(&args[1]);
-                let n = self.emit_expr_inline(&args[2]);
-                format!("memmove({}, {}, {})", dest, src, n)
-            }
-            CIntrinsic::Memset => {
-                let dest = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                let n = self.emit_expr_inline(&args[2]);
-                format!("memset({}, {}, {})", dest, val, n)
-            }
-            CIntrinsic::Memcmp => {
-                let a = self.emit_expr_inline(&args[0]);
-                let b = self.emit_expr_inline(&args[1]);
-                let n = self.emit_expr_inline(&args[2]);
-                format!("memcmp({}, {}, {})", a, b, n)
-            }
-
-            // -- Load / Store ---------------------------------------------
-            CIntrinsic::Load => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let ty = self.c_type(result_ty);
-                format!("(*(({}*)({})))", ty, ptr)
-            }
-            CIntrinsic::Store => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                let ty = self.c_type(&args[1].ty);
-                format!("(*(({}*)({})) = ({}))", ty, ptr, val)
-            }
-
-            // -- Type introspection ---------------------------------------
-            CIntrinsic::Sizeof => {
-                if !args.is_empty() {
-                    let ty = self.c_type(&args[0].ty);
-                    format!("sizeof({})", ty)
-                } else {
-                    // sizeof<T>() with no runtime args — typechecker should
-                    // have resolved this to a constant before reaching codegen.
-                    self.line("#error \"sizeof intrinsic reached codegen without type arg\"");
-                    "0".into()
-                }
-            }
-            CIntrinsic::Alignof => {
-                if !args.is_empty() {
-                    let ty = self.c_type(&args[0].ty);
-                    format!("_Alignof({})", ty)
-                } else {
-                    self.line("#error \"alignof intrinsic reached codegen without type arg\"");
-                    "0".into()
-                }
-            }
-
             // -- Pointer operations ---------------------------------------
             CIntrinsic::IntToPtr => {
                 let val = self.emit_expr_inline(&args[0]);
