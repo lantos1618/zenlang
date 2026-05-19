@@ -31,3 +31,32 @@ fn typechecker_ast_behavior_collection_lives_in_focused_helper() {
         "typechecker root should load focused AST behavior collection"
     );
 }
+
+#[test]
+fn typechecker_resolver_callable_replay_lives_in_focused_helper() {
+    let replay_kinds =
+        read("src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs");
+    let callable_replay =
+        read("src/typechecker/declaration_collection_resolver_tasks/callables.rs");
+
+    for helper in [
+        "collect_resolver_callable_declaration_metadata_tasks",
+        "push_resolver_callable_replay_tasks",
+        "push_resolver_callable_metadata_task",
+    ] {
+        assert!(
+            !replay_kinds.contains(&format!("fn {helper}")),
+            "resolver replay kinds should not own callable helper: {helper}"
+        );
+        assert!(
+            callable_replay.contains(&format!("fn {helper}")),
+            "resolver callable replay should live in focused helper: {helper}"
+        );
+    }
+
+    let root = read("src/typechecker/declaration_collection_resolver_tasks.rs");
+    assert!(
+        root.contains("mod callables;"),
+        "resolver declaration collection should load focused callable replay module"
+    );
+}
