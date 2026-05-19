@@ -6,6 +6,7 @@ use crate::ast::Pattern;
 use super::TypeChecker;
 
 mod match_validation;
+mod match_validation_bool;
 
 impl TypeChecker {
     /// Look up the payload type for a specific enum variant.
