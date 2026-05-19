@@ -242,6 +242,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_mir_minimal_function_schema_matches_golden",
         "emit_json_mir_outputs_match_arm_schema",
         "emit_json_mir_match_schema_matches_golden",
+        "emit_json_mir_generic_method_worklist_schema_matches_golden",
         "emit_json_mir_generic_option_schema_matches_golden",
         "emit_json_mir_generic_result_schema_matches_golden",
         "emit_json_mir_nested_generic_result_schema_matches_golden",
