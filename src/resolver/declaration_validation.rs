@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::ast::Declaration;
 use crate::error::Diagnostic;
 
@@ -8,6 +6,7 @@ use super::symbol_table::ScopeStack;
 use super::{BehaviorRefMetadata, Resolver, SymbolTable};
 
 mod behavior_associations;
+mod type_declarations;
 
 impl Resolver {
     pub(super) fn validate_declaration_types(
@@ -79,56 +78,14 @@ impl Resolver {
                 fields,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, false, diagnostics);
-                let mut seen_fields = HashSet::new();
-                for field in fields {
-                    if !seen_fields.insert(field.name.as_str()) {
-                        diagnostics.push(Diagnostic::error(
-                            "E0211",
-                            format!("duplicate field `{}` for struct `{name}`", field.name),
-                            field.span,
-                        ));
-                    }
-                    self.validate_type_ref(
-                        table,
-                        type_params,
-                        &field.ty,
-                        field.span,
-                        false,
-                        diagnostics,
-                    );
-                    if let Some(default) = &field.default {
-                        let scope_id = table.new_scope();
-                        let mut locals = ScopeStack::new(scope_id);
-                        self.validate_expr_refs(
-                            table,
-                            type_params,
-                            default,
-                            &mut locals,
-                            false,
-                            diagnostics,
-                        );
-                    }
-                }
+                self.validate_struct_declaration(table, name, type_params, fields, diagnostics);
             }
             Declaration::Enum {
                 type_params,
                 variants,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, false, diagnostics);
-                for variant in variants {
-                    if let Some(payload) = &variant.payload {
-                        self.validate_type_ref(
-                            table,
-                            type_params,
-                            payload,
-                            variant.span,
-                            false,
-                            diagnostics,
-                        );
-                    }
-                }
+                self.validate_enum_declaration(table, type_params, variants, diagnostics);
             }
             Declaration::Behavior {
                 name,
@@ -136,41 +93,7 @@ impl Resolver {
                 methods,
                 ..
             } => {
-                self.validate_type_param_constraints(table, type_params, true, diagnostics);
-                let mut seen_methods = HashSet::new();
-                for method in methods {
-                    if !seen_methods.insert(method.name.as_str()) {
-                        diagnostics.push(Diagnostic::error(
-                            "E0212",
-                            format!("duplicate behavior method `{}` in `{name}`", method.name),
-                            method.span,
-                        ));
-                    }
-                    self.validate_params(table, type_params, &method.params, true, diagnostics);
-                    if let Some(return_type) = &method.return_type {
-                        self.validate_type_ref(
-                            table,
-                            type_params,
-                            return_type,
-                            method.span,
-                            true,
-                            diagnostics,
-                        );
-                    }
-                    if let Some(default_body) = &method.default_body {
-                        let scope_id = table.new_scope();
-                        let mut locals =
-                            self.param_locals(table, &method.params, scope_id, diagnostics);
-                        self.validate_expr_refs(
-                            table,
-                            type_params,
-                            default_body,
-                            &mut locals,
-                            true,
-                            diagnostics,
-                        );
-                    }
-                }
+                self.validate_behavior_declaration(table, name, type_params, methods, diagnostics);
             }
             Declaration::ImplBlock {
                 type_name,
