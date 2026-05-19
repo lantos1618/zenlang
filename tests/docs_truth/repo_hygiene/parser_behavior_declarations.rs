@@ -31,3 +31,35 @@ fn parser_behavior_relationships_share_parenthesized_ref_parser() {
         );
     }
 }
+
+#[test]
+fn parser_impl_blocks_live_in_focused_helper() {
+    let behavior_declarations = read("src/parser/behavior_declarations.rs");
+    let impl_blocks = read("src/parser/impl_blocks.rs");
+    let parser_module = read("src/parser/mod.rs");
+
+    assert!(
+        behavior_declarations.lines().count() < 240,
+        "behavior_declarations.rs should stay focused on behavior declarations and relationships"
+    );
+    assert!(
+        !behavior_declarations.contains("fn prepend_impl_type_params"),
+        "generic impl-block type parameter merging should live in impl_blocks.rs"
+    );
+    assert!(
+        impl_blocks.contains("pub(super) fn parse_impl_block"),
+        "impl_blocks.rs should parse non-behavior impl blocks"
+    );
+    assert!(
+        impl_blocks.contains("pub(super) fn parse_impl_block_with_type_params"),
+        "impl_blocks.rs should parse generic non-behavior impl blocks"
+    );
+    assert!(
+        impl_blocks.contains("fn prepend_impl_type_params"),
+        "impl_blocks.rs should own impl type parameter merging"
+    );
+    assert!(
+        parser_module.contains("mod impl_blocks;"),
+        "parser module should include the focused impl block helper"
+    );
+}
