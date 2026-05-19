@@ -110,3 +110,16 @@ fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
 
     assert_eq!(actual.trim(), expected.trim());
 }
+
+#[test]
+fn emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden() {
+    let actual = normalized_json_for_path(
+        "symbols",
+        &fixture("tests/zen/behavior_json_generic_bound_ufcs.zen"),
+    );
+    let expected = normalized_fixture(
+        "tests/fixtures/ir_json/symbols_generic_behavior_bound_ufcs.golden.json",
+    );
+
+    assert_eq!(actual.trim(), expected.trim());
+}

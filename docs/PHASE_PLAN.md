@@ -3934,6 +3934,11 @@ Agent UX deliverables:
   `emit_json_symbols_generic_behavior_association_schema_matches_golden`,
   covering `Json<T>` behavior method signatures plus `Point` resolver metadata
   for `Json<StaticString>` impl and require associations.
+- Symbols JSON for generic behavior-bound UFCS dispatch is now pinned by
+  `emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden`,
+  covering the generic `encode<T: Json<T>>` symbol, the concrete
+  `Point.encode__Json_Point` impl symbol, and `Json<Point>` resolver metadata
+  on `Point`.
 - Build graph JSON now carries `format: "zen.build_graph.v0"`,
   `schema_version: 0`, and `semantic_status: "deterministic"` at the top level
   while preserving the existing target, dependency, feature, and host-effect
