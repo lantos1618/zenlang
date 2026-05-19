@@ -9,6 +9,7 @@ mod error_diagnostics;
 mod file_size;
 mod ir_json;
 mod module_system;
+mod parser_behavior_declarations;
 mod parser_core;
 mod parser_enums;
 mod parser_function_forms;

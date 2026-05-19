@@ -3,6 +3,7 @@ use crate::ast::BehaviorMethod;
 use crate::parser::keywords::ParserBehaviorKeyword;
 
 type BehaviorMethodSignature = (Vec<Param>, Option<AstType>, Option<Expression>);
+type ParenthesizedBehaviorRef = (String, Span, Vec<AstType>, Span);
 
 impl Parser {
     pub(super) fn parse_behavior_def(
@@ -205,17 +206,7 @@ impl Parser {
         type_name: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        self.skip_newlines();
-        self.expect(&Token::LParen)?;
-        self.skip_newlines();
-        let (behavior, _) = self.expect_identifier()?;
-        let behavior_type_args = if matches!(self.peek(), Token::Lt) {
-            self.parse_type_arg_list()?
-        } else {
-            Vec::new()
-        };
-        self.skip_newlines();
-        self.expect(&Token::RParen)?;
+        let (behavior, _, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
         self.skip_newlines();
         self.expect(&Token::LBrace)?;
 
@@ -239,11 +230,9 @@ impl Parser {
         })
     }
 
-    pub(super) fn parse_behavior_requires(
+    fn parse_parenthesized_behavior_ref(
         &mut self,
-        type_name: String,
-        name_span: Span,
-    ) -> Result<Declaration, CompileError> {
+    ) -> Result<ParenthesizedBehaviorRef, CompileError> {
         self.skip_newlines();
         self.expect(&Token::LParen)?;
         self.skip_newlines();
@@ -255,6 +244,17 @@ impl Parser {
         };
         self.skip_newlines();
         let end = self.expect(&Token::RParen)?;
+
+        Ok((behavior, behavior_span, behavior_type_args, end))
+    }
+
+    pub(super) fn parse_behavior_requires(
+        &mut self,
+        type_name: String,
+        name_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        let (behavior, behavior_span, behavior_type_args, end) =
+            self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::Requires {
             type_name,
             behavior,
@@ -268,17 +268,8 @@ impl Parser {
         type_name: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        self.skip_newlines();
-        self.expect(&Token::LParen)?;
-        self.skip_newlines();
-        let (behavior, behavior_span) = self.expect_identifier()?;
-        let behavior_type_args = if matches!(self.peek(), Token::Lt) {
-            self.parse_type_arg_list()?
-        } else {
-            Vec::new()
-        };
-        self.skip_newlines();
-        let end = self.expect(&Token::RParen)?;
+        let (behavior, behavior_span, behavior_type_args, end) =
+            self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::Derive {
             type_name,
             behavior,
@@ -292,17 +283,8 @@ impl Parser {
         behavior: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        self.skip_newlines();
-        self.expect(&Token::LParen)?;
-        self.skip_newlines();
-        let (parent, parent_span) = self.expect_identifier()?;
-        let parent_type_args = if matches!(self.peek(), Token::Lt) {
-            self.parse_type_arg_list()?
-        } else {
-            Vec::new()
-        };
-        self.skip_newlines();
-        let end = self.expect(&Token::RParen)?;
+        let (parent, parent_span, parent_type_args, end) =
+            self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::BehaviorExtends {
             behavior,
             parent,
