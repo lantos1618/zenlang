@@ -12,6 +12,7 @@ mod parser_function_forms;
 mod parser_keywords;
 mod removed_syntax;
 mod resolver_expression_validation;
+mod resolver_symbol_table;
 mod resolver_validation;
 mod source_truth;
 mod typechecker_behavior_impls;

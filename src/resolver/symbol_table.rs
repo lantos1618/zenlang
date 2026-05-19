@@ -43,4 +43,5 @@ impl SymbolTable {
 }
 
 include!("symbol_table/definitions.rs");
+include!("symbol_table/storage.rs");
 include!("symbol_table/behavior_edges.rs");
