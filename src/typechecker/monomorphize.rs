@@ -1,4 +1,4 @@
-//! Monomorphization helpers — generic callable specialization and substitution.
+//! Monomorphization helpers for generic callable specialization.
 
 use std::collections::HashMap;
 
@@ -8,38 +8,9 @@ use crate::error::{Diagnostic, Span};
 
 pub(super) use super::monomorphize_types::concrete_name_matches_generic;
 pub(crate) use super::monomorphize_types::type_to_ast;
-use super::monomorphize_types::{substitute_ast_type, type_mangle_key};
 use super::TypeChecker;
 
 impl TypeChecker {
-    pub(crate) fn mangle_generic_type_name(&self, name: &str, type_args: &[AstType]) -> String {
-        if type_args.is_empty() {
-            return name.to_string();
-        }
-        let suffix: Vec<String> = type_args
-            .iter()
-            .map(|arg| type_mangle_key(&self.resolve_type(arg)))
-            .collect();
-        format!("{}_{}", name, suffix.join("_"))
-    }
-
-    pub(crate) fn generic_function_mangled_name(
-        &self,
-        name: &str,
-        type_params: &[String],
-        substitutions: &HashMap<String, Type>,
-    ) -> String {
-        let suffix: Vec<String> = type_params
-            .iter()
-            .filter_map(|param| substitutions.get(param).map(type_mangle_key))
-            .collect();
-        if suffix.is_empty() {
-            name.to_string()
-        } else {
-            format!("{}_{}", name, suffix.join("_"))
-        }
-    }
-
     pub(crate) fn specialize_generic_function(
         &mut self,
         name: &str,
@@ -242,54 +213,5 @@ impl TypeChecker {
             .zip(type_args.iter())
             .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
             .collect()
-    }
-
-    /// Substitute type parameters in an AstType, returning a resolved Type.
-    pub(crate) fn substitute_type(
-        &self,
-        ast_type: &AstType,
-        substitutions: &HashMap<String, Type>,
-    ) -> Type {
-        match ast_type {
-            AstType::Named(name) => {
-                if let Some(concrete) = substitutions.get(name) {
-                    concrete.clone()
-                } else {
-                    self.resolve_type(ast_type)
-                }
-            }
-            AstType::Ptr(inner) => Type::Ptr(Box::new(self.substitute_type(inner, substitutions))),
-            AstType::MutPtr(inner) => {
-                Type::MutPtr(Box::new(self.substitute_type(inner, substitutions)))
-            }
-            AstType::RawPtr(inner) => {
-                Type::RawPtr(Box::new(self.substitute_type(inner, substitutions)))
-            }
-            AstType::Slice(inner) => {
-                Type::Slice(Box::new(self.substitute_type(inner, substitutions)))
-            }
-            AstType::Array { elem, size } => Type::Array {
-                elem: Box::new(self.substitute_type(elem, substitutions)),
-                size: *size,
-            },
-            AstType::Function { params, ret } => Type::Function {
-                params: params
-                    .iter()
-                    .map(|param| self.substitute_type(param, substitutions))
-                    .collect(),
-                ret: Box::new(self.substitute_type(ret, substitutions)),
-            },
-            AstType::Generic { name, type_args } => {
-                let subst_args: Vec<AstType> = type_args
-                    .iter()
-                    .map(|a| substitute_ast_type(a, substitutions))
-                    .collect();
-                self.resolve_type(&AstType::Generic {
-                    name: name.clone(),
-                    type_args: subst_args,
-                })
-            }
-            _ => self.resolve_type(ast_type),
-        }
     }
 }
