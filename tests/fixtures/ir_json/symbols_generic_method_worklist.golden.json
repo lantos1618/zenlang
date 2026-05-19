@@ -1,0 +1,303 @@
+{
+  "format": "zen.symbols.v0",
+  "semantic_status": "resolved",
+  "entry_module": 0,
+  "modules": [
+    {
+      "id": 0,
+      "package_id": 0,
+      "canonical_path": "generic_method_worklist.zen",
+      "symbols": [
+        {
+          "id": 0,
+          "namespace": "Module",
+          "name": "std",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 0,
+            "end": 12
+          }
+        },
+        {
+          "id": 1,
+          "namespace": "Import",
+          "name": "io",
+          "is_public": false,
+          "import_source": "std",
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 0,
+            "end": 12
+          }
+        },
+        {
+          "id": 2,
+          "namespace": "Type",
+          "name": "Box",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": 1,
+          "type_parameter_names": [
+            "T"
+          ],
+          "field_count": 1,
+          "field_type_names": [
+            [
+              "value",
+              "T"
+            ]
+          ],
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 14,
+            "end": 38
+          }
+        },
+        {
+          "id": 3,
+          "namespace": "Value",
+          "name": "inner",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 1,
+          "parameter_names": [
+            "value"
+          ],
+          "parameter_type_names": [
+            "T"
+          ],
+          "return_type_name": "T",
+          "type_parameter_count": 1,
+          "type_parameter_names": [
+            "T"
+          ],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 40,
+            "end": 77
+          }
+        },
+        {
+          "id": 4,
+          "namespace": "Value",
+          "name": "Box.get_inner",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 1,
+          "parameter_names": [
+            "self"
+          ],
+          "parameter_type_names": [
+            "Box<T>"
+          ],
+          "return_type_name": "T",
+          "type_parameter_count": 1,
+          "type_parameter_names": [
+            "T"
+          ],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 79,
+            "end": 140
+          }
+        },
+        {
+          "id": 5,
+          "namespace": "Value",
+          "name": "main",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": 0,
+          "parameter_names": [],
+          "parameter_type_names": [],
+          "return_type_name": "i32",
+          "type_parameter_count": 0,
+          "type_parameter_names": [],
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": null,
+          "scope_id": 0,
+          "definition_span": {
+            "file_id": 0,
+            "start": 142,
+            "end": 240
+          }
+        },
+        {
+          "id": 6,
+          "namespace": "Local",
+          "name": "value",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 1,
+          "definition_span": {
+            "file_id": 0,
+            "start": 52,
+            "end": 60
+          }
+        },
+        {
+          "id": 7,
+          "namespace": "Local",
+          "name": "self",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 3,
+          "definition_span": {
+            "file_id": 0,
+            "start": 99,
+            "end": 111
+          }
+        },
+        {
+          "id": 8,
+          "namespace": "Local",
+          "name": "box",
+          "is_public": false,
+          "import_source": null,
+          "parameter_count": null,
+          "parameter_names": null,
+          "parameter_type_names": null,
+          "return_type_name": null,
+          "type_parameter_count": null,
+          "type_parameter_names": null,
+          "field_count": null,
+          "field_type_names": null,
+          "variant_names": null,
+          "variant_owner_name": null,
+          "variant_payload_count": null,
+          "variant_payload_type_name": null,
+          "behavior_method_signatures": null,
+          "behavior_parent_names": null,
+          "behavior_impl_names": null,
+          "behavior_required_names": null,
+          "is_mutable": false,
+          "scope_id": 6,
+          "definition_span": {
+            "file_id": 0,
+            "start": 162,
+            "end": 190
+          }
+        }
+      ]
+    }
+  ]
+}
