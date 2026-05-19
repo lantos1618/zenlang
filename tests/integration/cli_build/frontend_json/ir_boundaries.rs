@@ -1,32 +1,33 @@
 use std::process::Command;
 
-#[test]
-fn emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override() {
+#[path = "ir_boundaries/compiler_json.rs"]
+mod compiler_json;
+#[path = "ir_boundaries/lowered_ir.rs"]
+mod lowered_ir;
+
+fn assert_rejects_hand_authored_json(
+    mode: &str,
+    filename: &str,
+    forged_json: &str,
+    description: &str,
+    required_stderr: &str,
+    forbidden_stderr: &[&str],
+) {
     let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_ast.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.ast_graph.v0",
-  "semantic_status": "unchecked",
-  "modules": [{
-    "path": "main.zen",
-    "declarations": [{ "kind": "Function", "name": "forged" }]
-  }]
-}
-"#,
-    )
-    .expect("write forged AST JSON");
+    let json_path = tmp.path().join(filename);
+    std::fs::write(&json_path, forged_json)
+        .unwrap_or_else(|err| panic!("write forged {description} JSON: {err}"));
 
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "ast", json_path.to_str().unwrap()])
+        .args(["emit-json", mode, json_path.to_str().unwrap()])
         .output()
-        .expect("run zen emit-json ast on hand-authored JSON input");
+        .unwrap_or_else(|err| {
+            panic!("run zen emit-json {mode} on hand-authored JSON input: {err}")
+        });
 
     assert!(
         !output.status.success(),
-        "zen emit-json ast should reject hand-authored AST IR before override: stdout={}, stderr={}",
+        "zen emit-json {mode} should reject hand-authored {description} before override: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -35,302 +36,16 @@ fn emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stdout.trim().is_empty(),
-        "AST JSON should not emit or accept hand-authored unchecked IR, stdout={stdout}"
+        "{description} JSON should not emit or accept hand-authored IR, stdout={stdout}"
     );
     assert!(
-        stderr.contains("compiler-owned AST JSON"),
-        "AST gate should name the compiler-owned AST JSON boundary, stderr={stderr}"
+        stderr.contains(required_stderr),
+        "{description} gate should name the compiler-owned boundary `{required_stderr}`, stderr={stderr}"
     );
-    assert!(
-        !stderr.contains("expected identifier") && !stderr.contains("unexpected token"),
-        "AST JSON should reject before treating JSON as Zen source, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_symbols_rejects_hand_authored_json_before_resolver_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_symbols.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.symbols.v0",
-  "semantic_status": "resolved",
-  "modules": [{
-    "name": "main",
-    "symbols": [{ "name": "Forged", "kind": "type", "visibility": "public" }]
-  }]
-}
-"#,
-    )
-    .expect("write forged symbols JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "symbols", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json symbols on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json symbols should reject hand-authored symbol IR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "symbols JSON should not emit or accept hand-authored resolver IR, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned symbols JSON"),
-        "symbols gate should name the compiler-owned symbols JSON boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("expected identifier") && !stderr.contains("unexpected token"),
-        "symbols JSON should reject before treating JSON as Zen source, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_typed_rejects_hand_authored_json_before_checked_ir_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_typed.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.typed.v0",
-  "semantic_status": "checked",
-  "program": {
-    "types": [{ "name": "i32", "kind": "forged-pointer" }],
-    "functions": [{ "name": "main", "return_type": "i32" }]
-  }
-}
-"#,
-    )
-    .expect("write forged typed JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "typed", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json typed on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json typed should reject hand-authored checked IR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "typed JSON should not emit or accept hand-authored checked IR, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned typed JSON"),
-        "typed gate should name the compiler-owned typed JSON boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("expected function name") && !stderr.contains("unexpected token"),
-        "typed JSON should reject before treating JSON as Zen source, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_diagnostics.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.diagnostics.v0",
-  "semantic_status": "diagnostic",
-  "diagnostics": [{
-    "severity": "note",
-    "message": "forged acceptance"
-  }]
-}
-"#,
-    )
-    .expect("write forged diagnostics JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "diagnostics", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json diagnostics on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json diagnostics should reject hand-authored diagnostics IR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "diagnostics JSON should not emit or accept hand-authored diagnostic IR, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned diagnostics JSON"),
-        "diagnostics gate should name the compiler-owned diagnostics JSON boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("expected identifier") && !stderr.contains("unexpected token"),
-        "diagnostics JSON should reject before treating JSON as Zen source, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_build_graph_rejects_hand_authored_json_before_graph_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_build_graph.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.build_graph.v0",
-  "semantic_status": "validated",
-  "targets": [{
-    "name": "forged",
-    "kind": "executable",
-    "sources": ["forged.zen"]
-  }]
-}
-"#,
-    )
-    .expect("write forged build graph JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "build-graph", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json build-graph on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json build-graph should reject hand-authored build graph IR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "build graph JSON should not emit or accept hand-authored build graph IR, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned build graph JSON"),
-        "build graph gate should name the compiler-owned build graph JSON boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("expects a build.zen file"),
-        "build graph JSON should reject before generic build.zen path validation, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_hir_rejects_hand_authored_json_before_ir_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_hir.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.hir.v0",
-  "semantic_status": "checked",
-  "program": {
-    "types": {
-      "Forged": {
-        "fields": [{ "name": "ptr", "type": "RawPtr<i32>" }]
-      }
+    for forbidden in forbidden_stderr {
+        assert!(
+            !stderr.contains(forbidden),
+            "{description} JSON should reject before `{forbidden}`, stderr={stderr}"
+        );
     }
-  }
-}
-"#,
-    )
-    .expect("write forged HIR JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "hir", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json hir on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json hir should reject hand-authored HIR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "forged HIR should not emit or accept hand-authored HIR JSON, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned IR schemas"),
-        "HIR gate should name the compiler-owned IR schema boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "HIR should reject through the IR-boundary gate, not command/path handling, stderr={stderr}"
-    );
-}
-
-#[test]
-fn emit_json_layout_rejects_hand_authored_json_before_layout_override() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let json_path = tmp.path().join("forged_layout.json");
-    std::fs::write(
-        &json_path,
-        r#"
-{
-  "format": "zen.layout.v0",
-  "semantic_status": "checked",
-  "layouts": {
-    "StaticString": {
-      "size": 1,
-      "alignment": 1
-    }
-  }
-}
-"#,
-    )
-    .expect("write forged layout JSON");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "layout", json_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json layout on hand-authored JSON input");
-
-    assert!(
-        !output.status.success(),
-        "zen emit-json layout should gate hand-authored layout IR before override: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stdout.trim().is_empty(),
-        "gated layout should not emit or accept hand-authored layout JSON, stdout={stdout}"
-    );
-    assert!(
-        stderr.contains("compiler-owned layout schemas"),
-        "layout gate should name the compiler-owned layout schema boundary, stderr={stderr}"
-    );
-    assert!(
-        !stderr.contains("unknown command") && !stderr.contains("No such file"),
-        "layout should reject through the IR-boundary gate, not command/path handling, stderr={stderr}"
-    );
 }
