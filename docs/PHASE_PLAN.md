@@ -204,6 +204,10 @@ Agent UX deliverables:
   `emit_json_mir_generic_vec_schema_matches_golden`, covering distinct
   `Vec_i32` and `Vec_StaticString` declarations plus concrete `Vec.len_i32`
   and `Vec.len_StaticString` field-access lowering.
+- Generic function worklist specialization is now pinned in HIR and MIR JSON by
+  `emit_json_hir_generic_function_worklist_schema_matches_golden` and
+  `emit_json_mir_generic_function_worklist_schema_matches_golden`, covering
+  concrete `outer_i32` plus its reachable `inner_i32` calls.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
   Diagnostics JSON pins this machine-readable shape through
