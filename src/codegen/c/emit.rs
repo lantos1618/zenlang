@@ -1,6 +1,5 @@
-use crate::ast::expressions::{BinaryOp, UnaryOp};
-
 use super::*;
+use operators::{c_binary_op, c_unary_op};
 
 impl CEmitter {
     // ── Block body ────────────────────────────────────────────
@@ -106,36 +105,13 @@ impl CEmitter {
             TypedExprKind::BinaryOp { op, left, right } => {
                 let l = self.emit_expr_inline(left);
                 let r = self.emit_expr_inline(right);
-                let op_str = match op {
-                    BinaryOp::Add => "+",
-                    BinaryOp::Sub => "-",
-                    BinaryOp::Mul => "*",
-                    BinaryOp::Div => "/",
-                    BinaryOp::Mod => "%",
-                    BinaryOp::Eq => "==",
-                    BinaryOp::NotEq => "!=",
-                    BinaryOp::Lt => "<",
-                    BinaryOp::Gt => ">",
-                    BinaryOp::LtEq => "<=",
-                    BinaryOp::GtEq => ">=",
-                    BinaryOp::And => "&&",
-                    BinaryOp::Or => "||",
-                    BinaryOp::BitAnd => "&",
-                    BinaryOp::BitOr => "|",
-                    BinaryOp::BitXor => "^",
-                    BinaryOp::ShiftLeft => "<<",
-                    BinaryOp::ShiftRight => ">>",
-                };
+                let op_str = c_binary_op(*op);
                 format!("({} {} {})", l, op_str, r)
             }
 
             TypedExprKind::UnaryOp { op, operand } => {
                 let o = self.emit_expr_inline(operand);
-                match op {
-                    UnaryOp::Neg => format!("(-{})", o),
-                    UnaryOp::Not => format!("(!{})", o),
-                    UnaryOp::BitNot => format!("(~{})", o),
-                }
+                format!("({}{})", c_unary_op(*op), o)
             }
 
             TypedExprKind::FunctionCall { function, args } => {
@@ -162,46 +138,16 @@ impl CEmitter {
             }
 
             TypedExprKind::StructLiteral { type_name, fields } => {
-                let name = c_ident(type_name);
-                let field_strs: Vec<_> = fields
-                    .iter()
-                    .map(|(fname, fval)| {
-                        let v = self.emit_expr_inline(fval);
-                        format!(".{} = {}", c_ident(fname), v)
-                    })
-                    .collect();
-                format!("({}){{ {} }}", name, field_strs.join(", "))
+                self.emit_struct_literal(type_name, fields)
             }
 
             TypedExprKind::EnumVariant {
                 type_name,
                 variant,
                 payload,
-            } => {
-                let name = c_ident(type_name);
-                let var = c_ident(variant);
-                match payload {
-                    None => {
-                        format!("({}){{ .tag = {}_{} }}", name, name, var)
-                    }
-                    Some(val) => {
-                        let v = self.emit_expr_inline(val);
-                        format!(
-                            "({}){{ .tag = {}_{}, .data.{} = {} }}",
-                            name,
-                            name,
-                            var,
-                            var.to_lowercase(),
-                            v
-                        )
-                    }
-                }
-            }
+            } => self.emit_enum_variant_literal(type_name, variant, payload.as_deref()),
 
-            TypedExprKind::ArrayLiteral { elements } => {
-                let elems: Vec<_> = elements.iter().map(|e| self.emit_expr_inline(e)).collect();
-                format!("{{ {} }}", elems.join(", "))
-            }
+            TypedExprKind::ArrayLiteral { elements } => self.emit_array_literal(elements),
 
             TypedExprKind::Cast { expr, to_type, .. } => {
                 let e = self.emit_expr_inline(expr);

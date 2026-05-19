@@ -2,7 +2,9 @@ mod closures;
 mod emit;
 mod functions;
 mod intrinsics;
+mod literals;
 mod matches;
+mod operators;
 mod strings;
 mod types;
 
