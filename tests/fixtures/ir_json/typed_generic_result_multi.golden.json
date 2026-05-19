@@ -1,0 +1,1154 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "ok_int",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Ok",
+                        "payload": {
+                          "kind": {
+                            "IntLiteral": 21
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 238,
+                            "end": 240
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "I32"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 209,
+                      "end": 241
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 200,
+                "end": 241
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "err_int",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Err",
+                        "payload": {
+                          "kind": {
+                            "StringLiteral": "bad"
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 286,
+                            "end": 291
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "I32"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 256,
+                      "end": 292
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 246,
+                "end": 292
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "ok_bool",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_bool_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "Bool"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_bool_StaticString",
+                        "variant": "Ok",
+                        "payload": {
+                          "kind": {
+                            "BoolLiteral": false
+                          },
+                          "ty": "Bool",
+                          "span": {
+                            "file_id": 0,
+                            "start": 337,
+                            "end": 342
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_bool_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "Bool"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 307,
+                      "end": 343
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 297,
+                "end": 343
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "err_bool",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_bool_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "Bool"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_bool_StaticString",
+                        "variant": "Err",
+                        "payload": {
+                          "kind": {
+                            "StringLiteral": "nope"
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 390,
+                            "end": 396
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_bool_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            "Bool"
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 359,
+                      "end": 397
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 348,
+                "end": 397
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Result.unwrap_or_i32_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "ok_int"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_i32_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "I32"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 417,
+                                              "end": 423
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 434,
+                                              "end": 435
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 417,
+                                      "end": 436
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 415,
+                            "end": 437
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 403,
+                    "end": 439
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 403,
+                "end": 439
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Result.unwrap_or_i32_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "err_int"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_i32_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "I32"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 458,
+                                              "end": 465
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 34
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 476,
+                                              "end": 478
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 458,
+                                      "end": 479
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 456,
+                            "end": 480
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 444,
+                    "end": 482
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 444,
+                "end": 482
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Result.unwrap_or_bool_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "ok_bool"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_bool_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "Bool"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 501,
+                                              "end": 508
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "BoolLiteral": true
+                                            },
+                                            "ty": "Bool",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 519,
+                                              "end": 523
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "Bool",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 501,
+                                      "end": 524
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 499,
+                            "end": 525
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 487,
+                    "end": 527
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 487,
+                "end": 527
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Result.unwrap_or_bool_StaticString",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "err_bool"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Result_bool_StaticString",
+                                                "variants": [
+                                                  [
+                                                    "Ok",
+                                                    "Bool"
+                                                  ],
+                                                  [
+                                                    "Err",
+                                                    "Str"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 546,
+                                              "end": 554
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "BoolLiteral": true
+                                            },
+                                            "ty": "Bool",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 565,
+                                              "end": 569
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "Bool",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 546,
+                                      "end": 570
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 544,
+                            "end": 571
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 532,
+                    "end": 573
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 532,
+                "end": 573
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 578,
+              "end": 579
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 194,
+            "end": 581
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 180,
+          "end": 581
+        }
+      },
+      {
+        "name": "Result.unwrap_or_i32_StaticString",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Enum": {
+                "name": "Result_i32_StaticString",
+                "variants": [
+                  [
+                    "Ok",
+                    "I32"
+                  ],
+                  [
+                    "Err",
+                    "Str"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 77,
+              "end": 87
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 89,
+              "end": 100
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "self"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "I32"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 110,
+                    "end": 114
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Ok",
+                        "bindings": [
+                          [
+                            "inner",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "inner"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 139,
+                                "end": 144
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 137,
+                              "end": 146
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 137,
+                          "end": 146
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 137,
+                        "end": 146
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 127,
+                      "end": 146
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_i32_StaticString",
+                        "variant": "Err",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 166,
+                                "end": 174
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 164,
+                              "end": 176
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 164,
+                          "end": 176
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 164,
+                        "end": 176
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 157,
+                      "end": 176
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 110,
+              "end": 176
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 104,
+            "end": 178
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 51,
+          "end": 178
+        }
+      },
+      {
+        "name": "Result.unwrap_or_bool_StaticString",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Enum": {
+                "name": "Result_bool_StaticString",
+                "variants": [
+                  [
+                    "Ok",
+                    "Bool"
+                  ],
+                  [
+                    "Err",
+                    "Str"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 77,
+              "end": 87
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "Bool",
+            "span": {
+              "file_id": 0,
+              "start": 89,
+              "end": 100
+            }
+          }
+        ],
+        "return_type": "Bool",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "self"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_bool_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          "Bool"
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 110,
+                    "end": 114
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_bool_StaticString",
+                        "variant": "Ok",
+                        "bindings": [
+                          [
+                            "inner",
+                            "Bool"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "inner"
+                              },
+                              "ty": "Bool",
+                              "span": {
+                                "file_id": 0,
+                                "start": 139,
+                                "end": 144
+                              }
+                            },
+                            "ty": "Bool",
+                            "span": {
+                              "file_id": 0,
+                              "start": 137,
+                              "end": 146
+                            }
+                          }
+                        },
+                        "ty": "Bool",
+                        "span": {
+                          "file_id": 0,
+                          "start": 137,
+                          "end": 146
+                        }
+                      },
+                      "ty": "Bool",
+                      "span": {
+                        "file_id": 0,
+                        "start": 137,
+                        "end": 146
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 127,
+                      "end": 146
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_bool_StaticString",
+                        "variant": "Err",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "Bool",
+                              "span": {
+                                "file_id": 0,
+                                "start": 166,
+                                "end": 174
+                              }
+                            },
+                            "ty": "Bool",
+                            "span": {
+                              "file_id": 0,
+                              "start": 164,
+                              "end": 176
+                            }
+                          }
+                        },
+                        "ty": "Bool",
+                        "span": {
+                          "file_id": 0,
+                          "start": 164,
+                          "end": 176
+                        }
+                      },
+                      "ty": "Bool",
+                      "span": {
+                        "file_id": 0,
+                        "start": 164,
+                        "end": 176
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 157,
+                      "end": 176
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "Bool",
+            "span": {
+              "file_id": 0,
+              "start": 110,
+              "end": 176
+            }
+          },
+          "ty": "Bool",
+          "span": {
+            "file_id": 0,
+            "start": 104,
+            "end": 178
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 51,
+          "end": 178
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Result_i32_StaticString",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "Ok",
+                "tag": 0,
+                "payload": [
+                  [
+                    "payload",
+                    "I32"
+                  ]
+                ]
+              },
+              {
+                "name": "Err",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "Str"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 209,
+          "end": 241
+        }
+      },
+      {
+        "name": "Result_bool_StaticString",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "Ok",
+                "tag": 0,
+                "payload": [
+                  [
+                    "payload",
+                    "Bool"
+                  ]
+                ]
+              },
+              {
+                "name": "Err",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "Str"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 307,
+          "end": 343
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}

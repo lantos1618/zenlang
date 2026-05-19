@@ -188,12 +188,14 @@ Agent UX deliverables:
   program through `generic_enum_multi_specialization` and
   `generic_result_enum_multi_specialization`, including generated-C definition
   uniqueness and call/definition assertions.
-- Generic Option multi-specialization is now pinned in HIR and MIR JSON by
+- Generic Option multi-specialization is now pinned in typed, HIR, and MIR JSON by
+  `emit_json_typed_generic_option_multi_schema_matches_golden`,
   `emit_json_hir_generic_option_multi_schema_matches_golden` and
   `emit_json_mir_generic_option_multi_schema_matches_golden`, covering
   distinct `Option_i32` and `Option_bool` declarations plus concrete
   `Option.unwrap_or_i32` and `Option.unwrap_or_bool` match lowering.
-- Generic Result multi-specialization is now pinned in HIR and MIR JSON by
+- Generic Result multi-specialization is now pinned in typed, HIR, and MIR JSON by
+  `emit_json_typed_generic_result_multi_schema_matches_golden`,
   `emit_json_hir_generic_result_multi_schema_matches_golden` and
   `emit_json_mir_generic_result_multi_schema_matches_golden`, covering
   distinct `Result_i32_StaticString` and `Result_bool_StaticString`
