@@ -3947,6 +3947,10 @@ Agent UX deliverables:
   resolver-owned `Result<T, E>` metadata, `Ok` and `Err` variant metadata,
   `Ok` payload type `T`, `Err` payload type `E`, and the `unwrap_or<T, E>`
   signature.
+- Symbols JSON for generic `Result<T, E>` enum method templates is now pinned
+  by `emit_json_symbols_generic_result_method_schema_matches_golden`, covering
+  resolver-owned `Result.unwrap_or<T, E>` metadata, `self: Self`, fallback
+  type `T`, and return type `T`.
 - Symbols JSON for generic behavior-bound UFCS dispatch is now pinned by
   `emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden`,
   covering the generic `encode<T: Json<T>>` symbol, the concrete
