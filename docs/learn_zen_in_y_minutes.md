@@ -1,12 +1,11 @@
 # Learn Zen In Y Minutes
 
-Zen is a systems language for explicit programs. Declarations are prefix-first,
-blocks produce their final expression, pattern matching is the main branch
-form, loops use explicit control handles, and ownership/effects are visible in
-types.
+Zen is a systems language for explicit programs: declarations are prefix-first,
+blocks produce their final expression, pattern matching is the branch form,
+loops use explicit control handles, and ownership/effects are visible in types.
 
 Use this page as the quick language tour. Stable examples are forms to copy into
-source today. Preview examples are intentionally Zen-shaped, but describe gated
+source today. Preview examples are intentionally Zen-shaped and cover gated
 surfaces such as allocator-backed strings, sync/async effects, raw memory,
 actors, and comptime type matching.
 
@@ -47,8 +46,8 @@ main = () i32 {
 }
 ```
 
-Local bindings are immutable by default. Use `::=` for mutable inferred locals.
-After a mutable binding exists, plain `=` assigns a new value.
+Local bindings are immutable by default. Use `::=` for mutable inferred locals;
+after that, plain `=` assigns a new value.
 
 Zen does not use a `return` keyword. Function bodies, match arms, and nested
 blocks produce values from their final expression. If you reach for a keyword
@@ -62,12 +61,7 @@ max = (a: i32, b: i32) i32 {
 }
 ```
 
-Numeric conversions are explicit and prefix-first:
-
-```zen
-cast(value, Type)
-```
-
+Numeric conversions are explicit and prefix-first: `cast(value, Type)`.
 String literals are `StaticString`, not allocator-backed strings.
 
 ## StaticString
@@ -77,13 +71,12 @@ count known after compilation. Passing it around copies a pointer-and-length
 view into program storage. It does not allocate, resize, free, or transfer heap
 ownership.
 
-Use `StaticString` for literal text and other text that is part of the program image.
+Use `StaticString` for literal text and other text in the program image.
 
 ## Dynamic String Preview
 
-`String<A>` is preview syntax for owned runtime text. It has memory that can
-grow or be released, so the owner must carry allocator state.
-
+`String<A>` is preview syntax for owned runtime text. It can grow or be
+released, so the owner must carry allocator state.
 A literal such as `"Zen"` never silently becomes `String<A>`. Runtime text
 construction belongs on an allocator-aware API.
 
@@ -91,7 +84,7 @@ construction belongs on an allocator-aware API.
 
 `value.method(args)` and `method(value, args)` are call-site spellings for the
 same attached function, not alternate declaration forms. Struct literals name
-fields explicitly, and field access uses dot syntax.
+fields explicitly; field access uses dot syntax.
 
 ## Enums And Matching
 
@@ -137,8 +130,8 @@ Nested generic types are written directly, such as
 
 ## Behaviors
 
-Behaviors describe required methods. Generic functions can use behavior bounds
-when they need a capability.
+Behaviors describe required methods. Generic functions use behavior bounds when
+they need a capability.
 
 ```zen
 Display: behavior {
@@ -156,19 +149,15 @@ show<T: Display> = (value: T) StaticString {
 }
 ```
 
-Relationship declarations keep the changed type or behavior on the left.
-There is no `impl Type for Behavior` spelling and no separate `extends` keyword block.
-
-```zen
-Point.implements(Display)
-Point.requires(Display)
-PrettyDisplay.extends(Display)
-```
+Relationship declarations keep the changed type or behavior on the left:
+`Point.implements(Display)`, `Point.requires(Display)`, and
+`PrettyDisplay.extends(Display)`. There is no `impl Type for Behavior` spelling
+and no separate `extends` keyword block.
 
 ## Loops
 
-Zen has one loop entry form.
-The loop handle is compiler-owned. `done` and `next` are closed loop-control
+Zen has one loop entry form. The loop handle is compiler-owned.
+`done` and `next` are closed loop-control
 verbs for that handle, not arbitrary user methods and not stringly names.
 
 Counted loop:
@@ -231,16 +220,10 @@ by module name, and dotted paths resolve through subdirectories.
 ## Memory And Ownership
 
 Stable Zen does not hide heap allocation behind literals, interpolation, method
-calls, or generic containers. If a value needs heap memory, the API must show
-the owner and allocator path.
+calls, or generic containers. Heap memory APIs show the owner and allocator path.
 
 ```zen
-OwnedBytes<T, A>: {
-    ptr: RawPtr<T>,
-    len: usize,
-    capacity: usize,
-    allocator: A,
-}
+OwnedBytes<T, A>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
 ```
 
 Pointer, length, capacity, and allocator travel together because a pointer
@@ -250,7 +233,6 @@ alone is just an address.
 
 `Sync` and `Async` are effect modes in type surfaces. They are not source
 keywords and there is no `async fn` spelling.
-
 Sync work returns checked data now; Async work returns task-shaped data.
 
 ```zen
@@ -283,27 +265,17 @@ Read the outer type first:
 
 There is no hidden conversion between sync and async allocation. `Result<...>`
 is complete now; `Task<Result<...>>` completes later at an explicit scheduler
-boundary.
-
-Allocator-backed construction carries the allocator through the resulting
-owner:
+boundary. Allocator-backed construction carries the allocator through the owner:
 
 ```zen
 Buffer<T, A: Allocator<T, Sync>>: {
-    ptr: RawPtr<T>,
-    len: usize,
-    capacity: usize,
-    allocator: A,
+    ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A,
 }
 
 make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
     allocator.alloc(len) ?
-        | Ok(ptr) { Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
-            ptr: ptr, len: len, capacity: len, allocator: allocator,
-        }) }
-        | Err(error) {
-            Result<Buffer<T, A>, AllocError>.Err(error)
-        }
+        | Ok(ptr) { Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> { ptr: ptr, len: len, capacity: len, allocator: allocator }) }
+        | Err(error) { Result<Buffer<T, A>, AllocError>.Err(error) }
 }
 ```
 
@@ -315,10 +287,10 @@ preview names. Stable source should not call them directly.
 
 `RawPtr<T>` is the explicit raw-memory spelling used in allocator previews.
 `Ptr<T>`, `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer,
-slice, and fixed-array shapes. Gated raw pointer offset, casts, integer conversion,
-load, store, atomics, raw syscalls, comptime type matching, actor framework
-types, and scheduler operations are gated design work until layout, ownership,
-effects, and runtime contracts are promoted.
+slice, and fixed-array shapes. Gated raw pointer offset, casts, integer
+conversion, load, store, atomics, raw syscalls, comptime type matching, actor framework
+types, and scheduler operations are gated design work until layout,
+ownership, effects, and runtime contracts are promoted.
 
 ## Translation Cheat Sheet
 
@@ -341,14 +313,9 @@ effects, and runtime contracts are promoted.
 ```zen
 { io } = std
 
-Display: behavior {
-    display: (Self) StaticString
-}
+Display: behavior { display: (Self) StaticString }
 
-Point: {
-    x: i32,
-    y: i32,
-}
+Point: { x: i32, y: i32 }
 
 Point.sum = (self: Point) i32 {
     self.x + self.y
@@ -390,8 +357,4 @@ That example shows the core: prefix declarations, typed data, attached methods,
 behavior implementations, bounded generics, expression-oriented control flow,
 static text, and explicit loop control.
 
-## More To Read
-
-- `README.md` for the language pitch.
-- `examples/README.md` for canonical runnable examples.
-- `docs/V1_SPEC.md` for the full v1 contract and gated design inventory.
+More to read: `README.md`, `examples/README.md`, and `docs/V1_SPEC.md`.
