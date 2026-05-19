@@ -83,3 +83,37 @@ fn build_target_field_extraction_lives_in_focused_helper() {
         );
     }
 }
+
+#[test]
+fn build_graph_host_effect_detection_lives_in_focused_helper() {
+    let lowering = read("src/build_graph/lowering.rs");
+    let host_effects = read("src/build_graph/lowering/host_effects.rs");
+
+    assert!(
+        lowering.lines().count() < 240,
+        "build graph lowering should stay focused on traversal and target collection"
+    );
+    for helper in [
+        "declared_host_effect",
+        "host_effect_arm_declares_fallback",
+        "host_effect",
+        "is_builder_os",
+    ] {
+        assert!(
+            !lowering.contains(&format!("fn {helper}")),
+            "build graph host-effect detection should live in host_effects.rs: {helper}"
+        );
+        assert!(
+            host_effects.contains(&format!("fn {helper}")),
+            "host_effects.rs should own build graph host-effect detection: {helper}"
+        );
+    }
+    assert!(
+        lowering.contains("mod host_effects;"),
+        "build graph lowering should include the focused host-effect helper"
+    );
+    assert!(
+        lowering.contains("use host_effects::{declared_host_effect, host_effect};"),
+        "build graph lowering should import host-effect detection from the focused helper"
+    );
+}

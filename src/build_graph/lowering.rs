@@ -2,6 +2,8 @@ use crate::ast::{Declaration, Expression, MatchArm, Program, Statement};
 
 #[path = "lowering/dsl.rs"]
 mod dsl;
+#[path = "lowering/host_effects.rs"]
+mod host_effects;
 #[path = "lowering/target_fields.rs"]
 mod target_fields;
 #[path = "lowering/targets.rs"]
@@ -10,6 +12,7 @@ mod targets;
 use dsl::{BuildTargetDslIdent, HostEffectResultVariant};
 #[cfg(test)]
 use dsl::{BuildTargetDslKind, BuildTargetField};
+use host_effects::{declared_host_effect, host_effect};
 use targets::build_target_from_builder_add;
 
 impl BuildGraph {
@@ -224,63 +227,6 @@ fn is_builder_add_call(expr: &Expression) -> bool {
             if method == BuildTargetDslIdent::Add.as_str()
                 && matches!(
                     receiver.as_ref(),
-                    Expression::Identifier { name, .. }
-                        if name == BuildTargetDslIdent::Builder.as_str()
-                )
-    )
-}
-
-fn declared_host_effect(expr: &Expression) -> Option<HostEffect> {
-    let Expression::Match {
-        scrutinee, arms, ..
-    } = expr
-    else {
-        return None;
-    };
-    let has_fallback = arms.iter().any(|arm| host_effect_arm_declares_fallback(&arm.pattern));
-    has_fallback.then(|| host_effect(scrutinee)).flatten()
-}
-
-fn host_effect_arm_declares_fallback(pattern: &crate::ast::Pattern) -> bool {
-    match pattern {
-        crate::ast::Pattern::Wildcard { .. } | crate::ast::Pattern::Identifier { .. } => true,
-        crate::ast::Pattern::Enum { variant, .. } => {
-            variant.parse::<HostEffectResultVariant>() == Ok(HostEffectResultVariant::Err)
-        }
-        _ => false,
-    }
-}
-
-fn host_effect(expr: &Expression) -> Option<HostEffect> {
-    let Expression::MethodCall {
-        receiver,
-        method,
-        args,
-        ..
-    } = expr
-    else {
-        return None;
-    };
-    if !is_builder_os(receiver) {
-        return None;
-    }
-    let [Expression::StringLiteral { value: argument, .. }] = args.as_slice() else {
-        return None;
-    };
-    match method.parse::<BuildTargetDslIdent>() {
-        Ok(BuildTargetDslIdent::Env) => Some(HostEffect::ReadEnv(argument.clone())),
-        Ok(BuildTargetDslIdent::ReadFile) => Some(HostEffect::ReadFile(argument.clone())),
-        _ => None,
-    }
-}
-
-fn is_builder_os(expr: &Expression) -> bool {
-    matches!(
-        expr,
-        Expression::MemberAccess { object, field, .. }
-            if field == BuildTargetDslIdent::Os.as_str()
-                && matches!(
-                    object.as_ref(),
                     Expression::Identifier { name, .. }
                         if name == BuildTargetDslIdent::Builder.as_str()
                 )
