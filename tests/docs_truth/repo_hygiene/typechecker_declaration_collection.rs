@@ -60,3 +60,36 @@ fn typechecker_resolver_callable_replay_lives_in_focused_helper() {
         "resolver declaration collection should load focused callable replay module"
     );
 }
+
+#[test]
+fn declaration_callable_tasks_live_in_focused_helper() {
+    let root = read("src/typechecker/declaration_tasks.rs");
+    let callables = read("src/typechecker/declaration_tasks_callables.rs");
+
+    for helper in [
+        "ResolverCallableSignature",
+        "ResolverTypeParameterMetadata",
+        "ResolverCallableDeclarationMetadataTask",
+        "CallableDeclarationTask",
+    ] {
+        assert!(
+            !root.contains(&format!("struct {helper}"))
+                && !root.contains(&format!("enum {helper}")),
+            "declaration_tasks.rs should not own callable task shape: {helper}"
+        );
+        assert!(
+            callables.contains(&format!("struct {helper}"))
+                || callables.contains(&format!("enum {helper}")),
+            "callable declaration task shape should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"declaration_tasks_callables.rs\");"),
+        "declaration tasks should include focused callable task shapes"
+    );
+    assert!(
+        root.lines().count() < 260,
+        "declaration_tasks.rs should stay focused on shared declaration task wiring"
+    );
+}
