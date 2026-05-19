@@ -108,7 +108,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
     }
 
     assert!(
-        guide.lines().count() <= 355,
+        guide.lines().count() <= 340,
         "Learn guide should stay compact; move detailed status or evidence to phase docs and tests"
     );
 }

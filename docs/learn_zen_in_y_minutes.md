@@ -317,23 +317,6 @@ Point.implements(Display) {
     display = (self: Point) StaticString { "Point" }
 }
 
-sum_to = (limit: i32) i32 {
-    total ::= 0
-    i ::= 0
-
-    loop((l) {
-        i > limit ?
-            | true { l.done() }
-            | false {
-                total = total + i
-                i = i + 1
-                l.next()
-            }
-    })
-
-    total
-}
-
 show<T: Display> = (value: T) StaticString {
     value.display()
 }
@@ -341,7 +324,7 @@ show<T: Display> = (value: T) StaticString {
 main = () i32 {
     point = Point { x: 20, y: 22 }
     io.println("${show(point)}: ${point.sum()}")
-    sum_to(10)
+    point.sum()
 }
 ```
 
