@@ -30,8 +30,10 @@ Quick map:
 - type relationships are receiver-first declarations such as
   `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
   `Point.requires(Json)`;
-- `StaticString` is baked into the program, while allocator-backed String is
-  owned dynamic text;
+- `StaticString` is baked into the program; it is not allocator-backed String
+  or other dynamic text;
+- allocator-backed `String<A>` is owned runtime memory and must carry the
+  allocator that can grow or release it;
 - sync, async, allocator, raw-memory, actor, and comptime type-matching
   surfaces are gated design work until promoted.
 
@@ -113,6 +115,36 @@ the corresponding subsystem is promoted.
 The rule for this document is simple: stable examples should compile; preview
 examples should make the future syntax concrete without pretending it is
 stable.
+
+## Stable Vs Preview Surface
+
+Stable examples are the forms to copy into runnable source today:
+
+| Stable today | Why it is stable |
+| --- | --- |
+| `StaticString` literals | static bytes are baked into the program and need no allocator |
+| final expressions | every value-producing block has one obvious result |
+| `value ? | Pattern { ... }` | bools, enums, `Option`, and `Result` share one branching shape |
+| `loop((l) { ... })` | loops have explicit state and explicit control edges |
+| `l.done()`, `l.next()`, `done(l)`, `next(l)` | loop control is visible and prefix/UFC-friendly |
+| `Type.method = ...` | methods are attached functions with an explicit receiver |
+| `Type.implements(Behavior)` | behavior relationships keep the changed type on the left |
+
+Preview examples are included only when the future API shape matters to the
+language model:
+
+| Preview surface | Intended reading |
+| --- | --- |
+| `String<A>` | dynamic owned text carrying allocator ownership |
+| `Allocator<T, Sync>` | allocation happens now and returns `Result<...>` |
+| `Allocator<T, Async>` | allocation is task-shaped and returns `Task<Result<...>>` |
+| `Task<T>` | async work is represented in the type instead of hidden in a call |
+| `RawPtr<T>` and raw intrinsics | explicit low-level memory work, gated until ownership rules are promoted |
+
+The split matters most for strings. `"hello"` is a `StaticString`: static
+storage plus length baked into the program. It is not a `String<A>`, because a
+dynamic string owns runtime memory, has capacity, can grow, and needs an
+allocator capability in its type/API surface.
 
 ## Use This Mental Model
 
@@ -259,6 +291,39 @@ No alternate loop syntax exists. There is no `while (...) { ... }`, no
 `for item in items { ... }`, and no body-first loop spelling. Convert those
 forms to `loop((l) { ... })` with explicit state and explicit `done`/`next`
 edges.
+
+Loop control recipes:
+
+```zen
+// Continue the current loop.
+loop((l) {
+    should_continue ?
+        | true { l.next() }
+        | false { l.done() }
+})
+
+// UFC spelling for the same control verbs.
+loop((l) {
+    finished ?
+        | true { done(l) }
+        | false { next(l) }
+})
+
+// Nested loops can exit an outer loop directly.
+loop((outer) {
+    loop((inner) {
+        stop ?
+            | true { outer.done() }
+            | false { inner.next() }
+    })
+
+    outer.next()
+})
+```
+
+Those calls are loop-control syntax, not ordinary methods named by strings.
+The compiler recognizes the control operation for the loop handle; user code
+does not implement `done` or `next`.
 
 The important part is that every edge is visible:
 
@@ -883,6 +948,28 @@ The practical rule is simple: if a value needs heap memory, the API must show
 the allocator path. The pointer, length, and allocator capability travel
 together.
 
+That rule also explains the stable string split:
+
+```zen
+static_label = (label: StaticString) StaticString {
+    label
+}
+```
+
+`static_label("Zen")` passes static program text. A future dynamic-text API
+should not accept that by accident as an owned string; it should ask for an
+allocator-backed owner explicitly:
+
+```zen
+dynamic_label<A> = (label: String<A>) String<A> {
+    label
+}
+```
+
+The second signature is preview-only today, but it shows the ownership
+contract: the caller is passing owned runtime text, and the allocator relation
+is part of the type.
+
 ## Pointer, Slice, And Array Types
 
 Pointer, slice, and array type syntax exists for signatures and compiler-owned
@@ -999,6 +1086,23 @@ stable source yet.
   an ordinary result.
 - loop handles are compiler-owned; their control verbs are `done` and `next`,
   not arbitrary user methods.
+
+In short:
+
+```zen
+// Sync: caller receives the checked value now.
+make_now<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<RawPtr<T>, AllocError> {
+    allocator.alloc(len)
+}
+
+// Async: caller receives a task that may later produce the checked value.
+make_later<T, A: Allocator<T, Async>> = (allocator: A, len: usize) Task<Result<RawPtr<T>, AllocError>> {
+    allocator.alloc(len)
+}
+```
+
+There is no hidden conversion between those two shapes. The outer type is the
+effect boundary.
 
 ### Sync And Async Preview
 
