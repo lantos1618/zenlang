@@ -27,3 +27,40 @@ fn typechecker_binary_op_checking_lives_in_focused_helper() {
         "typechecker root should include focused binary operator checking module"
     );
 }
+
+#[test]
+fn typechecker_type_resolution_uses_named_and_generic_helpers() {
+    let root = read("src/typechecker/resolve.rs");
+
+    for helper in [
+        "resolve_named_type",
+        "resolve_generic_type",
+        "resolve_struct_type",
+        "resolve_enum_type",
+    ] {
+        assert!(
+            root.contains(&format!("fn {helper}")),
+            "type resolution should route aggregate construction through focused helper: {helper}"
+        );
+    }
+
+    let named_branch = root
+        .split("AstType::Named(name) =>")
+        .nth(1)
+        .and_then(|tail| tail.split("AstType::Generic").next())
+        .expect("expected named type branch before generic type branch");
+    assert!(
+        named_branch.contains("self.resolve_named_type(name)"),
+        "named type branch should delegate to resolve_named_type"
+    );
+
+    let generic_branch = root
+        .split("AstType::Generic { name, type_args } =>")
+        .nth(1)
+        .and_then(|tail| tail.split("AstType::Ptr").next())
+        .expect("expected generic type branch before pointer branch");
+    assert!(
+        generic_branch.contains("self.resolve_generic_type(name, type_args)"),
+        "generic type branch should delegate to resolve_generic_type"
+    );
+}
