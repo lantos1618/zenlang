@@ -89,3 +89,31 @@ fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
         "resolver_metadata.rs should include the focused queue_selection module"
     );
 }
+
+#[test]
+fn declaration_validation_precollection_tasks_live_in_focused_helper() {
+    let tasks = read("src/typechecker/tests/declaration_validation/tasks.rs");
+    let precollection = read("src/typechecker/tests/declaration_validation/precollection_tasks.rs");
+    let module = read("src/typechecker/tests/declaration_validation.rs");
+
+    assert!(
+        tasks.lines().count() < 240,
+        "tasks.rs should stay focused on declaration semantic validation tasks"
+    );
+    assert!(
+        !tasks.contains("self_type_context_validation_tasks_collect_declarations"),
+        "precollection task tests should live in precollection_tasks.rs"
+    );
+    assert!(
+        precollection.contains("self_type_context_validation_tasks_collect_declarations"),
+        "precollection_tasks.rs should cover self type context task collection"
+    );
+    assert!(
+        precollection.contains("ast_declaration_collection_bundle_replays_collection_passes"),
+        "precollection_tasks.rs should cover declaration collection task replay"
+    );
+    assert!(
+        module.contains("mod precollection_tasks;"),
+        "declaration_validation.rs should include the focused precollection_tasks module"
+    );
+}
