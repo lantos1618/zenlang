@@ -3938,6 +3938,10 @@ Agent UX deliverables:
   `emit_json_symbols_generic_method_schema_matches_golden`, covering
   resolver-owned `Box<T>` type metadata and the `Box.get<T>` method signature
   before typed specialization lowers concrete `Box_i32` / `Box.get_i32`.
+- Symbols JSON for generic Option enum templates is now pinned by
+  `emit_json_symbols_generic_option_schema_matches_golden`, covering
+  resolver-owned `Option<T>` metadata, `None` and `Some` variant metadata,
+  `Some` payload type `T`, and the `unwrap_or<T>` signature.
 - Symbols JSON for generic behavior-bound UFCS dispatch is now pinned by
   `emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden`,
   covering the generic `encode<T: Json<T>>` symbol, the concrete
