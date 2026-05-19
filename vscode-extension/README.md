@@ -4,16 +4,16 @@ This extension provides language support for the Zen programming language in Vis
 
 ## Features
 
-- **Syntax Highlighting**: Full syntax highlighting for Zen code
-- **CodeLens Actions**: Inline buttons to run and build functions
-  - Run button for all functions
-  - Build button for main and build entry points
-  - Automatic detection of `main` and `build` functions
-  - Click to execute directly from your editor
-- **Code Snippets**: Common Zen code patterns
+- **Syntax highlighting**: TextMate grammar support for `.zen` files.
+- **Command palette actions**: `Zen: Run Zen Function` and
+  `Zen: Build Zen Function` call the local `zen` compiler for the active file.
+- **Language configuration**: comments, brackets, indentation, and word
+  patterns for editor basics.
 
-Language-server features are not part of the rewrite baseline. They are gated
-until a tested server binary is added to the package.
+Language server, semantic diagnostics, hover, completion, formatting, and inline
+editor actions are not shipped in this rewrite package. They stay gated until a
+tested `zen lsp` binary is backed by the CLI parser, resolver, typechecker,
+build graph, and diagnostics.
 
 ## Requirements
 
@@ -44,17 +44,13 @@ This extension contributes the following settings:
 
 1. Open any `.zen` file in VS Code
 2. You'll see syntax highlighting immediately
-3. CodeLens commands can call the local `zen` compiler where supported
+3. Use the command palette to run `Zen: Run Zen Function` or
+   `Zen: Build Zen Function`
 
-### Using CodeLens Actions
+### Using Command Palette Actions
 
-1. The extension automatically detects functions in your code
-2. Look for Run and Build buttons above function definitions
-3. Click Run to execute a function
-4. Click Build to compile a function (available for `main` and `build` functions)
-5. Output appears in the "Zen Run" or "Zen Build" output channel at the bottom
-
-See [CODELENS_FEATURE.md](./CODELENS_FEATURE.md) for detailed information about the CodeLens feature.
+The commands use the active `.zen` file and write output to "Zen Run" or
+"Zen Build" output channels.
 
 ## Development
 
@@ -67,7 +63,7 @@ To work on this extension:
 
 ## Known Issues
 
-- Language-server features are gated and not shipped in this rewrite package
+- Language server features are gated and not shipped in this rewrite package
 - Performance may vary with large files
 
 ## Release Notes
@@ -76,4 +72,4 @@ To work on this extension:
 
 Initial release with basic language support:
 - Syntax highlighting
-- CodeLens command integration
+- Command palette integration

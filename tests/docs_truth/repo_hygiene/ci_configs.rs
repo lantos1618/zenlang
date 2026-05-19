@@ -84,6 +84,43 @@ fn ci_and_release_only_advertise_existing_targets() {
 }
 
 #[test]
+fn vscode_extension_docs_advertise_only_shipped_editor_features() {
+    let readme = read("vscode-extension/README.md");
+    let package = read("vscode-extension/package.json");
+    let source = read("vscode-extension/src/extension.ts");
+
+    assert!(
+        readme.contains("Syntax highlighting"),
+        "VS Code README should advertise shipped syntax highlighting"
+    );
+    assert!(
+        readme.contains("command palette"),
+        "VS Code README should describe shipped command-palette commands"
+    );
+    assert!(
+        package.contains("\"zen.run\"") && source.contains("registerCommand('zen.run'"),
+        "VS Code run command should be contributed and registered"
+    );
+    assert!(
+        package.contains("\"zen.build\"") && source.contains("registerCommand('zen.build'"),
+        "VS Code build command should be contributed and registered"
+    );
+
+    for unsupported in [
+        "CodeLens",
+        "Run button",
+        "Build button",
+        "CODELENS_FEATURE.md",
+        "language-server features",
+    ] {
+        assert!(
+            !readme.contains(unsupported),
+            "VS Code README should not advertise unshipped editor feature: {unsupported}"
+        );
+    }
+}
+
+#[test]
 fn checked_in_configs_do_not_contain_secret_literals() {
     let config_paths = [
         ".github/copilot-mcp.json",
