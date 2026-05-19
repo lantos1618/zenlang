@@ -64,7 +64,7 @@ fn v1_spec_records_resolver_generic_and_behavior_evidence() {
     }
 
     assert!(
-        spec.lines().count() <= 270,
+        spec.lines().count() <= 260,
         "docs/V1_SPEC.md should stay compact; move exhaustive evidence to tests, golden fixtures, or git history"
     );
 }

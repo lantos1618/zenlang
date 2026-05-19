@@ -33,15 +33,12 @@ and machine-readable outputs should feel coherent rather than bolted together.
 Required Dev UX includes VS Code syntax, semantic diagnostics,
 go-to-definition, hover, completion, formatting, run/test code lenses, target
 selection, language server restart, compiler version display, local toolchain
-validation, and `zen lsp` backed by the CLI parser, resolver, typechecker,
-build graph, and diagnostics.
-
-Required Agent UX includes agent-readable diagnostics with stable codes, spans,
-related locations, suggested_fixes, feature_gate metadata, CLI/editor-aligned
-JSON, Machine-readable project graph and symbol graph output, deterministic
-quiet commands, formatting, future fix-application workflows,
-retrieval-friendly canonical docs, structured fix suggestions, and quiet
-branch-push CI.
+validation, and `zen lsp` backed by the CLI parser, resolver, typechecker, build
+graph, and diagnostics. Required Agent UX includes agent-readable diagnostics
+with stable codes, spans, related locations, suggested_fixes, feature_gate
+metadata, CLI/editor-aligned JSON, Machine-readable project graph and symbol
+graph output, deterministic quiet commands, formatting, structured fix suggestions,
+retrieval-friendly canonical docs, quiet branch-push CI, and quiet normal branch pushes.
 
 ## Compressed Evidence Map
 
@@ -113,26 +110,20 @@ advanced comptime type matching, and broad package/link build-driver behavior.
 
 ## Next Small Slice
 
-1. Pick one oversized Rust file that still crosses the cleanup threshold.
-2. Add or tighten a focused repo-hygiene/test guard.
-3. Move one coherent responsibility into a focused module.
-4. Run local gates: `cargo fmt --check`, `git diff --check`, focused tests,
-   `cargo clippy -- -D warnings`, `cargo test --lib`, and `cargo test --tests`.
-5. Confirm GitHub Actions stay quiet on normal branch pushes before opening a
-   ready PR.
+Pick one oversized Rust file that still crosses the cleanup threshold, add or
+tighten a focused repo-hygiene/test guard, move one coherent responsibility into
+a focused module, run local gates (`cargo fmt --check`, `git diff --check`,
+focused tests, `cargo clippy -- -D warnings`, `cargo test --lib`,
+`cargo test --tests`), and confirm GitHub Actions stay quiet on normal branch
+pushes before opening a ready PR.
 
 Do not mark the broader objective complete until the completion audit confirms
 all required language, docs, CI, Dev UX, Agent UX, and build-driver evidence.
 
 ## Detailed Evidence References
 
-- `docs/V1_SPEC.md`: current language/spec surface.
-- `docs/DIAGNOSTICS.md`: stable diagnostic codes and JSON expectations.
-- `docs/learn_zen_in_y_minutes.md`: concise public language tour.
-- `docs/COMPLETION_AUDIT.md`: checklist, compressed evidence, and gaps.
-- `tests/docs_truth`: documentation and repo-shape truth gates.
-- `tests/integration`: CLI, JSON, build graph, diagnostics, and generated-C.
-- `tests/resolver_phase2.rs`: resolver Phase 2 semantic evidence.
-- `tests/zen`: executable language fixtures.
-- Git history: per-slice implementation detail that should not be copied into
-  status Markdown.
+Use `docs/V1_SPEC.md`, `docs/DIAGNOSTICS.md`,
+`docs/learn_zen_in_y_minutes.md`, `docs/COMPLETION_AUDIT.md`,
+`tests/docs_truth`, `tests/integration`, `tests/resolver_phase2.rs`,
+`tests/zen`, and git history. Keep per-slice implementation detail in tests,
+fixtures, and commits instead of expanding status Markdown.

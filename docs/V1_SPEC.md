@@ -30,17 +30,15 @@ execution beyond the constrained deterministic graph surface.
 Developer UX and Agent UX are product requirements, not polish. The v1 language
 surface should grow toward MoonBit-style toolchain integration, but the compiler
 must not advertise unsupported language-server binaries or editor features as
-implemented. The current contract: VS Code extension remains a constrained editor wrapper until language server tests exist; `zen lsp` remains gated until
-it is backed by the same parser, resolver, typechecker, build graph, and
-diagnostics as the CLI; Agent-readable diagnostics keep stable codes, spans,
-related locations, suggested fixes, feature_gate metadata, and JSON output
-aligned with CLI and editor behavior; the machine-readable project graph and
-symbol graph remain compiler-owned outputs for modules, imports, visibility,
-targets, dependencies, generated symbols, examples, and stdlib gates; structured fix suggestions are planned for missing match arms, generic arity mistakes,
-removed syntax such as `return`, gated features, missing imports, and common type
-mismatches; quiet deterministic commands such as `zen check`, `zen test`, and
-`zen emit-json` are required for agents and editors before automated fix or
-package workflows can be promoted.
+implemented. The current contract: VS Code extension remains a constrained editor wrapper until
+language-server tests exist; `zen lsp` remains gated until it uses the same
+parser, resolver, typechecker, build graph, and diagnostics as the CLI;
+Agent-readable diagnostics keep stable codes, spans, related locations,
+structured fix suggestions, feature_gate metadata, and JSON aligned with
+CLI/editor behavior; machine-readable project graph and symbol graph JSON remain
+compiler-owned; quiet deterministic commands such as `zen check`, `zen test`,
+and `zen emit-json` are required before automated fix or package workflows can
+be promoted.
 
 ## Accepted Syntax Forms
 
@@ -170,8 +168,7 @@ Representative golden anchors:
   `unwrap_or<T, E>`, `Result.unwrap_or<T, E>`, `self: Self`,
   `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
 - diagnostics JSON: `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes
-  only after golden fixtures pin the code and shape; broader diagnostic-code coverage is still required. Important anchors include
-  `context.kind = "feature_gate"`,
+  only after golden fixtures pin the code and shape; broader diagnostic-code coverage is still required. Anchors include `context.kind = "feature_gate"`,
   `emit_json_diagnostics_removed_return_schema_matches_golden`,
   `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`,
   `emit_json_diagnostics_generic_association_gate_schema_matches_golden`,
