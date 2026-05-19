@@ -1,4 +1,5 @@
 mod scan;
+mod string_interpolation;
 mod strings;
 mod tokens;
 mod whitespace;

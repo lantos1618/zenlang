@@ -173,3 +173,31 @@ fn generic_behavior_impl_type_arg_tests_live_in_focused_helper() {
         "generic_behaviors.rs should include the focused impl_type_args module"
     );
 }
+
+#[test]
+fn lexer_string_interpolation_lives_in_focused_helper() {
+    let strings = read("src/lexer/strings.rs");
+    let interpolation = read("src/lexer/string_interpolation.rs");
+    let lexer_module = read("src/lexer/mod.rs");
+
+    assert!(
+        strings.lines().count() < 160,
+        "strings.rs should stay focused on literal string scanning"
+    );
+    assert!(
+        !strings.contains("fn lex_interpolation_body"),
+        "string interpolation body scanning should live in string_interpolation.rs"
+    );
+    assert!(
+        interpolation.contains("fn lex_interpolation_body"),
+        "string_interpolation.rs should scan interpolation bodies"
+    );
+    assert!(
+        interpolation.contains("fn lex_next_no_skip"),
+        "string_interpolation.rs should own no-skip token scanning for interpolation bodies"
+    );
+    assert!(
+        lexer_module.contains("mod string_interpolation;"),
+        "lexer module should include the focused string_interpolation helper"
+    );
+}
