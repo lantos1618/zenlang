@@ -39,3 +39,29 @@ fn module_system_roots_use_owned_prefix_enum() {
         );
     }
 }
+
+#[test]
+fn stdlib_import_gates_live_in_focused_helper() {
+    let import_resolution = read("src/module_system/import_resolution.rs");
+    let stdlib_gates = read("src/module_system/import_resolution/stdlib_gates.rs");
+
+    assert!(
+        !import_resolution.contains("enum GatedStdlibModule"),
+        "gated stdlib module table should not live in the import routing dispatcher"
+    );
+
+    for required in [
+        "pub(super) enum GatedStdlibModule",
+        "ActorFramework",
+        "AllocatorFramework",
+        "AsyncRuntime",
+        "SyncRuntime",
+        "pub(super) fn from_sub_path",
+        "pub(super) fn gate_message",
+    ] {
+        assert!(
+            stdlib_gates.contains(required),
+            "stdlib import gate spelling should live in the focused helper: {required}"
+        );
+    }
+}
