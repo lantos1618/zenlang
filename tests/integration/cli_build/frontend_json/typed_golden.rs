@@ -99,6 +99,66 @@ fn emit_json_typed_generic_method_nested_result_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_generic_ufc_dedup_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "typed",
+            test_dir().join("generic_ufc_dedup.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json typed on generic UFC dedup input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json typed should emit checked generic UFC dedup JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual = String::from_utf8(output.stdout).expect("typed generic UFC dedup stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual)
+        .expect("typed generic UFC dedup stdout is JSON");
+    let expected_path = fixture("tests/fixtures/ir_json/typed_generic_ufc_dedup.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
+fn emit_json_typed_generic_worklist_dedup_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "typed",
+            test_dir()
+                .join("generic_worklist_dedup.zen")
+                .to_str()
+                .unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json typed on generic worklist dedup input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json typed should emit checked generic worklist dedup JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual =
+        String::from_utf8(output.stdout).expect("typed generic worklist dedup stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual)
+        .expect("typed generic worklist dedup stdout is JSON");
+    let expected_path = fixture("tests/fixtures/ir_json/typed_generic_worklist_dedup.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
 fn emit_json_typed_generic_option_schema_matches_golden() {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args([

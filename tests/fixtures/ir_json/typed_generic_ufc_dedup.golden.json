@@ -1,0 +1,239 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "direct",
+                  "ty": "I32",
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "id_i32",
+                        "args": [
+                          {
+                            "kind": {
+                              "IntLiteral": 12
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 82,
+                              "end": 84
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 79,
+                      "end": 85
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 70,
+                "end": 85
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "chained",
+                  "ty": "I32",
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "id_i32",
+                        "args": [
+                          {
+                            "kind": {
+                              "IntLiteral": 30
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 100,
+                              "end": 102
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 100,
+                      "end": 112
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 90,
+                "end": 112
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "BinaryOp": {
+                                        "op": "Add",
+                                        "left": {
+                                          "kind": {
+                                            "Variable": "direct"
+                                          },
+                                          "ty": "I32",
+                                          "span": {
+                                            "file_id": 0,
+                                            "start": 131,
+                                            "end": 137
+                                          }
+                                        },
+                                        "right": {
+                                          "kind": {
+                                            "Variable": "chained"
+                                          },
+                                          "ty": "I32",
+                                          "span": {
+                                            "file_id": 0,
+                                            "start": 140,
+                                            "end": 147
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 131,
+                                      "end": 147
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 129,
+                            "end": 148
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 117,
+                    "end": 150
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 117,
+                "end": 150
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 155,
+              "end": 156
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 64,
+            "end": 158
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 50,
+          "end": 158
+        }
+      },
+      {
+        "name": "id_i32",
+        "params": [
+          {
+            "name": "value",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 23,
+              "end": 31
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Variable": "value"
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 41,
+              "end": 46
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 35,
+            "end": 48
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 14,
+          "end": 48
+        }
+      }
+    ],
+    "types": [],
+    "globals": [],
+    "entry_point": "main"
+  }
+}
