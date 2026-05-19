@@ -65,3 +65,25 @@ fn stdlib_import_gates_live_in_focused_helper() {
         );
     }
 }
+
+#[test]
+fn stdlib_path_resolution_lives_in_focused_helper() {
+    let import_resolution = read("src/module_system/import_resolution.rs");
+    let stdlib_paths = read("src/module_system/import_resolution/stdlib_paths.rs");
+
+    for helper in ["resolve_stdlib_file_path", "find_stdlib_root"] {
+        assert!(
+            !import_resolution.contains(&format!("fn {helper}")),
+            "import routing dispatcher should not own stdlib path helper: {helper}"
+        );
+        assert!(
+            stdlib_paths.contains(&format!("fn {helper}")),
+            "stdlib path helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        import_resolution.contains("mod stdlib_paths;"),
+        "import routing should load focused stdlib path helper"
+    );
+}
