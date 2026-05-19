@@ -643,6 +643,12 @@ Agent UX deliverables:
   by `emit_json_typed_generic_method_worklist_schema_matches_golden`, covering
   `Box.get_inner_i32` calling the concrete `inner_i32` specialization from the
   method body.
+- Checked HIR JSON for generic method specialization is now pinned by
+  `emit_json_hir_generic_method_schema_matches_golden`, covering concrete
+  `Box_i32` and `Box.get_i32` declarations.
+- Checked MIR JSON for generic method specialization is now pinned by
+  `emit_json_mir_generic_method_schema_matches_golden`, covering `Box.get_i32`
+  lowering to `self.value`.
 - Checked HIR JSON for generic method worklist specialization is now pinned by
   `emit_json_hir_generic_method_worklist_schema_matches_golden`, covering
   concrete `Box_i32`, `inner_i32`, and `Box.get_inner_i32` declarations.
