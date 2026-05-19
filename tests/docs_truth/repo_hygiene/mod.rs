@@ -4,6 +4,7 @@ mod build_graph_dsl;
 mod builtin_type_spelling;
 mod ci_configs;
 mod file_size;
+mod ir_json;
 mod module_system;
 mod parser_enums;
 mod parser_keywords;
