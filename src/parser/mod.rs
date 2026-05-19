@@ -20,6 +20,8 @@ mod declarations;
 mod expressions;
 mod import_declarations;
 mod keywords;
+mod lookahead;
+mod navigation;
 mod patterns;
 mod precedence;
 mod statements;
