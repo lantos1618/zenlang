@@ -3938,6 +3938,10 @@ Agent UX deliverables:
   `emit_json_symbols_generic_method_schema_matches_golden`, covering
   resolver-owned `Box<T>` type metadata and the `Box.get<T>` method signature
   before typed specialization lowers concrete `Box_i32` / `Box.get_i32`.
+- Symbols JSON for generic non-behavior impl-block methods is now pinned by
+  `emit_json_symbols_generic_type_impl_methods_schema_matches_golden`, covering
+  resolver-owned `Box<T>` metadata plus `Box.get<T>` and `Box.replace<T>`
+  method signatures restored from `Box<T>.impl`.
 - Symbols JSON for generic Option enum templates is now pinned by
   `emit_json_symbols_generic_option_schema_matches_golden`, covering
   resolver-owned `Option<T>` metadata, `None` and `Some` variant metadata,
