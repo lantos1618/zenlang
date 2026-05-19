@@ -3976,6 +3976,11 @@ Agent UX deliverables:
   `emit_json_symbols_generic_type_impl_methods_schema_matches_golden`, covering
   resolver-owned `Box<T>` metadata plus `Box.get<T>` and `Box.replace<T>`
   method signatures restored from `Box<T>.impl`.
+- HIR and MIR JSON for generic non-behavior impl-block methods are now pinned
+  by `emit_json_hir_generic_type_impl_methods_schema_matches_golden` and
+  `emit_json_mir_generic_type_impl_methods_schema_matches_golden`, covering
+  concrete `Box_i32`, `Box.replace_i32`, and `Box.get_i32` lowering restored
+  from `Box<T>.impl`.
 - Symbols JSON for generic `Self`-returning methods is now pinned by
   `emit_json_symbols_generic_self_method_schema_matches_golden`, covering
   resolver-owned `Box.copy<T>` and `Option.copy<T>` metadata with `self: Self`
