@@ -21,6 +21,8 @@ fn v1_spec_records_resolver_generic_and_behavior_evidence() {
         "tests/zen/multi_file_imported_behavior_requires/main.zen",
         "Generic specialization for functions, structs, enums, and methods",
         "generic_specializations_emit_each_generated_c_definition_once",
+        "compile_to_c_with_generated_call_check",
+        "undefined_generated_c_calls",
         "generic_specializations::enum_generated_c::enum_specializations_do_not_emit_unspecialized_c_symbols",
         "Explicit behavior association proving ground",
         "tests/zen/behavior_json_explicit_impl.zen",
