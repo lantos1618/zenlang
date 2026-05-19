@@ -56,6 +56,10 @@ fixed byte count. The value is a pointer-and-length view into static storage.
 Passing it around copies that view; it does not allocate, resize, free, or
 claim ownership of heap memory.
 
+Think of it as static data plus a small view value. The compiler can know the
+literal's byte count from the program text, and runtime code does not need an
+allocator, capacity field, destructor, or ownership transfer to pass it around.
+
 ```zen
 title: StaticString = "Zen"
 
@@ -79,6 +83,14 @@ String<A>: {
 
 A string literal does not silently become `String<A>`. Runtime string
 construction belongs on an allocator-aware API.
+
+Use this rule when reading any text API:
+
+| Text need | Type shape |
+| --- | --- |
+| Literal text baked into the program | `StaticString` |
+| Runtime text that can grow or be freed | `String<A>` |
+| Bytes plus ownership | owner carries `ptr`, `len`, `capacity`, and `allocator` |
 
 ### Loops Are Prefix Control
 
@@ -128,6 +140,9 @@ loop((l) {
 
 The loop handle is compiler-owned. `done` and `next` are loop-control verbs
 recognized for that handle, not arbitrary stringly user methods.
+The language treats them as a closed control surface for loops: enter with
+`loop((label) { ... })`, then choose exactly one visible edge with `done` or
+`next`.
 
 ### Sync, Async, And Allocators Are Type-Level Facts
 
@@ -168,6 +183,9 @@ Buffer<T, A>: {
 
 Read the outer type first: `Result<...>` is complete now;
 `Task<Result<...>>` is scheduled work that may complete later.
+That outer type is the timing boundary. Zen does not hide async behavior behind
+a source-level `async fn`, and it does not let sync allocation and async
+allocation collapse into the same call shape.
 
 The smallest useful rule set is:
 
@@ -179,6 +197,9 @@ The smallest useful rule set is:
 - use allocator-backed `String<A>` only when runtime-owned text is intended;
 - make sync work produce checked values now, and async work produce `Task<...>`;
 - keep allocators in the owner type that can grow or release heap storage.
+
+If a form erases one of those facts, rewrite it before putting it in public
+examples.
 
 ## The Five Rules To Remember
 
