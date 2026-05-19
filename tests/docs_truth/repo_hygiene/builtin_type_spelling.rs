@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn semantic_builtin_type_checks_use_shared_spelling_helper() {
-    let helper = read("src/ast/types.rs");
+    let helper_root = read("src/ast/types.rs");
+    let helper_names = read("src/ast/types/names.rs");
+    let helper = format!("{helper_root}\n{helper_names}");
     assert!(
         helper.contains("pub const DYNAMIC_STRING_TYPE_NAME: &str = \"String\""),
         "dynamic String spelling should live in the AST type helper module"
