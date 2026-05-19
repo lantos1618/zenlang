@@ -3,6 +3,7 @@ use names::CIntrinsic;
 
 mod memory;
 mod names;
+mod pointers;
 mod syscalls;
 
 impl CEmitter {
@@ -22,49 +23,14 @@ impl CEmitter {
         if intrinsic.is_syscall() {
             return intrinsic.emit_syscall(self, args);
         }
+        if let Some(emitted) = intrinsic.emit_pointer(self, args, result_ty) {
+            return emitted;
+        }
         if let Some(emitted) = intrinsic.emit_memory(self, args, result_ty) {
             return emitted;
         }
 
         match intrinsic {
-            // -- Pointer operations ---------------------------------------
-            CIntrinsic::IntToPtr => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((void*)(uintptr_t)({}))", val)
-            }
-            CIntrinsic::PtrToInt => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                format!("((uintptr_t)({}))", ptr)
-            }
-            CIntrinsic::Gep => {
-                let base = self.emit_expr_inline(&args[0]);
-                let offset = self.emit_expr_inline(&args[1]);
-                format!("((uint8_t*)({}) + ({}))", base, offset)
-            }
-            CIntrinsic::GepStruct => {
-                // Struct GEP: byte-offset into a struct by field index.
-                // In C we just cast to uint8_t* and offset, since the
-                // actual field layout matches.
-                let ptr = self.emit_expr_inline(&args[0]);
-                let idx = self.emit_expr_inline(&args[1]);
-                format!("((uint8_t*)({}) + ({}))", ptr, idx)
-            }
-            CIntrinsic::RawPtrOffset => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let offset = self.emit_expr_inline(&args[1]);
-                format!("((uint8_t*)({}) + ({}))", ptr, offset)
-            }
-            CIntrinsic::RawPtrCast => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let ty = self.c_type(result_ty);
-                format!("(({})({})", ty, ptr)
-            }
-            CIntrinsic::NullPtr | CIntrinsic::Nullptr => "(NULL)".into(),
-            CIntrinsic::IsNull => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                format!("(({}) == NULL)", ptr)
-            }
-
             // -- Atomic operations ----------------------------------------
             CIntrinsic::AtomicLoad => {
                 let ptr = self.emit_expr_inline(&args[0]);
