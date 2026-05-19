@@ -1,0 +1,150 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "id_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 12
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 84,
+                                              "end": 86
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 84,
+                                      "end": 96
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 82,
+                            "end": 97
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 70,
+                    "end": 99
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 70,
+                "end": 99
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 104,
+              "end": 105
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 64,
+            "end": 107
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 50,
+          "end": 107
+        }
+      },
+      {
+        "name": "id_i32",
+        "params": [
+          {
+            "name": "value",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 23,
+              "end": 31
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Variable": "value"
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 41,
+              "end": 46
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 35,
+            "end": 48
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 14,
+          "end": 48
+        }
+      }
+    ],
+    "types": [],
+    "globals": [],
+    "entry_point": "main"
+  }
+}

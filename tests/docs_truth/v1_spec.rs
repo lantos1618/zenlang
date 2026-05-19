@@ -190,6 +190,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_typed_generic_type_impl_methods_schema_matches_golden",
         "emit_json_typed_generic_self_method_schema_matches_golden",
         "emit_json_typed_generic_method_worklist_schema_matches_golden",
+        "emit_json_typed_generic_ufc_function_schema_matches_golden",
         "emit_json_typed_generic_option_schema_matches_golden",
         "emit_json_typed_generic_result_schema_matches_golden",
         "emit_json_typed_generic_result_method_schema_matches_golden",
