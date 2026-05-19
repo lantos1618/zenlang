@@ -33,3 +33,25 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
         );
     }
 }
+
+#[test]
+fn build_graph_dependency_order_lives_in_focused_helper() {
+    let root = read("src/build_graph.rs");
+    let dependency_order = read("src/build_graph/dependency_order.rs");
+
+    for helper in ["targets_in_dependency_order", "visit_target"] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "build graph root should not own dependency ordering helper: {helper}"
+        );
+        assert!(
+            dependency_order.contains(&format!("fn {helper}")),
+            "dependency ordering should live in focused build graph helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("mod dependency_order;"),
+        "build graph root should include focused dependency ordering module"
+    );
+}
