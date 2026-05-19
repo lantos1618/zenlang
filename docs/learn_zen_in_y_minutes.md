@@ -122,6 +122,61 @@ the corresponding subsystem is implemented.
 The rule for this document is simple: stable examples should compile. Preview
 examples make the future syntax concrete and are labeled as previews.
 
+## Learn It In One Pass
+
+This is the shortest useful version of the language:
+
+| Concept | Copy this shape |
+| --- | --- |
+| Static text | `name: StaticString = "Zen"` |
+| Dynamic text preview | `String<A>` where `A` owns growth and release |
+| Function result | put the value at the end of the block |
+| Counted loop | `loop((l) { ... l.next() ... l.done() ... })` |
+| Nested loop exit | call the outer handle, such as `outer.done()` |
+| UFC loop control | `done(l)` and `next(l)` |
+| Sync effect preview | produce `Result<T, E>` directly |
+| Async effect preview | produce `Task<Result<T, E>>` |
+| Sync allocator preview | `Allocator<T, Sync>` returns allocation results now |
+| Async allocator preview | `Allocator<T, Async>` returns task-shaped allocation results |
+
+Stable code should look like this:
+
+```zen
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+```
+
+The matching preview shape for allocator-backed work is:
+
+```zen
+make_now<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<RawPtr<T>, AllocError> {
+    allocator.alloc(len)
+}
+
+make_later<T, A: Allocator<T, Async>> = (allocator: A, len: usize) Task<Result<RawPtr<T>, AllocError>> {
+    allocator.alloc(len)
+}
+```
+
+Read the outer type first. `Result<...>` means the checked value is available
+now. `Task<Result<...>>` means the checked value belongs to scheduled work.
+`StaticString` is static program storage; `String<A>` is dynamic owned storage
+and must keep allocator ownership visible.
+
 ## Stable Vs Preview Surface
 
 Stable examples are the forms to copy into runnable source today:
@@ -899,7 +954,9 @@ edge with `done` or `next`.
 
 The loop parameter is a control handle, not a user-defined object. `done` and
 `next` are compiler-owned loop-control verbs for that handle. They are not
-arbitrary user methods on a library object. The compiler recognizes only the control verbs for the loop handle here; this is not general user-defined method dispatch.
+arbitrary user methods on a library object. The compiler recognizes only the
+control verbs for the loop handle here; this is not general user-defined
+method dispatch.
 
 Counted loops use explicit state:
 
