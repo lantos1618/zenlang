@@ -14,4 +14,5 @@ include!("resolver_validation_support/behavior_type_helpers.rs");
 include!("resolver_validation_support/behavior_refs.rs");
 include!("resolver_validation_support/expected_locals.rs");
 include!("resolver_validation_support/expected_local_traversal.rs");
+include!("resolver_validation_support/expected_formatting.rs");
 include!("resolver_validation_support/expected_helpers.rs");
