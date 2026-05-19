@@ -1,5 +1,6 @@
 use super::*;
 
+mod callables;
 mod replay_kinds;
 
 impl TypeChecker {
