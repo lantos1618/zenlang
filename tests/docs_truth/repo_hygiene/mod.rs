@@ -1,5 +1,6 @@
 use super::*;
 
+mod ast_expression_operators;
 mod build_graph_dsl;
 mod builtin_type_spelling;
 mod ci_configs;
