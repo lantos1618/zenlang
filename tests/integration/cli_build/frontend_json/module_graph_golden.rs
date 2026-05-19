@@ -99,6 +99,14 @@ fn emit_json_symbols_module_graph_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_symbols_generic_method_schema_matches_golden() {
+    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_method.zen"));
+    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_generic_method.golden.json");
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
 fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
     let actual = normalized_json_for_path(
         "symbols",
