@@ -649,6 +649,12 @@ Agent UX deliverables:
 - Checked MIR JSON for generic method specialization is now pinned by
   `emit_json_mir_generic_method_schema_matches_golden`, covering `Box.get_i32`
   lowering to `self.value`.
+- Checked HIR JSON for generic `Self -> Self` method specialization is now
+  pinned by `emit_json_hir_generic_self_method_schema_matches_golden`, covering
+  `Box.copy_i32`, `Box.copy_Option_i32`, and `Option.copy_i32`.
+- Checked MIR JSON for generic `Self -> Self` method specialization is now
+  pinned by `emit_json_mir_generic_self_method_schema_matches_golden`, covering
+  those concrete copy methods returning `self`.
 - Checked HIR JSON for generic method worklist specialization is now pinned by
   `emit_json_hir_generic_method_worklist_schema_matches_golden`, covering
   concrete `Box_i32`, `inner_i32`, and `Box.get_inner_i32` declarations.

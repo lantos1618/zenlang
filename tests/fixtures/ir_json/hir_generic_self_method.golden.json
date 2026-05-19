@@ -1,0 +1,91 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Box_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "Option_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "None",
+            "tag": 0,
+            "payload": []
+          },
+          {
+            "name": "Some",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Box_Option_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "Option_i32"
+          }
+        ],
+        "variants": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Box.copy_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Box_i32"
+          }
+        ],
+        "return_type": "Box_i32"
+      },
+      {
+        "name": "Box.copy_Option_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Box_Option_i32"
+          }
+        ],
+        "return_type": "Box_Option_i32"
+      },
+      {
+        "name": "Option.copy_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Option_i32"
+          }
+        ],
+        "return_type": "Option_i32"
+      }
+    ],
+    "globals": []
+  }
+}
