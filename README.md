@@ -81,5 +81,3 @@ Zen code is meant to read from the outside in:
 - [Learn Zen In Y Minutes](docs/learn_zen_in_y_minutes.md)
 - [Examples](examples/README.md)
 - [V1 language contract](docs/V1_SPEC.md)
-- [Phase plan](docs/PHASE_PLAN.md)
-- [Completion audit](docs/COMPLETION_AUDIT.md)

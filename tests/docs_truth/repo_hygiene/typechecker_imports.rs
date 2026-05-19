@@ -33,3 +33,30 @@ fn typechecker_root_imports_use_static_root_enum() {
         );
     }
 }
+
+#[test]
+fn typechecker_imported_method_seeding_lives_in_focused_helper() {
+    let dependencies = read("src/typechecker/resolver_validation/imports_source_dependencies.rs");
+    let seeding = read("src/typechecker/resolver_validation/imported_method_seeding.rs");
+
+    for helper in [
+        "seed_imported_method_with_dependencies",
+        "seed_imported_impl_method",
+        "seed_imported_method_signature",
+    ] {
+        assert!(
+            !dependencies.contains(&format!("fn {helper}")),
+            "source dependency collection should not own imported method seeding helper: {helper}"
+        );
+        assert!(
+            seeding.contains(&format!("fn {helper}")),
+            "imported method seeding should live in focused helper: {helper}"
+        );
+    }
+
+    let root = read("src/typechecker/resolver_validation.rs");
+    assert!(
+        root.contains("include!(\"resolver_validation/imported_method_seeding.rs\");"),
+        "resolver validation should include focused imported method seeding"
+    );
+}
