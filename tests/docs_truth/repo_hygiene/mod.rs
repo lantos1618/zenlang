@@ -19,3 +19,4 @@ mod typechecker_behavior_impls;
 mod typechecker_imports;
 mod typechecker_resolver_validation;
 mod typechecker_runtime;
+mod typechecker_semantic_validation;
