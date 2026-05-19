@@ -54,3 +54,33 @@ fn resolver_call_expression_validation_lives_in_focused_helper() {
         "resolver expression validation should load focused call validation"
     );
 }
+
+#[test]
+fn resolver_expression_traversal_lives_in_focused_helper() {
+    let validation = read("src/resolver/expression_validation.rs");
+    let traversal = read("src/resolver/expression_validation/traversal.rs");
+
+    for helper in [
+        "validate_binary_expr_refs",
+        "validate_unary_expr_refs",
+        "validate_index_expr_refs",
+        "validate_if_or_while_expr_refs",
+        "validate_string_interpolation_refs",
+        "validate_range_expr_refs",
+        "validate_defer_expr_refs",
+    ] {
+        assert!(
+            !validation.contains(&format!("fn {helper}")),
+            "resolver expression dispatch should not own traversal helper: {helper}"
+        );
+        assert!(
+            traversal.contains(&format!("fn {helper}")),
+            "resolver expression traversal should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        validation.contains("mod traversal;"),
+        "resolver expression validation should load focused traversal validation"
+    );
+}
