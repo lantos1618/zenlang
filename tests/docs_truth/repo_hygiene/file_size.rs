@@ -203,6 +203,38 @@ fn lexer_string_interpolation_lives_in_focused_helper() {
 }
 
 #[test]
+fn lexer_number_scanning_lives_in_focused_helper() {
+    let scan = read("src/lexer/scan.rs");
+    let numbers = read("src/lexer/numbers.rs");
+    let lexer_module = read("src/lexer/mod.rs");
+
+    assert!(
+        scan.lines().count() < 220,
+        "scan.rs should stay focused on token dispatch and small token scanners"
+    );
+    assert!(
+        !scan.contains("fn lex_prefixed_int"),
+        "prefixed integer scanning should live in numbers.rs"
+    );
+    assert!(
+        !scan.contains("fn eat_digits"),
+        "digit scanning should live in numbers.rs"
+    );
+    assert!(
+        numbers.contains("pub(super) fn lex_number"),
+        "numbers.rs should own number token scanning"
+    );
+    assert!(
+        numbers.contains("fn lex_prefixed_int"),
+        "numbers.rs should own prefixed integer scanning"
+    );
+    assert!(
+        lexer_module.contains("mod numbers;"),
+        "lexer module should include the focused number scanning helper"
+    );
+}
+
+#[test]
 fn monomorphize_type_substitution_lives_in_focused_helper() {
     let monomorphize = read("src/typechecker/monomorphize.rs");
     let names = read("src/typechecker/monomorphize_names.rs");
