@@ -2,6 +2,11 @@ use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
 
+#[path = "module_graph_golden/generic_symbols.rs"]
+mod generic_symbols;
+#[path = "module_graph_golden/graph.rs"]
+mod graph;
+
 fn fixture(path: &str) -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
 }
@@ -82,121 +87,9 @@ fn normalized_fixture(path: &str) -> String {
     serde_json::to_string_pretty(&json).expect("serialize normalized fixture JSON")
 }
 
-#[test]
-fn emit_json_ast_module_graph_schema_matches_golden() {
-    let actual = normalized_module_graph_json("ast");
-    let expected = normalized_fixture("tests/fixtures/ir_json/ast_module_graph.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_module_graph_schema_matches_golden() {
-    let actual = normalized_module_graph_json("symbols");
-    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_module_graph.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_method_schema_matches_golden() {
-    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_method.zen"));
-    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_generic_method.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_option_schema_matches_golden() {
-    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_enum_option.zen"));
-    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_generic_option.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_result_schema_matches_golden() {
-    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_result_enum.zen"));
-    let expected = normalized_fixture("tests/fixtures/ir_json/symbols_generic_result.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_result_method_schema_matches_golden() {
-    let actual = normalized_json_for_path(
-        "symbols",
-        &fixture("tests/zen/generic_result_enum_method.zen"),
-    );
-    let expected =
-        normalized_fixture("tests/fixtures/ir_json/symbols_generic_result_method.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_type_impl_methods_schema_matches_golden() {
-    let actual = normalized_json_for_path(
-        "symbols",
-        &fixture("tests/zen/generic_type_impl_methods.zen"),
-    );
-    let expected =
-        normalized_fixture("tests/fixtures/ir_json/symbols_generic_type_impl_methods.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_self_method_schema_matches_golden() {
-    let actual = normalized_json_for_path("symbols", &fixture("tests/zen/generic_method_self.zen"));
-    let expected =
-        normalized_fixture("tests/fixtures/ir_json/symbols_generic_self_method.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_method_worklist_schema_matches_golden() {
-    let actual =
-        normalized_json_for_path("symbols", &fixture("tests/zen/generic_method_worklist.zen"));
-    let expected =
-        normalized_fixture("tests/fixtures/ir_json/symbols_generic_method_worklist.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_ufc_function_schema_matches_golden() {
-    let actual =
-        normalized_json_for_path("symbols", &fixture("tests/zen/generic_ufc_function.zen"));
-    let expected =
-        normalized_fixture("tests/fixtures/ir_json/symbols_generic_ufc_function.golden.json");
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
-    let actual = normalized_json_for_path(
-        "symbols",
-        &fixture("tests/zen/behavior_json_generic_association.zen"),
-    );
-    let expected = normalized_fixture(
-        "tests/fixtures/ir_json/symbols_generic_behavior_association.golden.json",
-    );
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden() {
-    let actual = normalized_json_for_path(
-        "symbols",
-        &fixture("tests/zen/behavior_json_generic_bound_ufcs.zen"),
-    );
-    let expected = normalized_fixture(
-        "tests/fixtures/ir_json/symbols_generic_behavior_bound_ufcs.golden.json",
-    );
+fn assert_symbols_fixture_matches(source_path: &str, fixture_path: &str) {
+    let actual = normalized_json_for_path("symbols", &fixture(source_path));
+    let expected = normalized_fixture(fixture_path);
 
     assert_eq!(actual.trim(), expected.trim());
 }
