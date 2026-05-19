@@ -1,44 +1,37 @@
 # Zen v1 Specification Draft
 
-Status: v1 draft. This document is normative for intended v1 behavior, but the
-feature matrix controls what the rewrite compiler may currently advertise.
-Exhaustive proof belongs in tests, golden fixtures, and git history; this spec
-keeps representative Test Evidence only.
+Status: v1 draft. This document is normative for intended v1 behavior, while
+the feature matrix controls what the rewrite compiler may currently advertise.
+Exhaustive proof belongs in tests, golden fixtures, and git history.
 
 ## Baseline
 
 The active implementation is the rewrite compiler:
 `source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
-
-Compiler-owned semantic data is the source of truth. Serialized JSON and YAML are
-interface formats only; they must be generated from or validated against checked
-compiler data.
+Compiler-owned semantic data is the source of truth; serialized JSON and YAML are
+interface formats generated from or validated against checked compiler data.
 
 ## Syntax Contract
 
-Implemented syntax forms are limited to the forms covered by `tests/zen` and Rust
-unit/integration tests: declarations, calls, imports, bindings, structs, enums,
-field access, method-style calls, final-expression results, prefix loops,
-`defer`, casts, string interpolation, and parser/codegen-supported `?` arms.
+Implemented syntax forms are limited to forms covered by `tests/zen` and Rust
+tests: declarations, calls, imports, bindings, structs, enums, field access,
+method-style calls, final-expression results, prefix loops, `defer`, casts,
+string interpolation, and parser/codegen-supported `?` arms.
 
-Unsupported spec-like constructs must stay gated until parser, resolver,
-typechecker, codegen, diagnostics, JSON, and public examples agree on the shape.
-This includes unspecialized generic behavior targets, comptime execution, type
-matching, async operations, actor syntax, package manifests, and `build.zen`
-execution beyond the constrained deterministic graph surface.
+Unsupported spec-like constructs stay gated until parser, resolver, typechecker,
+codegen, diagnostics, JSON, and public examples agree on the shape. This includes
+unspecialized generic behavior targets, comptime execution, type matching, async
+operations, actor syntax, package manifests, and broader `build.zen` execution.
 
-Developer UX and Agent UX are product requirements, not polish. The v1 language
-surface should grow toward MoonBit-style toolchain integration, but the compiler
-must not advertise unsupported language-server binaries or editor features as
-implemented. The current contract: VS Code extension remains a constrained editor wrapper until
-language-server tests exist; `zen lsp` remains gated until it uses the same
-parser, resolver, typechecker, build graph, and diagnostics as the CLI;
-Agent-readable diagnostics keep stable codes, spans, related locations,
-structured fix suggestions, feature_gate metadata, and JSON aligned with
-CLI/editor behavior; machine-readable project graph and symbol graph JSON remain
-compiler-owned; quiet deterministic commands such as `zen check`, `zen test`,
-and `zen emit-json` are required before automated fix or package workflows can
-be promoted.
+Developer UX and Agent UX are product requirements, not polish. The v1 surface
+should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
+Current contract: VS Code extension remains a constrained editor wrapper;
+`zen lsp` remains gated until it shares parser, resolver, typechecker, build graph, and
+diagnostics with the CLI. Agent-readable diagnostics keep stable codes, spans,
+related locations, structured fix suggestions, feature_gate metadata, and JSON;
+machine-readable project graph and symbol graph JSON remain compiler-owned;
+quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json`
+gate automated fix or package workflows.
 
 ## Accepted Syntax Forms
 
@@ -151,9 +144,7 @@ target/build input.
 
 Current commands: `zen emit-json ast <file>`, `zen emit-json symbols <file>`,
 `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`,
-`zen emit-json hir <file>`, `zen emit-json mir <file>`,
-`zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and
-`zen emit-json target-yaml <file>`.
+`zen emit-json hir <file>`, `zen emit-json mir <file>`, `zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and `zen emit-json target-yaml <file>`.
 
 Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted.
 
@@ -161,20 +152,8 @@ Representative golden anchors:
 
 - hand-authored IR rejection: `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`, `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`, `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`, `emit_json_layout_rejects_hand_authored_json_before_layout_override`, and `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
 - symbols/typed/HIR/MIR/layout generics: `emit_json_ast_module_graph_schema_matches_golden`, `emit_json_symbols_module_graph_schema_matches_golden`, `emit_json_symbols_generic_method_schema_matches_golden`, `emit_json_typed_generic_method_schema_matches_golden`, `emit_json_hir_generic_method_worklist_schema_matches_golden`, `emit_json_mir_generic_method_worklist_schema_matches_golden`, `emit_json_layout_generic_option_schema_matches_golden`, `emit_json_layout_generic_result_schema_matches_golden`, and `emit_json_layout_nested_generic_result_schema_matches_golden`.
-- generic names pinned by golden fixtures: `Box.get<T>`, `Box.replace<T>`,
-  `Box<T>.impl`, `Box.copy<T>`, `Option.copy<T>`, `inner<T>`, `id<T>`,
-  `12.id<i32>()`, `id_i32`, `Box.get_inner<T>`, `Box.get_inner_i32`,
-  `inner_i32`, `Option<T>`, `unwrap_or<T>`, `Result<T, E>`,
-  `unwrap_or<T, E>`, `Result.unwrap_or<T, E>`, `self: Self`,
-  `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
-- diagnostics JSON: `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes
-  only after golden fixtures pin the code and shape; broader diagnostic-code coverage is still required. Anchors include `context.kind = "feature_gate"`,
-  `emit_json_diagnostics_removed_return_schema_matches_golden`,
-  `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`,
-  `emit_json_diagnostics_generic_association_gate_schema_matches_golden`,
-  `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`,
-  `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden`, and
-  `emit_json_diagnostics_generic_function_arity_schema_matches_golden`.
+- generic names pinned by golden fixtures: `Box.get<T>`, `Box.replace<T>`, `Box<T>.impl`, `Box.copy<T>`, `Option.copy<T>`, `inner<T>`, `id<T>`, `12.id<i32>()`, `id_i32`, `Box.get_inner<T>`, `Box.get_inner_i32`, `inner_i32`, `Option<T>`, `unwrap_or<T>`, `Result<T, E>`, `unwrap_or<T, E>`, `Result.unwrap_or<T, E>`, `self: Self`, `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
+- diagnostics JSON: `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes only after golden fixtures pin the code and shape; broader diagnostic-code coverage is still required. Anchors include `context.kind = "feature_gate"`, `emit_json_diagnostics_removed_return_schema_matches_golden`, `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`, `emit_json_diagnostics_generic_association_gate_schema_matches_golden`, `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`, `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden`, and `emit_json_diagnostics_generic_function_arity_schema_matches_golden`.
 - build/target JSON:
   `emit_json_build_graph_project_schema_matches_golden`,
   `emit_json_build_graph_host_effect_schema_matches_golden`,
