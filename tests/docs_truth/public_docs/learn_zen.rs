@@ -107,4 +107,9 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
             "Learn guide should avoid teaching non-behavior impl-block syntax as the public tutorial path: {stale}"
         );
     }
+
+    assert!(
+        guide.lines().count() <= 500,
+        "Learn guide should stay compact; move detailed status or evidence to phase docs and tests"
+    );
 }
