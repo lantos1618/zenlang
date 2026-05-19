@@ -4,7 +4,8 @@ use super::*;
 fn codegen_c_intrinsics_use_owned_name_enum() {
     let lowering = read("src/codegen/c/intrinsics.rs");
     let names = read("src/codegen/c/intrinsics/names.rs");
-    let source = format!("{lowering}\n{names}");
+    let spelling = read("src/codegen/c/intrinsics/names/spelling.rs");
+    let source = format!("{lowering}\n{names}\n{spelling}");
 
     for forbidden in [
         "match name",
@@ -37,6 +38,7 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
 
     for required in [
         "enum CIntrinsic",
+        "mod spelling;",
         "const ALL: &[CIntrinsic]",
         "impl fmt::Display for CIntrinsic",
         "impl FromStr for CIntrinsic",
@@ -50,6 +52,19 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
             "C intrinsic spelling should live in CIntrinsic: {required}"
         );
     }
+
+    assert!(
+        names.lines().count() < 220,
+        "names.rs should stay focused on the intrinsic enum, ordered table, and parse/display glue"
+    );
+    assert!(
+        !names.contains("const ADD_OVERFLOW"),
+        "intrinsic spelling constants should live in names/spelling.rs"
+    );
+    assert!(
+        spelling.contains("pub(super) const fn as_str"),
+        "intrinsic spelling helper should own string rendering"
+    );
 }
 
 #[test]
