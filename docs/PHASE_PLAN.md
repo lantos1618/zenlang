@@ -3942,6 +3942,10 @@ Agent UX deliverables:
   `emit_json_symbols_generic_type_impl_methods_schema_matches_golden`, covering
   resolver-owned `Box<T>` metadata plus `Box.get<T>` and `Box.replace<T>`
   method signatures restored from `Box<T>.impl`.
+- Symbols JSON for generic `Self`-returning methods is now pinned by
+  `emit_json_symbols_generic_self_method_schema_matches_golden`, covering
+  resolver-owned `Box.copy<T>` and `Option.copy<T>` metadata with `self: Self`
+  and return type `Self` on generic struct and enum receivers.
 - Symbols JSON for generic Option enum templates is now pinned by
   `emit_json_symbols_generic_option_schema_matches_golden`, covering
   resolver-owned `Option<T>` metadata, `None` and `Some` variant metadata,
