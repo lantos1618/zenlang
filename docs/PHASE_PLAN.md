@@ -639,6 +639,10 @@ Agent UX deliverables:
 - Checked typed JSON for generic method specialization is now pinned by
   `emit_json_typed_generic_method_schema_matches_golden`, covering the
   specialized `Box_i32` type and `Box.get_i32` method output.
+- Checked typed JSON for generic method worklist specialization is now pinned
+  by `emit_json_typed_generic_method_worklist_schema_matches_golden`, covering
+  `Box.get_inner_i32` calling the concrete `inner_i32` specialization from the
+  method body.
 - Checked typed JSON for generic `Option<T>` enum specialization is now pinned
   by `emit_json_typed_generic_option_schema_matches_golden`, covering concrete
   `Option_i32` enum payloads, `unwrap_or_i32`, and typed call sites.
