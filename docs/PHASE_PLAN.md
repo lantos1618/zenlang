@@ -3934,6 +3934,10 @@ Agent UX deliverables:
   `emit_json_symbols_generic_behavior_association_schema_matches_golden`,
   covering `Json<T>` behavior method signatures plus `Point` resolver metadata
   for `Json<StaticString>` impl and require associations.
+- Symbols JSON for generic method templates is now pinned by
+  `emit_json_symbols_generic_method_schema_matches_golden`, covering
+  resolver-owned `Box<T>` type metadata and the `Box.get<T>` method signature
+  before typed specialization lowers concrete `Box_i32` / `Box.get_i32`.
 - Symbols JSON for generic behavior-bound UFCS dispatch is now pinned by
   `emit_json_symbols_generic_behavior_bound_ufcs_schema_matches_golden`,
   covering the generic `encode<T: Json<T>>` symbol, the concrete
