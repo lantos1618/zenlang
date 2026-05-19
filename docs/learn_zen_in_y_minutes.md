@@ -4,8 +4,11 @@ Zen is a systems language built around prefix-first declarations, explicit data
 shapes, pattern matching, generics, behaviors, visible ownership, and
 predictable native output.
 
-Runnable examples live in `examples/` and `tests/zen/`. This guide has two
-layers:
+Runnable examples live in `examples/` and `tests/zen/`. This guide is a fast
+tour of the source shape: what stable examples should look like today, and how
+the reserved preview surfaces are intended to read once promoted.
+
+The guide has two layers:
 
 - stable source forms you can use in examples today;
 - gated design previews that show intended syntax, but currently compile to
@@ -22,13 +25,77 @@ Quick map:
 - values come from final expressions, not `return`;
 - branching uses `?` pattern matching for bools, enums, `Option`, and `Result`;
 - loops use one prefix form, `loop((label) { ... })`;
+- loop exits are `label.done()` and `label.next()`, with `done(label)` and
+  `next(label)` as UFC spellings;
 - type relationships are receiver-first declarations such as
   `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
   `Point.requires(Json)`;
 - `StaticString` is baked into the program, while allocator-backed String is
   owned dynamic text;
-- sync, async, allocator, raw-memory, actor, and comptime type matching work is
-  a gated design surface until promoted.
+- sync, async, allocator, raw-memory, actor, and comptime type-matching
+  surfaces are gated design work until promoted.
+
+## The Whole Shape In One Page
+
+```zen
+{ io } = std
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
+
+Display: behavior {
+    display: (Self) StaticString
+}
+
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
+
+Point.implements(Display) {
+    display = (self: Point) StaticString {
+        "Point"
+    }
+}
+
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+
+show<T: Display> = (value: T) StaticString {
+    value.display()
+}
+
+main = () i32 {
+    point = Point { x: 20, y: 22 }
+    name: StaticString = show(point)
+
+    io.println("${name}: ${point.sum()}")
+    sum_to(10)
+}
+```
+
+That example is the core of Zen: prefix declarations, typed data, attached
+methods, behavior implementations, bounded generics, expression-oriented
+control flow, and explicit loop control.
 
 ## Read This Guide In Two Passes
 
@@ -58,6 +125,8 @@ Zen keeps important edges visible:
   not `String<A>`. Static text and dynamic text are different types.
 - Effects are explicit. Sync work produces a direct checked value. Async work
   returns a task-shaped value.
+- Allocation is explicit. Dynamic owners carry the allocator that can grow or
+  release their storage.
 - Behavior relationships are explicit. Use `Type.implements(Behavior)`,
   `Type.requires(Behavior)`, and `Child.extends(Parent)`.
 - Tooling truth comes from the compiler. JSON views are emitted from source;
@@ -78,6 +147,8 @@ no `extends Behavior` keyword block, no `return`, and no body-first loop.
 | `break` | `l.done()` or `done(l)` |
 | `continue` | `l.next()` or `next(l)` |
 | `impl Type for Behavior` | `Type.implements(Behavior) { ... }` |
+| `extends Parent` keyword block | `Child.extends(Parent)` |
+| `requires Behavior` keyword block | `Type.requires(Behavior)` |
 | `async fn` | a function whose type is `Task<Result<T, E>>` or another task-shaped type |
 | string literal text | `StaticString` |
 | growable owned text | `String<A>` or another owner that carries allocator ownership |
@@ -659,6 +730,8 @@ The loop parameter is a control handle, not a user-defined object. `done` and
 `next` are compiler-owned loop-control verbs for that handle. They are not
 arbitrary user methods on a library object. The compiler recognizes only the control verbs for the loop handle here; this is not general user-defined method dispatch.
 
+Counted loops use explicit state:
+
 ```zen
 sum_to = (limit: i32) i32 {
     total ::= 0
@@ -715,8 +788,9 @@ functions named `done` or `next`:
 
 ```zen
 loop((l) {
-    done(l)
-    next(l)
+    finished ?
+        | true { done(l) }
+        | false { next(l) }
 })
 ```
 
@@ -732,6 +806,21 @@ The complete stable loop surface is:
 
 There is no hidden loop result channel. Accumulated values live in explicit
 mutable bindings outside the loop and are read after `done`.
+
+This is the complete mental rewrite:
+
+```zen
+// Source idea: repeat while i is not past limit.
+loop((l) {
+    i > limit ?
+        | true { l.done() }
+        | false {
+            total = total + i
+            i = i + 1
+            l.next()
+        }
+})
+```
 
 ## Defer
 
@@ -785,6 +874,7 @@ source types instead of pretending allocation is free.
 OwnedBytes<T, A>: {
     ptr: RawPtr<T>,
     len: usize,
+    capacity: usize,
     allocator: A,
 }
 ```
@@ -887,6 +977,11 @@ code cannot accidentally call async operations. Current compiler paths reject
 these spellings with feature-gate diagnostics instead of treating them as
 ordinary unknown names.
 
+Read every example in this section as a preview. The syntax is intentionally
+Zen-shaped, but `Sync`, `Async`, `Allocator`, `String<A>`, `Task<T>`, raw
+allocation intrinsics, actor framework types, and scheduler operations are not
+stable source yet.
+
 ### Sync/Async/Allocator Quick Rules
 
 - `Sync` APIs compute now and produce direct checked data.
@@ -898,6 +993,8 @@ ordinary unknown names.
   `Task<Result<RawPtr<T>, AllocError>>`.
 - allocator-backed owners keep the allocator with the pointer, length, and
   capacity facts.
+- `StaticString` does not become `String<A>` by assignment or inference.
+- `String<A>` owns dynamic bytes and therefore needs allocator ownership.
 - async work returns a task-shaped value instead of hiding scheduler work inside
   an ordinary result.
 - loop handles are compiler-owned; their control verbs are `done` and `next`,
@@ -975,6 +1072,7 @@ Allocator<T, Async>: behavior {
 Buffer<T, A: Allocator<T, Sync>>: {
     ptr: RawPtr<T>,
     len: usize,
+    capacity: usize,
     allocator: A,
 }
 ```
@@ -993,6 +1091,7 @@ make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer
             Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> {
                 ptr: ptr,
                 len: len,
+                capacity: len,
                 allocator: allocator,
             })
         }
@@ -1004,6 +1103,21 @@ make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer
 
 `Buffer<T, A>` owns memory only because `A` is kept with the buffer. Passing a
 raw pointer alone is just an address.
+
+An async allocator has the same ownership goal, but its first result is a task
+for allocation work, not an allocated owner:
+
+```zen
+allocate_later<T, A: Allocator<T, Async>> = (allocator: A, len: usize) Task<Result<RawPtr<T>, AllocError>> {
+    allocator.alloc(len)
+}
+```
+
+The important distinction is the outer type. Sync allocation gives back
+`Result<...>` now. Async allocation gives back `Task<Result<...>>`, so callers
+cannot confuse scheduled work with completed allocation. Building an owned
+`Buffer<T, A>` from that async result belongs at an explicit scheduler/task
+boundary once async lowering is promoted.
 
 Raw allocation intrinsics such as `@builtin.raw_allocate(...)`,
 `@builtin.raw_deallocate(...)`, and `@builtin.raw_reallocate(...)` are gated.
