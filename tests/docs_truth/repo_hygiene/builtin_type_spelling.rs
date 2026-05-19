@@ -4,7 +4,8 @@ use super::*;
 fn semantic_builtin_type_checks_use_shared_spelling_helper() {
     let helper_root = read("src/ast/types.rs");
     let helper_names = read("src/ast/types/names.rs");
-    let helper = format!("{helper_root}\n{helper_names}");
+    let helper_gated = read("src/ast/types/gated.rs");
+    let helper = format!("{helper_root}\n{helper_names}\n{helper_gated}");
     assert!(
         helper.contains("pub const DYNAMIC_STRING_TYPE_NAME: &str = \"String\""),
         "dynamic String spelling should live in the AST type helper module"
@@ -50,6 +51,26 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
     assert!(
         helper.contains("Some(GatedBuiltinType::DynamicString)"),
         "dynamic String recognition should be expressed through the gated builtin type enum"
+    );
+    assert!(
+        helper_root.contains("mod gated;"),
+        "AST type module should include a focused gated builtin helper"
+    );
+    assert!(
+        helper_root.contains("pub use gated::"),
+        "AST type module should re-export gated builtin names from the focused helper"
+    );
+    assert!(
+        helper_gated.contains("pub enum GatedBuiltinType"),
+        "gated.rs should own gated builtin type classification"
+    );
+    assert!(
+        !helper_names.contains("pub enum GatedBuiltinType"),
+        "names.rs should stay focused on stable builtin and generic type names"
+    );
+    assert!(
+        helper_names.lines().count() < 220,
+        "names.rs should stay compact after gated builtin types move out"
     );
 
     for path in [
