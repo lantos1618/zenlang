@@ -1,0 +1,115 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Box_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "Option_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "None",
+            "tag": 0,
+            "payload": []
+          },
+          {
+            "name": "Some",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Result_Option_i32_StaticString",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "Option_i32"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "StaticString"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Box.wrap_result_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Box_i32"
+          }
+        ],
+        "return_type": "Result_Option_i32_StaticString"
+      },
+      {
+        "name": "unwrap_result_Option_i32_StaticString",
+        "params": [
+          {
+            "name": "value",
+            "type": "Result_Option_i32_StaticString"
+          },
+          {
+            "name": "fallback",
+            "type": "Option_i32"
+          }
+        ],
+        "return_type": "Option_i32"
+      },
+      {
+        "name": "unwrap_option_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "Option_i32"
+          },
+          {
+            "name": "fallback",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}
