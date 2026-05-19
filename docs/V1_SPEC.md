@@ -262,9 +262,12 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   JSON for generic method worklist specialization is pinned by
   `emit_json_typed_generic_method_worklist_schema_matches_golden`, covering
   `Box.get_inner_i32` calling the concrete `inner_i32` specialization from the
-  method body. Checked typed JSON for generic direct-call/UFC-call
-  deduplication is pinned by `emit_json_typed_generic_ufc_dedup_schema_matches_golden`,
-  covering both call-site spellings feeding the same concrete `id_i32`.
+  method body. Checked typed JSON for generic UFC-only function calls is pinned
+  by `emit_json_typed_generic_ufc_function_schema_matches_golden`, proving
+  `12.id<i32>()` lowers to the concrete `id_i32` specialization. Checked typed
+  JSON for generic direct-call/UFC-call deduplication is pinned by
+  `emit_json_typed_generic_ufc_dedup_schema_matches_golden`, covering both
+  call-site spellings feeding the same concrete `id_i32`.
   Checked typed JSON for generic function worklist deduplication is pinned by
   `emit_json_typed_generic_worklist_dedup_schema_matches_golden`, covering
   `left_i32` and `right_i32` calling the same concrete `inner_i32`. Checked typed
