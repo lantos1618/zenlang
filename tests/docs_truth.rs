@@ -13,8 +13,6 @@ fn read(path: impl AsRef<Path>) -> String {
 mod contributor_docs;
 #[path = "docs_truth/phase_audit.rs"]
 mod phase_audit;
-#[path = "docs_truth/phase_audit_manifest.rs"]
-mod phase_audit_manifest;
 #[path = "docs_truth/public_docs.rs"]
 mod public_docs;
 #[path = "docs_truth/repo_hygiene/mod.rs"]
