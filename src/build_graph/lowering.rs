@@ -2,6 +2,8 @@ use crate::ast::{Declaration, Expression, MatchArm, Program, Statement};
 
 #[path = "lowering/dsl.rs"]
 mod dsl;
+#[path = "lowering/target_fields.rs"]
+mod target_fields;
 #[path = "lowering/targets.rs"]
 mod targets;
 
