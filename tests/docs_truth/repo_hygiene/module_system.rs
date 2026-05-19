@@ -87,3 +87,33 @@ fn stdlib_path_resolution_lives_in_focused_helper() {
         "import routing should load focused stdlib path helper"
     );
 }
+
+#[test]
+fn graph_loading_export_lookup_lives_in_focused_helper() {
+    let graph_loading = read("src/module_system/graph_loading.rs");
+    let exported_symbols = read("src/module_system/graph_loading/exported_symbols.rs");
+
+    assert!(
+        graph_loading.lines().count() < 240,
+        "module graph loading should stay focused on loading and import traversal"
+    );
+    for helper in ["enum ExportedModuleSymbol", "fn exported_module_symbol"] {
+        assert!(
+            !graph_loading.contains(helper),
+            "exported module symbol definitions should live in exported_symbols.rs: {helper}"
+        );
+        assert!(
+            exported_symbols.contains(helper),
+            "exported_symbols.rs should own exported module symbol definitions: {helper}"
+        );
+    }
+    assert!(
+        graph_loading.contains("mod exported_symbols;"),
+        "graph loading should include the focused exported-symbol helper"
+    );
+    assert!(
+        graph_loading
+            .contains("use exported_symbols::{exported_module_symbol, ExportedModuleSymbol};"),
+        "graph loading should import exported-symbol helpers explicitly"
+    );
+}
