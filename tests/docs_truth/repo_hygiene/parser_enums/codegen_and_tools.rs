@@ -181,7 +181,9 @@ fn codegen_c_pointer_intrinsics_live_in_focused_helper() {
 #[test]
 fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
     let lowering = read("src/build_graph/lowering.rs");
+    let host_effects = read("src/build_graph/lowering/host_effects.rs");
     let dsl = read("src/build_graph/lowering/dsl.rs");
+    let source = format!("{lowering}\n{host_effects}");
 
     for forbidden in [
         "match method.as_str()",
@@ -189,12 +191,12 @@ fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
         "method == BuildTargetDslIdent::ReadFile.as_str()",
     ] {
         assert!(
-            !lowering.contains(forbidden),
+            !source.contains(forbidden),
             "build graph host-effect method dispatch should parse through BuildTargetDslIdent: {forbidden}"
         );
     }
     assert!(
-        lowering.contains("method.parse::<BuildTargetDslIdent>()"),
+        source.contains("method.parse::<BuildTargetDslIdent>()"),
         "build graph host-effect method dispatch should parse method names through BuildTargetDslIdent"
     );
     assert!(
