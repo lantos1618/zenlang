@@ -7,6 +7,9 @@ use super::expression_validation_constructs::{
 use super::symbol_table::ScopeStack;
 use super::{Resolver, SymbolTable};
 
+mod calls;
+use calls::{FunctionCallRef, MethodCallRef};
+
 impl Resolver {
     pub(super) fn validate_expr_refs(
         &self,
@@ -25,38 +28,23 @@ impl Resolver {
                 args,
                 span,
             } => {
-                self.validate_type_arg_refs(
+                self.validate_function_call_expr_refs(
                     table,
                     type_params,
-                    type_args,
-                    *span,
-                    allow_self_type,
-                    diagnostics,
-                );
-                if module.is_none() && !self.is_known_value_name(table, locals, name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0203",
-                        format!("unknown value symbol '{name}'"),
-                        *span,
-                    ));
-                }
-                self.validate_expr_arg_refs(
-                    table,
-                    type_params,
-                    args,
+                    FunctionCallRef {
+                        name,
+                        module: module.as_deref(),
+                        type_args,
+                        args,
+                        span: *span,
+                    },
                     locals,
                     allow_self_type,
                     diagnostics,
                 );
             }
             Expression::Identifier { name, span } => {
-                if !self.is_known_value_name(table, locals, name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0203",
-                        format!("unknown value symbol '{name}'"),
-                        *span,
-                    ));
-                }
+                self.validate_identifier_expr_refs(table, name, *span, locals, diagnostics);
             }
             Expression::MethodCall {
                 receiver,
@@ -65,26 +53,15 @@ impl Resolver {
                 span,
                 ..
             } => {
-                self.validate_expr_refs(
+                self.validate_method_call_expr_refs(
                     table,
                     type_params,
-                    receiver,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_type_arg_refs(
-                    table,
-                    type_params,
-                    type_args,
-                    *span,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_expr_arg_refs(
-                    table,
-                    type_params,
-                    args,
+                    MethodCallRef {
+                        receiver,
+                        type_args,
+                        args,
+                        span: *span,
+                    },
                     locals,
                     allow_self_type,
                     diagnostics,
