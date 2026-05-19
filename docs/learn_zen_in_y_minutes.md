@@ -194,6 +194,112 @@ now. `Task<Result<...>>` means the checked value belongs to scheduled work.
 `StaticString` is static program storage; `String<A>` is dynamic owned storage
 and must keep allocator ownership visible.
 
+### Copy-Paste Loop Forms
+
+Loops have one public entry point. Start with `loop((label) { ... })`, then
+make every edge explicit with `label.next()` or `label.done()`.
+
+```zen
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+```
+
+Nested loops name the loop they want to control. Exiting an outer loop is not
+a special keyword; it is just an explicit call on the outer handle.
+
+```zen
+loop((outer) {
+    loop((inner) {
+        stop ?
+            | true { outer.done() }
+            | false { inner.next() }
+    })
+
+    outer.next()
+})
+```
+
+UFC is the same control operation with the verb first:
+
+```zen
+loop((l) {
+    done(l)
+    next(l)
+})
+```
+
+Do not translate these to `while`, `for`, `break`, `continue`, or a body-first
+loop. Those are not the public Zen forms.
+
+### Copy-Paste Text, Sync, Async, And Allocator Forms
+
+Use `StaticString` when the bytes are baked into the program. It is a static
+pointer-and-length view:
+
+```zen
+title: StaticString = "Zen"
+```
+
+Use `String<A>` only when runtime text owns memory managed by allocator `A`:
+
+```zen
+String<A>: {
+    ptr: RawPtr<u8>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+```
+
+Sync APIs produce checked data directly. Async APIs produce task-shaped work:
+
+```zen
+read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
+}
+
+read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+```
+
+Allocator capabilities follow the same outer-type rule:
+
+```zen
+Allocator<T, Sync>: behavior {
+    alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
+}
+
+Allocator<T, Async>: behavior {
+    alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>>
+}
+```
+
+The practical reading is:
+
+| Surface | Meaning |
+| --- | --- |
+| `StaticString` | static bytes plus length baked into the program |
+| `String<A>` | owned dynamic bytes plus allocator ownership |
+| `Result<T, E>` | checked data is available now |
+| `Task<Result<T, E>>` | checked data belongs to scheduled work |
+| `Allocator<T, Sync>` | allocation returns now |
+| `Allocator<T, Async>` | allocation returns as task-shaped work |
+
 ## Stable Vs Preview Surface
 
 Stable examples are the forms to copy into runnable source today:
