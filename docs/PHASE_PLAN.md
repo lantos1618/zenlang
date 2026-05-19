@@ -199,6 +199,11 @@ Agent UX deliverables:
   distinct `Result_i32_StaticString` and `Result_bool_StaticString`
   declarations plus concrete `Result.unwrap_or_i32_StaticString` and
   `Result.unwrap_or_bool_StaticString` match lowering.
+- Generic `Vec<T>` struct/method specialization is now pinned in HIR and MIR
+  JSON by `emit_json_hir_generic_vec_schema_matches_golden` and
+  `emit_json_mir_generic_vec_schema_matches_golden`, covering distinct
+  `Vec_i32` and `Vec_StaticString` declarations plus concrete `Vec.len_i32`
+  and `Vec.len_StaticString` field-access lowering.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
   Diagnostics JSON pins this machine-readable shape through
