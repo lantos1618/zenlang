@@ -19,6 +19,8 @@ mod ir_boundaries;
 mod layout_golden;
 #[path = "frontend_json/layout_json.rs"]
 mod layout_json;
+#[path = "frontend_json/mir_generic_worklist_golden.rs"]
+mod mir_generic_worklist_golden;
 #[path = "frontend_json/mir_golden.rs"]
 mod mir_golden;
 #[path = "frontend_json/module_graph.rs"]
