@@ -44,6 +44,131 @@ Quick map:
 - sync, async, allocator, raw-memory, actor, and comptime type-matching
   surfaces are gated design work.
 
+## Read These Shapes First
+
+Zen tries to make lifetime, timing, and control visible in the source. These
+are the spellings to internalize before reading the rest of the page.
+
+### Static Text Is Program Text
+
+`StaticString` means literal bytes stored with the compiled program plus a
+fixed byte count. The value is a pointer-and-length view into static storage.
+Passing it around copies that view; it does not allocate, resize, free, or
+claim ownership of heap memory.
+
+```zen
+title: StaticString = "Zen"
+
+identity_static = (value: StaticString) StaticString {
+    value
+}
+```
+
+`String<A>` means allocator-backed dynamic text. It is runtime-owned storage,
+so its shape must include the allocator capability that can grow or release
+the bytes:
+
+```zen
+String<A>: {
+    ptr: RawPtr<u8>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+```
+
+A string literal does not silently become `String<A>`. Runtime string
+construction belongs on an allocator-aware API.
+
+### Loops Are Prefix Control
+
+There is one stable loop entry form:
+
+```zen
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+```
+
+Nested loops control the handle they name:
+
+```zen
+loop((outer) {
+    loop((inner) {
+        stop ?
+            | true { outer.done() }
+            | false { inner.next() }
+    })
+
+    outer.next()
+})
+```
+
+UFC loop control is the same control operation with the verb first:
+
+```zen
+loop((l) {
+    done(l)
+    next(l)
+})
+```
+
+The loop handle is compiler-owned. `done` and `next` are loop-control verbs
+recognized for that handle, not arbitrary stringly user methods.
+
+### Sync, Async, And Allocators Are Type-Level Facts
+
+Sync work returns checked data now. Async work returns task-shaped data:
+
+```zen
+read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
+    source.read_all(allocator)
+}
+
+read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
+    source.read_all_async(allocator)
+}
+```
+
+Allocators follow that same outer-type rule:
+
+```zen
+Allocator<T, Sync>: behavior {
+    alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
+}
+
+Allocator<T, Async>: behavior {
+    alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>>
+}
+```
+
+Dynamic owners carry the allocator because ownership is not just a pointer:
+
+```zen
+Buffer<T, A>: {
+    ptr: RawPtr<T>,
+    len: usize,
+    capacity: usize,
+    allocator: A,
+}
+```
+
+Read the outer type first: `Result<...>` is complete now;
+`Task<Result<...>>` is scheduled work that may complete later.
+
 The smallest useful rule set is:
 
 - write declarations in prefix form: `name = ...`, `Type.method = ...`,

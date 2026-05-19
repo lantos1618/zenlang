@@ -1,179 +1,50 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-fn fixture(path: &str) -> std::path::PathBuf {
+#[path = "layout_golden/generic.rs"]
+mod generic;
+#[path = "layout_golden/subject.rs"]
+mod subject;
+
+fn fixture(path: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
 }
 
-#[test]
-fn emit_json_layout_compound_schema_matches_golden() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("compound_layout_subject.zen");
-    std::fs::write(
-        &zen_path,
-        r#"
-Handles: {
-    ptr: Ptr<i32>,
-    raw: RawPtr<i32>,
-    slice: Slice<i32>,
-    fixed: [i32; 4],
+fn write_subject(tmp: &tempfile::TempDir, file_name: &str, source: &str) -> PathBuf {
+    let zen_path = tmp.path().join(file_name);
+    std::fs::write(&zen_path, source).unwrap_or_else(|err| panic!("write {file_name}: {err}"));
+    zen_path
 }
 
-Choice:
-    Empty,
-    WithPayload(Handles)
-
-main = () i32 { 0 }
-"#,
-    )
-    .expect("write compound layout subject");
-
+fn emit_layout(path: &Path, description: &str) -> String {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "layout", zen_path.to_str().unwrap()])
+        .args(["emit-json", "layout", path.to_str().unwrap()])
         .output()
-        .expect("run zen emit-json layout on compound program input");
+        .unwrap_or_else(|err| panic!("run zen emit-json layout on {description}: {err}"));
 
     assert!(
         output.status.success(),
-        "zen emit-json layout should emit checked compound layout JSON: stdout={}, stderr={}",
+        "zen emit-json layout should emit checked layout JSON for {description}: stdout={}, stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let actual = String::from_utf8(output.stdout).expect("layout stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual).expect("layout stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/layout_compound.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_layout_basic_schema_matches_golden() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("layout_subject.zen");
-    std::fs::write(
-        &zen_path,
-        r#"
-Point: {
-    x: i32,
-    label: StaticString
-}
-
-main = () i32 { 0 }
-"#,
-    )
-    .expect("write layout subject");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "layout", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json layout on program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual = String::from_utf8(output.stdout).expect("layout stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual).expect("layout stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/layout_basic.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_layout_generic_result_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "layout",
-            fixture("tests/zen/generic_result_enum.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json layout on generic Result program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked generic Result layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual = String::from_utf8(output.stdout).expect("layout generic Result stdout is UTF-8");
+    let actual = String::from_utf8(output.stdout)
+        .unwrap_or_else(|err| panic!("layout {description} stdout is UTF-8: {err}"));
     serde_json::from_str::<serde_json::Value>(&actual)
-        .expect("layout generic Result stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/layout_generic_result.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
+        .unwrap_or_else(|err| panic!("layout {description} stdout is JSON: {err}"));
+    actual
 }
 
-#[test]
-fn emit_json_layout_generic_option_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "layout",
-            fixture("tests/zen/generic_enum_option.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json layout on generic Option program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked generic Option layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual = String::from_utf8(output.stdout).expect("layout generic Option stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual)
-        .expect("layout generic Option stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/layout_generic_option.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
+fn expected_fixture(path: &str) -> String {
+    let expected_path = fixture(path);
+    std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()))
 }
 
-#[test]
-fn emit_json_layout_nested_generic_result_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "layout",
-            fixture("tests/zen/generic_nested_result_enum.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json layout on nested generic Result program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked nested generic Result layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual =
-        String::from_utf8(output.stdout).expect("layout nested generic Result stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual)
-        .expect("layout nested generic Result stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/layout_nested_generic_result.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+fn assert_layout_matches_fixture(source_path: &Path, description: &str, fixture_path: &str) {
+    let actual = emit_layout(source_path, description);
+    let expected = expected_fixture(fixture_path);
 
     assert_eq!(actual.trim(), expected.trim());
 }
