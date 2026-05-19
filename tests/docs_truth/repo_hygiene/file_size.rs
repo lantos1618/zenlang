@@ -201,3 +201,40 @@ fn lexer_string_interpolation_lives_in_focused_helper() {
         "lexer module should include the focused string_interpolation helper"
     );
 }
+
+#[test]
+fn monomorphize_type_substitution_lives_in_focused_helper() {
+    let monomorphize = read("src/typechecker/monomorphize.rs");
+    let names = read("src/typechecker/monomorphize_names.rs");
+    let substitution = read("src/typechecker/monomorphize_substitution.rs");
+    let module = read("src/typechecker/mod.rs");
+
+    assert!(
+        monomorphize.lines().count() < 240,
+        "monomorphize.rs should stay focused on callable specialization"
+    );
+    assert!(
+        !monomorphize.contains("pub(crate) fn substitute_type"),
+        "type substitution should live in monomorphize_substitution.rs"
+    );
+    assert!(
+        names.contains("pub(crate) fn generic_function_mangled_name"),
+        "monomorphize_names.rs should own generic callable mangling"
+    );
+    assert!(
+        names.contains("pub(crate) fn mangle_generic_type_name"),
+        "monomorphize_names.rs should own generic type mangling"
+    );
+    assert!(
+        substitution.contains("pub(crate) fn substitute_type"),
+        "monomorphize_substitution.rs should own generic AstType substitution"
+    );
+    assert!(
+        module.contains("mod monomorphize_substitution;"),
+        "typechecker module should include the focused monomorphize_substitution helper"
+    );
+    assert!(
+        module.contains("mod monomorphize_names;"),
+        "typechecker module should include the focused monomorphize_names helper"
+    );
+}
