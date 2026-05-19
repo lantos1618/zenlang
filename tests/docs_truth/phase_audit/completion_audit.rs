@@ -68,7 +68,7 @@ fn completion_audit_records_recovery_objective_evidence_and_gaps() {
     }
 
     assert!(
-        audit.lines().count() <= 220,
+        audit.lines().count() <= 120,
         "docs/COMPLETION_AUDIT.md should stay compact; move granular evidence to tests or git history"
     );
 
