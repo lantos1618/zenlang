@@ -1,0 +1,67 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Vec_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "first",
+            "type": "i32"
+          },
+          {
+            "name": "len",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "Vec_StaticString",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "first",
+            "type": "StaticString"
+          },
+          {
+            "name": "len",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Vec.len_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Vec_i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "Vec.len_StaticString",
+        "params": [
+          {
+            "name": "self",
+            "type": "Vec_StaticString"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}
