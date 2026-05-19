@@ -30,8 +30,8 @@ Quick map:
 - type relationships are receiver-first declarations such as
   `Point.implements(Json)`, `PrettyJson.extends(Json)`, and
   `Point.requires(Json)`;
-- `StaticString` is baked into the program; it is not allocator-backed String
-  or other dynamic text;
+- `StaticString` is baked into the program as static bytes plus length; it is
+  not allocator-backed String or other dynamic text;
 - allocator-backed `String<A>` is owned runtime memory and must carry the
   allocator that can grow or release it;
 - sync, async, allocator, raw-memory, actor, and comptime type-matching
@@ -142,9 +142,10 @@ language model:
 | `RawPtr<T>` and raw intrinsics | explicit low-level memory work, gated until ownership rules are promoted |
 
 The split matters most for strings. `"hello"` is a `StaticString`: static
-storage plus length baked into the program. It is not a `String<A>`, because a
-dynamic string owns runtime memory, has capacity, can grow, and needs an
-allocator capability in its type/API surface.
+bytes plus length baked into the program image. It has a known location and
+byte count after compilation. It is not a `String<A>`. A dynamic string owns
+runtime memory, has capacity, can grow, and needs an allocator capability in
+its type/API surface.
 
 ## Use This Mental Model
 
@@ -154,7 +155,8 @@ Zen keeps important edges visible:
   expressions. loop control is prefix-only: enter with `loop((l) { ... })`,
   then call `l.done()`, `l.next()`, `done(l)`, or `next(l)`.
 - Text ownership is explicit. StaticString is not a String. `StaticString` is
-  not `String<A>`. Static text and dynamic text are different types.
+  not `String<A>`. Static text and dynamic text are different types, and a
+  literal never silently allocates dynamic text.
 - Effects are explicit. Sync work produces a direct checked value. Async work
   returns a task-shaped value.
 - Allocation is explicit. Dynamic owners carry the allocator that can grow or
@@ -184,6 +186,43 @@ no `extends Behavior` keyword block, no `return`, and no body-first loop.
 | `async fn` | a function whose type is `Task<Result<T, E>>` or another task-shaped type |
 | string literal text | `StaticString` |
 | growable owned text | `String<A>` or another owner that carries allocator ownership |
+
+## What Is Stable Right Now
+
+Use this stable core for examples, tutorials, and small programs:
+
+```zen
+{ io } = std
+
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
+
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
+
+    total
+}
+
+main = () i32 {
+    label: StaticString = "sum"
+    io.println("${label}: ${sum_to(10)}")
+    0
+}
+```
+
+That program uses only stable shapes: imports, typed functions, immutable and
+mutable locals, static text, final expressions, interpolation at an output
+boundary, pattern matching, and prefix-only loops. It does not allocate a
+dynamic string, start async work, call a raw intrinsic, or rely on an implicit
+return.
 
 ## Copy These Forms First
 
@@ -1025,8 +1064,11 @@ are gated; use `StaticString` for literal/static text.
 That distinction is deliberate:
 
 - `StaticString` is a non-owning view into program storage.
+- `StaticString` has a fixed byte count known from the compiled program.
+- Copying or passing `StaticString` copies the view, not a heap allocation.
 - `String<A>` is owned dynamic memory and therefore needs allocator ownership.
 - A literal such as `"Zen"` does not allocate a dynamic `String`.
+- Runtime text construction belongs on an allocator-aware path.
 - String interpolation is non-owning in stable examples; only literal bytes are
 guaranteed to be baked into program storage.
 
@@ -1108,7 +1150,9 @@ effect boundary.
 
 `Sync` and `Async` are effect modes. They are part of the type contract, not
 marker-only names. The intended rule is that a function either runs in a sync
-context or returns task-shaped async work explicitly:
+context or returns task-shaped async work explicitly. They are not source
+keywords placed before a function; they appear in the types that describe the
+capability being used.
 
 ```zen
 read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
@@ -1184,6 +1228,10 @@ Buffer<T, A: Allocator<T, Sync>>: {
 Sync allocation returns `Result` directly. Async allocation returns
 `Task<Result<...>>`. Dynamic memory ownership is visible in the returned type:
 bytes plus allocator ownership and an effect mode.
+
+The allocator type parameter is not decoration. It answers three questions at
+the call boundary: what element type is being allocated, whether the work is
+sync or async, and which capability must later release or grow the storage.
 
 Allocator-backed construction carries the allocator through the resulting
 owner:
