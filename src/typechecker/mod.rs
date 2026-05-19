@@ -36,6 +36,7 @@ mod patterns;
 mod program_checking;
 mod program_module_graph;
 mod resolve;
+mod resolve_binary_ops;
 mod resolver_backed_collection;
 mod resolver_lookup;
 mod resolver_metadata_collection;
