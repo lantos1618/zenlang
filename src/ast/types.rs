@@ -1,14 +1,15 @@
 use crate::error::Span;
 use serde::Serialize;
 
+mod gated;
 mod names;
 
-pub use names::{
-    gated_builtin_type_name, is_builtin_type_name, BuiltinGenericTypeName, BuiltinTypeName,
-    GatedBuiltinType, ACTOR_REF_TYPE_NAME, ACTOR_TYPE_NAME, ALLOCATOR_TYPE_NAME,
-    ASYNC_EFFECT_TYPE_NAME, DYNAMIC_STRING_TYPE_NAME, MAILBOX_TYPE_NAME, STATIC_STRING_TYPE_NAME,
-    SUPERVISOR_TYPE_NAME, SYNC_EFFECT_TYPE_NAME,
+pub use gated::{
+    gated_builtin_type_name, is_builtin_type_name, GatedBuiltinType, ACTOR_REF_TYPE_NAME,
+    ACTOR_TYPE_NAME, ALLOCATOR_TYPE_NAME, ASYNC_EFFECT_TYPE_NAME, DYNAMIC_STRING_TYPE_NAME,
+    MAILBOX_TYPE_NAME, SUPERVISOR_TYPE_NAME, SYNC_EFFECT_TYPE_NAME,
 };
+pub use names::{BuiltinGenericTypeName, BuiltinTypeName, STATIC_STRING_TYPE_NAME};
 
 /// Parser-level type representation.
 ///
