@@ -30,6 +30,23 @@ Quick map:
 - sync, async, allocator, raw-memory, actor, and comptime type matching work is
   a gated design surface until promoted.
 
+## Read This Guide In Two Passes
+
+Use the stable sections for code you put in public examples today. Those
+sections cover imports, values, functions, methods, structs, enums, matching,
+generics, behaviors, receiver-first behavior relationships, modules, defer,
+and prefix-only loops.
+
+Use the gated-preview sections to understand the intended language shape for
+memory ownership, dynamic strings, sync/async effects, allocators, raw memory,
+actors, and comptime type matching. Preview examples are still Zen-shaped, but
+the compiler should reject them with explicit feature-gate diagnostics until
+the corresponding subsystem is promoted.
+
+The rule for this document is simple: stable examples should compile; preview
+examples should make the future syntax concrete without pretending it is
+stable.
+
 ## Use This Mental Model
 
 Zen keeps important edges visible:
@@ -37,7 +54,8 @@ Zen keeps important edges visible:
 - Control is explicit. Functions, matches, and blocks produce values from final
   expressions. loop control is prefix-only: enter with `loop((l) { ... })`,
   then call `l.done()`, `l.next()`, `done(l)`, or `next(l)`.
-- Text ownership is explicit. StaticString is not a String. Static text and dynamic text are different types.
+- Text ownership is explicit. StaticString is not a String. `StaticString` is
+  not `String<A>`. Static text and dynamic text are different types.
 - Effects are explicit. Sync work produces a direct checked value. Async work
   returns a task-shaped value.
 - Behavior relationships are explicit. Use `Type.implements(Behavior)`,
@@ -45,8 +63,8 @@ Zen keeps important edges visible:
 - Tooling truth comes from the compiler. JSON views are emitted from source;
   hand-authored JSON is not accepted as checked program state.
 
-No in-between keyword phrases are part of the stable tutorial syntax. If a
-form reads like a borrowed phrase from another language, translate it into the
+Transitional keyword phrases are not part of stable tutorial syntax. If a form
+reads like a borrowed phrase from another language, translate it into the
 receiver-first or prefix-first Zen form. That means no `impl ... for ...`,
 no `extends Behavior` keyword block, no `return`, and no body-first loop.
 
@@ -62,7 +80,7 @@ no `extends Behavior` keyword block, no `return`, and no body-first loop.
 | `impl Type for Behavior` | `Type.implements(Behavior) { ... }` |
 | `async fn` | a function whose type is `Task<Result<T, E>>` or another task-shaped type |
 | string literal text | `StaticString` |
-| growable owned text | `String<A>` with allocator ownership |
+| growable owned text | `String<A>` or another owner that carries allocator ownership |
 
 ## Copy These Forms First
 
@@ -166,7 +184,7 @@ Those forms keep the thing being changed on the left. There is no separate
 | Exit a loop | `l.done()` or `done(l)` |
 | Fail or be absent | use `Result<T, E>` or `Option<T>` |
 
-No in-between loop syntax exists. There is no `while (...) { ... }`, no
+No alternate loop syntax exists. There is no `while (...) { ... }`, no
 `for item in items { ... }`, and no body-first loop spelling. Convert those
 forms to `loop((l) { ... })` with explicit state and explicit `done`/`next`
 edges.
