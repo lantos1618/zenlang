@@ -698,6 +698,12 @@ Agent UX deliverables:
   pinned by `emit_json_mir_generic_method_nested_result_schema_matches_golden`,
   covering `Box.wrap_result_i32` lowering to a concrete
   `Result_Option_i32_StaticString.Ok(Option_i32.Some(self.value))`.
+- Checked typed JSON for generic methods returning nested generic enums is now
+  pinned by
+  `emit_json_typed_generic_method_nested_result_schema_matches_golden`,
+  covering `Box.wrap_result_i32`, concrete
+  `Result_Option_i32_StaticString` / `Option_i32` values, and the specialized
+  unwrap call sites that consume the method result.
 - Checked HIR JSON for generic `Result<T, E>` enum method specialization is
   now pinned by `emit_json_hir_generic_result_method_schema_matches_golden`,
   covering concrete `Result_i32_StaticString` payloads and the
