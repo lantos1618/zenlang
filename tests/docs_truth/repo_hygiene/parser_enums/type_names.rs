@@ -3,7 +3,9 @@ use super::*;
 #[test]
 fn parser_type_names_use_owned_type_name_enums() {
     let parser_types = read("src/parser/types.rs");
-    let type_names = read("src/ast/types.rs");
+    let type_names_root = read("src/ast/types.rs");
+    let type_names_owned = read("src/ast/types/names.rs");
+    let type_names = format!("{type_names_root}\n{type_names_owned}");
 
     for forbidden in [
         r#""i8" =>"#,
