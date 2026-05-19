@@ -51,7 +51,7 @@ The name being introduced or changed comes first:
 | Requirement | `Type.requires(Behavior)` |
 | Inheritance | `ChildBehavior.extends(ParentBehavior)` |
 
-## Values
+## Values And Results
 
 ```zen
 main = () i32 {
@@ -68,10 +68,9 @@ main = () i32 {
 Local bindings are immutable by default. Use `::=` for mutable inferred locals.
 After a mutable binding exists, plain `=` assigns a new value.
 
-## Final Expressions
-
 Zen does not use a `return` keyword. Function bodies, match arms, and nested
-blocks produce values from their final expression.
+blocks produce values from their final expression. If you reach for a keyword
+exit value, put the value at the end of the block instead.
 
 ```zen
 max = (a: i32, b: i32) i32 {
@@ -81,26 +80,7 @@ max = (a: i32, b: i32) i32 {
 }
 ```
 
-If you reach for a keyword exit value, put the value at the end of the block
-instead.
-
-## Types
-
-```zen
-main = () i32 {
-    signed: i32 = 42
-    wide: i64 = cast(signed, i64)
-    ratio: f64 = 3.5
-    flag: bool = true
-    label: StaticString = "static text"
-
-    flag ?
-        | true { cast(wide, i32) }
-        | false { cast(ratio, i32) }
-}
-```
-
-Numeric conversions are explicit. Casts use prefix syntax:
+Numeric conversions are explicit and prefix-first:
 
 ```zen
 cast(value, Type)
@@ -114,14 +94,6 @@ String literals are `StaticString`, not allocator-backed strings.
 count known after compilation. Passing it around copies a pointer-and-length
 view into program storage. It does not allocate, resize, free, or transfer heap
 ownership.
-
-```zen
-title: StaticString = "Zen"
-
-identity_static = (value: StaticString) StaticString {
-    value
-}
-```
 
 Use `StaticString` for literal text and other text that is part of the program
 image.
@@ -144,22 +116,7 @@ String<A>: {
 A literal such as `"Zen"` never silently becomes `String<A>`. Runtime text
 construction belongs on an allocator-aware API.
 
-## Functions
-
-```zen
-add = (a: i32, b: i32) i32 {
-    a + b
-}
-
-main = () i32 {
-    add(20, 22)
-}
-```
-
-Functions have typed parameters and an explicit result type. Use `void` for
-functions that only perform effects.
-
-## Calls And UFC
+## Calls, Structs, And Data
 
 ```zen
 Point: {
@@ -173,34 +130,15 @@ Point.sum = (self: Point) i32 {
 
 main = () i32 {
     point = Point { x: 20, y: 22 }
-
     dot = point.sum()
     ufc = sum(point)
-
     dot + ufc
 }
 ```
 
 `value.method(args)` and `method(value, args)` are call-site spellings for the
-same attached function. They are not alternate declaration forms.
-
-## Structs
-
-```zen
-Person: {
-    name: StaticString,
-    age: i32,
-}
-
-birthday = (p: Person) Person {
-    Person {
-        name: p.name,
-        age: p.age + 1,
-    }
-}
-```
-
-Struct literals name fields explicitly. Field access uses dot syntax.
+same attached function. They are not alternate declaration forms. Struct
+literals name fields explicitly, and field access uses dot syntax.
 
 ## Enums And Matching
 
@@ -211,22 +149,13 @@ Direction:
     East,
     West
 
-opposite = (d: Direction) Direction {
-    d ?
-        | North { Direction.South }
-        | South { Direction.North }
-        | East { Direction.West }
-        | West { Direction.East }
-}
-```
-
-The `?` operator is the pattern-match form for bools, enums, `Option`, and
-`Result`.
-
-```zen
 Option<T>:
     None,
     Some(T)
+
+Result<T, E>:
+    Ok(T),
+    Err(E)
 
 unwrap_or<T> = (value: Option<T>, fallback: T) T {
     value ?
@@ -235,37 +164,18 @@ unwrap_or<T> = (value: Option<T>, fallback: T) T {
 }
 ```
 
+The `?` operator is the pattern-match form for bools, enums, `Option`, and
+`Result`.
+
 ## Result And Error Handling
 
 Zen models failure with data. There are no exceptions and no null.
 
 ```zen
-Result<T, E>:
-    Ok(T),
-    Err(E)
-
 divide = (a: f64, b: f64) Result<f64, StaticString> {
     b == 0.0 ?
         | true { Result<f64, StaticString>.Err("division by zero") }
         | false { Result<f64, StaticString>.Ok(a / b) }
-}
-```
-
-Result and option values use the same `?` match form as booleans and enums.
-
-## Generics
-
-```zen
-Box<T>: {
-    value: T,
-}
-
-Box.get<T> = (self: Box<T>) T {
-    self.value
-}
-
-identity<T> = (value: T) T {
-    value
 }
 ```
 
@@ -401,18 +311,6 @@ method calls, or generic containers. If a value needs heap memory, the API must
 show the owner and allocator path.
 
 ```zen
-Label: {
-    text: StaticString,
-}
-
-from_text = (text: StaticString) Label {
-    Label { text: text }
-}
-```
-
-Preview owner shape:
-
-```zen
 OwnedBytes<T, A>: {
     ptr: RawPtr<T>,
     len: usize,
@@ -443,11 +341,7 @@ Async work returns task-shaped data:
 read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
     source.read_all_async(allocator)
 }
-```
 
-Allocators follow the same outer-type rule:
-
-```zen
 Allocator<T, Sync>: behavior {
     alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
 }
@@ -516,12 +410,10 @@ PointerViews: {
 
 `RawPtr<T>` is the explicit raw-memory spelling used in allocator previews.
 `Ptr<T>`, `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer,
-slice, and fixed-array shapes.
-
-raw pointer offset, casts, integer conversion, load, store, atomics, raw
-syscalls, comptime type matching, actor framework types, and scheduler
-operations are gated design work until layout, ownership, effects, and runtime
-contracts are promoted.
+slice, and fixed-array shapes. Gated raw pointer offset, casts, integer conversion,
+load, store, atomics, raw syscalls, comptime type matching, actor framework
+types, and scheduler operations are gated design work until layout, ownership,
+effects, and runtime contracts are promoted.
 
 ## Translation Cheat Sheet
 
@@ -543,10 +435,6 @@ contracts are promoted.
 
 ```zen
 { io } = std
-
-Result<T, E>:
-    Ok(T),
-    Err(E)
 
 Display: behavior {
     display: (Self) StaticString
