@@ -1,0 +1,1124 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "some_int",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "Some",
+                        "payload": {
+                          "kind": {
+                            "IntLiteral": 34
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 222,
+                            "end": 224
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 205,
+                      "end": 225
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 194,
+                "end": 225
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "none_int",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "None",
+                        "payload": null
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 241,
+                      "end": 257
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 230,
+                "end": 257
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "some_bool",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_bool",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "Bool"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_bool",
+                        "variant": "Some",
+                        "payload": {
+                          "kind": {
+                            "BoolLiteral": true
+                          },
+                          "ty": "Bool",
+                          "span": {
+                            "file_id": 0,
+                            "start": 292,
+                            "end": 296
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_bool",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "Bool"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 274,
+                      "end": 297
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 262,
+                "end": 297
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "none_bool",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_bool",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "Bool"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_bool",
+                        "variant": "None",
+                        "payload": null
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_bool",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "Bool"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 314,
+                      "end": 331
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 302,
+                "end": 331
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Option.unwrap_or_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "some_int"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_i32",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 351,
+                                              "end": 359
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 370,
+                                              "end": 371
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 351,
+                                      "end": 372
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 349,
+                            "end": 373
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 337,
+                    "end": 375
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 337,
+                "end": 375
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Option.unwrap_or_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "none_int"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_i32",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 394,
+                                              "end": 402
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 55
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 413,
+                                              "end": 415
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 394,
+                                      "end": 416
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 392,
+                            "end": 417
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 380,
+                    "end": 419
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 380,
+                "end": 419
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Option.unwrap_or_bool",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "some_bool"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_bool",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "Bool"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 438,
+                                              "end": 447
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "BoolLiteral": false
+                                            },
+                                            "ty": "Bool",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 458,
+                                              "end": 463
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "Bool",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 438,
+                                      "end": 464
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 436,
+                            "end": 465
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 424,
+                    "end": 467
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 424,
+                "end": 467
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Option.unwrap_or_bool",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "none_bool"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_bool",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "Bool"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 486,
+                                              "end": 495
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "BoolLiteral": true
+                                            },
+                                            "ty": "Bool",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 506,
+                                              "end": 510
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "Bool",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 486,
+                                      "end": 511
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 484,
+                            "end": 512
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 472,
+                    "end": 514
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 472,
+                "end": 514
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 519,
+              "end": 520
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 188,
+            "end": 522
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 174,
+          "end": 522
+        }
+      },
+      {
+        "name": "Option.unwrap_or_i32",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Enum": {
+                "name": "Option_i32",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 71,
+              "end": 81
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 83,
+              "end": 94
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "self"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 104,
+                    "end": 108
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "Some",
+                        "bindings": [
+                          [
+                            "value",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "value"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 135,
+                                "end": 140
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 133,
+                              "end": 142
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 133,
+                          "end": 142
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 133,
+                        "end": 142
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 121,
+                      "end": 142
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "None",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 160,
+                                "end": 168
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 158,
+                              "end": 170
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 158,
+                          "end": 170
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 158,
+                        "end": 170
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 153,
+                      "end": 170
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 104,
+              "end": 170
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 98,
+            "end": 172
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 48,
+          "end": 172
+        }
+      },
+      {
+        "name": "Option.unwrap_or_bool",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Enum": {
+                "name": "Option_bool",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "Bool"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 71,
+              "end": 81
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "Bool",
+            "span": {
+              "file_id": 0,
+              "start": 83,
+              "end": 94
+            }
+          }
+        ],
+        "return_type": "Bool",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "self"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_bool",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "Bool"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 104,
+                    "end": 108
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_bool",
+                        "variant": "Some",
+                        "bindings": [
+                          [
+                            "value",
+                            "Bool"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "value"
+                              },
+                              "ty": "Bool",
+                              "span": {
+                                "file_id": 0,
+                                "start": 135,
+                                "end": 140
+                              }
+                            },
+                            "ty": "Bool",
+                            "span": {
+                              "file_id": 0,
+                              "start": 133,
+                              "end": 142
+                            }
+                          }
+                        },
+                        "ty": "Bool",
+                        "span": {
+                          "file_id": 0,
+                          "start": 133,
+                          "end": 142
+                        }
+                      },
+                      "ty": "Bool",
+                      "span": {
+                        "file_id": 0,
+                        "start": 133,
+                        "end": 142
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 121,
+                      "end": 142
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_bool",
+                        "variant": "None",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "Bool",
+                              "span": {
+                                "file_id": 0,
+                                "start": 160,
+                                "end": 168
+                              }
+                            },
+                            "ty": "Bool",
+                            "span": {
+                              "file_id": 0,
+                              "start": 158,
+                              "end": 170
+                            }
+                          }
+                        },
+                        "ty": "Bool",
+                        "span": {
+                          "file_id": 0,
+                          "start": 158,
+                          "end": 170
+                        }
+                      },
+                      "ty": "Bool",
+                      "span": {
+                        "file_id": 0,
+                        "start": 158,
+                        "end": 170
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 153,
+                      "end": 170
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "Bool",
+            "span": {
+              "file_id": 0,
+              "start": 104,
+              "end": 170
+            }
+          },
+          "ty": "Bool",
+          "span": {
+            "file_id": 0,
+            "start": 98,
+            "end": 172
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 48,
+          "end": 172
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Option_i32",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "None",
+                "tag": 0,
+                "payload": null
+              },
+              {
+                "name": "Some",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "I32"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 205,
+          "end": 225
+        }
+      },
+      {
+        "name": "Option_bool",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "None",
+                "tag": 0,
+                "payload": null
+              },
+              {
+                "name": "Some",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "Bool"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 274,
+          "end": 297
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}
