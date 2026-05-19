@@ -6,10 +6,12 @@ mod aggregate_support;
 mod call_support;
 mod call_validation;
 mod control_flow_support;
+mod enum_variant;
 mod function_checking;
 mod generic_call_validation;
 mod method_call_support;
 mod simple_forms;
+mod struct_literal;
 
 use crate::ast::expressions::StringPart;
 use crate::ast::typed::*;

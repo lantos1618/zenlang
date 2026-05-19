@@ -16,6 +16,7 @@ mod resolver_expression_validation;
 mod resolver_symbol_table;
 mod resolver_validation;
 mod source_truth;
+mod typechecker_aggregate_constructors;
 mod typechecker_behavior_impls;
 mod typechecker_call_validation;
 mod typechecker_imports;
