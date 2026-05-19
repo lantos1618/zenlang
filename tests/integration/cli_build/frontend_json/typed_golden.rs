@@ -159,6 +159,33 @@ fn emit_json_typed_generic_worklist_dedup_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_generic_vec_schema_matches_golden() {
+    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args([
+            "emit-json",
+            "typed",
+            test_dir().join("generic_vec.zen").to_str().unwrap(),
+        ])
+        .output()
+        .expect("run zen emit-json typed on generic Vec input");
+
+    assert!(
+        output.status.success(),
+        "zen emit-json typed should emit checked generic Vec JSON: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let actual = String::from_utf8(output.stdout).expect("typed generic Vec stdout is UTF-8");
+    serde_json::from_str::<serde_json::Value>(&actual).expect("typed generic Vec stdout is JSON");
+    let expected_path = fixture("tests/fixtures/ir_json/typed_generic_vec.golden.json");
+    let expected = std::fs::read_to_string(&expected_path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
 fn emit_json_typed_generic_option_schema_matches_golden() {
     let output = Command::new(env!("CARGO_BIN_EXE_zen"))
         .args([
