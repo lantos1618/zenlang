@@ -11,6 +11,8 @@ mod diagnostics_generic_arity_golden;
 mod diagnostics_golden;
 #[path = "frontend_json/diagnostics_json.rs"]
 mod diagnostics_json;
+#[path = "frontend_json/hir_generic_ufc_golden.rs"]
+mod hir_generic_ufc_golden;
 #[path = "frontend_json/hir_golden.rs"]
 mod hir_golden;
 #[path = "frontend_json/ir_boundaries.rs"]
@@ -19,6 +21,8 @@ mod ir_boundaries;
 mod layout_golden;
 #[path = "frontend_json/layout_json.rs"]
 mod layout_json;
+#[path = "frontend_json/mir_generic_ufc_golden.rs"]
+mod mir_generic_ufc_golden;
 #[path = "frontend_json/mir_generic_worklist_golden.rs"]
 mod mir_generic_worklist_golden;
 #[path = "frontend_json/mir_golden.rs"]
