@@ -135,7 +135,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "Copy These Forms First",
         "## Control Flow At A Glance",
         "No alternate loop syntax",
-        "Transitional keyword phrases",
+        "Keyword-style forms from other languages",
         "Translation Cheat Sheet",
         "`while condition { ... }`",
         "`for item in items { ... }`",
