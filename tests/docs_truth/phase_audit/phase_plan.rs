@@ -11,6 +11,12 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "Dev UX And Agent UX Track",
         "Compressed Evidence Map",
         "Current Phase",
+        "Phase 5 Acceptance Evidence",
+        "generic enum specialization",
+        "generic method specialization",
+        "worklist monomorphization",
+        "generated-C call/definition consistency",
+        "generic arity, inference, and bound diagnostics",
         "Next Small Slice",
         "Detailed Evidence References",
         "Sync/Async are real effects",
@@ -70,7 +76,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
     }
 
     assert!(
-        plan.lines().count() <= 260,
+        plan.lines().count() <= 180,
         "docs/PHASE_PLAN.md should stay compact; move granular evidence to tests or git history"
     );
 

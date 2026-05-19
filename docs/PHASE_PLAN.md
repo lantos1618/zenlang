@@ -31,35 +31,22 @@ MoonBit-style toolchain integration is the benchmark: one coherent compiler,
 build system, package graph, language server, VS Code extension, web/editor
 entry point, and machine-readable surface area rather than disconnected tools.
 
-Dev UX requirements:
+Dev UX requirements: VS Code syntax, semantic diagnostics, go-to-definition,
+hover, completion, formatting, run/test code lenses, target selection, language
+server restart, compiler version display, local toolchain validation, and
+`zen lsp` backed by the CLI parser, resolver, typechecker, build graph, and
+diagnostics. Editor build graph integration must cover target/test discovery,
+dependency inspection, run/test/build, declared host effects, deterministic
+errors, and structured fix suggestions for missing match arms, generic arity
+mistakes, removed syntax such as `return`, gated features, missing imports, and
+common type mismatches.
 
-- VS Code extension with syntax highlighting, semantic diagnostics,
-  go-to-definition, hover, completion, formatting, code lenses for run/test,
-  command-palette target selection, language server restart, compiler version
-  display, and local toolchain validation.
-- `zen lsp` backed by the same parser, resolver, typechecker, build graph, and
-  diagnostics used by the CLI.
-- Build graph integration for editor target discovery, test discovery,
-  dependency graph inspection, selected-target run/test/build, declared
-  host-effect visualization, and deterministic error ordering.
-- Quick fixes and structured fix suggestions for missing match arms, generic
-  arity mistakes, removed syntax such as `return`, gated features, missing
-  imports, and common type mismatches.
-
-Agent UX requirements:
-
-- agent-readable diagnostics with stable codes, spans, related locations,
-  suggested_fixes, feature_gate metadata, and JSON output matching CLI/editor
-  behavior.
-- Machine-readable project graph and symbol graph output for modules, imports,
-  visibility, targets, dependencies, generated C symbols, tests, examples, and
-  stdlib gates.
-- Deterministic, quiet commands for `zen check`, `zen test`, `zen emit-json`,
-  build graph inspection, formatting, and future fix-application workflows.
-- Retrieval-friendly docs and examples with canonical syntax, learn-by-example
-  snippets, and no duplicate public examples that teach divergent syntax.
-- CI should stay quiet on normal branch pushes; PR ready-for-review checks and
-  manual dispatch are the intended GitHub Actions paths.
+Agent UX requirements: agent-readable diagnostics with stable codes, spans,
+related locations, suggested_fixes, feature_gate metadata, CLI/editor-aligned
+JSON. Machine-readable project graph and symbol graph output, deterministic
+quiet commands for `zen check`, `zen test`, `zen emit-json`, build graph
+inspection, formatting, future fix-application workflows, retrieval-friendly
+canonical docs, and quiet branch-push CI.
 
 ## Compressed Evidence Map
 
@@ -119,15 +106,36 @@ Granular evidence belongs in tests, golden fixtures, and git history.
 
 ## Current Phase
 
-Continue Phase 2/3 hardening and cleanup:
+Phase 5 is in evidence-hardening and cleanup. The main generic specialization
+surfaces are implemented; continue by closing proof gaps, keeping generated C
+consistent, and preventing large-file/slop regressions.
 
-- Keep resolver/typechecker work on resolver-owned metadata instead of stale AST
-  fallback.
-- Keep diagnostics and JSON schemas stable enough for editor and agent use.
-- Keep build.zen deterministic graph behavior constrained and tested before
-  broadening package/link semantics.
-- Keep docs compressed: public language docs explain the language, while status
-  docs summarize current state and point to tests for proof.
+## Phase 5 Acceptance Evidence
+
+- generic enum specialization: `Option<T>`, `Result<T, E>`, nested
+  `Result<Option<T>, StaticString>`, duplicate variants, and multi-file enum
+  dependencies are covered by executable fixtures, typed/HIR/MIR golden tests,
+  and generated-C tests.
+- generic method specialization: generic, `Self`, type impl, enum, imported
+  dependency, and nested result method cases are covered by executable fixtures,
+  JSON golden tests, and method worklist generated-C tests.
+- worklist monomorphization: recursive functions, methods, imported transitive
+  dependencies, and deduped instantiations are covered by `generic_worklist*`,
+  `generic_method_worklist`, `multi_file_generic_imported_*`, and generated-C
+  definition-count checks.
+- generated-C call/definition consistency: `compile_to_c_with_generated_call_check`
+  plus `undefined_generated_c_calls` scan specialization fixtures, while
+  `generic_specializations_emit_each_generated_c_definition_once` guards
+  duplicate definitions.
+- generic arity, inference, and bound diagnostics: E5000, E5001, E5002, and
+  E6004 are pinned across unit, CLI, and JSON golden tests.
+- magic-string and fixture-hardcoding risk remains an active hygiene concern:
+  owned spelling enums and docs-truth repo-hygiene checks should keep replacing
+  ad hoc semantic string checks when they appear.
+
+Current non-Phase-5 gaps remain Dev UX, Agent UX, full LSP/editor workflows,
+allocator-backed dynamic strings, Sync/Async lowering, raw memory semantics,
+advanced comptime type matching, and broad package/link build-driver behavior.
 
 ## Next Small Slice
 
