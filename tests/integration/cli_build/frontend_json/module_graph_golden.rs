@@ -166,6 +166,16 @@ fn emit_json_symbols_generic_method_worklist_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_symbols_generic_ufc_function_schema_matches_golden() {
+    let actual =
+        normalized_json_for_path("symbols", &fixture("tests/zen/generic_ufc_function.zen"));
+    let expected =
+        normalized_fixture("tests/fixtures/ir_json/symbols_generic_ufc_function.golden.json");
+
+    assert_eq!(actual.trim(), expected.trim());
+}
+
+#[test]
 fn emit_json_symbols_generic_behavior_association_schema_matches_golden() {
     let actual = normalized_json_for_path(
         "symbols",
