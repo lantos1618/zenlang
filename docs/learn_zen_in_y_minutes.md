@@ -379,21 +379,28 @@ edges.
 Loop control recipes:
 
 ```zen
-// Continue the current loop.
-loop((l) {
-    should_continue ?
-        | true { l.next() }
-        | false { l.done() }
-})
+sum_to = (limit: i32) i32 {
+    total ::= 0
+    i ::= 0
 
-// UFC spelling for the same control verbs.
-loop((l) {
-    finished ?
-        | true { done(l) }
-        | false { next(l) }
-})
+    loop((l) {
+        i > limit ?
+            | true { l.done() }
+            | false {
+                total = total + i
+                i = i + 1
+                l.next()
+            }
+    })
 
-// Nested loops can exit an outer loop directly.
+    total
+}
+```
+
+Nested loops can control the current loop or an outer loop by naming the
+handle:
+
+```zen
 loop((outer) {
     loop((inner) {
         stop ?
@@ -409,7 +416,17 @@ Those calls are loop-control syntax, not ordinary methods named by strings.
 The compiler recognizes the control operation for the loop handle; user code
 does not implement `done` or `next`.
 
-The important part is that every edge is visible:
+The UFC spelling puts the control verb first while still naming the handle:
+
+```zen
+loop((l) {
+    done(l)
+    next(l)
+})
+```
+
+The important part is that every edge is visible. Continue the current loop
+with `next`; exit it with `done`:
 
 ```zen
 count_down = (start: i32) i32 {
@@ -1093,16 +1110,16 @@ main = () i32 {
 ```
 
 `StaticString` is baked into the program. It points at static storage and keeps
-its fixed length with the value, so a literal can be passed around without
+its fixed byte count with the value, so a literal can be passed around without
 allocating or changing ownership. Its bytes live in the program image; the
 value is a stable pointer-and-length view and does not own or free memory.
 The location and byte count are known from the compiled program, so the value
-cannot grow.
+cannot grow, shrink, or release memory.
 
-The allocator-backed `String<A>` type is dynamic: it owns memory, carries
-allocator-managed capacity, length, and storage. It also carries allocator
-ownership. It can grow, can be built at runtime, and must be created through
-allocator-aware APIs once the allocator model is promoted.
+The allocator-backed `String<A>` type is dynamic: it owns runtime memory and
+carries allocator-managed capacity, length, and storage. It also carries
+allocator ownership. It can grow, can be built at runtime, and must be created
+through allocator-aware APIs once the allocator model is promoted.
 Until that ownership path exists, source-level `String` annotations
 are gated; use `StaticString` for literal/static text.
 
