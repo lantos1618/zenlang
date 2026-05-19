@@ -131,3 +131,65 @@ fn typechecker_resolver_type_behavior_metadata_tests_live_in_focused_modules() {
         );
     }
 }
+
+#[test]
+fn typechecker_resolver_declaration_tests_live_in_focused_modules() {
+    let root = read("src/typechecker/tests/resolver_declarations.rs");
+    let symbols = read("src/typechecker/tests/resolver_declarations/symbols.rs");
+    let imports = read("src/typechecker/tests/resolver_declarations/imports.rs");
+    let methods = read("src/typechecker/tests/resolver_declarations/methods.rs");
+
+    for test_name in [
+        "check_program_with_symbols_requires_resolver_declarations",
+        "check_program_with_symbols_rejects_extra_resolver_declarations",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_declarations.rs should not own symbol declaration test: {test_name}"
+        );
+        assert!(
+            symbols.contains(&format!("fn {test_name}")),
+            "resolver declaration symbol tests should live in focused module: {test_name}"
+        );
+    }
+
+    for test_name in [
+        "check_program_with_symbols_rejects_extra_resolver_imports_when_ast_imports_are_present",
+        "check_program_with_symbols_rejects_extra_resolver_modules_when_ast_imports_are_present",
+        "check_program_with_symbols_uses_resolver_import_bindings",
+        "check_program_with_symbols_validates_stripped_resolver_import_sources",
+        "check_program_with_symbols_validates_stripped_resolver_import_visibility",
+        "check_program_with_symbols_requires_stripped_resolver_import_modules",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_declarations.rs should not own resolver import test: {test_name}"
+        );
+        assert!(
+            imports.contains(&format!("fn {test_name}")),
+            "resolver declaration import tests should live in focused module: {test_name}"
+        );
+    }
+
+    for test_name in [
+        "check_program_with_symbols_requires_resolver_method_receiver_type",
+        "check_program_with_symbols_validates_resolver_method_signature",
+        "check_program_with_symbols_validates_resolver_method_function_type_signature",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_declarations.rs should not own resolver method test: {test_name}"
+        );
+        assert!(
+            methods.contains(&format!("fn {test_name}")),
+            "resolver declaration method tests should live in focused module: {test_name}"
+        );
+    }
+
+    for module_name in ["symbols", "imports", "methods"] {
+        assert!(
+            root.contains(&format!("mod {module_name};")),
+            "resolver declarations root should include focused module: {module_name}"
+        );
+    }
+}
