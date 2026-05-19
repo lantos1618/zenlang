@@ -1,111 +1,14 @@
-use serde::Serialize;
-
 use crate::ast::typed::{
     MatchKind, TypedBlock, TypedExprKind, TypedExpression, TypedFunction, TypedMatchArm,
     TypedParam, TypedPattern, TypedProgram, TypedStatement, TypedStatementKind,
 };
 
-#[derive(Serialize)]
-struct MirJsonProgram {
-    format: &'static str,
-    schema_version: u32,
-    semantic_status: &'static str,
-    lowering_status: &'static str,
-    functions: Vec<MirFunction>,
-}
+mod schema;
 
-#[derive(Serialize)]
-struct MirFunction {
-    name: String,
-    params: Vec<MirParam>,
-    return_type: String,
-    blocks: Vec<MirBlock>,
-}
-
-#[derive(Serialize)]
-struct MirParam {
-    name: String,
-    r#type: String,
-}
-
-#[derive(Serialize)]
-struct MirBlock {
-    label: &'static str,
-    statements: Vec<MirStatement>,
-    terminator: MirTerminator,
-}
-
-#[derive(Serialize)]
-struct MirStatement {
-    kind: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    ty: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    mutable: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<MirExpression>,
-}
-
-#[derive(Serialize)]
-struct MirTerminator {
-    kind: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<MirExpression>,
-}
-
-#[derive(Serialize)]
-struct MirExpression {
-    kind: &'static str,
-    #[serde(rename = "type")]
-    ty: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    op: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    left: Option<Box<MirExpression>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    right: Option<Box<MirExpression>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    target: Option<Box<MirExpression>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    field: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    function: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    match_kind: Option<&'static str>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    args: Vec<MirExpression>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    arms: Vec<MirMatchArm>,
-}
-
-#[derive(Serialize)]
-struct MirMatchArm {
-    pattern: MirPattern,
-    body: MirBlock,
-}
-
-#[derive(Serialize)]
-struct MirPattern {
-    kind: &'static str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    value: Option<serde_json::Value>,
-    bindings: Vec<MirPatternBinding>,
-}
-
-#[derive(Serialize)]
-struct MirPatternBinding {
-    name: String,
-    #[serde(rename = "type")]
-    ty: String,
-}
+use schema::{
+    MirBlock, MirExpression, MirFunction, MirJsonProgram, MirMatchArm, MirParam, MirPattern,
+    MirPatternBinding, MirStatement, MirTerminator,
+};
 
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
     let graph = MirJsonProgram {
