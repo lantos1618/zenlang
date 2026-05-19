@@ -145,3 +145,31 @@ fn struct_literal_default_tests_live_in_focused_helper() {
         "core_semantics.rs should include the focused struct_literal_defaults module"
     );
 }
+
+#[test]
+fn generic_behavior_impl_type_arg_tests_live_in_focused_helper() {
+    let impls = read("src/typechecker/tests/generic_behaviors/impls_and_requires.rs");
+    let type_args = read("src/typechecker/tests/generic_behaviors/impl_type_args.rs");
+    let module = read("src/typechecker/tests/generic_behaviors.rs");
+
+    assert!(
+        impls.lines().count() < 180,
+        "impls_and_requires.rs should stay focused on basic impl/require behavior tests"
+    );
+    assert!(
+        !impls.contains("behavior_impl_generic_behavior_without_type_args_is_error"),
+        "generic behavior impl type-argument tests should live in impl_type_args.rs"
+    );
+    assert!(
+        type_args.contains("behavior_impl_generic_behavior_without_type_args_is_error"),
+        "impl_type_args.rs should cover missing generic behavior type arguments"
+    );
+    assert!(
+        type_args.contains("behavior_impl_generic_behavior_type_arg_bound_passes_when_satisfied"),
+        "impl_type_args.rs should cover satisfied generic behavior type-argument bounds"
+    );
+    assert!(
+        module.contains("mod impl_type_args;"),
+        "generic_behaviors.rs should include the focused impl_type_args module"
+    );
+}
