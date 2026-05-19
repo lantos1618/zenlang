@@ -1,6 +1,9 @@
 use std::path::Path;
 use std::process::Command;
 
+#[path = "mir_golden/generic_enums.rs"]
+mod generic_enums;
+
 fn fixture(path: &str) -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
 }
@@ -80,126 +83,6 @@ main = () i32 {
     let actual = String::from_utf8(output.stdout).expect("MIR minimal stdout is UTF-8");
     serde_json::from_str::<serde_json::Value>(&actual).expect("MIR minimal stdout is JSON");
     let expected_path = fixture("tests/fixtures/ir_json/mir_minimal_function.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_mir_generic_result_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "mir",
-            fixture("tests/zen/generic_result_enum.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json mir on generic Result program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json mir should emit checked generic Result MIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual = String::from_utf8(output.stdout).expect("MIR generic Result stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual).expect("MIR generic Result stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/mir_generic_result.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_mir_generic_option_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "mir",
-            fixture("tests/zen/generic_enum_option.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json mir on generic Option program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json mir should emit checked generic Option MIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual = String::from_utf8(output.stdout).expect("MIR generic Option stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual).expect("MIR generic Option stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/mir_generic_option.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_mir_generic_option_multi_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "mir",
-            fixture("tests/zen/generic_enum_multi_specialization.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json mir on generic Option multi-specialization input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json mir should emit checked generic Option multi-specialization MIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual =
-        String::from_utf8(output.stdout).expect("MIR generic Option multi stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual)
-        .expect("MIR generic Option multi stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/mir_generic_option_multi.golden.json");
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
-
-    assert_eq!(actual.trim(), expected.trim());
-}
-
-#[test]
-fn emit_json_mir_generic_result_multi_schema_matches_golden() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "mir",
-            fixture("tests/zen/generic_result_enum_multi_specialization.zen")
-                .to_str()
-                .unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json mir on generic Result multi-specialization input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json mir should emit checked generic Result multi-specialization MIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let actual =
-        String::from_utf8(output.stdout).expect("MIR generic Result multi stdout is UTF-8");
-    serde_json::from_str::<serde_json::Value>(&actual)
-        .expect("MIR generic Result multi stdout is JSON");
-    let expected_path = fixture("tests/fixtures/ir_json/mir_generic_result_multi.golden.json");
     let expected = std::fs::read_to_string(&expected_path)
         .unwrap_or_else(|err| panic!("read {}: {err}", expected_path.display()));
 
