@@ -151,34 +151,45 @@ fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
 
 #[test]
 fn cli_emit_json_modes_use_owned_mode_enum() {
-    let source = read("src/cli.rs");
+    let cli = read("src/cli.rs");
+    let mode = read("src/cli/emit_json_mode.rs");
 
     assert!(
-        source.contains("enum EmitJsonMode"),
+        !cli.contains("enum EmitJsonMode"),
+        "cli.rs should keep command dispatch focused and delegate emit-json mode parsing"
+    );
+    assert!(
+        cli.lines().count() < 260,
+        "cli.rs should stay below the cleanup threshold after extracting emit-json modes"
+    );
+    assert!(
+        mode.contains("pub(super) enum EmitJsonMode"),
         "emit-json command routing should use an owned EmitJsonMode enum"
     );
     assert!(
-        source.contains("mode.parse::<EmitJsonMode>()"),
+        cli.contains("mode.parse::<EmitJsonMode>()"),
         "emit-json command routing should parse modes through EmitJsonMode"
     );
     assert!(
-        source.contains("EmitJsonMode::usage()"),
+        mode.contains("pub(super) fn emit_json_usage() -> String"),
         "emit-json usage should be generated from EmitJsonMode"
     );
     assert!(
-        source.contains(".find(|mode| mode.as_str() == value)"),
+        mode.contains(".find(|mode| mode.as_str() == value)"),
         "emit-json mode parsing should use the enum-owned ordered table"
     );
     assert!(
-        source.contains("fn gate_message(self) -> Option<&'static str>"),
+        mode.contains("pub(super) fn gate_message(self) -> Option<&'static str>"),
         "emit-json gated diagnostics should be owned by EmitJsonMode"
     );
     assert!(
-        source.contains("mode.gate_message()"),
+        cli.contains("mode.gate_message()"),
         "emit-json command routing should read gated diagnostics from EmitJsonMode"
     );
     assert!(
-        !source.contains("<ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml>"),
+        !cli.contains("<ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml>")
+            && !mode
+                .contains("<ast|symbols|typed|diagnostics|build-graph|hir|mir|layout|target-yaml>"),
         "emit-json usage should not duplicate the mode list as a raw string"
     );
 }
