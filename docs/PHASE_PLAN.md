@@ -4490,6 +4490,11 @@ Agent UX deliverables:
   covering `@builtin.gep(...)` as a gated ownership/layout surface instead of
   an ordinary unknown-builtin fallback while ownership and pointer provenance
   semantics remain in the Required Test Backlog.
+- Diagnostics JSON now carries a structured suggested fix for non-exhaustive
+  bool matches. `E4006` includes an `add_missing_bool_match_arm` edit that
+  inserts the absent `true`/`false` arm skeleton, pinned by
+  `emit_json_diagnostics_missing_bool_match_arm_schema_matches_golden` and
+  covered by `emit_json_diagnostics_includes_structured_missing_bool_match_arm_fix`.
 
 ## Current Phase
 

@@ -3,7 +3,10 @@ use std::collections::{HashMap, HashSet};
 use crate::ast::expressions::MatchArm;
 use crate::ast::typed::*;
 use crate::ast::Pattern;
-use crate::error::{Diagnostic, Span};
+use crate::error::{
+    Diagnostic, Span, SuggestedFix, TextEdit, MISSING_BOOL_MATCH_ARM_FIX_KIND,
+    MISSING_BOOL_MATCH_ARM_FIX_TITLE,
+};
 
 use super::TypeChecker;
 
@@ -196,16 +199,34 @@ impl TypeChecker {
         }
 
         if require_exhaustive && !wildcard_seen && !(true_seen && false_seen) {
-            let missing = match (true_seen, false_seen) {
-                (true, false) => "`false`",
-                (false, true) => "`true`",
-                _ => "`true`, `false`",
+            let missing_values: Vec<&str> = match (true_seen, false_seen) {
+                (true, false) => vec!["false"],
+                (false, true) => vec!["true"],
+                _ => vec!["true", "false"],
             };
-            self.diagnostics.push(Diagnostic::error(
-                "E4006",
-                format!("non-exhaustive bool match: missing {missing}"),
-                span,
-            ));
+            let missing = missing_values
+                .iter()
+                .map(|value| format!("`{value}`"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let replacement = missing_values
+                .iter()
+                .map(|value| format!("        | {value} {{ <expression> }}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let insertion = Span::new(span.file_id, span.end, span.end);
+            self.diagnostics.push(
+                Diagnostic::error(
+                    "E4006",
+                    format!("non-exhaustive bool match: missing {missing}"),
+                    span,
+                )
+                .with_suggested_fix(SuggestedFix::new(
+                    MISSING_BOOL_MATCH_ARM_FIX_KIND,
+                    MISSING_BOOL_MATCH_ARM_FIX_TITLE,
+                    vec![TextEdit::new(insertion, format!("\n{replacement}"))],
+                )),
+            );
         }
     }
 

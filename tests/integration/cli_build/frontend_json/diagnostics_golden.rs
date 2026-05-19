@@ -3,6 +3,8 @@ use std::process::Command;
 
 #[path = "diagnostics_golden/behavior_association.rs"]
 mod behavior_association;
+#[path = "diagnostics_golden/control_flow.rs"]
+mod control_flow;
 #[path = "diagnostics_golden/generic_methods.rs"]
 mod generic_methods;
 #[path = "diagnostics_golden/removed_syntax.rs"]
