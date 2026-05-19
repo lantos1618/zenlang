@@ -1,38 +1,6 @@
 use super::*;
 
 #[test]
-fn contributor_docs_require_tests_first_for_language_work() {
-    let contributing = read("CONTRIBUTING.md");
-
-    for required in [
-        "Failing tests first",
-        "parser",
-        "semantic",
-        "effects",
-        "stdlib",
-        "codegen",
-        "tooling",
-        "C backend",
-    ] {
-        assert!(
-            contributing.contains(required),
-            "CONTRIBUTING.md is missing TDD/baseline requirement: {required}"
-        );
-    }
-
-    for stale_claim in [
-        "LLVM code generation",
-        "src/lsp",
-        "cargo build --bin zen-lsp",
-    ] {
-        assert!(
-            !contributing.contains(stale_claim),
-            "CONTRIBUTING.md still documents unsupported rewrite-baseline workflow: {stale_claim}"
-        );
-    }
-}
-
-#[test]
 fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
     let spec = read("docs/V1_SPEC.md");
 
@@ -219,6 +187,7 @@ fn v1_spec_records_phase_one_feature_gates_and_test_backlog() {
         "emit_json_diagnostics_generic_behavior_overlap_schema_matches_golden",
         "emit_json_typed_rejects_hand_authored_json_before_checked_ir_override",
         "emit_json_typed_generic_method_schema_matches_golden",
+        "emit_json_typed_generic_type_impl_methods_schema_matches_golden",
         "emit_json_typed_generic_method_worklist_schema_matches_golden",
         "emit_json_typed_generic_option_schema_matches_golden",
         "emit_json_typed_generic_result_schema_matches_golden",

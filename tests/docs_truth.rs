@@ -9,6 +9,8 @@ fn read(path: impl AsRef<Path>) -> String {
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {}", path.display(), e))
 }
 
+#[path = "docs_truth/contributor_docs.rs"]
+mod contributor_docs;
 #[path = "docs_truth/phase_audit.rs"]
 mod phase_audit;
 #[path = "docs_truth/phase_audit_manifest.rs"]
