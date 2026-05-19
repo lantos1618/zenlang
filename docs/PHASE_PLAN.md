@@ -226,6 +226,10 @@ Agent UX deliverables:
   `emit_json_typed_generic_ufc_function_schema_matches_golden`, covering
   `12.id<i32>()` lowering inside string interpolation to the concrete
   `id_i32` specialization.
+- Generic UFC-only function specialization is now also pinned in HIR and MIR
+  JSON by `emit_json_hir_generic_ufc_function_schema_matches_golden` and
+  `emit_json_mir_generic_ufc_function_schema_matches_golden`, covering the
+  concrete `id_i32` declaration and minimal return lowering.
 - Generic diagnostics now cover explicit type-argument arity failures for
   two-parameter `Result<T, E>` enum methods without noisy followup diagnostics.
   Diagnostics JSON pins this machine-readable shape through
