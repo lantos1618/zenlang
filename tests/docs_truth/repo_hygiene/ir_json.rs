@@ -4,6 +4,7 @@ use super::*;
 fn mir_json_schema_types_live_in_focused_helper() {
     let mir_lowering = read("src/ir_json/mir.rs");
     let mir_schema = read("src/ir_json/mir/schema.rs");
+    let mir_expression = read("src/ir_json/mir/expression.rs");
 
     for moved_schema_type in [
         "struct MirJsonProgram",
@@ -24,6 +25,22 @@ fn mir_json_schema_types_live_in_focused_helper() {
     assert!(
         mir_schema.contains("use serde::Serialize"),
         "MIR JSON schema helper should own serialization derives"
+    );
+    assert!(
+        mir_lowering.lines().count() < 220,
+        "MIR JSON root lowering should stay focused on programs, functions, blocks, and patterns"
+    );
+    assert!(
+        !mir_lowering.contains("fn mir_expression_kind"),
+        "MIR expression kind lowering should live in expression.rs"
+    );
+    assert!(
+        mir_expression.contains("pub(super) fn mir_expression"),
+        "expression.rs should own MIR expression lowering"
+    );
+    assert!(
+        mir_expression.contains("fn mir_expression_kind"),
+        "expression.rs should own MIR expression kind classification"
     );
 }
 
