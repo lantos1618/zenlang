@@ -18,6 +18,7 @@ mod core;
 mod declaration_types;
 mod declarations;
 mod expressions;
+mod impl_blocks;
 mod import_declarations;
 mod keywords;
 mod lookahead;
