@@ -656,6 +656,10 @@ Agent UX deliverables:
   pinned by `emit_json_typed_generic_result_schema_matches_golden`, covering
   concrete `Result_i32_StaticString` enum payloads,
   `unwrap_or_i32_StaticString`, and typed call sites.
+- Checked typed JSON for generic `Result<T, E>` enum method specialization is
+  now pinned by `emit_json_typed_generic_result_method_schema_matches_golden`,
+  covering concrete `Result.unwrap_or_i32_StaticString` call sites and
+  method-body match typing.
 - Checked typed JSON for nested generic `Result<Option<T>, E>` specialization
   is now pinned by
   `emit_json_typed_nested_generic_result_schema_matches_golden`, covering
