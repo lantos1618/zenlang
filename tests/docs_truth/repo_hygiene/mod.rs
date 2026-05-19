@@ -25,6 +25,7 @@ mod typechecker_declaration_collection;
 mod typechecker_imports;
 mod typechecker_patterns;
 mod typechecker_program_checking;
+mod typechecker_resolve;
 mod typechecker_resolver_validation;
 mod typechecker_runtime;
 mod typechecker_semantic_validation;
