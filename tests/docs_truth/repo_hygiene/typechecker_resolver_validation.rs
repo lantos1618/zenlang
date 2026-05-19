@@ -83,3 +83,51 @@ fn typechecker_resolver_pattern_local_traversal_lives_in_focused_helper() {
         "resolver validation should include focused pattern-local traversal"
     );
 }
+
+#[test]
+fn typechecker_resolver_type_behavior_metadata_tests_live_in_focused_modules() {
+    let root = read("src/typechecker/tests/resolver_type_behavior_metadata.rs");
+    let type_metadata =
+        read("src/typechecker/tests/resolver_type_behavior_metadata/type_symbols.rs");
+    let behavior_metadata =
+        read("src/typechecker/tests/resolver_type_behavior_metadata/behavior_symbols.rs");
+
+    for test_name in [
+        "check_program_with_symbols_validates_resolver_type_parameter_counts",
+        "check_program_with_symbols_validates_resolver_type_parameter_names",
+        "check_program_with_symbols_validates_resolver_type_visibility",
+        "check_program_with_symbols_validates_resolver_type_parameter_bounds",
+        "check_program_with_symbols_validates_resolver_type_like_absent_value_metadata",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_type_behavior_metadata.rs should not own type metadata test: {test_name}"
+        );
+        assert!(
+            type_metadata.contains(&format!("fn {test_name}")),
+            "type metadata tests should live in focused module: {test_name}"
+        );
+    }
+
+    for test_name in [
+        "check_program_with_symbols_validates_resolver_behavior_visibility",
+        "check_program_with_symbols_validates_resolver_behavior_type_parameter_bounds",
+        "check_program_with_symbols_validates_resolver_behavior_absent_type_metadata",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_type_behavior_metadata.rs should not own behavior metadata test: {test_name}"
+        );
+        assert!(
+            behavior_metadata.contains(&format!("fn {test_name}")),
+            "behavior metadata tests should live in focused module: {test_name}"
+        );
+    }
+
+    for module_name in ["type_symbols", "behavior_symbols"] {
+        assert!(
+            root.contains(&format!("mod {module_name};")),
+            "resolver type/behavior metadata root should include focused module: {module_name}"
+        );
+    }
+}
