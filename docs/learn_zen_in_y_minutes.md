@@ -1,23 +1,18 @@
 # Learn Zen In Y Minutes
 
-Zen is a systems language built around prefix-first declarations, explicit data
-shapes, pattern matching, generics, behaviors, visible ownership, and
-predictable native output.
+Zen is a systems language for explicit programs: prefix-first declarations,
+plain data shapes, pattern matching, generics, behaviors, visible ownership,
+and predictable native output.
 
-Runnable examples live in `examples/` and `tests/zen/`. This guide is the
-short source tour: copy the stable forms for real examples today, and read the
-preview forms only as the intended shape of gated language work.
-
-The guide has two layers:
-
-- stable source forms you can use in examples today;
-- gated design previews that show intended syntax, but currently compile to
-  feature-gate diagnostics instead of pretending the feature exists.
+Runnable examples live in `examples/` and `tests/zen/`. This page is the
+language tour: copy the stable source forms you can use in examples today, and
+read the gated design previews that show intended syntax for features that are
+still behind diagnostics.
 
 Stable Zen avoids hidden allocation, exceptions, null, `break`, `continue`,
 and keyword exits. Values come from final expressions. Loops use explicit
-control calls. Heap ownership has to appear in the type/API surface. The
-guide below teaches the canonical source spelling, not transitional aliases.
+control calls. Heap ownership appears in the type/API surface. The guide below
+teaches the canonical source spelling.
 
 Quick map:
 
@@ -36,7 +31,18 @@ Quick map:
 - allocator-backed `String<A>` is owned runtime memory and must carry the
   allocator that can grow or release it;
 - sync, async, allocator, raw-memory, actor, and comptime type-matching
-  surfaces are gated design work until promoted.
+  surfaces are gated design work.
+
+The smallest useful rule set is:
+
+- write declarations in prefix form: `name = ...`, `Type.method = ...`,
+  `Type.implements(Behavior)`;
+- use final expressions for values; Zen does not use a `return` keyword;
+- use `loop((l) { ... })`, then `l.next()` or `l.done()`;
+- use `StaticString` for literal text baked into the program;
+- use allocator-backed `String<A>` only when runtime-owned text is intended;
+- make sync work produce checked values now, and async work produce `Task<...>`;
+- keep allocators in the owner type that can grow or release heap storage.
 
 ## The Whole Shape In One Page
 
@@ -111,11 +117,10 @@ Use the gated-preview sections to understand the intended language shape for
 memory ownership, dynamic strings, sync/async effects, allocators, raw memory,
 actors, and comptime type matching. Preview examples are still Zen-shaped, but
 the compiler should reject them with explicit feature-gate diagnostics until
-the corresponding subsystem is promoted.
+the corresponding subsystem is implemented.
 
-The rule for this document is simple: stable examples should compile; preview
-examples should make the future syntax concrete without pretending it is
-stable.
+The rule for this document is simple: stable examples should compile. Preview
+examples make the future syntax concrete and are labeled as previews.
 
 ## Stable Vs Preview Surface
 
@@ -131,8 +136,8 @@ Stable examples are the forms to copy into runnable source today:
 | `Type.method = ...` | methods are attached functions with an explicit receiver |
 | `Type.implements(Behavior)` | behavior relationships keep the changed type on the left |
 
-Preview examples are included only when the future API shape matters to the
-language model:
+Preview examples are included only when the API shape matters to the language
+model:
 
 | Preview surface | Intended reading |
 | --- | --- |
@@ -140,7 +145,7 @@ language model:
 | `Allocator<T, Sync>` | allocation happens now and returns `Result<...>` |
 | `Allocator<T, Async>` | allocation is task-shaped and returns `Task<Result<...>>` |
 | `Task<T>` | async work is represented in the type instead of hidden in a call |
-| `RawPtr<T>` and raw intrinsics | explicit low-level memory work, gated until ownership rules are promoted |
+| `RawPtr<T>` and raw intrinsics | explicit low-level memory work, gated until ownership rules exist |
 
 The split matters most for strings. `"hello"` is a `StaticString`: static
 bytes plus length baked into the program image. It has a known location and
@@ -168,10 +173,10 @@ Zen keeps important edges visible:
 - Tooling truth comes from the compiler. JSON views are emitted from source;
   hand-authored JSON is not accepted as checked program state.
 
-Transitional keyword phrases are not part of stable tutorial syntax. If a form
-reads like a borrowed phrase from another language, translate it into the
-receiver-first or prefix-first Zen form. That means no `impl ... for ...`,
-no `extends Behavior` keyword block, no `return`, and no body-first loop.
+Keyword-style forms from other languages are not stable tutorial syntax.
+Translate them into receiver-first or prefix-first Zen. That means no
+`impl ... for ...`, no `extends Behavior` keyword block, no `return`, and no
+body-first loop.
 
 ## Translation Cheat Sheet
 
