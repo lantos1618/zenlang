@@ -649,6 +649,14 @@ Agent UX deliverables:
 - Checked MIR JSON for generic method worklist specialization is now pinned by
   `emit_json_mir_generic_method_worklist_schema_matches_golden`, covering
   `Box.get_inner_i32` lowering to a concrete `inner_i32(self.value)` call.
+- Checked HIR JSON for generic `Result<T, E>` enum method specialization is
+  now pinned by `emit_json_hir_generic_result_method_schema_matches_golden`,
+  covering concrete `Result_i32_StaticString` payloads and the
+  `Result.unwrap_or_i32_StaticString` method signature.
+- Checked MIR JSON for generic `Result<T, E>` enum method specialization is
+  now pinned by `emit_json_mir_generic_result_method_schema_matches_golden`,
+  covering `Result.unwrap_or_i32_StaticString` lowering to an enum match over
+  `Result_i32_StaticString.Ok` and `Result_i32_StaticString.Err`.
 - Checked typed JSON for generic `Option<T>` enum specialization is now pinned
   by `emit_json_typed_generic_option_schema_matches_golden`, covering concrete
   `Option_i32` enum payloads, `unwrap_or_i32`, and typed call sites.

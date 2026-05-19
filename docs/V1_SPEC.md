@@ -329,6 +329,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   method worklist HIR output is pinned by
   `emit_json_hir_generic_method_worklist_schema_matches_golden`, covering
   concrete `Box_i32`, `inner_i32`, and `Box.get_inner_i32` declarations.
+  Generic `Result<T, E>` enum method HIR output is pinned by
+  `emit_json_hir_generic_result_method_schema_matches_golden`, covering
+  concrete `Result_i32_StaticString` payloads and
+  `Result.unwrap_or_i32_StaticString` method signature lowering.
   Nested
   generic HIR specialization is pinned by
   `emit_json_hir_nested_generic_result_schema_matches_golden`, covering
@@ -351,6 +355,10 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   match-arm lowering. Generic method worklist MIR output is pinned by
   `emit_json_mir_generic_method_worklist_schema_matches_golden`, covering
   `Box.get_inner_i32` lowering to a concrete `inner_i32(self.value)` call.
+  Generic `Result<T, E>` enum method MIR output is pinned by
+  `emit_json_mir_generic_result_method_schema_matches_golden`, covering
+  `Result.unwrap_or_i32_StaticString` lowering to an enum match over
+  `Result_i32_StaticString.Ok` and `Result_i32_StaticString.Err`.
   Nested generic MIR specialization is pinned by
   `emit_json_mir_nested_generic_result_schema_matches_golden`, covering nested
   `Result_Option_i32_StaticString.Ok(Option_i32.Some(...))`, dependent
