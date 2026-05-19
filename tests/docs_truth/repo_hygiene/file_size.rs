@@ -61,3 +61,31 @@ fn zen_source_files_stay_below_cleanup_threshold() {
         );
     }
 }
+
+#[test]
+fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
+    let helper = read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers.rs");
+    let queue_helper = read("src/typechecker/tests/resolver_metadata/queue_selection.rs");
+    let module = read("src/typechecker/tests/resolver_metadata.rs");
+
+    assert!(
+        helper.lines().count() < 260,
+        "impl_and_method_helpers.rs should stay focused on impl/method metadata helpers"
+    );
+    assert!(
+        !helper.contains("named_queue_selection_prefers_exact_then_front"),
+        "queue-selection tests should live in queue_selection.rs"
+    );
+    assert!(
+        queue_helper.contains("resolver_behavior_ref_queue_selection_prefers_exact_then_front"),
+        "queue_selection.rs should cover behavior ref queue selection"
+    );
+    assert!(
+        queue_helper.contains("named_queue_selection_can_preserve_front_for_future_match"),
+        "queue_selection.rs should cover future-front preservation"
+    );
+    assert!(
+        module.contains("mod queue_selection;"),
+        "resolver_metadata.rs should include the focused queue_selection module"
+    );
+}
