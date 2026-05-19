@@ -5,6 +5,7 @@
 use super::*;
 
 include!("resolver_validation/entry_symbols.rs");
+include!("resolver_validation/post_pass.rs");
 include!("resolver_validation/replay_tasks.rs");
 include!("resolver_validation/imports_modules.rs");
 include!("resolver_validation/imports_dependencies.rs");
