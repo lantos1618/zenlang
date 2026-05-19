@@ -4,6 +4,7 @@ mod ast_expression_operators;
 mod build_graph_dsl;
 mod builtin_type_spelling;
 mod ci_configs;
+mod codegen_c;
 mod error_diagnostics;
 mod file_size;
 mod ir_json;

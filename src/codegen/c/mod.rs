@@ -1,5 +1,6 @@
 mod closures;
 mod emit;
+mod functions;
 mod intrinsics;
 mod matches;
 mod strings;
