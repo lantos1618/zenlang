@@ -14,6 +14,11 @@ and keyword exits. Values come from final expressions. Loops use explicit
 control calls. Heap ownership appears in the type/API surface. The guide below
 teaches the canonical source spelling.
 
+If you only read one page, read the sections through `Learn It In One Pass`.
+They give the public spelling for functions, final expressions, static text,
+dynamic text previews, loops, sync/async effect previews, and allocator-backed
+ownership. The rest of the guide expands those same rules with more examples.
+
 Quick map:
 
 - declarations are prefix-first: the name appears before the operation;
@@ -43,6 +48,18 @@ The smallest useful rule set is:
 - use allocator-backed `String<A>` only when runtime-owned text is intended;
 - make sync work produce checked values now, and async work produce `Task<...>`;
 - keep allocators in the owner type that can grow or release heap storage.
+
+## The Five Rules To Remember
+
+1. A block result is its final expression. Zen does not use `return`.
+2. A string literal is `StaticString`: static bytes plus length baked into the
+   program image. It is a pointer-and-length view and does not allocate.
+3. Runtime-owned text is `String<A>` or another allocator-backed owner. If it
+   can grow, shrink, or release memory, the allocator belongs in the type.
+4. Loops have one stable shape: `loop((l) { ... })`, with explicit `l.next()`,
+   `l.done()`, `next(l)`, or `done(l)` control edges.
+5. Sync and async are visible in types. Sync returns a checked value now;
+   async returns task-shaped work such as `Task<Result<T, E>>`.
 
 ## The Whole Shape In One Page
 
