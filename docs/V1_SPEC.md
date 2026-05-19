@@ -262,6 +262,9 @@ Generic behavior inheritance with child type-parameter parent args is covered by
   followups. Non-generic module function call type arguments are pinned by
   `emit_json_diagnostics_nongeneric_module_function_type_args_schema_matches_golden`,
   covering the stable `E5002` payload for `io.println<i32>("bad")` without
+  argument followups. Non-generic builtin function call type arguments are
+  pinned by `emit_json_diagnostics_nongeneric_builtin_function_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `@builtin.panic<i32>("bad")` without
   argument followups. Non-generic method call type arguments are pinned by
   `emit_json_diagnostics_nongeneric_method_type_args_schema_matches_golden`,
   covering the stable `E5002` payload for `box.get<i32>()` without argument

@@ -698,6 +698,11 @@ Agent UX deliverables:
   `emit_json_diagnostics_nongeneric_module_function_type_args_schema_matches_golden`,
   covering the stable `E5002` payload for `io.println<i32>("bad")` without
   argument-mismatch followups.
+- Diagnostics JSON for non-generic builtin function call type arguments is now
+  pinned by
+  `emit_json_diagnostics_nongeneric_builtin_function_type_args_schema_matches_golden`,
+  covering the stable `E5002` payload for `@builtin.panic<i32>("bad")` without
+  argument-mismatch followups.
 - Diagnostics JSON for generic function type-argument annotation arity is now
   pinned by
   `emit_json_diagnostics_generic_function_type_arg_annotation_arity_schema_matches_golden`,
