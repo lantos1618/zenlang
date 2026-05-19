@@ -165,6 +165,42 @@ fn typechecker_resolver_variant_metadata_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_absence_diagnostics_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let diagnostics = read("src/typechecker/resolver_validation/metadata_diagnostics.rs");
+    let absence = read("src/typechecker/resolver_validation/metadata_absence.rs");
+
+    for helper in [
+        "validate_resolver_absent_value_signature_metadata",
+        "validate_resolver_absent_type_parameter_metadata",
+        "validate_resolver_absent_field_metadata",
+        "validate_resolver_absent_variant_metadata",
+        "validate_resolver_absent_behavior_association_metadata",
+        "validate_resolver_absent_behavior_declaration_metadata",
+        "validate_resolver_absent_mutability_metadata",
+        "validate_resolver_absent_source_metadata",
+    ] {
+        assert!(
+            !diagnostics.contains(&format!("fn {helper}")),
+            "resolver metadata diagnostics should not own absence wrapper: {helper}"
+        );
+        assert!(
+            absence.contains(&format!("fn {helper}")),
+            "resolver absence diagnostics should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        diagnostics.lines().count() < 220,
+        "resolver metadata diagnostics should stay focused on generic emitters"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation/metadata_absence.rs\");"),
+        "resolver validation should include focused absence diagnostics"
+    );
+}
+
+#[test]
 fn typechecker_resolver_type_behavior_metadata_tests_live_in_focused_modules() {
     let root = read("src/typechecker/tests/resolver_type_behavior_metadata.rs");
     let type_metadata =
