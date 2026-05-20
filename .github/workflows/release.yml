@@ -14,15 +14,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    name: Build Linux C-backend compiler
+  checks:
+    name: Lint and Test
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache Cargo
         uses: actions/cache@v5
@@ -37,28 +38,94 @@ jobs:
           restore-keys: |
             linux-cargo-
 
-      - name: Test
-        run: |
-          cargo fmt --check
-          cargo clippy -- -D warnings
-          cargo test --lib
-          cargo test --tests
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --lib
+
+      - name: Integration tests
+        run: cargo test --tests
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: zen-linux-x86_64
+            bin: zen
+            archive: tar.gz
+          - os: macos-13
+            target: x86_64-apple-darwin
+            name: zen-macos-x86_64
+            bin: zen
+            archive: tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: zen-macos-aarch64
+            bin: zen
+            archive: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: zen-windows-x86_64
+            bin: zen.exe
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.target }}-cargo-
 
       - name: Build Release Binary
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Prepare Binary
+      - name: Package (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
         run: |
           mkdir -p dist
-          cp target/release/zen dist/
-          chmod +x dist/zen
-          cd dist && tar -czvf ../zen-linux-x86_64.tar.gz zen
+          cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" dist/
+          chmod +x "dist/${{ matrix.bin }}"
+          tar -C dist -czvf "${{ matrix.name }}.tar.gz" "${{ matrix.bin }}"
+
+      - name: Package (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.bin }}" -Destination "dist/"
+          Compress-Archive -Path "dist/${{ matrix.bin }}" -DestinationPath "${{ matrix.name }}.zip"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
-          name: zen-linux-x86_64
-          path: zen-linux-x86_64.tar.gz
+          name: ${{ matrix.name }}
+          path: |
+            ${{ matrix.name }}.tar.gz
+            ${{ matrix.name }}.zip
+          if-no-files-found: ignore
 
   release:
     name: Create Release
@@ -91,6 +158,8 @@ jobs:
           draft: true
           prerelease: true
           generate_release_notes: true
-          files: artifacts/**/*.tar.gz
+          files: |
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
