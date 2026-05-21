@@ -1,26 +1,15 @@
 # Zen v1 Specification Draft
-
-Status: v1 draft. This document is normative for intended v1 behavior; the feature
-matrix controls compiler claims, while proof belongs in tests, fixtures, and history.
+Status: v1 draft. This document is normative for intended v1 behavior; the feature matrix controls compiler claims, while proof belongs in tests, fixtures, and history.
 
 ## Syntax Contract
-The active implementation is the rewrite compiler:
-`source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
-Implemented syntax is limited to forms covered by `tests/zen` and Rust tests:
-declarations, calls, imports, bindings, structs, enums, field access, method-style
-calls, final-expression results, prefix loops, `defer`, casts, string interpolation,
-and parser/codegen-supported `?` arms. Unsupported spec-like constructs stay gated
-until parser, resolver, typechecker, codegen, diagnostics, JSON, and public examples agree.
-
-Developer UX and Agent UX are product requirements, not polish. The v1 surface
-should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
+The active implementation is the rewrite compiler: `source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
+Implemented syntax is limited to forms covered by `tests/zen` and Rust tests: declarations, calls, imports, bindings, structs, enums, field access, method-style calls, final-expression results, prefix loops, `defer`, casts, string interpolation, and parser/codegen-supported `?` arms. Unsupported spec-like constructs stay gated until parser, resolver, typechecker, codegen, diagnostics, JSON, and public examples agree.
+Developer UX and Agent UX are product requirements, not polish. The v1 surface should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
 Current contract: VS Code extension remains a constrained editor wrapper; `zen lsp` remains gated until it shares parser, resolver, typechecker, build graph, and diagnostics with the CLI.
-Agent-readable diagnostics keep stable codes, spans, related locations,
-structured fix suggestions, feature_gate metadata, and JSON; machine-readable project graph and symbol graph JSON remain compiler-owned; quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json` gate automated fix or package workflows.
+Agent-readable diagnostics keep stable codes, spans, related locations, structured fix suggestions, feature_gate metadata, and JSON; machine-readable project graph and symbol graph JSON remain compiler-owned; quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json` gate automated fix or package workflows.
 
 ## Accepted Syntax Forms
-Every accepted syntax form must have a spec entry and Test Evidence before it is
-advertised as implemented.
+Every accepted syntax form must have a spec entry and Test Evidence before it is advertised as implemented.
 
 | Syntax form | Status | Test Evidence |
 |---|---|---|
@@ -47,103 +36,32 @@ advertised as implemented.
 | Behavior inheritance `.extends` | experimental | `resolver_rejects_duplicate_behavior_parent_edges`, `imported_behavior_extends_requires_parent_methods`, `imported_behavior_extends_imported_parent_requires_parent_methods`, `imported_behavior_extends_requires_transitive_parent_methods` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
-- `StaticString` is baked into the program. It denotes literal/static text with
-  stable storage and compile-time length in the generated runtime layout. The
-  allocator-backed `String` type is owned, dynamic text and carries allocator identity
-  before promotion. String literals do not implicitly allocate or coerce into `String`;
-  dynamic `String` construction must use an explicit allocator-aware path. String
-  interpolation currently returns a `StaticString`-shaped non-owning view, but only literal text is guaranteed
-  to be baked program storage; interpolation must not imply allocator-backed
-  `String` construction. Source-level `String` use currently reports a gated
-  allocator-backed text diagnostic, including the generic nested case pinned by
-  `emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden`.
-- `Sync/Async effects`: gated. Sync code must not call async operations except
-  through an explicit runtime blocking boundary. Async operations lower through
-  checked task, queue, scheduler, yield, and await-like APIs. `async task enqueue`
-  and `async yield` builtins are gated. Evidence anchors:
-  `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`,
-  `stdlib_async_runtime_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`,
-  `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`, `stdlib_sync_runtime_import_is_gated_before_loading_sketch`,
-  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`, `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`,
-  `atomic_intrinsics_are_rejected_as_effect_gates`, `@builtin.atomic_load`, `@builtin.atomic_store`,
-  `@builtin.atomic_add`, `@builtin.atomic_sub`, `@builtin.atomic_cas`, `@builtin.atomic_xchg`, and `@builtin.fence`.
-- `Typed allocators`: gated. `Allocator<T, Sync>` and `Allocator<T, Async>` are
-  distinct typed allocator modes. Raw allocation and byte-memory intrinsics are
-  gated until ownership and effect semantics exist. Evidence anchors:
-  `raw_memory_intrinsics_are_rejected_as_allocator_gates`,
-  `byte_memory_intrinsics_are_rejected_as_allocator_gates`,
-  `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`,
-  `stdlib_allocator_import_is_gated_before_loading_sketch`,
-  `module_graph_gates_stdlib_allocator_import_before_loading_sketch`,
-  `emit_json_diagnostics_allocator_import_gate_schema_matches_golden`,
-  `@builtin.raw_allocate`, `@builtin.raw_deallocate`,
-  `@builtin.raw_reallocate`, `@builtin.memcpy`, `@builtin.memmove`,
-  `@builtin.memset`, and `@builtin.memcmp`.
-- `Type matching`: gated. comptime type matching operates on typed metadata for
-  primitives, structs, enums, fields, variants, behaviors, allocator modes, and
-  effect modes. It is separate from runtime value matching and remains gated until typed metadata and derive lowering exist. Evidence anchors:
-  `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and
-  `primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown`.
-- `Behavior association`: gated beyond the explicit proving ground. Associated
-  operations resolve by explicit impl, then generated impl, then declared
-  fallback where the spec allows it. Ambiguity is a hard diagnostic.
-- `AST traversal`: experimental tooling. `zen emit-json ast <file>` emits
-  `semantic_status: "unchecked"`; semantic acceptance must use typed JSON,
-  diagnostics, check, build, or test paths.
-- `Actors in std`: gated. Promoted actor framework spellings `Actor`,
-  `ActorRef`, `Mailbox`, and `Supervisor` depend on effect-aware queues and typed
-  allocators. `Channel` remains an experimental stdlib channel sketch, not a
-  global actor builtin. Evidence anchors:
-  `bare_actor_framework_types_are_rejected_as_gated_not_unknown`,
-  `stdlib_actor_framework_import_is_gated_before_loading_sketch`,
-  `module_graph_gates_stdlib_actor_framework_import_before_loading_sketch`, and
-  `emit_json_diagnostics_actor_import_gate_schema_matches_golden`.
-- `Ownership and raw pointer operations`: gated. Evidence anchors:
-  `raw_pointer_intrinsics_are_rejected_as_ownership_gates`, `@builtin.gep`,
-  `@builtin.gep_struct`, `@builtin.raw_ptr_cast`, `@builtin.ptr_to_int`,
-  `@builtin.int_to_ptr`, `@builtin.load<T>`, and `@builtin.store<T>`.
-- `Host syscalls`: gated until explicit host effect declarations and syscall ABI
-  semantics exist. Evidence anchors:
-  `syscall_intrinsics_are_rejected_as_host_effect_gates`, `@builtin.syscall0`,
-  and `@builtin.syscall6`.
-- Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is
-  gated until typechecked propagation and lowering are implemented.
-- ABI: stable layout JSON exists for primitives, baked `StaticString`, pointers,
-  slices, arrays, structs, and simple enums. Full options/results, closures, and
-  function pointer ABI compatibility remain gated until broader layout tests
-  exist.
+- `StaticString` is baked into the program. It denotes literal/static text with stable storage and compile-time length in the generated runtime layout. String literals as baked `StaticString`; interpolation as non-owning `StaticString` views. The allocator-backed `String` type is owned, dynamic text and carries allocator identity before promotion. String literals do not implicitly allocate or coerce into `String`; dynamic construction must use an explicit allocator-aware path, and only literal text is guaranteed to be baked program storage; interpolation must not imply allocator-backed `String` construction. Source-level `String` use currently reports a gated allocator-backed text diagnostic, including the generic nested case pinned by `emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden`.
+- `Sync/Async effects`: gated. Sync code must not call async operations except through an explicit runtime blocking boundary. Async operations lower through checked task, queue, scheduler, yield, and await-like APIs. `async task enqueue` and `async yield` builtins are gated. Evidence anchors: `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`, `stdlib_async_runtime_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`, `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`, `stdlib_sync_runtime_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`, `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`, `atomic_intrinsics_are_rejected_as_effect_gates`, `@builtin.atomic_load`, `@builtin.atomic_store`, `@builtin.atomic_add`, `@builtin.atomic_sub`, `@builtin.atomic_cas`, `@builtin.atomic_xchg`, and `@builtin.fence`.
+- `Typed allocators`: gated. `Allocator<T, Sync>` and `Allocator<T, Async>` are distinct typed allocator modes. Raw allocation and byte-memory intrinsics are gated until ownership and effect semantics exist. Evidence anchors: `raw_memory_intrinsics_are_rejected_as_allocator_gates`, `byte_memory_intrinsics_are_rejected_as_allocator_gates`, `sync_and_async_typed_allocator_modes_are_rejected_as_gated_not_unknown`, `stdlib_allocator_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_allocator_import_before_loading_sketch`, `emit_json_diagnostics_allocator_import_gate_schema_matches_golden`, `@builtin.raw_allocate`, `@builtin.raw_deallocate`, `@builtin.raw_reallocate`, `@builtin.memcpy`, `@builtin.memmove`, `@builtin.memset`, and `@builtin.memcmp`.
+- `Type matching`: gated. comptime type matching operates on typed metadata for primitives, structs, enums, fields, variants, behaviors, allocator modes, and effect modes. It is separate from runtime value matching and remains gated until typed metadata and derive lowering exist. Evidence anchors: `comptime_type_match_intrinsic_is_rejected_as_gated_not_unknown` and `primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown`.
+- `Behavior association`: gated beyond the explicit proving ground. Associated operations resolve by explicit impl, then generated impl, then declared fallback where the spec allows it. Ambiguity is a hard diagnostic.
+- `AST traversal`: experimental tooling. `zen emit-json ast <file>` emits `semantic_status: "unchecked"`; semantic acceptance must use typed JSON, diagnostics, check, build, or test paths.
+- `Actors in std`: gated. Promoted actor framework spellings `Actor`, `ActorRef`, `Mailbox`, and `Supervisor` depend on effect-aware queues and typed allocators. `Channel` remains an experimental stdlib channel sketch, not a global actor builtin. Evidence anchors: `bare_actor_framework_types_are_rejected_as_gated_not_unknown`, `stdlib_actor_framework_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_actor_framework_import_before_loading_sketch`, and `emit_json_diagnostics_actor_import_gate_schema_matches_golden`.
+- `Ownership and raw pointer operations`: gated. Evidence anchors: `raw_pointer_intrinsics_are_rejected_as_ownership_gates`, `@builtin.gep`, `@builtin.gep_struct`, `@builtin.raw_ptr_cast`, `@builtin.ptr_to_int`, `@builtin.int_to_ptr`, `@builtin.load<T>`, and `@builtin.store<T>`.
+- `Host syscalls`: gated until explicit host effect declarations and syscall ABI semantics exist. Evidence anchors: `syscall_intrinsics_are_rejected_as_host_effect_gates`, `@builtin.syscall0`, and `@builtin.syscall6`.
+- Errors: `Result<T, E>` and `.raise()` are v1 design goals, but `.raise()` is gated until typechecked propagation and lowering are implemented.
+- ABI: stable layout JSON exists for primitives, baked `StaticString`, pointers, slices, arrays, structs, and simple enums. Full options/results, closures, and function pointer ABI compatibility remain gated until broader layout tests exist.
 
 ## JSON/YAML IR Boundaries
-JSON/YAML IR boundaries are constrained. JSON is the machine-readable exchange
-format for compiler-owned AST, symbols, typed programs, diagnostics, HIR, MIR,
-layout, and deterministic build graphs. YAML is the human-authored format for
-target/build input.
-
+JSON/YAML IR boundaries are constrained. JSON is the machine-readable exchange format for compiler-owned AST, symbols, typed programs, diagnostics, HIR, MIR, layout, and deterministic build graphs. YAML is the human-authored format for target/build input.
 Current commands: `zen emit-json ast <file>`, `zen emit-json symbols <file>`, `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`, `zen emit-json hir <file>`, `zen emit-json mir <file>`, `zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and `zen emit-json target-yaml <file>`.
-
-Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted. Semantic acceptance must use typed JSON, diagnostics, check, build, or test paths.
-
+Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted. semantic acceptance must use typed JSON, diagnostics, check, build, or test paths.
 Evidence is category-level here; exhaustive fixture names live in `tests/fixtures/ir_json` and integration tests.
-
 - hand-authored IR rejection is pinned for AST, symbols, typed, diagnostics, HIR, MIR, layout, and build graph JSON. Representative anchors: `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`, `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`, and `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
 - compiler-owned generic JSON is pinned across AST, symbols, typed, HIR, MIR, layout, build graph, and target YAML. Representative anchors: `emit_json_ast_module_graph_schema_matches_golden`, `emit_json_symbols_generic_method_schema_matches_golden`, `emit_json_typed_generic_method_schema_matches_golden`, `emit_json_hir_generic_method_worklist_schema_matches_golden`, `emit_json_mir_generic_method_worklist_schema_matches_golden`, `emit_json_layout_nested_generic_result_schema_matches_golden`, `emit_json_build_graph_project_schema_matches_golden`, and `emit_json_target_yaml_backend_schema_matches_golden`.
 - golden fixtures pin representative generic names such as `Box.get<T>`, `Box<T>.impl`, `Option<T>`, `Result<T, E>`, `self: Self`, `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
 - diagnostics JSON is cataloged in `docs/DIAGNOSTICS.md`; JSON-stable public diagnostic codes require golden fixtures for code and shape, while broader diagnostic-code coverage is still required. Representative anchors include `context.kind = "feature_gate"`, `emit_json_diagnostics_removed_return_schema_matches_golden`, `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`, `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`, and `emit_json_diagnostics_generic_function_arity_schema_matches_golden`.
 
 ## Build Graph
-`build.zen` is constrained. `zen check build.zen` validates a deterministic
-graph and declared target sources. `zen emit build.zen` emits C for one target;
-`zen build build.zen` compiles executable targets; direct `zen build.zen`
-aliases that path; `zen test build.zen` compiles and runs test targets.
-Executable target dependencies compile before dependents, and dependency cycles
-are rejected before execution. test target execution, target C emission,
-dependency-ordered multi-executable build tests, library target graph emission,
-host-effect arrays, and legacy `emit-json ast|symbols|typed|diagnostics`
-rejection are the current proof shape.
-
-Constrained `build.zen` execution already has positive and negative evidence:
-Deterministic build graph compiles executable and test targets, while build
-scripts using undeclared host side effects are rejected.
+`build.zen` is constrained. `zen check build.zen` validates a deterministic graph and declared target sources. `zen emit build.zen` emits C for one target; `zen build build.zen` compiles executable targets; direct `zen build.zen` aliases that path; `zen test build.zen` compiles and runs test targets.
+Executable target dependencies compile before dependents, and dependency cycles are rejected before execution. test target execution, target C emission, dependency-ordered multi-executable build tests, library target graph emission, host-effect arrays, and legacy `emit-json ast|symbols|typed|diagnostics` rejection are the current proof shape.
+Constrained `build.zen` execution already has positive and negative evidence: Deterministic build graph compiles executable and test targets, while build scripts using undeclared host side effects are rejected.
 
 ## Feature Matrix
 | Feature | Status | Gate |
@@ -184,5 +102,4 @@ Generated/fallback behavior association syntax is reserved but not implemented: 
 Evidence: `parser::tests::parse_generated_behavior_derive_association`, `resolver_gates_generated_behavior_derive_association`, `emit_json_diagnostics_spans_full_gated_behavior_derive_association`, `emit_json_diagnostics_spans_full_gated_generic_association_target`, and `emit_json_diagnostics_generic_association_gate_schema_matches_golden`.
 
 ## Stdlib Gate
-Files under `stdlib/` are experimental unless a test proves they parse, typecheck,
-and build through the same compiler path as user modules. Aspirational stdlib APIs must not be described as implemented until promoted by tests.
+Files under `stdlib/` are experimental unless a test proves they parse, typecheck, and build through the same compiler path as user modules. Aspirational stdlib APIs must not be described as implemented until promoted by tests.
