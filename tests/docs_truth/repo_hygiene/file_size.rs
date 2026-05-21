@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn production_rust_files_stay_below_cleanup_threshold() {
-    const MAX_LINES: usize = 400;
+    const MAX_LINES: usize = 305;
 
     let output = std::process::Command::new("git")
         .args(["ls-files", "*.rs"])
