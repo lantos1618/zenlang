@@ -1,35 +1,24 @@
 # Zen v1 Specification Draft
 
-Status: v1 draft. This document is normative for intended v1 behavior, while
-the feature matrix controls what the rewrite compiler may currently advertise.
-Exhaustive proof belongs in tests, golden fixtures, and git history.
-
-## Baseline
-The active implementation is the rewrite compiler:
-`source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
-Compiler-owned semantic data is the source of truth; serialized JSON and YAML are
-interface formats generated from or validated against checked compiler data.
+Status: v1 draft. This document is normative for intended v1 behavior; the
+feature matrix controls what the rewrite compiler may advertise, and exhaustive
+proof belongs in tests, golden fixtures, and git history.
 
 ## Syntax Contract
-Implemented syntax forms are limited to forms covered by `tests/zen` and Rust
-tests: declarations, calls, imports, bindings, structs, enums, field access,
+The active implementation is the rewrite compiler:
+`source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
+Implemented syntax is limited to forms covered by `tests/zen` and Rust tests:
+declarations, calls, imports, bindings, structs, enums, field access,
 method-style calls, final-expression results, prefix loops, `defer`, casts,
-string interpolation, and parser/codegen-supported `?` arms.
-
-Unsupported spec-like constructs stay gated until parser, resolver, typechecker,
-codegen, diagnostics, JSON, and public examples agree on the shape. This includes
-unspecialized generic behavior targets, comptime execution, type matching, async
-operations, actor syntax, package manifests, and broader `build.zen` execution.
+string interpolation, and parser/codegen-supported `?` arms. Unsupported
+spec-like constructs stay gated until parser, resolver, typechecker, codegen,
+diagnostics, JSON, and public examples agree on the shape.
 
 Developer UX and Agent UX are product requirements, not polish. The v1 surface
 should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
-Current contract: VS Code extension remains a constrained editor wrapper;
-`zen lsp` remains gated until it shares parser, resolver, typechecker, build
-graph, and diagnostics with the CLI. Agent-readable diagnostics keep stable
-codes, spans, related locations, structured fix suggestions, feature_gate
-metadata, and JSON; machine-readable project graph and symbol graph JSON remain
-compiler-owned; quiet deterministic commands such as `zen check`, `zen test`,
-and `zen emit-json` gate automated fix or package workflows.
+Current contract: VS Code extension remains a constrained editor wrapper; `zen lsp` remains gated until it shares parser, resolver, typechecker, build graph, and diagnostics with the CLI.
+Agent-readable diagnostics keep stable codes, spans, related locations,
+structured fix suggestions, feature_gate metadata, and JSON; machine-readable project graph and symbol graph JSON remain compiler-owned; quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json` gate automated fix or package workflows.
 
 ## Accepted Syntax Forms
 Every accepted syntax form must have a spec entry and Test Evidence before it is
