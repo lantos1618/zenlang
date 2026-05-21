@@ -5,6 +5,8 @@ use crate::ast::typed::{Type, TypeDefKind, TypedProgram, TypedTypeDef};
 use super::metrics::{align_to, scalar_layout, POINTER_ALIGN, POINTER_SIZE, USIZE_SIZE};
 use super::schema::{LayoutJsonField, LayoutJsonType, LayoutJsonVariant};
 
+mod scalar_types;
+
 pub(super) struct LayoutContext<'a> {
     types: BTreeMap<&'a str, &'a TypedTypeDef>,
     layouts: BTreeMap<String, LayoutJsonType>,
@@ -29,39 +31,6 @@ impl<'a> LayoutContext<'a> {
 
     pub(super) fn layouts(self) -> BTreeMap<String, LayoutJsonType> {
         self.layouts
-    }
-
-    fn seed_builtin_layouts(&mut self) {
-        for (name, size, alignment) in [
-            ("bool", 1, 1),
-            ("i8", 1, 1),
-            ("u8", 1, 1),
-            ("i16", 2, 2),
-            ("u16", 2, 2),
-            ("i32", 4, 4),
-            ("u32", 4, 4),
-            ("f32", 4, 4),
-            ("i64", 8, 8),
-            ("u64", 8, 8),
-            ("usize", USIZE_SIZE, POINTER_ALIGN),
-            ("f64", 8, 8),
-            ("void", 0, 1),
-        ] {
-            self.layouts
-                .insert(name.into(), scalar_layout("primitive", size, alignment));
-        }
-        self.layouts.insert(
-            "StaticString".into(),
-            scalar_layout("static_string", POINTER_SIZE + USIZE_SIZE, POINTER_ALIGN),
-        );
-        self.layouts.insert(
-            "String".into(),
-            scalar_layout(
-                "dynamic_string",
-                POINTER_SIZE + USIZE_SIZE * 2 + POINTER_SIZE,
-                POINTER_ALIGN,
-            ),
-        );
     }
 
     fn layout_type_def(&mut self, type_def: &'a TypedTypeDef) -> LayoutJsonType {
@@ -139,21 +108,6 @@ impl<'a> LayoutContext<'a> {
 
     fn layout_type(&mut self, ty: &Type) -> LayoutJsonType {
         match ty {
-            Type::I8 => self.layout_by_name("i8"),
-            Type::I16 => self.layout_by_name("i16"),
-            Type::I32 => self.layout_by_name("i32"),
-            Type::I64 => self.layout_by_name("i64"),
-            Type::U8 => self.layout_by_name("u8"),
-            Type::U16 => self.layout_by_name("u16"),
-            Type::U32 => self.layout_by_name("u32"),
-            Type::U64 => self.layout_by_name("u64"),
-            Type::Usize => self.layout_by_name("usize"),
-            Type::F32 => self.layout_by_name("f32"),
-            Type::F64 => self.layout_by_name("f64"),
-            Type::Bool => self.layout_by_name("bool"),
-            Type::Void | Type::Never | Type::Unknown => self.layout_by_name("void"),
-            Type::Str => self.layout_by_name("StaticString"),
-            Type::String => self.layout_by_name("String"),
             Type::Named(name) => self.layout_named(name),
             Type::Struct { fields, .. } => self.layout_struct(fields),
             Type::Enum { name, .. } => self.layout_named(name),
@@ -172,21 +126,26 @@ impl<'a> LayoutContext<'a> {
             Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) | Type::Function { .. } => {
                 self.cache_compound_layout(ty, "pointer", POINTER_SIZE, POINTER_ALIGN)
             }
+            Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::Usize
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Void
+            | Type::Never
+            | Type::Unknown
+            | Type::Str
+            | Type::String => self
+                .layout_builtin_type(ty)
+                .unwrap_or_else(|| scalar_layout("opaque", 0, 1)),
         }
-    }
-
-    fn cache_compound_layout(
-        &mut self,
-        ty: &Type,
-        kind: &'static str,
-        size: u32,
-        alignment: u32,
-    ) -> LayoutJsonType {
-        let layout = scalar_layout(kind, size, alignment);
-        self.layouts
-            .entry(ty.display_name())
-            .or_insert_with(|| layout.clone());
-        layout
     }
 
     fn layout_named(&mut self, name: &str) -> LayoutJsonType {
@@ -197,12 +156,5 @@ impl<'a> LayoutContext<'a> {
             return self.layout_type_def(type_def);
         }
         scalar_layout("opaque", 0, 1)
-    }
-
-    fn layout_by_name(&self, name: &str) -> LayoutJsonType {
-        self.layouts
-            .get(name)
-            .cloned()
-            .unwrap_or_else(|| scalar_layout("opaque", 0, 1))
     }
 }
