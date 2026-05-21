@@ -185,6 +185,5 @@ main = () i32 {
 }
 ```
 That example shows prefix declarations, typed data, attached methods, behavior
-implementations, bounded generics, expression-oriented control flow, static text,
-and explicit loop control.
+implementations, bounded generics, expression-oriented control flow, and static text.
 More to read: `README.md`, `examples/README.md`, and `docs/V1_SPEC.md`.

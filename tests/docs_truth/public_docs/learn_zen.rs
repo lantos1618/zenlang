@@ -91,7 +91,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "keyword exit value",
         "growable owned text",
         "## One Page Example",
-        "behavior\nimplementations, bounded generics, expression-oriented control flow, static text,\nand explicit loop control",
+        "behavior\nimplementations, bounded generics, expression-oriented control flow, and static text",
         "docs/V1_SPEC.md",
     ] {
         assert!(
@@ -106,6 +106,11 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
             "Learn guide should avoid teaching non-behavior impl-block syntax as the public tutorial path: {stale}"
         );
     }
+
+    assert!(
+        !guide.contains("static text,\nand explicit loop control"),
+        "Learn guide should not claim the one-page example demonstrates loop control unless that example includes a loop"
+    );
 
     assert!(
         guide.lines().count() <= 190,
