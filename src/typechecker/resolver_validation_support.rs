@@ -9,6 +9,7 @@ include!("resolver_validation_support/absence_symbol_descriptors.rs");
 include!("resolver_validation_support/absence_validation.rs");
 include!("resolver_validation_support/field_variant_scope.rs");
 include!("resolver_validation_support/local_scope.rs");
+include!("resolver_validation_support/resolver_type_parameters.rs");
 include!("resolver_validation_support/type_info_constructors.rs");
 include!("resolver_validation_support/type_helpers.rs");
 include!("resolver_validation_support/behavior_type_helpers.rs");
