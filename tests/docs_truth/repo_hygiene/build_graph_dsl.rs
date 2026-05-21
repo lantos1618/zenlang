@@ -117,6 +117,31 @@ fn build_graph_error_types_live_in_focused_helper() {
 }
 
 #[test]
+fn build_graph_json_output_lives_in_focused_helper() {
+    let root = read("src/build_graph.rs");
+    let json = read("src/build_graph/json.rs");
+
+    for helper in ["struct BuildGraphJson", "fn canonical_json"] {
+        assert!(
+            !root.contains(helper),
+            "build graph root should not own JSON output helper: {helper}"
+        );
+        assert!(
+            json.contains(helper),
+            "build graph JSON output should live in focused helper: {helper}"
+        );
+    }
+    assert!(
+        root.lines().count() < 200,
+        "build_graph.rs should stay focused on graph shapes and construction"
+    );
+    assert!(
+        root.contains("mod json;"),
+        "build graph root should include focused JSON output helper"
+    );
+}
+
+#[test]
 fn build_target_field_extraction_lives_in_focused_helper() {
     let targets = read("src/build_graph/lowering/targets.rs");
     let fields = read("src/build_graph/lowering/target_fields.rs");
