@@ -168,8 +168,6 @@ fn build_graph_ast_traversal_lives_in_focused_helper() {
         "struct BuildProgramLowering",
         "enum BuildTargetAddContext",
         "fn collect_expr",
-        "fn collect_statement",
-        "fn is_builder_add_call",
     ] {
         assert!(
             !lowering.contains(helper),
@@ -184,4 +182,39 @@ fn build_graph_ast_traversal_lives_in_focused_helper() {
         traversal.contains("build_target_from_builder_add"),
         "build graph AST traversal should own target collection from builder.add calls"
     );
+}
+
+#[test]
+fn build_graph_traversal_statement_and_builder_helpers_live_in_focused_modules() {
+    let traversal = read("src/build_graph/lowering/traversal.rs");
+    let statements = read("src/build_graph/lowering/traversal/statements.rs");
+    let builder_calls = read("src/build_graph/lowering/traversal/builder_calls.rs");
+
+    assert!(
+        traversal.lines().count() < 190,
+        "build graph traversal root should stay focused on expression traversal"
+    );
+    assert!(
+        !traversal.contains("fn collect_statement"),
+        "statement traversal should not live in traversal.rs"
+    );
+    assert!(
+        statements.contains("fn collect_statement"),
+        "statement traversal should live in traversal/statements.rs"
+    );
+    assert!(
+        !traversal.contains("fn is_builder_add_call"),
+        "builder.add detection should not live in traversal.rs"
+    );
+    assert!(
+        builder_calls.contains("fn is_builder_add_call")
+            && builder_calls.contains("BuildTargetDslIdent"),
+        "builder.add detection should live in traversal/builder_calls.rs and use owned DSL identifiers"
+    );
+    for module_name in ["statements", "builder_calls"] {
+        assert!(
+            traversal.contains(&format!("mod {module_name};")),
+            "build graph traversal should include focused helper: {module_name}"
+        );
+    }
 }

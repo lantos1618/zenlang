@@ -1,9 +1,15 @@
-use crate::ast::{Expression, MatchArm, Statement, StringPart};
+use crate::ast::{Expression, MatchArm, StringPart};
 
-use super::dsl::BuildTargetDslIdent;
 use super::host_effects::{declared_host_effect, host_effect};
 use super::targets::build_target_from_builder_add;
 use super::{BuildGraphError, BuildGraphInput, BuildTargetInput, HostEffect};
+
+#[path = "traversal/builder_calls.rs"]
+mod builder_calls;
+#[path = "traversal/statements.rs"]
+mod statements;
+
+use builder_calls::is_builder_add_call;
 
 #[derive(Default)]
 pub(super) struct BuildProgramLowering {
@@ -172,36 +178,4 @@ impl BuildProgramLowering {
         }
     }
 
-    fn collect_statement(&mut self, statement: &Statement, add_context: BuildTargetAddContext) {
-        match statement {
-            Statement::Expression { expr: value, .. } => {
-                self.collect_expr(value, add_context);
-            }
-            Statement::VarDecl { value, .. } => {
-                self.collect_expr(value, BuildTargetAddContext::DynamicExpression);
-            }
-            Statement::Assignment { target, value, .. } => {
-                self.collect_expr(target, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(value, BuildTargetAddContext::DynamicExpression);
-            }
-            Statement::Block { stmts, .. } => {
-                for stmt in stmts {
-                    self.collect_statement(stmt, add_context);
-                }
-            }
-        }
-    }
-}
-
-fn is_builder_add_call(expr: &Expression) -> bool {
-    matches!(
-        expr,
-        Expression::MethodCall { receiver, method, .. }
-            if method == BuildTargetDslIdent::Add.as_str()
-                && matches!(
-                    receiver.as_ref(),
-                    Expression::Identifier { name, .. }
-                        if name == BuildTargetDslIdent::Builder.as_str()
-                )
-    )
 }
