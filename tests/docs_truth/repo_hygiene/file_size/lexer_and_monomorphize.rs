@@ -168,3 +168,31 @@ fn monomorphize_generic_method_self_type_lives_in_focused_helper() {
         "typechecker module should include focused generic type-argument helper"
     );
 }
+
+#[test]
+fn monomorphize_generic_aggregate_inference_lives_in_focused_helper() {
+    let inference = read("src/typechecker/monomorphize_inference.rs");
+    let generic_types = read("src/typechecker/monomorphize_inference_types.rs");
+    let module = read("src/typechecker/mod.rs");
+
+    assert!(
+        inference.lines().count() < 160,
+        "monomorphize_inference.rs should stay focused on inference entry points and recursive matching"
+    );
+    assert!(
+        !inference.contains("fn match_generic_type_params"),
+        "generic aggregate type inference should live in focused helper"
+    );
+    assert!(
+        generic_types.contains("fn match_generic_type_params"),
+        "focused generic aggregate inference helper should match struct and enum type params"
+    );
+    assert!(
+        generic_types.contains("Type::Struct") && generic_types.contains("Type::Enum"),
+        "focused generic aggregate inference helper should cover structs and enums"
+    );
+    assert!(
+        module.contains("mod monomorphize_inference_types;"),
+        "typechecker module should include focused generic aggregate inference helper"
+    );
+}

@@ -31,6 +31,7 @@ mod import_roots;
 mod monomorphize;
 mod monomorphize_dependencies;
 mod monomorphize_inference;
+mod monomorphize_inference_types;
 mod monomorphize_method_self;
 mod monomorphize_names;
 mod monomorphize_specialized_types;
