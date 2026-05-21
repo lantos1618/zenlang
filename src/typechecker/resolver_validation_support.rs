@@ -4,6 +4,7 @@ include!("resolver_validation_support/expected_value_symbols.rs");
 include!("resolver_validation_support/expected_symbols.rs");
 include!("resolver_validation_support/absence_entries.rs");
 include!("resolver_validation_support/absence_diagnostics.rs");
+include!("resolver_validation_support/count_diagnostics.rs");
 include!("resolver_validation_support/absence_signatures.rs");
 include!("resolver_validation_support/behavior_absence_descriptors.rs");
 include!("resolver_validation_support/absence_symbol_descriptors.rs");
