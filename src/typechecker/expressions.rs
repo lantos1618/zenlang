@@ -13,6 +13,7 @@ mod function_checking;
 mod gated_methods;
 mod generic_call_validation;
 mod method_call_support;
+mod return_flow;
 mod simple_forms;
 mod struct_literal;
 
