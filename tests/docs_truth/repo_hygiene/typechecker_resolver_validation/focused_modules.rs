@@ -109,3 +109,13 @@ fn typechecker_resolver_declaration_tests_live_in_focused_modules() {
         );
     }
 }
+
+#[test]
+fn resolver_collection_behavior_impl_method_tests_live_in_focused_modules() {
+    let root = read("src/typechecker/tests/resolver_collection/behavior_impl_methods/mod.rs");
+
+    assert!(
+        root.lines().count() < 260,
+        "resolver collection behavior impl method tests should live in focused modules"
+    );
+}
