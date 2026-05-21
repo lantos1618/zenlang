@@ -9,7 +9,6 @@ Preview examples cover gated surfaces: allocator-backed strings, sync/async
 effects, raw memory, actors, and comptime type matching.
 
 ## The Shape
-
 Declarations are prefix-first. The name being introduced or changed comes
 first:
 
@@ -32,7 +31,6 @@ first:
 | Inheritance | `ChildBehavior.extends(ParentBehavior)` |
 
 ## Values And Results
-
 ```zen
 main = () i32 {
     answer = 42
@@ -61,26 +59,22 @@ Numeric conversions are explicit and prefix-first: `cast(value, Type)`.
 String literals are `StaticString`, not allocator-backed strings.
 
 ## StaticString
-
 `StaticString` is baked into the program: static bytes plus a fixed byte count
 known after compilation. Passing it around copies a pointer-and-length view into
 program storage. It does not allocate, resize, free, or transfer heap ownership.
 
 ## Dynamic String Preview
-
 `String<A>` is preview syntax for owned runtime text. It can grow or be
 released, so the owner must carry allocator state. A literal such as `"Zen"`
 never silently becomes `String<A>`; runtime text construction belongs on an
 allocator-aware API.
 
 ## Calls, Structs, And Data
-
 `value.method(args)` and `method(value, args)` are call-site spellings for the
 same attached function, not alternate declaration forms. Struct literals name
 fields explicitly; field access uses dot syntax.
 
 ## Enums And Matching
-
 ```zen
 Direction: North, South, East, West
 Option<T>: None, Some(T)
@@ -97,7 +91,6 @@ The `?` operator is the pattern-match form for bools, enums, `Option`, and
 `Result`.
 
 ## Result And Error Handling
-
 Zen models failure with data. There are no exceptions and no null.
 
 ```zen
@@ -112,7 +105,6 @@ Nested generic types are written directly, such as
 `Result<Option<i32>, StaticString>`.
 
 ## Behaviors
-
 Behaviors describe required methods. Generic functions use behavior bounds when
 they need a capability.
 
@@ -133,7 +125,6 @@ Relationship declarations keep the changed type or behavior on the left:
 `PrettyDisplay.extends(Display)`. There is no `impl Type for Behavior` spelling.
 
 ## Loops
-
 Zen has one loop entry form. The handle is compiler-owned, and `done`/`next`
 are closed control verbs for that handle, not user methods or stringly names.
 
@@ -185,16 +176,13 @@ There is no `while`, `for`, `break`, `continue`, suffix loop, or hidden result
 channel. Accumulated values live in explicit mutable bindings outside the loop.
 
 ## Defer
-
 `defer` runs cleanup expressions before leaving the current scope.
 
 ## Imports And Modules
-
 Imports use destructuring-style binding from a module path; local files import
 by module name, and dotted paths resolve through subdirectories.
 
 ## Memory And Ownership
-
 Stable Zen does not hide heap allocation behind literals, interpolation, method
 calls, or generic containers. Heap APIs show the owner and allocator path.
 
@@ -206,7 +194,6 @@ Pointer, length, capacity, and allocator travel together; a pointer alone is
 just an address.
 
 ## Sync, Async, And Allocator Preview
-
 `Sync` and `Async` are effect modes in type surfaces, not source keywords; there
 is no `async fn` spelling. Sync work returns checked data now. Async work
 returns task-shaped data.
@@ -256,7 +243,6 @@ Raw allocation intrinsics such as `@builtin.raw_allocate`,
 preview names; stable source should not call them directly.
 
 ## Pointer, Slice, Array, Actor, And Comptime Preview
-
 `RawPtr<T>` is the raw-memory spelling used in allocator previews. `Ptr<T>`,
 `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer, slice, and
 fixed-array shapes. Raw pointer offset, casts, integer conversion, load, store,
@@ -265,7 +251,6 @@ scheduler operations stay gated until layout, ownership, effects, and runtime
 contracts are promoted.
 
 ## Translation Cheat Sheet
-
 | If you reach for | Use |
 | --- | --- |
 | keyword exit value | final expression |
@@ -281,7 +266,6 @@ contracts are promoted.
 | growable owned text | `String<A>` or another owner that carries allocator ownership |
 
 ## One Page Example
-
 ```zen
 { io } = std
 

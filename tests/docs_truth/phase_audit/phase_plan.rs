@@ -76,7 +76,7 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
     }
 
     assert!(
-        plan.lines().count() <= 115,
+        plan.lines().count() <= 100,
         "docs/PHASE_PLAN.md should stay compact; move granular evidence to tests or git history"
     );
 
