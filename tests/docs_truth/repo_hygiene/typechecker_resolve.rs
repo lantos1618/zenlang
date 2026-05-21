@@ -91,3 +91,38 @@ fn generic_type_reference_walker_bounds_live_in_focused_helper() {
         "type_refs.rs should own named type lookup for generic type-ref validation"
     );
 }
+
+#[test]
+fn resolver_type_reference_collected_metadata_lives_in_focused_helper() {
+    let root = read("src/typechecker/generic_type_validation/resolver_type_references.rs");
+    let collected = read(
+        "src/typechecker/generic_type_validation/resolver_type_references/collected_metadata.rs",
+    );
+
+    assert!(
+        root.lines().count() < 180,
+        "resolver_type_references.rs should stay focused on resolver task dispatch"
+    );
+    assert!(
+        root.contains("mod collected_metadata;"),
+        "resolver type-reference validation should include focused collected metadata helper"
+    );
+    for helper in [
+        "collected_value_type_param_scope",
+        "collected_type_type_param_scope",
+        "collected_behavior_type_param_scope",
+        "validate_collected_struct_type_references",
+        "validate_collected_enum_type_references",
+        "validate_collected_behavior_type_references",
+        "validate_collected_value_type_references",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "resolver type-reference dispatch should not own collected metadata helper: {helper}"
+        );
+        assert!(
+            collected.contains(&format!("pub(super) fn {helper}")),
+            "collected metadata helper should own resolver metadata validation: {helper}"
+        );
+    }
+}
