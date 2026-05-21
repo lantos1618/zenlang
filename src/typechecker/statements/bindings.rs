@@ -13,22 +13,27 @@ impl TypeChecker {
         mutable: bool,
         span: &Span,
     ) -> Result<TypedStatement, Diagnostic> {
-        let saved_return_type = self.current_return_type.take();
-        let typed_value = self.check_expr(value);
-        self.current_return_type = saved_return_type;
-        let typed_value = typed_value?;
         let annotation_valid = ty
             .as_ref()
             .is_none_or(|t| self.generic_type_annotation_arities_valid(t));
-        let var_type = if let Some(t) = ty {
+        let annotated_type = ty.as_ref().map(|t| {
             if annotation_valid {
                 self.resolve_type(t)
             } else {
                 Type::Unknown
             }
-        } else {
-            typed_value.ty.clone()
-        };
+        });
+        let contextual_type = annotated_type
+            .as_ref()
+            .filter(|ty| **ty != Type::Unknown)
+            .cloned();
+
+        let saved_return_type = self.current_return_type.take();
+        self.current_return_type = contextual_type;
+        let typed_value = self.check_expr(value);
+        self.current_return_type = saved_return_type;
+        let typed_value = typed_value?;
+        let var_type = annotated_type.unwrap_or_else(|| typed_value.ty.clone());
 
         let typed_value = self.coerce_declared_literal(var_type.clone(), typed_value);
 
