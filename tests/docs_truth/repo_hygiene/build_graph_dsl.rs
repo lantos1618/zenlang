@@ -2,7 +2,9 @@ use super::*;
 
 #[test]
 fn build_graph_dsl_parsing_uses_enum_static_tables() {
-    let dsl = read("src/build_graph/lowering/dsl.rs");
+    let dsl_root = read("src/build_graph/lowering/dsl.rs");
+    let target_fields = read("src/build_graph/lowering/dsl/target_fields.rs");
+    let dsl = format!("{dsl_root}\n{target_fields}");
 
     for forbidden in [
         r#"match value {
@@ -32,6 +34,34 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
             "build graph DSL spelling should parse through enum static tables: {required}"
         );
     }
+}
+
+#[test]
+fn build_target_field_spelling_lives_in_focused_helper() {
+    let dsl = read("src/build_graph/lowering/dsl.rs");
+    let target_fields = read("src/build_graph/lowering/dsl/target_fields.rs");
+
+    assert!(
+        !dsl.contains("enum BuildTargetField"),
+        "build graph DSL root should not own target field enum spelling"
+    );
+    for required in [
+        "pub(in crate::build_graph) enum BuildTargetField",
+        "const ALL: &[BuildTargetField]",
+        ".find(|field| field.as_str() == value)",
+        "impl fmt::Display for BuildTargetField",
+        "impl FromStr for BuildTargetField",
+    ] {
+        assert!(
+            target_fields.contains(required),
+            "target field spelling should live in focused helper: {required}"
+        );
+    }
+    assert!(
+        dsl.contains("mod target_fields;")
+            && dsl.contains("pub(super) use target_fields::BuildTargetField;"),
+        "build graph DSL root should load and re-export target field spelling"
+    );
 }
 
 #[test]
