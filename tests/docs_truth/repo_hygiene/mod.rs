@@ -12,6 +12,7 @@ mod ir_json;
 mod module_system;
 mod parser_behavior_declarations;
 mod parser_core;
+mod parser_declarations;
 mod parser_enums;
 mod parser_function_forms;
 mod parser_keywords;

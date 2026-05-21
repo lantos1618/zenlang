@@ -3,6 +3,8 @@ use super::*;
 #[test]
 fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
     let source = read("src/parser/declarations.rs");
+    let suffix_forms = read("src/parser/declarations/suffix_forms.rs");
+    let dispatch_source = format!("{source}\n{suffix_forms}");
     let ast_declarations = read("src/ast/declarations.rs");
     let type_keywords = read("src/ast/declarations/type_keywords.rs");
     let keyword_source = format!("{ast_declarations}\n{type_keywords}");
@@ -16,12 +18,12 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         r#"matches!(method_name.as_str(), "implements" | "requires" | "extends")"#,
     ] {
         assert!(
-            !source.contains(forbidden),
+            !dispatch_source.contains(forbidden),
             "parser type declaration suffix dispatch should use TypeDeclarationKeyword, not raw spelling checks: {forbidden}"
         );
     }
     assert!(
-        source.contains("TypeDeclarationKeyword"),
+        dispatch_source.contains("TypeDeclarationKeyword"),
         "parser type declaration suffix dispatch should use TypeDeclarationKeyword"
     );
 
