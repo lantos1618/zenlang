@@ -157,3 +157,67 @@ main = () i32 {
     );
     assert_eq!(assignment.ty, Type::I32);
 }
+
+#[test]
+fn function_argument_type_disambiguates_behavior_method_call() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) i32 { value.x }
+}
+
+take_i32 = (value: i32) i32 {
+    value
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    result = take_i32(point.encode())
+    result
+}
+"#,
+    );
+
+    let typed = TypeChecker::new()
+        .check_program(&program)
+        .expect("function parameter type should disambiguate behavior method call");
+    let main = typed
+        .functions
+        .iter()
+        .find(|function| function.name == "main")
+        .expect("main function");
+    let result = main
+        .body
+        .statements
+        .iter()
+        .find_map(|statement| match &statement.kind {
+            TypedStatementKind::VarDecl { name, value, .. } if name == "result" => Some(value),
+            _ => None,
+        })
+        .expect("result local");
+    let TypedExprKind::FunctionCall { function, args } = &result.kind else {
+        panic!("expected result local to be initialized from a function call");
+    };
+    assert_eq!(function, "take_i32");
+    let arg = args.first().expect("take_i32 argument");
+
+    assert!(
+        matches!(
+            &arg.kind,
+            TypedExprKind::FunctionCall { function, .. }
+                if function == "Point.encode__Json_i32"
+        ),
+        "expected function parameter to select Json<i32> behavior method, got {arg:?}"
+    );
+    assert_eq!(arg.ty, Type::I32);
+}
