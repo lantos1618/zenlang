@@ -1,3 +1,4 @@
+use super::call_validation::BehaviorMethodResolution;
 use super::gated_methods::GatedMethod;
 use super::*;
 
@@ -36,9 +37,13 @@ impl TypeChecker {
             Type::Named(n) | Type::Struct { name: n, .. } | Type::Enum { name: n, .. } => n.clone(),
             _ => String::new(),
         };
-        let method_key = self
-            .behavior_specialized_method_key(&type_name, method)
-            .unwrap_or_else(|| Self::method_key(&type_name, method));
+        let method_key = match self.behavior_specialized_method_key(&type_name, method, span) {
+            BehaviorMethodResolution::Resolved(method_key) => method_key,
+            BehaviorMethodResolution::Ambiguous => {
+                return Ok(self.ambiguous_method_expr(&type_name, method, typed_args, span));
+            }
+            BehaviorMethodResolution::None => Self::method_key(&type_name, method),
+        };
 
         if let Some(info) = self.methods.get(&method_key).cloned() {
             // Found as a type method — handle generics

@@ -93,7 +93,7 @@ impl TypeChecker {
         methods: &[Declaration],
     ) {
         for method in methods {
-            self.collect_impl_method_signature(type_name, method);
+            self.collect_impl_method_signature(type_name, behavior, behavior_type_args, method);
         }
         if let Some(behavior) = behavior {
             self.collect_behavior_default_method_signatures(

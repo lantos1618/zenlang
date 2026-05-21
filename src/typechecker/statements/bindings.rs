@@ -13,7 +13,10 @@ impl TypeChecker {
         mutable: bool,
         span: &Span,
     ) -> Result<TypedStatement, Diagnostic> {
-        let typed_value = self.check_expr(value)?;
+        let saved_return_type = self.current_return_type.take();
+        let typed_value = self.check_expr(value);
+        self.current_return_type = saved_return_type;
+        let typed_value = typed_value?;
         let annotation_valid = ty
             .as_ref()
             .is_none_or(|t| self.generic_type_annotation_arities_valid(t));

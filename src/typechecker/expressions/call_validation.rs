@@ -1,5 +1,11 @@
 use super::*;
 
+pub(super) enum BehaviorMethodResolution {
+    None,
+    Resolved(String),
+    Ambiguous,
+}
+
 impl TypeChecker {
     pub(super) fn check_call_signature(
         &mut self,
@@ -95,30 +101,75 @@ impl TypeChecker {
     }
 
     pub(super) fn behavior_specialized_method_key(
+        &mut self,
+        type_name: &str,
+        method: &str,
+        span: Span,
+    ) -> BehaviorMethodResolution {
+        let prefix = format!("{}__", Self::method_key(type_name, method));
+        let candidates: Vec<String> = self
+            .methods
+            .keys()
+            .filter(|key| key.starts_with(&prefix))
+            .cloned()
+            .collect();
+
+        if candidates.is_empty() {
+            return BehaviorMethodResolution::None;
+        }
+
+        if candidates.len() == 1 {
+            return BehaviorMethodResolution::Resolved(candidates[0].clone());
+        }
+
+        if let Some(expected) = self.current_return_type.as_ref() {
+            let matching: Vec<String> = candidates
+                .iter()
+                .filter(|key| {
+                    self.methods.get(*key).is_some_and(|info| {
+                        self.types_compatible(expected, &self.resolve_type(&info.return_type))
+                    })
+                })
+                .cloned()
+                .collect();
+
+            if matching.len() == 1 {
+                return BehaviorMethodResolution::Resolved(matching[0].clone());
+            }
+        }
+
+        self.diagnostics.push(Diagnostic::error(
+            "E3044",
+            format!(
+                "ambiguous behavior method `{}` for type `{}`; candidates: {}",
+                method,
+                type_name,
+                candidates
+                    .iter()
+                    .map(|candidate| format!("`{candidate}`"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            span,
+        ));
+        BehaviorMethodResolution::Ambiguous
+    }
+
+    pub(super) fn ambiguous_method_expr(
         &self,
         type_name: &str,
         method: &str,
-    ) -> Option<String> {
-        let prefix = format!("{}__", Self::method_key(type_name, method));
-        let candidates: Vec<_> = self
-            .methods
-            .iter()
-            .filter(|(key, _)| key.starts_with(&prefix))
-            .collect();
-
-        if candidates.len() == 1 {
-            return Some(candidates[0].0.clone());
+        typed_args: Vec<TypedExpression>,
+        span: Span,
+    ) -> TypedExpression {
+        TypedExpression {
+            kind: TypedExprKind::FunctionCall {
+                function: format!("{}_{}", type_name, method),
+                args: typed_args,
+            },
+            ty: Type::Unknown,
+            span,
         }
-
-        let expected = self.current_return_type.as_ref()?;
-        let matching: Vec<_> = candidates
-            .into_iter()
-            .filter(|(_, info)| {
-                self.types_compatible(expected, &self.resolve_type(&info.return_type))
-            })
-            .collect();
-
-        (matching.len() == 1).then(|| matching[0].0.clone())
     }
 
     pub(super) fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {

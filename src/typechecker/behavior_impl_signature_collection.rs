@@ -1,7 +1,13 @@
 use super::*;
 
 impl TypeChecker {
-    pub(super) fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
+    pub(super) fn collect_impl_method_signature(
+        &mut self,
+        type_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
+        method: &Declaration,
+    ) {
         let Declaration::Function {
             name,
             type_params,
@@ -16,7 +22,7 @@ impl TypeChecker {
         };
 
         self.validate_generic_bounds(type_params);
-        let key = Self::method_key(type_name, name);
+        let key = Self::behavior_impl_method_key(type_name, name, behavior, behavior_type_args);
         self.methods.insert(
             key.clone(),
             func_info_from_ast_signature(key.clone(), type_params, params, return_type),
