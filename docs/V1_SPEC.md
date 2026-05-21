@@ -5,14 +5,12 @@ the feature matrix controls what the rewrite compiler may currently advertise.
 Exhaustive proof belongs in tests, golden fixtures, and git history.
 
 ## Baseline
-
 The active implementation is the rewrite compiler:
 `source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
 Compiler-owned semantic data is the source of truth; serialized JSON and YAML are
 interface formats generated from or validated against checked compiler data.
 
 ## Syntax Contract
-
 Implemented syntax forms are limited to forms covered by `tests/zen` and Rust
 tests: declarations, calls, imports, bindings, structs, enums, field access,
 method-style calls, final-expression results, prefix loops, `defer`, casts,
@@ -34,7 +32,6 @@ quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json
 gate automated fix or package workflows.
 
 ## Accepted Syntax Forms
-
 Every accepted syntax form must have a spec entry and Test Evidence before it is
 advertised as implemented.
 
@@ -63,7 +60,6 @@ advertised as implemented.
 | Behavior inheritance `.extends` | experimental | `resolver_rejects_duplicate_behavior_parent_edges`, `imported_behavior_extends_requires_parent_methods`, `imported_behavior_extends_imported_parent_requires_parent_methods`, `imported_behavior_extends_requires_transitive_parent_methods` |
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
-
 - `StaticString` is baked into the program. It denotes literal/static text with
   stable storage and compile-time length in the generated runtime layout.
   The allocator-backed `String` type is owned, dynamic text and carries allocator
@@ -136,15 +132,12 @@ advertised as implemented.
   exist.
 
 ## JSON/YAML IR Boundaries
-
 JSON/YAML IR boundaries are constrained. JSON is the machine-readable exchange
 format for compiler-owned AST, symbols, typed programs, diagnostics, HIR, MIR,
 layout, and deterministic build graphs. YAML is the human-authored format for
 target/build input.
 
-Current commands: `zen emit-json ast <file>`, `zen emit-json symbols <file>`,
-`zen emit-json typed <file>`, `zen emit-json diagnostics <file>`,
-`zen emit-json hir <file>`, `zen emit-json mir <file>`, `zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and `zen emit-json target-yaml <file>`.
+Current commands: `zen emit-json ast <file>`, `zen emit-json symbols <file>`, `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`, `zen emit-json hir <file>`, `zen emit-json mir <file>`, `zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and `zen emit-json target-yaml <file>`.
 
 Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted.
 
@@ -167,7 +160,6 @@ Representative golden anchors:
   `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
 
 ## Build Graph
-
 `build.zen` is constrained. `zen check build.zen` validates a deterministic
 graph and verifies declared target sources exist. `zen emit build.zen` emits C
 for one target. `zen build build.zen` compiles executable targets, and direct
@@ -183,7 +175,6 @@ Deterministic build graph compiles executable and test targets, while build
 scripts using undeclared host side effects are rejected.
 
 ## Feature Matrix
-
 | Feature | Status | Gate |
 |---|---|---|
 | Lexer/parser for tested fixtures | implemented | Unit and integration tests |
@@ -207,7 +198,6 @@ scripts using undeclared host side effects are rejected.
 | Formatter, package manager, alternate backends | removed | Reintroduce only with tests and binaries |
 
 ## Required Test Backlog
-
 Every remaining v1 effect/type-match/allocator/actor/IR claim needs at least one
 Planned Positive Test and one Planned Negative Test before implementation.
 
@@ -220,17 +210,10 @@ Planned Positive Test and one Planned Negative Test before implementation.
 | Actors in std | Actor mailbox send/receive works with scheduler and allocator integration | Actor using async mailbox from sync-only context is rejected |
 | JSON/YAML IR boundaries | Checked layout JSON, checked MIR JSON, and target YAML validate against schemas | Hand-authored JSON IR cannot override compiler-owned types or layouts |
 
-Generated/fallback behavior association syntax is reserved but not implemented:
-`Type.derive(Json)` currently parses into a reserved AST declaration and then
-reports an explicit resolver gate, covered by
-`parser::tests::parse_generated_behavior_derive_association`,
-`resolver_gates_generated_behavior_derive_association`,
-`emit_json_diagnostics_spans_full_gated_behavior_derive_association`,
-`emit_json_diagnostics_spans_full_gated_generic_association_target`, and
-`emit_json_diagnostics_generic_association_gate_schema_matches_golden`.
+Generated/fallback behavior association syntax is reserved but not implemented: `Type.derive(Json)` currently parses into a reserved AST declaration and reports an explicit resolver gate.
+Evidence: `parser::tests::parse_generated_behavior_derive_association`, `resolver_gates_generated_behavior_derive_association`, `emit_json_diagnostics_spans_full_gated_behavior_derive_association`, `emit_json_diagnostics_spans_full_gated_generic_association_target`, and `emit_json_diagnostics_generic_association_gate_schema_matches_golden`.
 
 ## Stdlib Gate
-
 Files under `stdlib/` are experimental unless a test proves they parse, typecheck,
 and build through the same compiler path as user modules. Aspirational stdlib
 APIs must not be described as implemented until promoted by tests.
