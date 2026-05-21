@@ -29,3 +29,28 @@ fn resolver_behavior_ref_validation_message_tests_live_in_focused_helper() {
         "behavior_refs.rs should include focused validation message tests"
     );
 }
+
+#[test]
+fn resolver_imported_type_dependency_seeding_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let imports = read("src/typechecker/resolver_validation/imports_dependencies.rs");
+    let type_dependencies =
+        read("src/typechecker/resolver_validation/imports_type_dependencies.rs");
+
+    assert!(
+        !imports.contains("fn seed_imported_type_dependency"),
+        "imports_dependencies.rs should not own imported type dependency seeding"
+    );
+    assert!(
+        type_dependencies.contains("fn seed_imported_type_dependency"),
+        "imports_type_dependencies.rs should own imported type dependency seeding"
+    );
+    assert!(
+        imports.lines().count() < 200,
+        "imports_dependencies.rs should stay focused on callable/template/import seeding"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation/imports_type_dependencies.rs\");"),
+        "resolver validation should include focused imported type dependency seeding"
+    );
+}
