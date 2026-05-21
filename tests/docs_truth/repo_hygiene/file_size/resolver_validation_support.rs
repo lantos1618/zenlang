@@ -112,3 +112,37 @@ fn expected_local_traversal_support_stays_split_by_responsibility() {
         "bindings.rs should cover shared local binding helpers"
     );
 }
+
+#[test]
+fn resolver_backed_type_info_constructors_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation_support/type_info_constructors.rs");
+    let resolver_backed = read(
+        "src/typechecker/resolver_validation_support/type_info_constructors/resolver_backed.rs",
+    );
+
+    assert!(
+        root.lines().count() < 180,
+        "type_info_constructors.rs should stay focused on AST-backed constructors"
+    );
+    assert!(
+        root.contains("include!(\"type_info_constructors/resolver_backed.rs\");"),
+        "type info constructors should include focused resolver-backed constructors"
+    );
+
+    for helper in [
+        "behavior_info_for_resolver_backed_stub",
+        "struct_info_from_resolver_fields",
+        "enum_info_from_resolver_variants",
+        "behavior_info_from_resolver_methods",
+        "func_info_from_behavior_method",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "type_info_constructors.rs should not own resolver-backed helper: {helper}"
+        );
+        assert!(
+            resolver_backed.contains(&format!("fn {helper}")),
+            "resolver-backed type info constructor should live in resolver_backed.rs: {helper}"
+        );
+    }
+}
