@@ -5,22 +5,33 @@ use std::str::FromStr;
 pub(super) enum ModuleRootPrefix {
     Std,
     AtStd,
+    Builtin,
 }
 
 impl ModuleRootPrefix {
     const STD: &'static str = "std";
     const AT_STD: &'static str = "@std";
-    const ALL: &[ModuleRootPrefix] = &[ModuleRootPrefix::Std, ModuleRootPrefix::AtStd];
+    const AT_BUILTIN: &'static str = "@builtin";
+    const ALL: &[ModuleRootPrefix] = &[
+        ModuleRootPrefix::Std,
+        ModuleRootPrefix::AtStd,
+        ModuleRootPrefix::Builtin,
+    ];
 
     pub(super) const fn as_str(self) -> &'static str {
         match self {
             Self::Std => Self::STD,
             Self::AtStd => Self::AT_STD,
+            Self::Builtin => Self::AT_BUILTIN,
         }
     }
 
     pub(super) const fn is_std(self) -> bool {
         matches!(self, Self::Std | Self::AtStd)
+    }
+
+    pub(super) const fn is_builtin(self) -> bool {
+        matches!(self, Self::Builtin)
     }
 }
 

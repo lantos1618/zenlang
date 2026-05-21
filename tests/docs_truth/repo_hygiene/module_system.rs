@@ -13,9 +13,11 @@ fn module_system_roots_use_owned_prefix_enum() {
         for forbidden in [
             r#"first == "std""#,
             r#"first == "@std""#,
+            r#"first == "@builtin""#,
             r#"match first.as_str()"#,
             r#""std" =>"#,
             r#""@std" =>"#,
+            r#""@builtin" =>"#,
         ] {
             assert!(
                 !source.contains(forbidden),
@@ -28,10 +30,12 @@ fn module_system_roots_use_owned_prefix_enum() {
         "enum ModuleRootPrefix",
         "const STD: &'static str = \"std\"",
         "const AT_STD: &'static str = \"@std\"",
+        "const AT_BUILTIN: &'static str = \"@builtin\"",
         "impl FromStr for ModuleRootPrefix",
         "impl fmt::Display for ModuleRootPrefix",
         ".find(|prefix| prefix.as_str() == value)",
         "pub(super) fn parse_module_root_prefix",
+        "pub(super) const fn is_builtin",
     ] {
         assert!(
             root_prefix.contains(required),
