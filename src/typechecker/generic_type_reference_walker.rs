@@ -2,6 +2,7 @@ use super::*;
 
 mod expressions;
 mod statements;
+mod type_ref_bounds;
 mod type_refs;
 
 impl TypeChecker {
