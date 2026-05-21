@@ -1,5 +1,6 @@
 mod core_semantics;
 mod focused_tests;
+mod intrinsics;
 mod lexer_and_monomorphize;
 mod resolver_phase2;
 mod resolver_validation;
