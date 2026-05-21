@@ -73,6 +73,16 @@ fn resolver_validation_docs_truth_stays_split_across_focused_modules() {
 }
 
 #[test]
+fn resolver_collection_type_metadata_tests_stay_split_by_responsibility() {
+    let root = read("src/typechecker/tests/resolver_collection/type_metadata.rs");
+
+    assert!(
+        root.lines().count() < 260,
+        "resolver collection type metadata tests should stay split by focused responsibility"
+    );
+}
+
+#[test]
 fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
     let helper = read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers.rs");
     let queue_helper = read("src/typechecker/tests/resolver_metadata/queue_selection.rs");
