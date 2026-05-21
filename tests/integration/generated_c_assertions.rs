@@ -39,6 +39,17 @@ int32_t outer_i32(int32_t value) {
 }
 
 #[test]
+fn generated_c_call_definition_scan_ignores_function_pointer_calls() {
+    let c_source = r#"
+int32_t caller_i32(int32_t (*callback_i32)(int32_t), int32_t value) {
+    return callback_i32(value);
+}
+"#;
+
+    assert_eq!(undefined_generated_c_calls(c_source), Vec::<String>::new());
+}
+
+#[test]
 fn generated_c_definition_count_ignores_prototypes() {
     let c_source = r#"
 int32_t inner_i32(int32_t value);
