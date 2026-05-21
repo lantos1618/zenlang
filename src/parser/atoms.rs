@@ -1,8 +1,9 @@
 use super::*;
 use crate::error::{REMOVED_AS_CAST_MESSAGE, REMOVED_RETURN_KEYWORD_MESSAGE};
-use crate::parser::keywords::{ParserModuleRoot, ParserPrefixKeyword, ParserThisMethod};
+use crate::parser::keywords::{ParserPrefixKeyword, ParserThisMethod};
 
 mod forms;
+mod module_roots;
 
 impl Parser {
     /// Parse prefix / atom expressions.
@@ -136,75 +137,8 @@ impl Parser {
             Token::Dot => self.parse_shorthand_enum_variant_expr(),
 
             // Module-qualified: @builtin.func(args), @std.mod.func(args)
-            Token::AtBuiltin => {
-                let (_, span) = self.advance();
-                self.expect(&Token::Dot)?;
-                let (func_name, _) = self.expect_identifier()?;
-
-                // Check for type args
-                let type_args = if matches!(self.peek(), Token::Lt) {
-                    self.parse_type_arg_list()?
-                } else {
-                    Vec::new()
-                };
-
-                self.expect(&Token::LParen)?;
-                let args = self.parse_arg_list()?;
-                let end = self.expect(&Token::RParen)?;
-
-                Ok(Expression::FunctionCall {
-                    name: func_name,
-                    module: Some(ParserModuleRoot::AtBuiltin.as_str().to_string()),
-                    type_args,
-                    args,
-                    span: span.merge(end),
-                })
-            }
-
-            Token::AtStd => {
-                let (_, span) = self.advance();
-                self.expect(&Token::Dot)?;
-                let mut module_parts = Vec::new();
-                let (first, _) = self.expect_identifier()?;
-                module_parts.push(first);
-
-                // Collect module.sub.func path
-                while matches!(self.peek(), Token::Dot) {
-                    let saved = self.pos;
-                    self.advance(); // consume .
-                    if let Token::Identifier(_) = self.peek() {
-                        let (part, _) = self.expect_identifier()?;
-                        module_parts.push(part);
-                    } else {
-                        self.pos = saved;
-                        break;
-                    }
-                }
-
-                // Last part is the function name
-                let func_name = module_parts.pop().unwrap();
-                let module = ParserModuleRoot::AtStd.join_module_parts(&module_parts);
-
-                if matches!(self.peek(), Token::LParen) {
-                    self.advance();
-                    let args = self.parse_arg_list()?;
-                    let end = self.expect(&Token::RParen)?;
-                    Ok(Expression::FunctionCall {
-                        name: func_name,
-                        module: Some(module),
-                        type_args: Vec::new(),
-                        args,
-                        span: span.merge(end),
-                    })
-                } else {
-                    // Might be a member access
-                    Ok(Expression::MemberAccess {
-                        object: Box::new(Expression::Identifier { name: module, span }),
-                        field: func_name,
-                        span: span.merge(self.prev_span()),
-                    })
-                }
-            }
+            Token::AtBuiltin => self.parse_builtin_module_call_expr(),
+            Token::AtStd => self.parse_std_module_root_expr(),
 
             // Parenthesized expression or closure
             Token::LParen => {
