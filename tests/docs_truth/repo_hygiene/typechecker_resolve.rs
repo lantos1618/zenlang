@@ -149,6 +149,8 @@ fn resolver_type_reference_collected_metadata_lives_in_focused_helper() {
 fn generic_type_validation_ast_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/generic_type_validation.rs");
     let ast_tasks = read("src/typechecker/generic_type_validation/ast_type_references.rs");
+    let validation =
+        read("src/typechecker/generic_type_validation/ast_type_references/validation.rs");
 
     assert!(
         root.lines().count() < 120,
@@ -158,9 +160,28 @@ fn generic_type_validation_ast_tasks_live_in_focused_helper() {
         root.contains("mod ast_type_references;"),
         "generic type validation should include focused AST type-reference task helper"
     );
+    assert!(
+        ast_tasks.lines().count() < 90,
+        "AST type-reference task collection should not own task validation"
+    );
+    assert!(
+        ast_tasks.contains("mod validation;"),
+        "AST type-reference task collection should include focused validation helper"
+    );
     for helper in [
         "collect_ast_type_reference_validation_tasks",
         "push_ast_type_reference_validation_task",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "generic type validation root should not own AST task helper: {helper}"
+        );
+        assert!(
+            ast_tasks.contains(&format!("fn {helper}")),
+            "AST type-reference task collection should own: {helper}"
+        );
+    }
+    for helper in [
         "validate_ast_type_reference_tasks",
         "validate_ast_callable_type_references",
     ] {
@@ -169,8 +190,12 @@ fn generic_type_validation_ast_tasks_live_in_focused_helper() {
             "generic type validation root should not own AST task helper: {helper}"
         );
         assert!(
-            ast_tasks.contains(&format!("fn {helper}")),
-            "AST type-reference task helper should own: {helper}"
+            !ast_tasks.contains(&format!("fn {helper}")),
+            "AST type-reference task collection should not own validation helper: {helper}"
+        );
+        assert!(
+            validation.contains(&format!("fn {helper}")),
+            "AST type-reference validation helper should own: {helper}"
         );
     }
 }
