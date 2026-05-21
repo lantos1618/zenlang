@@ -6,6 +6,8 @@ mod dsl;
 mod host_effects;
 #[path = "lowering/target_fields.rs"]
 mod target_fields;
+#[path = "lowering/target_validation.rs"]
+mod target_validation;
 #[path = "lowering/targets.rs"]
 mod targets;
 #[path = "lowering/traversal.rs"]

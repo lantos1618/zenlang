@@ -1,5 +1,7 @@
 use super::*;
 
+mod target_helpers;
+
 #[test]
 fn build_graph_dsl_parsing_uses_enum_static_tables() {
     let dsl_root = read("src/build_graph/lowering/dsl.rs");
@@ -34,34 +36,6 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
             "build graph DSL spelling should parse through enum static tables: {required}"
         );
     }
-}
-
-#[test]
-fn build_target_field_spelling_lives_in_focused_helper() {
-    let dsl = read("src/build_graph/lowering/dsl.rs");
-    let target_fields = read("src/build_graph/lowering/dsl/target_fields.rs");
-
-    assert!(
-        !dsl.contains("enum BuildTargetField"),
-        "build graph DSL root should not own target field enum spelling"
-    );
-    for required in [
-        "pub(in crate::build_graph) enum BuildTargetField",
-        "const ALL: &[BuildTargetField]",
-        ".find(|field| field.as_str() == value)",
-        "impl fmt::Display for BuildTargetField",
-        "impl FromStr for BuildTargetField",
-    ] {
-        assert!(
-            target_fields.contains(required),
-            "target field spelling should live in focused helper: {required}"
-        );
-    }
-    assert!(
-        dsl.contains("mod target_fields;")
-            && dsl.contains("pub(super) use target_fields::BuildTargetField;"),
-        "build graph DSL root should load and re-export target field spelling"
-    );
 }
 
 #[test]
@@ -139,34 +113,6 @@ fn build_graph_json_output_lives_in_focused_helper() {
         root.contains("mod json;"),
         "build graph root should include focused JSON output helper"
     );
-}
-
-#[test]
-fn build_target_field_extraction_lives_in_focused_helper() {
-    let targets = read("src/build_graph/lowering/targets.rs");
-    let fields = read("src/build_graph/lowering/target_fields.rs");
-
-    assert!(
-        targets.lines().count() < 220,
-        "build target construction should stay focused on target shapes"
-    );
-    for helper in [
-        "required_string_field",
-        "required_one_of_string_fields",
-        "optional_string_field",
-        "required_string_array_field",
-        "optional_string_array_field",
-        "field_value",
-    ] {
-        assert!(
-            !targets.contains(&format!("fn {helper}")),
-            "build target field extraction should live in target_fields.rs: {helper}"
-        );
-        assert!(
-            fields.contains(&format!("fn {helper}")),
-            "target_fields.rs should own build target field extraction: {helper}"
-        );
-    }
 }
 
 #[test]
