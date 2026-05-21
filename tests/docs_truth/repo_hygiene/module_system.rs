@@ -141,3 +141,35 @@ fn graph_loading_export_lookup_lives_in_focused_helper() {
         "graph loading should import exported-symbol helpers explicitly"
     );
 }
+
+#[test]
+fn module_graph_stdlib_gate_sketch_tests_live_in_focused_helper() {
+    let graph_loading = read("src/module_system/tests/graph_loading.rs");
+    let stdlib_gates = read("src/module_system/tests/graph_loading/stdlib_gates.rs");
+
+    for helper in [
+        "assert_graph_stdlib_import_is_gated_before_loading_sketch",
+        "module_graph_gates_stdlib_actor_framework_import_before_loading_sketch",
+        "module_graph_gates_stdlib_allocator_import_before_loading_sketch",
+        "module_graph_gates_stdlib_async_runtime_import_before_loading_sketch",
+        "module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch",
+    ] {
+        assert!(
+            !graph_loading.contains(&format!("fn {helper}")),
+            "module graph loading tests should not own stdlib gate sketch helper: {helper}"
+        );
+        assert!(
+            stdlib_gates.contains(&format!("fn {helper}")),
+            "stdlib gate sketch test should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        graph_loading.lines().count() < 200,
+        "graph_loading.rs tests should stay focused on graph loading behavior"
+    );
+    assert!(
+        graph_loading.contains("mod stdlib_gates;"),
+        "graph_loading.rs should include focused stdlib gate sketch tests"
+    );
+}
