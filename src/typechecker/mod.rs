@@ -34,6 +34,7 @@ mod monomorphize_inference;
 mod monomorphize_names;
 mod monomorphize_specialized_types;
 mod monomorphize_substitution;
+mod monomorphize_type_refs;
 mod monomorphize_types;
 mod patterns;
 mod program_checking;
