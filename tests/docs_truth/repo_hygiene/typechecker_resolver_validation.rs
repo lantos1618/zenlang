@@ -1,6 +1,7 @@
 use super::*;
 
 mod focused_modules;
+mod local_traversal;
 mod support_helpers;
 
 #[test]

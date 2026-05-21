@@ -18,6 +18,7 @@ include!("resolver_validation/imports_source_type_methods.rs");
 include!("resolver_validation/imported_method_seeding.rs");
 include!("resolver_validation/symbols_locals.rs");
 include!("resolver_validation/local_traversal.rs");
+include!("resolver_validation/statement_locals.rs");
 include!("resolver_validation/pattern_locals.rs");
 include!("resolver_validation/metadata_core.rs");
 include!("resolver_validation/metadata_absence.rs");
