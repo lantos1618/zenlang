@@ -62,6 +62,38 @@ fn typechecker_resolver_callable_replay_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_type_reference_replay_lives_in_focused_helper() {
+    let replay_kinds =
+        read("src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs");
+    let type_references =
+        read("src/typechecker/declaration_collection_resolver_tasks/type_references.rs");
+
+    for helper in [
+        "collect_resolver_type_reference_validation_tasks",
+        "push_resolver_type_reference_validation_task",
+    ] {
+        assert!(
+            !replay_kinds.contains(&format!("fn {helper}")),
+            "resolver replay kinds should not own fallback type-reference helper: {helper}"
+        );
+        assert!(
+            type_references.contains(&format!("fn {helper}")),
+            "resolver type-reference replay should live in focused helper: {helper}"
+        );
+    }
+
+    let root = read("src/typechecker/declaration_collection_resolver_tasks.rs");
+    assert!(
+        root.contains("mod type_references;"),
+        "resolver declaration collection should load focused type-reference replay module"
+    );
+    assert!(
+        replay_kinds.lines().count() < 180,
+        "resolver replay kinds should stay focused on metadata replay dispatch"
+    );
+}
+
+#[test]
 fn declaration_callable_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/declaration_tasks.rs");
     let callables = read("src/typechecker/declaration_tasks_callables.rs");
