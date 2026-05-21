@@ -3,6 +3,9 @@ use crate::error::Diagnostic;
 
 use super::*;
 
+mod control_flow;
+pub(super) use control_flow::{IfOrWhileExprRef, RangeExprRef};
+
 pub(super) struct BinaryExprRef<'a> {
     pub(super) left: &'a Expression,
     pub(super) right: &'a Expression,
@@ -11,17 +14,6 @@ pub(super) struct BinaryExprRef<'a> {
 pub(super) struct IndexExprRef<'a> {
     pub(super) object: &'a Expression,
     pub(super) index: &'a Expression,
-}
-
-pub(super) struct IfOrWhileExprRef<'a> {
-    pub(super) condition: &'a Expression,
-    pub(super) body: &'a Expression,
-    pub(super) else_body: Option<&'a Expression>,
-}
-
-pub(super) struct RangeExprRef<'a> {
-    pub(super) start: &'a Expression,
-    pub(super) end: &'a Expression,
 }
 
 impl Resolver {
@@ -98,43 +90,6 @@ impl Resolver {
         );
     }
 
-    pub(super) fn validate_if_or_while_expr_refs(
-        &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
-        expr: IfOrWhileExprRef<'_>,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
-    ) {
-        self.validate_expr_refs(
-            table,
-            type_params,
-            expr.condition,
-            locals,
-            allow_self_type,
-            diagnostics,
-        );
-        self.validate_child_scope_expr_refs(
-            table,
-            type_params,
-            expr.body,
-            locals,
-            allow_self_type,
-            diagnostics,
-        );
-        if let Some(else_body) = expr.else_body {
-            self.validate_child_scope_expr_refs(
-                table,
-                type_params,
-                else_body,
-                locals,
-                allow_self_type,
-                diagnostics,
-            );
-        }
-    }
-
     pub(super) fn validate_string_interpolation_refs(
         &self,
         table: &mut SymbolTable,
@@ -156,51 +111,5 @@ impl Resolver {
                 );
             }
         }
-    }
-
-    pub(super) fn validate_range_expr_refs(
-        &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
-        expr: RangeExprRef<'_>,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
-    ) {
-        self.validate_expr_refs(
-            table,
-            type_params,
-            expr.start,
-            locals,
-            allow_self_type,
-            diagnostics,
-        );
-        self.validate_expr_refs(
-            table,
-            type_params,
-            expr.end,
-            locals,
-            allow_self_type,
-            diagnostics,
-        );
-    }
-
-    pub(super) fn validate_defer_expr_refs(
-        &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
-        expr: &Expression,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
-    ) {
-        self.validate_expr_refs(
-            table,
-            type_params,
-            expr,
-            locals,
-            allow_self_type,
-            diagnostics,
-        );
     }
 }
