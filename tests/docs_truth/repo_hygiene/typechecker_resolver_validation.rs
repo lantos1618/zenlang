@@ -88,6 +88,33 @@ fn typechecker_resolver_expected_value_symbols_live_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_local_scope_support_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation_support.rs");
+    let field_variant = read("src/typechecker/resolver_validation_support/field_variant_scope.rs");
+    let local_scope = read("src/typechecker/resolver_validation_support/local_scope.rs");
+
+    for helper in ["ResolverScopeCursor", "ResolverLocalScope"] {
+        assert!(
+            !field_variant.contains(&format!("struct {helper}")),
+            "field_variant_scope.rs should not own resolver local scope helper: {helper}"
+        );
+        assert!(
+            local_scope.contains(&format!("struct {helper}")),
+            "resolver local scope helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        field_variant.lines().count() < 240,
+        "field/variant metadata support should stay focused on metadata helpers"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation_support/local_scope.rs\");"),
+        "resolver validation support should include focused local-scope helper"
+    );
+}
+
+#[test]
 fn typechecker_resolver_expected_formatting_lives_in_focused_helper() {
     let root = read("src/typechecker/resolver_validation_support.rs");
     let helpers = read("src/typechecker/resolver_validation_support/expected_helpers.rs");
