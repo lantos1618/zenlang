@@ -98,3 +98,62 @@ main = () i32 {
     );
     assert_eq!(encoded.ty, Type::I32);
 }
+
+#[test]
+fn assignment_target_disambiguates_behavior_method_call() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
+}
+
+Point.implements(Json<i32>) {
+    encode = (value: Point) i32 { value.x }
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    encoded ::= 0
+    encoded = point.encode()
+    encoded
+}
+"#,
+    );
+
+    let typed = TypeChecker::new()
+        .check_program(&program)
+        .expect("assignment target type should disambiguate behavior method call");
+    let main = typed
+        .functions
+        .iter()
+        .find(|function| function.name == "main")
+        .expect("main function");
+    let assignment = main
+        .body
+        .statements
+        .iter()
+        .find_map(|statement| match &statement.kind {
+            TypedStatementKind::Expression(TypedExpression {
+                kind: TypedExprKind::Assign { value, .. },
+                ..
+            }) => Some(value.as_ref()),
+            _ => None,
+        })
+        .expect("encoded assignment");
+
+    assert!(
+        matches!(
+            &assignment.kind,
+            TypedExprKind::FunctionCall { function, .. }
+                if function == "Point.encode__Json_i32"
+        ),
+        "expected assignment target to select Json<i32> behavior method, got {assignment:?}"
+    );
+    assert_eq!(assignment.ty, Type::I32);
+}

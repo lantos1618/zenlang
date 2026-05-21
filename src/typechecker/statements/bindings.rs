@@ -13,6 +13,11 @@ impl TypeChecker {
         mutable: bool,
         span: &Span,
     ) -> Result<TypedStatement, Diagnostic> {
+        let reassignment_info = if !mutable && ty.is_none() {
+            self.lookup_var_info(name).cloned()
+        } else {
+            None
+        };
         let annotation_valid = ty
             .as_ref()
             .is_none_or(|t| self.generic_type_annotation_arities_valid(t));
@@ -25,6 +30,7 @@ impl TypeChecker {
         });
         let contextual_type = annotated_type
             .as_ref()
+            .or_else(|| reassignment_info.as_ref().map(|info| &info.ty))
             .filter(|ty| **ty != Type::Unknown)
             .cloned();
 
@@ -50,8 +56,7 @@ impl TypeChecker {
             ));
         }
 
-        if !mutable && ty.is_none() && self.lookup_var_info(name).is_some() {
-            let target_info = self.lookup_var_info(name).cloned().expect("checked above");
+        if let Some(target_info) = reassignment_info {
             self.check_assignment_target(
                 name,
                 &target_info.ty,
@@ -95,7 +100,12 @@ impl TypeChecker {
         span: &Span,
     ) -> Result<TypedStatement, Diagnostic> {
         let typed_target = self.check_expr(target)?;
-        let typed_value = self.check_expr(value)?;
+        let contextual_type = (typed_target.ty != Type::Unknown).then(|| typed_target.ty.clone());
+        let saved_return_type = self.current_return_type.take();
+        self.current_return_type = contextual_type;
+        let typed_value = self.check_expr(value);
+        self.current_return_type = saved_return_type;
+        let typed_value = typed_value?;
         if let TypedExprKind::Variable(name) = &typed_target.kind {
             if let Some(info) = self.lookup_var_info(name).cloned() {
                 self.check_assignment_target(name, &info.ty, info.mutable, &typed_value, span);
