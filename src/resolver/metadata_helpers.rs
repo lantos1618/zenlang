@@ -5,6 +5,12 @@ use super::symbol_table::{
     TypeParameterBoundRefMetadata, ValueSignatureMetadata,
 };
 
+mod behavior_refs;
+
+pub(super) use behavior_refs::{
+    behavior_ref_display, resolver_behavior_impl_method_key, resolver_method_key,
+};
+
 fn resolver_return_type_name(return_type: &Option<AstType>) -> String {
     return_type
         .as_ref()
@@ -94,66 +100,6 @@ fn type_param_bound_display(type_param: &TypeParam) -> Option<String> {
     })
 }
 
-pub(super) fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
-    if type_args.is_empty() {
-        behavior.to_string()
-    } else {
-        format!(
-            "{}<{}>",
-            behavior,
-            type_args
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
-pub(super) fn resolver_method_key(type_name: &str, method_name: &str) -> String {
-    format!("{type_name}.{method_name}")
-}
-
-pub(super) fn resolver_behavior_impl_method_key(
-    type_name: &str,
-    method_name: &str,
-    behavior: &str,
-    behavior_type_args: &[AstType],
-) -> String {
-    if behavior_type_args.is_empty() {
-        return resolver_method_key(type_name, method_name);
-    }
-
-    format!(
-        "{}__{}",
-        resolver_method_key(type_name, method_name),
-        behavior_ref_symbol_suffix(behavior, behavior_type_args)
-    )
-}
-
-pub(super) fn behavior_ref_symbol_suffix(behavior: &str, type_args: &[AstType]) -> String {
-    let mut parts = vec![sanitize_symbol_part(behavior)];
-    parts.extend(
-        type_args
-            .iter()
-            .map(AstType::display_name)
-            .map(|name| sanitize_symbol_part(&name)),
-    );
-    parts.join("_")
-}
-
-fn sanitize_symbol_part(name: &str) -> String {
-    let mut out = String::new();
-    for ch in name.chars() {
-        if ch.is_ascii_alphanumeric() {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    out
-}
-
 pub(super) fn resolver_field_types(fields: &[StructField]) -> Vec<(String, AstType, String)> {
     fields
         .iter()
@@ -201,31 +147,4 @@ pub(super) fn resolver_behavior_method_types(
             return_type: method.return_type.clone().unwrap_or(AstType::Void),
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn resolver_method_key_formats_type_qualified_method_name() {
-        assert_eq!(resolver_method_key("Point", "get"), "Point.get");
-    }
-
-    #[test]
-    fn resolver_behavior_impl_method_key_includes_generic_behavior_specialization() {
-        assert_eq!(
-            resolver_behavior_impl_method_key("Point", "encode", "Json", &[AstType::Str]),
-            "Point.encode__Json_StaticString"
-        );
-        assert_eq!(
-            resolver_behavior_impl_method_key(
-                "Point",
-                "encode",
-                "Json",
-                &[AstType::Named("Point".to_string())]
-            ),
-            "Point.encode__Json_Point"
-        );
-    }
 }
