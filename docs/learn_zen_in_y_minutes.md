@@ -1,8 +1,7 @@
 # Learn Zen In Y Minutes
-
 Zen is a systems language for explicit programs: declarations are prefix-first,
 blocks produce their final expression, pattern matching is the branch form,
-loops use explicit control handles, and ownership/effects are visible in types.
+loops use explicit control handles, and ownership/effects stay visible in types.
 
 Use this page as the quick language tour. Stable examples can be copied today.
 Preview examples cover gated surfaces: allocator-backed strings, sync/async
@@ -29,26 +28,22 @@ Declarations are prefix-first. The name being introduced or changed comes first:
 | Requirement | `Type.requires(Behavior)` |
 | Inheritance | `ChildBehavior.extends(ParentBehavior)` |
 
-## Values And Results
+## Values, Text, And Calls
 Local bindings are immutable by default. Use `::=` for mutable inferred locals;
-after that, plain `=` assigns a new value. Zen does not use a `return` keyword.
+plain `=` then assigns a new value. Zen does not use a `return` keyword.
 Function bodies, match arms, and nested blocks produce their final expression.
-
 Numeric conversions are explicit and prefix-first: `cast(value, Type)`.
-String literals are `StaticString`, not allocator-backed strings.
 
-## StaticString
+String literals are `StaticString`, not allocator-backed strings.
 `StaticString` is baked into the program: static bytes plus a fixed byte count
 known after compilation. Passing it around copies a pointer-and-length view into
-program storage. It does not allocate, resize, free, or transfer heap ownership.
+program storage; it does not allocate, resize, free, or transfer heap ownership.
 
-## Dynamic String Preview
 `String<A>` is preview syntax for owned runtime text. It can grow or be
 released, so the owner must carry allocator state. A literal such as `"Zen"`
 never silently becomes `String<A>`; runtime text construction belongs on an
 allocator-aware API.
 
-## Calls, Structs, And Data
 `value.method(args)` and `method(value, args)` are call-site spellings for the
 same attached function, not alternate declaration forms. Struct literals name
 fields explicitly; field access uses dot syntax.
@@ -70,7 +65,6 @@ The `?` operator is the pattern-match form for bools, enums, `Option`, and
 
 ## Result And Error Handling
 Zen models failure with data. There are no exceptions and no null.
-
 Nested generic types are written directly, such as
 `Result<Option<i32>, StaticString>`.
 
@@ -80,11 +74,9 @@ they need a capability.
 
 ```zen
 Display: behavior { display: (Self) StaticString }
-
 Point.implements(Display) {
     display = (self: Point) StaticString { "Point" }
 }
-
 show<T: Display> = (value: T) StaticString {
     value.display()
 }
@@ -104,7 +96,6 @@ Counted loop:
 sum_to = (limit: i32) i32 {
     total ::= 0
     i ::= 0
-
     loop((l) {
         i > limit ?
             | true { l.done() }
@@ -114,7 +105,6 @@ sum_to = (limit: i32) i32 {
                 l.next()
             }
     })
-
     total
 }
 ```
@@ -128,7 +118,6 @@ loop((outer) {
             | true { outer.done() }
             | false { inner.next() }
     })
-
     outer.next()
 })
 ```
@@ -188,13 +177,9 @@ is complete now; `Task<Result<...>>` completes later at a scheduler boundary.
 
 ```zen
 Buffer<T, A: Allocator<T, Sync>>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
-
 make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
     allocator.alloc(len) ?
-        | Ok(ptr) {
-            buffer = Buffer<T, A> { ptr: ptr, len: len, capacity: len, allocator: allocator }
-            Result<Buffer<T, A>, AllocError>.Ok(buffer)
-        }
+        | Ok(ptr) { Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> { ptr: ptr, len: len, capacity: len, allocator: allocator }) }
         | Err(error) { Result<Buffer<T, A>, AllocError>.Err(error) }
 }
 ```
@@ -231,18 +216,11 @@ contracts are promoted.
 { io } = std
 Display: behavior { display: (Self) StaticString }
 Point: { x: i32, y: i32 }
-
-Point.sum = (self: Point) i32 {
-    self.x + self.y
-}
-
+Point.sum = (self: Point) i32 { self.x + self.y }
 Point.implements(Display) {
     display = (self: Point) StaticString { "Point" }
 }
-
-show<T: Display> = (value: T) StaticString {
-    value.display()
-}
+show<T: Display> = (value: T) StaticString { value.display() }
 main = () i32 {
     point = Point { x: 20, y: 22 }
     io.println("${show(point)}: ${point.sum()}")

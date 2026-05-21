@@ -1,18 +1,16 @@
 # Zen v1 Specification Draft
 
-Status: v1 draft. This document is normative for intended v1 behavior; the
-feature matrix controls what the rewrite compiler may advertise, and exhaustive
-proof belongs in tests, golden fixtures, and git history.
+Status: v1 draft. This document is normative for intended v1 behavior; the feature
+matrix controls compiler claims, while proof belongs in tests, fixtures, and history.
 
 ## Syntax Contract
 The active implementation is the rewrite compiler:
 `source -> tokens -> AST -> module loader -> typechecker -> typed AST -> C backend -> cc`.
 Implemented syntax is limited to forms covered by `tests/zen` and Rust tests:
-declarations, calls, imports, bindings, structs, enums, field access,
-method-style calls, final-expression results, prefix loops, `defer`, casts,
-string interpolation, and parser/codegen-supported `?` arms. Unsupported
-spec-like constructs stay gated until parser, resolver, typechecker, codegen,
-diagnostics, JSON, and public examples agree on the shape.
+declarations, calls, imports, bindings, structs, enums, field access, method-style
+calls, final-expression results, prefix loops, `defer`, casts, string interpolation,
+and parser/codegen-supported `?` arms. Unsupported spec-like constructs stay gated
+until parser, resolver, typechecker, codegen, diagnostics, JSON, and public examples agree.
 
 Developer UX and Agent UX are product requirements, not polish. The v1 surface
 should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
@@ -50,13 +48,12 @@ advertised as implemented.
 
 ## Type, Module, ABI, Error, Effect, And Comptime Decisions
 - `StaticString` is baked into the program. It denotes literal/static text with
-  stable storage and compile-time length in the generated runtime layout.
-  The allocator-backed `String` type is owned, dynamic text and carries allocator
-  identity before it can be promoted. String literals do not implicitly allocate
-  or coerce into `String`; dynamic `String` construction must use an explicit
-  allocator-aware path once promoted. String interpolation currently returns a
-  `StaticString`-shaped non-owning view, but only literal text is guaranteed to
-  be baked program storage; interpolation must not imply allocator-backed
+  stable storage and compile-time length in the generated runtime layout. The
+  allocator-backed `String` type is owned, dynamic text and carries allocator identity
+  before promotion. String literals do not implicitly allocate or coerce into `String`;
+  dynamic `String` construction must use an explicit allocator-aware path. String
+  interpolation currently returns a `StaticString`-shaped non-owning view, but only literal text is guaranteed
+  to be baked program storage; interpolation must not imply allocator-backed
   `String` construction. Source-level `String` use currently reports a gated
   allocator-backed text diagnostic, including the generic nested case pinned by
   `emit_json_diagnostics_generic_dynamic_string_gate_schema_matches_golden`.
@@ -65,15 +62,11 @@ advertised as implemented.
   checked task, queue, scheduler, yield, and await-like APIs. `async task enqueue`
   and `async yield` builtins are gated. Evidence anchors:
   `async_scheduler_intrinsics_are_rejected_as_gated_not_unknown`,
-  `stdlib_async_runtime_import_is_gated_before_loading_sketch`,
-  `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`,
-  `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`,
-  `stdlib_sync_runtime_import_is_gated_before_loading_sketch`,
-  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`,
-  `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`,
-  `atomic_intrinsics_are_rejected_as_effect_gates`, `@builtin.atomic_load`,
-  `@builtin.atomic_store`, `@builtin.atomic_add`, `@builtin.atomic_sub`,
-  `@builtin.atomic_cas`, `@builtin.atomic_xchg`, and `@builtin.fence`.
+  `stdlib_async_runtime_import_is_gated_before_loading_sketch`, `module_graph_gates_stdlib_async_runtime_import_before_loading_sketch`,
+  `emit_json_diagnostics_async_runtime_import_gate_schema_matches_golden`, `stdlib_sync_runtime_import_is_gated_before_loading_sketch`,
+  `module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch`, `emit_json_diagnostics_sync_runtime_import_gate_schema_matches_golden`,
+  `atomic_intrinsics_are_rejected_as_effect_gates`, `@builtin.atomic_load`, `@builtin.atomic_store`,
+  `@builtin.atomic_add`, `@builtin.atomic_sub`, `@builtin.atomic_cas`, `@builtin.atomic_xchg`, and `@builtin.fence`.
 - `Typed allocators`: gated. `Allocator<T, Sync>` and `Allocator<T, Async>` are
   distinct typed allocator modes. Raw allocation and byte-memory intrinsics are
   gated until ownership and effect semantics exist. Evidence anchors:
@@ -176,8 +169,7 @@ scripts using undeclared host side effects are rejected.
 | Formatter, package manager, alternate backends | removed | Reintroduce only with tests and binaries |
 
 ## Required Test Backlog
-Every remaining v1 effect/type-match/allocator/actor/IR claim needs at least one
-Planned Positive Test and one Planned Negative Test before implementation.
+Every remaining v1 effect/type-match/allocator/actor/IR claim needs at least one Planned Positive Test and one Planned Negative Test before implementation.
 
 | Area | Planned Positive Test | Planned Negative Test |
 |---|---|---|
@@ -193,5 +185,4 @@ Evidence: `parser::tests::parse_generated_behavior_derive_association`, `resolve
 
 ## Stdlib Gate
 Files under `stdlib/` are experimental unless a test proves they parse, typecheck,
-and build through the same compiler path as user modules. Aspirational stdlib
-APIs must not be described as implemented until promoted by tests.
+and build through the same compiler path as user modules. Aspirational stdlib APIs must not be described as implemented until promoted by tests.
