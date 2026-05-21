@@ -128,6 +128,7 @@ fn parser_module_roots_use_owned_root_enum() {
     }
 
     let keywords = read("src/parser/keywords.rs");
+    let keyword_module_roots = read("src/parser/keywords/module_roots.rs");
     for required in [
         "enum ParserModuleRoot",
         "const ALL: &[ParserModuleRoot]",
@@ -138,10 +139,40 @@ fn parser_module_roots_use_owned_root_enum() {
     ] {
         assert!(
             keywords.contains(required)
+                || keyword_module_roots.contains(required)
                 || module_roots.contains(required)
                 || read("src/parser/atoms.rs").contains(required)
                 || read("src/parser/import_declarations.rs").contains(required),
             "parser module root spelling should live in ParserModuleRoot: {required}"
+        );
+    }
+}
+
+#[test]
+fn parser_module_root_spelling_lives_in_focused_keyword_helper() {
+    let keywords = read("src/parser/keywords.rs");
+    let module_roots = read("src/parser/keywords/module_roots.rs");
+
+    assert!(
+        !keywords.contains("enum ParserModuleRoot"),
+        "parser keyword root should not own module-root spelling"
+    );
+    assert!(
+        keywords.contains("mod module_roots;")
+            && keywords.contains("pub(super) use module_roots::ParserModuleRoot;"),
+        "parser keyword root should load and re-export the focused module-root helper"
+    );
+
+    for required in [
+        "enum ParserModuleRoot",
+        "const ALL: &[ParserModuleRoot]",
+        "impl FromStr for ParserModuleRoot",
+        ".find(|root| root.as_str() == value)",
+        "fn join_module_parts",
+    ] {
+        assert!(
+            module_roots.contains(required),
+            "parser module-root spelling should live in focused keyword helper: {required}"
         );
     }
 }
