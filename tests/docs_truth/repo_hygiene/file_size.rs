@@ -63,6 +63,16 @@ fn zen_source_files_stay_below_cleanup_threshold() {
 }
 
 #[test]
+fn resolver_validation_docs_truth_stays_split_across_focused_modules() {
+    let root = read("tests/docs_truth/repo_hygiene/typechecker_resolver_validation.rs");
+
+    assert!(
+        root.lines().count() < 260,
+        "typechecker resolver-validation docs-truth guards should stay split across focused modules"
+    );
+}
+
+#[test]
 fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
     let helper = read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers.rs");
     let queue_helper = read("src/typechecker/tests/resolver_metadata/queue_selection.rs");
