@@ -9,8 +9,7 @@ Preview examples cover gated surfaces: allocator-backed strings, sync/async
 effects, raw memory, actors, and comptime type matching.
 
 ## The Shape
-Declarations are prefix-first. The name being introduced or changed comes
-first:
+Declarations are prefix-first. The name being introduced or changed comes first:
 
 | Need | Spell it like this |
 | --- | --- |
@@ -31,29 +30,9 @@ first:
 | Inheritance | `ChildBehavior.extends(ParentBehavior)` |
 
 ## Values And Results
-```zen
-main = () i32 {
-    answer = 42
-    label: StaticString = "zen"
-    count ::= 0
-    count = count + 1
-    answer + count
-}
-```
-
 Local bindings are immutable by default. Use `::=` for mutable inferred locals;
-after that, plain `=` assigns a new value.
-
-Zen does not use a `return` keyword. Function bodies, match arms, and nested
-blocks produce their final expression.
-
-```zen
-max = (a: i32, b: i32) i32 {
-    a > b ?
-        | true { a }
-        | false { b }
-}
-```
+after that, plain `=` assigns a new value. Zen does not use a `return` keyword.
+Function bodies, match arms, and nested blocks produce their final expression.
 
 Numeric conversions are explicit and prefix-first: `cast(value, Type)`.
 String literals are `StaticString`, not allocator-backed strings.
@@ -76,7 +55,6 @@ fields explicitly; field access uses dot syntax.
 
 ## Enums And Matching
 ```zen
-Direction: North, South, East, West
 Option<T>: None, Some(T)
 Result<T, E>: Ok(T), Err(E)
 
@@ -92,14 +70,6 @@ The `?` operator is the pattern-match form for bools, enums, `Option`, and
 
 ## Result And Error Handling
 Zen models failure with data. There are no exceptions and no null.
-
-```zen
-divide = (a: f64, b: f64) Result<f64, StaticString> {
-    b == 0.0 ?
-        | true { Result<f64, StaticString>.Err("division by zero") }
-        | false { Result<f64, StaticString>.Ok(a / b) }
-}
-```
 
 Nested generic types are written directly, such as
 `Result<Option<i32>, StaticString>`.
@@ -199,14 +169,6 @@ is no `async fn` spelling. Sync work returns checked data now. Async work
 returns task-shaped data.
 
 ```zen
-read_now = (source: Source, allocator: Allocator<u8, Sync>) Result<Bytes<u8>, IoError> {
-    source.read_all(allocator)
-}
-
-read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes<u8>, IoError>> {
-    source.read_all_async(allocator)
-}
-
 Allocator<T, Sync>: behavior { alloc: (Self, count: usize) Result<RawPtr<T>, AllocError> }
 Allocator<T, Async>: behavior { alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>> }
 ```
@@ -223,7 +185,6 @@ Read the outer type first:
 
 There is no hidden conversion between sync and async allocation. `Result<...>`
 is complete now; `Task<Result<...>>` completes later at a scheduler boundary.
-Allocator-backed construction carries the allocator through the owner:
 
 ```zen
 Buffer<T, A: Allocator<T, Sync>>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
@@ -268,9 +229,7 @@ contracts are promoted.
 ## One Page Example
 ```zen
 { io } = std
-
 Display: behavior { display: (Self) StaticString }
-
 Point: { x: i32, y: i32 }
 
 Point.sum = (self: Point) i32 {
@@ -284,7 +243,6 @@ Point.implements(Display) {
 show<T: Display> = (value: T) StaticString {
     value.display()
 }
-
 main = () i32 {
     point = Point { x: 20, y: 22 }
     io.println("${show(point)}: ${point.sum()}")
