@@ -45,87 +45,14 @@ impl TypeChecker {
                     );
                     self.require_resolver_callable_locals(symbols, params, body, &mut scope_cursor);
                 }
-                Declaration::Struct {
-                    name,
-                    type_params,
-                    fields,
-                    public,
-                    span,
-                    ..
-                } => {
-                    if self
-                        .require_resolver_struct_symbol(
-                            symbols,
-                            name,
-                            expected_struct_symbol(type_params, fields, *public),
-                            *span,
-                        )
-                        .is_none()
-                    {
-                        continue;
-                    };
-                    for field in fields {
-                        if let Some(default) = &field.default {
-                            self.require_resolver_scoped_expr_locals(
-                                symbols,
-                                default,
-                                &mut scope_cursor,
-                            );
-                        }
-                    }
-                }
-                Declaration::Enum {
-                    name,
-                    type_params,
-                    variants,
-                    public,
-                    span,
-                    ..
-                } => {
-                    self.require_resolver_enum_symbol(
+                Declaration::Struct { .. }
+                | Declaration::Enum { .. }
+                | Declaration::Behavior { .. } => {
+                    self.validate_resolver_type_declaration_entry(
                         symbols,
-                        name,
-                        expected_enum_symbol(type_params, variants, *public),
-                        *span,
+                        decl,
+                        &mut scope_cursor,
                     );
-                    for variant in variants {
-                        self.require_resolver_variant_symbol(
-                            symbols,
-                            &variant.name,
-                            expected_variant_symbol(name, *public, &variant.payload),
-                            variant.span,
-                        );
-                    }
-                }
-                Declaration::Behavior {
-                    name,
-                    type_params,
-                    methods,
-                    public,
-                    span,
-                    ..
-                } => {
-                    if self
-                        .require_resolver_behavior_symbol(
-                            symbols,
-                            name,
-                            expected_behavior_symbol(type_params, methods, *public),
-                            *span,
-                        )
-                        .is_none()
-                    {
-                        continue;
-                    };
-                    for method in methods {
-                        if let Some(default_body) = &method.default_body {
-                            self.require_resolver_callable_locals(
-                                symbols,
-                                &method.params,
-                                default_body,
-                                &mut scope_cursor,
-                            );
-                        }
-                    }
                 }
                 Declaration::Import {
                     names,
