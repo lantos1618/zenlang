@@ -89,6 +89,30 @@ fn stdlib_path_resolution_lives_in_focused_helper() {
 }
 
 #[test]
+fn imported_declaration_selection_lives_in_focused_helper() {
+    let import_resolution = read("src/module_system/import_resolution.rs");
+    let imported_declarations =
+        read("src/module_system/import_resolution/imported_declarations.rs");
+
+    assert!(
+        !import_resolution.contains("fn collect_imported_declarations"),
+        "import routing dispatcher should not own imported declaration selection"
+    );
+    assert!(
+        imported_declarations.contains("fn collect_imported_declarations"),
+        "imported declaration selection should live in focused helper"
+    );
+    assert!(
+        import_resolution.lines().count() < 240,
+        "import routing dispatcher should stay focused on routing imports"
+    );
+    assert!(
+        import_resolution.contains("mod imported_declarations;"),
+        "import routing should load focused imported declaration helper"
+    );
+}
+
+#[test]
 fn graph_loading_export_lookup_lives_in_focused_helper() {
     let graph_loading = read("src/module_system/graph_loading.rs");
     let exported_symbols = read("src/module_system/graph_loading/exported_symbols.rs");
