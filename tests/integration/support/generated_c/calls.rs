@@ -19,17 +19,34 @@ pub fn assert_generated_c_calls_resolve_to_definitions(c_source: &str) {
 
 pub fn undefined_generated_c_calls(c_source: &str) -> Vec<String> {
     let definitions = c_function_definitions(c_source);
-    let function_pointer_bindings = c_function_pointer_bindings(c_source);
+    let mut function_pointer_bindings = Vec::new();
+    let mut function_body_depth = 0usize;
     let mut undefined = Vec::new();
 
     for line in c_source.lines() {
         let trimmed = line.trim();
+        if starts_c_function_body(trimmed) {
+            function_pointer_bindings = c_function_pointer_bindings(trimmed);
+            function_body_depth = brace_delta(trimmed, 0);
+            continue;
+        }
+
         if trimmed.is_empty()
             || trimmed.starts_with('#')
             || trimmed.starts_with("typedef ")
             || is_any_c_function_signature_line(trimmed)
         {
+            if function_body_depth > 0 {
+                function_body_depth = brace_delta(trimmed, function_body_depth);
+                if function_body_depth == 0 {
+                    function_pointer_bindings.clear();
+                }
+            }
             continue;
+        }
+
+        if function_body_depth > 0 {
+            collect_function_pointer_bindings_on_line(trimmed, &mut function_pointer_bindings);
         }
 
         for call in generated_c_calls_on_line(trimmed) {
@@ -40,9 +57,26 @@ pub fn undefined_generated_c_calls(c_source: &str) -> Vec<String> {
                 undefined.push(call);
             }
         }
+
+        if function_body_depth > 0 {
+            function_body_depth = brace_delta(trimmed, function_body_depth);
+            if function_body_depth == 0 {
+                function_pointer_bindings.clear();
+            }
+        }
     }
 
     undefined
+}
+
+fn starts_c_function_body(trimmed: &str) -> bool {
+    trimmed.ends_with('{') && is_any_c_function_signature_line(trimmed)
+}
+
+fn brace_delta(trimmed: &str, current: usize) -> usize {
+    let opens = trimmed.bytes().filter(|byte| *byte == b'{').count();
+    let closes = trimmed.bytes().filter(|byte| *byte == b'}').count();
+    current.saturating_add(opens).saturating_sub(closes)
 }
 
 fn is_any_c_function_signature_line(trimmed: &str) -> bool {
@@ -95,18 +129,9 @@ fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
     calls
 }
 
-fn c_function_pointer_bindings(c_source: &str) -> Vec<String> {
+fn c_function_pointer_bindings(line: &str) -> Vec<String> {
     let mut bindings = Vec::new();
-
-    for line in c_source.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("typedef ") {
-            continue;
-        }
-
-        collect_function_pointer_bindings_on_line(trimmed, &mut bindings);
-    }
-
+    collect_function_pointer_bindings_on_line(line, &mut bindings);
     bindings
 }
 
