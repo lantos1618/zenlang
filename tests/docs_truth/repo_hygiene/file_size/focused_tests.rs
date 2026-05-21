@@ -21,6 +21,36 @@ fn resolver_collection_type_metadata_tests_stay_split_by_responsibility() {
 }
 
 #[test]
+fn resolver_collection_generic_function_template_tests_stay_split_by_responsibility() {
+    let root = read(
+        "src/typechecker/tests/resolver_collection/function_method_templates/generic_functions.rs",
+    );
+    let integrity =
+        read("src/typechecker/tests/resolver_collection/function_method_templates/generic_functions/integrity.rs");
+
+    assert!(
+        root.lines().count() < 180,
+        "generic_functions.rs should stay focused on resolver-backed generic function metadata"
+    );
+    assert!(
+        root.contains("mod integrity;"),
+        "generic_functions.rs should include the focused integrity module"
+    );
+    assert!(
+        !root.contains("collect_declarations_with_symbols_preserves_generic_template_param_mutability_by_position"),
+        "generic function template integrity tests should live in integrity.rs"
+    );
+    assert!(
+        integrity.contains("collect_declarations_with_symbols_uses_resolver_generic_function_template_return_presence"),
+        "integrity.rs should cover resolver-backed return presence"
+    );
+    assert!(
+        integrity.contains("collect_declarations_with_symbols_ignores_stale_generic_template_param_names_for_mutability"),
+        "integrity.rs should cover positional mutability restoration"
+    );
+}
+
+#[test]
 fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
     let helper = read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers.rs");
     let queue_helper = read("src/typechecker/tests/resolver_metadata/queue_selection.rs");
