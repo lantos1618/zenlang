@@ -31,6 +31,46 @@ fn typechecker_resolver_expected_value_symbols_live_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_expected_behavior_methods_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation_support.rs");
+    let symbols = read("src/typechecker/resolver_validation_support/expected_symbols.rs");
+    let helpers = read("src/typechecker/resolver_validation_support/expected_helpers.rs");
+    let focused = read("src/typechecker/resolver_validation_support/expected_behavior_methods.rs");
+
+    for helper in [
+        "ExpectedBehaviorMethod",
+        "ExpectedBehaviorMethodMetadata",
+        "BehaviorMethodValidation",
+    ] {
+        assert!(
+            !symbols.contains(&format!("struct {helper}")),
+            "expected_symbols.rs should not own behavior-method helper: {helper}"
+        );
+        assert!(
+            focused.contains(&format!("struct {helper}")),
+            "expected behavior-method helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        !helpers.contains("fn expected_behavior_method_metadata"),
+        "expected_helpers.rs should not own behavior-method metadata construction"
+    );
+    assert!(
+        focused.contains("fn expected_behavior_method_metadata"),
+        "expected behavior-method metadata construction should live in focused helper"
+    );
+    assert!(
+        symbols.lines().count() < 150,
+        "expected_symbols.rs should stay focused on expected symbol structs"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation_support/expected_behavior_methods.rs\");"),
+        "resolver validation support should include focused expected behavior-method helpers"
+    );
+}
+
+#[test]
 fn typechecker_resolver_local_scope_support_lives_in_focused_helper() {
     let root = read("src/typechecker/resolver_validation_support.rs");
     let field_variant = read("src/typechecker/resolver_validation_support/field_variant_scope.rs");

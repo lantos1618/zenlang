@@ -1,6 +1,7 @@
 include!("resolver_validation_support/replay_tasks.rs");
 include!("resolver_validation_support/expected_type_parameters.rs");
 include!("resolver_validation_support/expected_value_symbols.rs");
+include!("resolver_validation_support/expected_behavior_methods.rs");
 include!("resolver_validation_support/expected_symbols.rs");
 include!("resolver_validation_support/absence_entries.rs");
 include!("resolver_validation_support/absence_diagnostics.rs");

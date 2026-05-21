@@ -94,16 +94,6 @@ fn expected_variant_name_metadata(variants: &[EnumVariant]) -> Vec<String> {
         .collect()
 }
 
-fn expected_behavior_method_metadata(
-    methods: &[ast::BehaviorMethod],
-) -> Vec<ExpectedBehaviorMethod> {
-    let mut expected = Vec::new();
-    for method in methods {
-        expected.push(ExpectedBehaviorMethod::new(method));
-    }
-    expected
-}
-
 fn expected_behavior_edge(behavior: &str, type_args: &[AstType]) -> ExpectedBehaviorEdge {
     ExpectedBehaviorEdge::new(behavior, type_args)
 }
