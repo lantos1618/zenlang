@@ -1,6 +1,60 @@
 use super::*;
 
 #[test]
+fn ast_and_symbols_json_graphs_live_in_focused_helpers() {
+    let ir_json = read("src/ir_json.rs");
+    let ast_graph = read("src/ir_json/ast_graph.rs");
+    let symbols = read("src/ir_json/symbols.rs");
+
+    for moved_schema_type in [
+        "struct AstJsonGraph",
+        "struct AstJsonModule",
+        "struct AstJsonImport",
+    ] {
+        assert!(
+            !ir_json.contains(moved_schema_type),
+            "top-level IR JSON dispatch should not own AST graph schema definitions: {moved_schema_type}"
+        );
+        assert!(
+            ast_graph.contains(moved_schema_type),
+            "AST graph JSON schema definitions should live in the focused AST helper: {moved_schema_type}"
+        );
+    }
+
+    for moved_schema_type in [
+        "struct SymbolsJsonGraph",
+        "struct SymbolsJsonModule",
+        "struct SymbolJson",
+    ] {
+        assert!(
+            !ir_json.contains(moved_schema_type),
+            "top-level IR JSON dispatch should not own symbols schema definitions: {moved_schema_type}"
+        );
+        assert!(
+            symbols.contains(moved_schema_type),
+            "symbols JSON schema definitions should live in the focused symbols helper: {moved_schema_type}"
+        );
+    }
+
+    assert!(
+        ast_graph.contains("pub(super) fn ast_graph_to_json"),
+        "AST graph JSON helper should own AST graph serialization entry point"
+    );
+    assert!(
+        symbols.contains("pub(super) fn symbols_graph_to_json"),
+        "symbols JSON helper should own symbols graph serialization entry point"
+    );
+    assert!(
+        ir_json.contains("mod ast_graph;") && ir_json.contains("mod symbols;"),
+        "IR JSON root should include focused AST and symbols helpers"
+    );
+    assert!(
+        ir_json.lines().count() < 120,
+        "ir_json.rs should stay focused on public JSON dispatch"
+    );
+}
+
+#[test]
 fn mir_json_schema_types_live_in_focused_helper() {
     let mir_lowering = read("src/ir_json/mir.rs");
     let mir_schema = read("src/ir_json/mir/schema.rs");
