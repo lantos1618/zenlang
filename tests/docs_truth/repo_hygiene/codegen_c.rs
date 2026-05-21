@@ -31,14 +31,29 @@ fn codegen_c_function_emission_lives_in_focused_helper() {
 #[test]
 fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
     let emit = read("src/codegen/c/emit.rs");
+    let statements = read("src/codegen/c/emit/statements.rs");
     let operators = read("src/codegen/c/operators.rs");
     let literals = read("src/codegen/c/literals.rs");
     let c_mod = read("src/codegen/c/mod.rs");
 
     assert!(
-        emit.lines().count() < 240,
-        "C expression emission should stay focused on expression routing"
+        emit.lines().count() < 170,
+        "C expression emission should stay focused on inline expression routing"
     );
+    assert!(
+        emit.contains("mod statements;"),
+        "C expression emission should load focused statement emission helper"
+    );
+    for helper in ["emit_block_body", "emit_statement", "emit_expr_to_stmt"] {
+        assert!(
+            !emit.contains(&format!("fn {helper}")),
+            "C inline expression emitter should not own statement helper: {helper}"
+        );
+        assert!(
+            statements.contains(&format!("fn {helper}")),
+            "C statement emission should live in focused helper: {helper}"
+        );
+    }
     for helper in ["fn c_binary_op", "fn c_unary_op"] {
         assert!(
             !emit.contains(helper),
