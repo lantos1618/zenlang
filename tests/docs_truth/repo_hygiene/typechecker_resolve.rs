@@ -64,3 +64,30 @@ fn typechecker_type_resolution_uses_named_and_generic_helpers() {
         "generic type branch should delegate to resolve_generic_type"
     );
 }
+
+#[test]
+fn generic_type_reference_walker_bounds_live_in_focused_helper() {
+    let root = read("src/typechecker/generic_type_reference_walker.rs");
+    let type_refs = read("src/typechecker/generic_type_reference_walker/type_refs.rs");
+
+    assert!(
+        root.lines().count() < 160,
+        "generic_type_reference_walker.rs should stay focused on public traversal entry points"
+    );
+    assert!(
+        root.contains("mod type_refs;"),
+        "generic type-reference walker should include the focused type_refs helper"
+    );
+    assert!(
+        !root.contains("fn validate_generic_type_ref_bounds_with_unknowns"),
+        "recursive generic type-ref bound validation should live in type_refs.rs"
+    );
+    assert!(
+        type_refs.contains("pub(super) fn validate_generic_type_ref_bounds_with_unknowns"),
+        "type_refs.rs should own recursive generic type-ref bound validation"
+    );
+    assert!(
+        type_refs.contains("fn is_known_named_type"),
+        "type_refs.rs should own named type lookup for generic type-ref validation"
+    );
+}
