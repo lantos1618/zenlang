@@ -31,3 +31,32 @@ fn typechecker_struct_default_validation_lives_in_focused_helper() {
         "typechecker should still load semantic validation root"
     );
 }
+
+#[test]
+fn typechecker_self_type_validation_tasks_live_in_focused_helper() {
+    let root = read("src/typechecker/self_type_validation.rs");
+    let tasks = read("src/typechecker/self_type_validation/tasks.rs");
+
+    for helper in [
+        "collect_self_type_context_validation_tasks",
+        "push_self_type_context_validation_task",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "self_type_validation.rs should not own self-type task collection helper: {helper}"
+        );
+        assert!(
+            tasks.contains(&format!("fn {helper}")),
+            "self-type task collection should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("mod tasks;"),
+        "self_type_validation.rs should load focused task collection helper"
+    );
+    assert!(
+        root.lines().count() < 230,
+        "self_type_validation.rs should stay focused on self-type validation"
+    );
+}
