@@ -148,3 +148,43 @@ fn typechecker_resolver_absence_diagnostics_live_in_focused_helper() {
         "resolver validation should include focused absence diagnostics"
     );
 }
+
+#[test]
+fn typechecker_resolver_import_absence_metadata_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let symbols_locals = read("src/typechecker/resolver_validation/symbols_locals.rs");
+    let import_absence = read("src/typechecker/resolver_validation/import_absence.rs");
+
+    assert!(
+        symbols_locals.lines().count() < 190,
+        "resolver symbol/local validation should stay focused on lookup and role validation"
+    );
+    assert!(
+        !symbols_locals.contains("fn validate_resolver_import_absent_declaration_metadata"),
+        "resolver symbol/local validation should not own import absence metadata"
+    );
+    assert!(
+        import_absence.contains("fn validate_resolver_import_absent_declaration_metadata"),
+        "import absence metadata validation should live in focused helper"
+    );
+
+    for required in [
+        "ValueSignatureAbsenceValidation::import_resolver_codes()",
+        "TypeParameterAbsenceValidation::import_resolver_codes()",
+        "FieldAbsenceValidation::import_resolver_codes()",
+        "VariantAbsenceValidation::import_resolver_codes()",
+        "BehaviorAssociationAbsenceValidation::import_resolver_codes()",
+        "BehaviorDeclarationAbsenceValidation::import_resolver_codes()",
+        "MutabilityAbsenceValidation::import_resolver_code()",
+    ] {
+        assert!(
+            import_absence.contains(required),
+            "import absence helper should keep resolver absence evidence: {required}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"resolver_validation/import_absence.rs\");"),
+        "resolver validation should include focused import absence metadata helper"
+    );
+}
