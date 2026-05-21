@@ -124,3 +124,47 @@ fn monomorphize_specialized_type_ref_reconstruction_lives_in_focused_helper() {
         "typechecker module should include the focused monomorphize_type_refs helper"
     );
 }
+
+#[test]
+fn monomorphize_generic_method_self_type_lives_in_focused_helper() {
+    let monomorphize = read("src/typechecker/monomorphize.rs");
+    let method_self = read("src/typechecker/monomorphize_method_self.rs");
+    let type_args = read("src/typechecker/monomorphize_type_args.rs");
+    let module = read("src/typechecker/mod.rs");
+
+    assert!(
+        monomorphize.lines().count() < 170,
+        "monomorphize.rs should stay focused on callable specialization"
+    );
+    for helper in ["generic_method_self_type", "generic_receiver_self_type"] {
+        assert!(
+            !monomorphize.contains(&format!("fn {helper}")),
+            "callable specialization should not own generic method Self helper: {helper}"
+        );
+        assert!(
+            method_self.contains(&format!("fn {helper}")),
+            "generic method Self reconstruction should live in focused helper: {helper}"
+        );
+    }
+    assert!(
+        module.contains("mod monomorphize_method_self;"),
+        "typechecker module should include focused generic method Self helper"
+    );
+    for helper in [
+        "reject_missing_generic_substitutions",
+        "type_param_substitutions",
+    ] {
+        assert!(
+            !monomorphize.contains(&format!("fn {helper}")),
+            "callable specialization should not own generic type-argument helper: {helper}"
+        );
+        assert!(
+            type_args.contains(&format!("fn {helper}")),
+            "generic type-argument substitution diagnostics should live in focused helper: {helper}"
+        );
+    }
+    assert!(
+        module.contains("mod monomorphize_type_args;"),
+        "typechecker module should include focused generic type-argument helper"
+    );
+}
