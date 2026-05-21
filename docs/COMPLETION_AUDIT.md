@@ -1,7 +1,6 @@
 # Completion Audit
 
 ## Objective Restatement
-
 Continue from recovered branch `codex/phase0-1-truth-gates` at recovery commit
 `183d140c` from 2026-05-12 08:18:35 UTC. Use checked-in docs, tests, and commits
 as evidence. Do not mark the objective complete while unresolved gaps remain.
@@ -17,19 +16,17 @@ as evidence. Do not mark the objective complete while unresolved gaps remain.
 | Preserve durable plan | `docs/PHASE_PLAN.md` records recovery, decisions, evidence, phase, and next slice. | active |
 
 ## Design Decisions Preserved
-
 Sync/Async are real effects; typed allocators are central; actors live in std
 first; AST/HIR traversal is tooling/metaprogramming; type matching and behavior
-association are separate; JSON is compiler-owned IR output; YAML is human-authored
-config/spec input; `build.zen` is deterministic comptime graph construction;
-`StaticString` is baked program data; allocator-backed `String` is dynamic memory;
-`Type.implements(Behavior)` covers non-generic explicit behavior associations.
-Dev UX and Agent UX target MoonBit-style toolchain integration, VS Code extension
-support, language server workflows, agent-readable diagnostics, project graph
-output, structured fix suggestions, and quiet normal branch pushes.
+association are separate; JSON is compiler-owned IR output; YAML is
+human-authored config/spec input; `build.zen` is deterministic comptime graph
+construction; `StaticString` is baked program data; allocator-backed `String` is
+dynamic memory; `Type.implements(Behavior)` covers non-generic explicit behavior associations.
+Dev UX and Agent UX target MoonBit-style toolchain integration,
+VS Code extension support, language server workflows, agent-readable diagnostics,
+project graph output, structured fix suggestions, and quiet normal branch pushes.
 
 ## Compressed Evidence Summary
-
 - Docs split by job: `README.md` pitches, `docs/learn_zen_in_y_minutes.md` teaches, and status lives here plus `docs/PHASE_PLAN.md`.
 - Repo shape is guarded by `tests/docs_truth`, `production_rust_files_stay_below_cleanup_threshold`, `zen_source_files_stay_below_cleanup_threshold`, and every tracked Rust source file.
 - Frontend/C-backend behavior is guarded by `docs/V1_SPEC.md`, `tests/zen`, generated-C checks, and integration tests.

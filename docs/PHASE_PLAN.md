@@ -1,23 +1,19 @@
 # Phase Plan
 
 ## Recovery Point
-Recovered branch: `codex/phase0-1-truth-gates`.
-Recovery commit: `183d140c` from 2026-05-12 08:18:35 UTC.
-Treat unpushed `/tmp` work after that commit as lost; continue from checked-in
-docs, tests, and commits only.
+Recovered branch `codex/phase0-1-truth-gates` at commit `183d140c`
+(2026-05-12 08:18:35 UTC). Treat unpushed `/tmp` work after that as lost;
+continue from checked-in docs, tests, and commits only.
 
 ## Design Decisions To Preserve
-- Sync/Async are real effects, not marker-only types.
-- typed allocators are central to allocation and effect decisions.
+- Sync/Async are real effects; typed allocators drive allocation/effect rules.
 - actors live in std first; no actor syntax is v1-stable yet.
 - AST/HIR traversal is tooling/metaprogramming, not core semantics.
 - type matching and behavior association are separate mechanisms.
-- JSON is compiler-owned IR output.
-- YAML is human-authored config/spec input.
+- JSON is compiler-owned IR output; YAML is human-authored config/spec input.
 - build.zen is deterministic comptime build graph construction.
 - `StaticString` is baked program data; allocator-backed `String` is dynamic.
-- `Type.implements(Behavior)` covers non-generic explicit behavior associations
-  until the solver supports advanced forms.
+- `Type.implements(Behavior)` covers non-generic explicit behavior associations.
 - Dev UX and Agent UX are product requirements, not polish.
 
 ## Dev UX And Agent UX Track
@@ -26,8 +22,8 @@ Required Dev UX: syntax/semantic diagnostics, go-to-definition, hover, completio
 Required Agent UX: agent-readable diagnostics with stable codes, spans, related locations, suggested_fixes, feature_gate metadata, CLI/editor-aligned JSON, Machine-readable project graph and symbol graph output, deterministic quiet commands, structured fix suggestions, retrieval-friendly docs, and quiet normal branch pushes.
 
 ## Compressed Evidence Map
-This is a capability index, not a changelog. Granular evidence belongs in tests,
-golden fixtures, and git history.
+This is a capability index, not a changelog; granular evidence belongs in tests,
+golden fixtures, and git history:
 
 - Phase 0 truth gates: README, contributor docs, stdlib, CI, release, old-spec quarantine, and docs shape are guarded by `tests/docs_truth`.
 - Phase 1 frontend and C-backend baseline: syntax and C execution are covered by `docs/V1_SPEC.md`, `tests/zen`, integration tests, and generated-C checks.
@@ -46,11 +42,11 @@ surfaces are implemented; continue closing proof gaps, keeping generated C
 consistent, and preventing large-file/slop regressions.
 
 ## Phase 5 Acceptance Evidence
-- generic enum specialization: `Option<T>`, `Result<T, E>`, nested results, duplicate variants, multi-file dependencies, executable fixtures, typed/HIR/MIR golden tests, and generated-C tests.
-- generic method specialization: generic, `Self`, type impl, enum, imported dependency, nested result cases, JSON golden tests, and method worklist generated-C checks.
-- worklist monomorphization: recursive functions/methods, imported transitive dependencies, deduped instantiations, and generated-C definition-count checks.
-- generated-C call/definition consistency: `compile_to_c_with_generated_call_check`, `undefined_generated_c_calls`, and duplicate-definition scans.
-- generic arity, inference, and bound diagnostics: E5000, E5001, E5002, and E6004 across unit, CLI, and JSON golden tests.
+generic enum specialization, generic method specialization, worklist monomorphization,
+generated-C call/definition consistency, and generic arity, inference, and bound diagnostics are covered by executable fixtures,
+typed/HIR/MIR JSON golden tests, generated-C scans, E5000/E5001/E5002/E6004
+diagnostics, `compile_to_c_with_generated_call_check`, and
+`undefined_generated_c_calls`.
 
 Non-Phase-5 gaps remain Dev UX, Agent UX, full LSP/editor workflows,
 allocator-backed dynamic strings, Sync/Async lowering, raw memory semantics,
