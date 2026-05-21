@@ -36,6 +36,7 @@ mod monomorphize_substitution;
 mod monomorphize_types;
 mod patterns;
 mod program_checking;
+mod program_globals;
 mod program_module_graph;
 mod resolve;
 mod resolve_binary_ops;
