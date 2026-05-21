@@ -71,3 +71,42 @@ fn cli_emit_json_modes_use_owned_mode_enum() {
         "emit-json usage should not duplicate the mode list as a raw string"
     );
 }
+
+#[test]
+fn cli_compiler_owned_json_boundaries_live_in_focused_helper() {
+    let cli = read("src/cli.rs");
+    let json_boundaries = read("src/cli/json_boundaries.rs");
+
+    for moved_helper in [
+        "is_build_zen_path",
+        "reject_build_zen_for_emit_json_mode",
+        "reject_hand_authored_json_for_emit",
+        "has_json_extension",
+    ] {
+        assert!(
+            !cli.contains(&format!("fn {moved_helper}")),
+            "cli command dispatch should not own JSON boundary helper: {moved_helper}"
+        );
+        assert!(
+            json_boundaries.contains(&format!("fn {moved_helper}")),
+            "JSON boundary helper should live in focused helper: {moved_helper}"
+        );
+    }
+
+    assert!(
+        !cli.contains("enum CompilerOwnedJsonBoundary"),
+        "cli command dispatch should not own compiler-owned JSON boundary variants"
+    );
+    assert!(
+        json_boundaries.contains("enum CompilerOwnedJsonBoundary"),
+        "compiler-owned JSON boundary variants should live in focused helper"
+    );
+    assert!(
+        cli.contains("mod json_boundaries;"),
+        "cli should load focused JSON boundary helper"
+    );
+    assert!(
+        cli.lines().count() < 170,
+        "cli.rs should stay focused on top-level command dispatch"
+    );
+}
