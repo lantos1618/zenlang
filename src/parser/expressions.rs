@@ -1,13 +1,12 @@
 use super::*;
-use crate::error::REMOVED_INFIX_AS_CAST_MESSAGE;
-use crate::parser::keywords::ParserPrefixKeyword;
 
+mod infix;
 mod suffixes;
+
+use infix::InfixParse;
 
 impl Parser {
     // ── Expressions (Pratt parser) ────────────────────────────
-    const REMOVED_AS_CAST_L_BP: u8 = 1;
-
     pub(super) fn parse_expression(&mut self) -> Result<Expression, CompileError> {
         self.parse_expr_bp(0)
     }
@@ -160,97 +159,16 @@ impl Parser {
                 _ => {}
             }
 
-            if matches!(
-                self.peek(),
-                Token::Identifier(name)
-                    if matches!(name.parse::<ParserPrefixKeyword>(), Ok(ParserPrefixKeyword::As))
-            ) {
-                if Self::REMOVED_AS_CAST_L_BP < min_bp {
-                    break;
-                }
-                self.advance();
-                self.parse_type()?;
-                return Err(CompileError::Syntax(
-                    REMOVED_INFIX_AS_CAST_MESSAGE.into(),
-                    Some(lhs.span().merge(self.prev_span())),
-                ));
-            }
-
-            // Infix binary operators
-            if let Some((l_bp, r_bp)) = infix_bp(self.peek()) {
-                if l_bp < min_bp {
-                    break;
-                }
-
-                let op = match self.peek() {
-                    Token::Plus => BinaryOp::Add,
-                    Token::Minus => BinaryOp::Sub,
-                    Token::Star => BinaryOp::Mul,
-                    Token::Slash => BinaryOp::Div,
-                    Token::Percent => BinaryOp::Mod,
-                    Token::Eq => BinaryOp::Eq,
-                    Token::NotEq => BinaryOp::NotEq,
-                    Token::Lt => BinaryOp::Lt,
-                    Token::Gt => BinaryOp::Gt,
-                    Token::LtEq => BinaryOp::LtEq,
-                    Token::GtEq => BinaryOp::GtEq,
-                    Token::And => BinaryOp::And,
-                    Token::Or => BinaryOp::Or,
-                    Token::BitAnd => BinaryOp::BitAnd,
-                    Token::Pipe => BinaryOp::BitOr,
-                    Token::BitXor => BinaryOp::BitXor,
-                    Token::ShiftLeft => BinaryOp::ShiftLeft,
-                    Token::ShiftRight => BinaryOp::ShiftRight,
-                    _ => break,
-                };
-
-                self.advance(); // consume operator
-                let rhs = self.parse_expr_bp(r_bp)?;
-                let span = lhs.span().merge(rhs.span());
-                lhs = Expression::BinaryOp {
-                    op,
-                    left: Box::new(lhs),
-                    right: Box::new(rhs),
-                    span,
-                };
-                continue;
-            }
-
-            // Range operators: .. and ..=
-            match self.peek() {
-                Token::DotDot => {
-                    let (l_bp, r_bp) = (3, 4);
-                    if l_bp < min_bp {
-                        break;
-                    }
-                    self.advance();
-                    let rhs = self.parse_expr_bp(r_bp)?;
-                    let span = lhs.span().merge(rhs.span());
-                    lhs = Expression::Range {
-                        start: Box::new(lhs),
-                        end: Box::new(rhs),
-                        inclusive: false,
-                        span,
-                    };
+            match self.parse_infix_or_range_expr(lhs, min_bp)? {
+                InfixParse::Parsed(next) => {
+                    lhs = next;
                     continue;
                 }
-                Token::DotDotEq => {
-                    let (l_bp, r_bp) = (3, 4);
-                    if l_bp < min_bp {
-                        break;
-                    }
-                    self.advance();
-                    let rhs = self.parse_expr_bp(r_bp)?;
-                    let span = lhs.span().merge(rhs.span());
-                    lhs = Expression::Range {
-                        start: Box::new(lhs),
-                        end: Box::new(rhs),
-                        inclusive: true,
-                        span,
-                    };
-                    continue;
+                InfixParse::Stop(current) => {
+                    lhs = current;
+                    break;
                 }
-                _ => {}
+                InfixParse::Continue(current) => lhs = current,
             }
 
             break;
