@@ -93,3 +93,33 @@ fn declaration_callable_tasks_live_in_focused_helper() {
         "declaration_tasks.rs should stay focused on shared declaration task wiring"
     );
 }
+
+#[test]
+fn declaration_type_reference_tasks_live_in_focused_helper() {
+    let root = read("src/typechecker/declaration_tasks.rs");
+    let type_refs = read("src/typechecker/declaration_tasks_type_references.rs");
+
+    for helper in [
+        "AstTypeReferenceValidationTask",
+        "SelfTypeContextValidationTask",
+        "ResolverTypeReferenceValidationTask",
+    ] {
+        assert!(
+            !root.contains(&format!("enum {helper}")),
+            "declaration_tasks.rs should not own type/self-reference task shape: {helper}"
+        );
+        assert!(
+            type_refs.contains(&format!("enum {helper}")),
+            "type/self-reference declaration task shape should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"declaration_tasks_type_references.rs\");"),
+        "declaration tasks should include focused type-reference task shapes"
+    );
+    assert!(
+        root.lines().count() < 170,
+        "declaration_tasks.rs should stay focused on shared declaration task bundles"
+    );
+}
