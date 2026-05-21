@@ -1,4 +1,5 @@
 mod declaration_checking;
+mod type_definition_lowering;
 
 use super::*;
 
