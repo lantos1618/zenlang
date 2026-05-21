@@ -13,6 +13,7 @@ include!("resolver_validation_support/resolver_type_parameters.rs");
 include!("resolver_validation_support/type_info_constructors.rs");
 include!("resolver_validation_support/type_helpers.rs");
 include!("resolver_validation_support/behavior_type_helpers.rs");
+include!("resolver_validation_support/behavior_ref_validation.rs");
 include!("resolver_validation_support/behavior_refs.rs");
 include!("resolver_validation_support/expected_locals.rs");
 include!("resolver_validation_support/expected_local_traversal.rs");
