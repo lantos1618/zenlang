@@ -1,5 +1,7 @@
 use super::super::*;
 
+mod codegen_c;
+
 #[test]
 fn resolver_validation_docs_truth_stays_split_across_focused_modules() {
     let root = read("tests/docs_truth/repo_hygiene/typechecker_resolver_validation.rs");
