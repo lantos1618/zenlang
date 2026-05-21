@@ -72,3 +72,36 @@ fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
         "C codegen should load focused aggregate literal helper"
     );
 }
+
+#[test]
+fn generated_c_test_support_splits_definition_and_call_scanning() {
+    let root = read("tests/integration/support/generated_c.rs");
+    let definitions = read("tests/integration/support/generated_c/definitions.rs");
+    let calls = read("tests/integration/support/generated_c/calls.rs");
+
+    for module in [
+        "#[path = \"generated_c/calls.rs\"]",
+        "#[path = \"generated_c/definitions.rs\"]",
+    ] {
+        assert!(
+            root.contains(module),
+            "generated_c.rs should load focused support module `{module}`"
+        );
+    }
+    assert!(
+        !root.contains("fn c_function_definitions"),
+        "generated_c.rs should not own generated C definition scanning"
+    );
+    assert!(
+        definitions.contains("pub(super) fn c_function_definitions"),
+        "definitions.rs should own generated C definition scanning"
+    );
+    assert!(
+        calls.contains("pub fn undefined_generated_c_calls"),
+        "calls.rs should own generated C call/definition consistency scanning"
+    );
+    assert!(
+        calls.contains("fn c_function_pointer_bindings"),
+        "calls.rs should own generated C function-pointer binding detection"
+    );
+}
