@@ -1,8 +1,9 @@
 use super::*;
-use crate::ast::AstType;
 
 mod aggregate_metadata;
 mod behavior_metadata;
+mod type_parameters;
+mod value_metadata;
 
 impl SymbolTable {
     #[cfg(test)]
@@ -91,126 +92,6 @@ impl SymbolTable {
     ) {
         if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
             symbol.is_mutable = is_mutable;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_parameter_count_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        parameter_count: Option<usize>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.parameter_count = parameter_count;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_parameter_type_names_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        parameter_type_names: Option<Vec<String>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.parameter_type_names = parameter_type_names;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_parameter_types_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        parameter_types: Option<Vec<AstType>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.parameter_types = parameter_types;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_parameter_names_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        parameter_names: Option<Vec<String>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.parameter_names = parameter_names;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_return_type_name_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        return_type_name: Option<String>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.return_type_name = return_type_name;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_return_type_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        return_type: Option<AstType>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.return_type = return_type;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_type_parameter_count_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        type_parameter_count: Option<usize>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.type_parameter_count = type_parameter_count;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_type_parameter_names_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        type_parameter_names: Option<Vec<String>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.type_parameter_names = type_parameter_names;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_type_parameter_bounds_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        type_parameter_bounds: Option<Vec<TypeParameterBoundMetadata>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.type_parameter_bounds = type_parameter_bounds;
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_type_parameter_bound_refs_for_test(
-        &mut self,
-        namespace: Namespace,
-        name: &str,
-        type_parameter_bound_refs: Option<Vec<TypeParameterBoundRefMetadata>>,
-    ) {
-        if let Some(symbol) = self.find_symbol_mut_for_test(namespace, name) {
-            symbol.type_parameter_bound_refs = type_parameter_bound_refs;
         }
     }
 }

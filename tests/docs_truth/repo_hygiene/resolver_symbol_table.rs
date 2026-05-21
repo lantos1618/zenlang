@@ -59,3 +59,56 @@ fn resolver_symbol_definition_metadata_lives_in_focused_helper() {
         "symbol table should include focused definition metadata helper"
     );
 }
+
+#[test]
+fn resolver_symbol_table_test_support_metadata_setters_live_in_focused_helpers() {
+    let root = read("src/resolver/symbol_table_test_support.rs");
+    let value_metadata = read("src/resolver/symbol_table_test_support/value_metadata.rs");
+    let type_parameters = read("src/resolver/symbol_table_test_support/type_parameters.rs");
+
+    assert!(
+        root.lines().count() < 150,
+        "symbol table test support root should stay focused on lookup and generic symbol mutation"
+    );
+
+    for helper in [
+        "set_parameter_count_for_test",
+        "set_parameter_type_names_for_test",
+        "set_parameter_types_for_test",
+        "set_parameter_names_for_test",
+        "set_return_type_name_for_test",
+        "set_return_type_for_test",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "symbol table test support root should not own value metadata setter: {helper}"
+        );
+        assert!(
+            value_metadata.contains(&format!("fn {helper}")),
+            "value_metadata.rs should own value metadata setter: {helper}"
+        );
+    }
+
+    for helper in [
+        "set_type_parameter_count_for_test",
+        "set_type_parameter_names_for_test",
+        "set_type_parameter_bounds_for_test",
+        "set_type_parameter_bound_refs_for_test",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "symbol table test support root should not own type parameter setter: {helper}"
+        );
+        assert!(
+            type_parameters.contains(&format!("fn {helper}")),
+            "type_parameters.rs should own type parameter setter: {helper}"
+        );
+    }
+
+    for module_name in ["value_metadata", "type_parameters"] {
+        assert!(
+            root.contains(&format!("mod {module_name};")),
+            "symbol table test support root should include focused helper: {module_name}"
+        );
+    }
+}
