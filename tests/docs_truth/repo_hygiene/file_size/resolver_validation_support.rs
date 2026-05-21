@@ -32,3 +32,34 @@ fn resolver_behavior_ref_validation_descriptor_lives_in_focused_helper() {
         "resolver validation support should include focused behavior-ref validation helper"
     );
 }
+
+#[test]
+fn resolver_behavior_absence_descriptors_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation_support.rs");
+    let mixed = read("src/typechecker/resolver_validation_support/absence_symbol_descriptors.rs");
+    let behavior =
+        read("src/typechecker/resolver_validation_support/behavior_absence_descriptors.rs");
+
+    for helper in [
+        "BehaviorAssociationAbsenceValidation",
+        "BehaviorDeclarationAbsenceValidation",
+    ] {
+        assert!(
+            !mixed.contains(&format!("struct {helper}")),
+            "absence_symbol_descriptors.rs should not own behavior absence descriptor: {helper}"
+        );
+        assert!(
+            behavior.contains(&format!("struct {helper}")),
+            "behavior absence descriptor should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        mixed.lines().count() < 140,
+        "absence_symbol_descriptors.rs should stay focused on non-behavior descriptors"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation_support/behavior_absence_descriptors.rs\");"),
+        "resolver validation support should include focused behavior absence descriptors"
+    );
+}
