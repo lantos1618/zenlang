@@ -24,12 +24,12 @@ operations, actor syntax, package manifests, and broader `build.zen` execution.
 Developer UX and Agent UX are product requirements, not polish. The v1 surface
 should grow toward MoonBit-style toolchain integration, but the compiler must not advertise unsupported language-server binaries or editor features as implemented.
 Current contract: VS Code extension remains a constrained editor wrapper;
-`zen lsp` remains gated until it shares parser, resolver, typechecker, build graph, and
-diagnostics with the CLI. Agent-readable diagnostics keep stable codes, spans,
-related locations, structured fix suggestions, feature_gate metadata, and JSON;
-machine-readable project graph and symbol graph JSON remain compiler-owned;
-quiet deterministic commands such as `zen check`, `zen test`, and `zen emit-json`
-gate automated fix or package workflows.
+`zen lsp` remains gated until it shares parser, resolver, typechecker, build
+graph, and diagnostics with the CLI. Agent-readable diagnostics keep stable
+codes, spans, related locations, structured fix suggestions, feature_gate
+metadata, and JSON; machine-readable project graph and symbol graph JSON remain
+compiler-owned; quiet deterministic commands such as `zen check`, `zen test`,
+and `zen emit-json` gate automated fix or package workflows.
 
 ## Accepted Syntax Forms
 Every accepted syntax form must have a spec entry and Test Evidence before it is
@@ -139,35 +139,24 @@ target/build input.
 
 Current commands: `zen emit-json ast <file>`, `zen emit-json symbols <file>`, `zen emit-json typed <file>`, `zen emit-json diagnostics <file>`, `zen emit-json hir <file>`, `zen emit-json mir <file>`, `zen emit-json layout <file>`, `zen emit-json build-graph <file>`, and `zen emit-json target-yaml <file>`.
 
-Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted.
+Schema status: AST JSON is unchecked; symbols JSON is resolved; typed JSON is explicitly marked checked; diagnostics JSON is explicitly marked diagnostic. All schemas use `schema_version: 0` until promoted. Semantic acceptance must use typed JSON, diagnostics, check, build, or test paths.
 
-Representative golden anchors:
+Evidence is category-level here; exhaustive fixture names live in `tests/fixtures/ir_json` and integration tests.
 
-- hand-authored IR rejection: `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`, `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`, `emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override`, `emit_json_hir_rejects_hand_authored_json_before_ir_override`, `emit_json_mir_rejects_hand_authored_json_before_ir_override`, `emit_json_layout_rejects_hand_authored_json_before_layout_override`, and `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
-- symbols/typed/HIR/MIR/layout generics: `emit_json_ast_module_graph_schema_matches_golden`, `emit_json_symbols_module_graph_schema_matches_golden`, `emit_json_symbols_generic_method_schema_matches_golden`, `emit_json_typed_generic_method_schema_matches_golden`, `emit_json_hir_generic_method_worklist_schema_matches_golden`, `emit_json_mir_generic_method_worklist_schema_matches_golden`, `emit_json_layout_generic_option_schema_matches_golden`, `emit_json_layout_generic_result_schema_matches_golden`, and `emit_json_layout_nested_generic_result_schema_matches_golden`.
-- generic names pinned by golden fixtures: `Box.get<T>`, `Box.replace<T>`, `Box<T>.impl`, `Box.copy<T>`, `Option.copy<T>`, `inner<T>`, `id<T>`, `12.id<i32>()`, `id_i32`, `Box.get_inner<T>`, `Box.get_inner_i32`, `inner_i32`, `Option<T>`, `unwrap_or<T>`, `Result<T, E>`, `unwrap_or<T, E>`, `Result.unwrap_or<T, E>`, `self: Self`, `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
-- diagnostics JSON: `docs/DIAGNOSTICS.md` catalogs JSON-stable public diagnostic codes only after golden fixtures pin the code and shape; broader diagnostic-code coverage is still required. Anchors include `context.kind = "feature_gate"`, `emit_json_diagnostics_removed_return_schema_matches_golden`, `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`, `emit_json_diagnostics_generic_association_gate_schema_matches_golden`, `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`, `emit_json_diagnostics_dynamic_string_gate_schema_matches_golden`, and `emit_json_diagnostics_generic_function_arity_schema_matches_golden`.
-- build/target JSON:
-  `emit_json_build_graph_project_schema_matches_golden`,
-  `emit_json_build_graph_host_effect_schema_matches_golden`,
-  `emit_json_build_graph_target_metadata_schema_matches_golden`,
-  `emit_json_target_yaml_validates_minimal_target_schema`,
-  `emit_json_target_yaml_validates_backend_schema`,
-  `emit_json_target_yaml_validates_c_backend_flags`,
-  `emit_json_target_yaml_backend_schema_matches_golden`,
-  `emit_json_target_yaml_rejects_empty_c_backend_flags`,
-  `emit_json_target_yaml_rejects_layout_overrides`, and
-  `emit_json_target_yaml_rejects_unsupported_backend_codegen`.
+- hand-authored IR rejection is pinned for AST, symbols, typed, diagnostics, HIR, MIR, layout, and build graph JSON. Representative anchors: `emit_json_ast_rejects_hand_authored_json_before_unchecked_ir_override`, `emit_json_symbols_rejects_hand_authored_json_before_resolver_override`, `emit_json_typed_rejects_hand_authored_json_before_checked_ir_override`, and `emit_json_build_graph_rejects_hand_authored_json_before_graph_override`.
+- compiler-owned generic JSON is pinned across AST, symbols, typed, HIR, MIR, layout, build graph, and target YAML. Representative anchors: `emit_json_ast_module_graph_schema_matches_golden`, `emit_json_symbols_generic_method_schema_matches_golden`, `emit_json_typed_generic_method_schema_matches_golden`, `emit_json_hir_generic_method_worklist_schema_matches_golden`, `emit_json_mir_generic_method_worklist_schema_matches_golden`, `emit_json_layout_nested_generic_result_schema_matches_golden`, `emit_json_build_graph_project_schema_matches_golden`, and `emit_json_target_yaml_backend_schema_matches_golden`.
+- golden fixtures pin representative generic names such as `Box.get<T>`, `Box<T>.impl`, `Option<T>`, `Result<T, E>`, `self: Self`, `Json<StaticString>`, `Json<Point>`, and `Point.encode__Json_Point`.
+- diagnostics JSON is cataloged in `docs/DIAGNOSTICS.md`; JSON-stable public diagnostic codes require golden fixtures for code and shape, while broader diagnostic-code coverage is still required. Representative anchors include `context.kind = "feature_gate"`, `emit_json_diagnostics_removed_return_schema_matches_golden`, `emit_json_diagnostics_behavior_derive_gate_schema_matches_golden`, `emit_json_diagnostics_typed_allocator_effect_gate_schema_matches_golden`, and `emit_json_diagnostics_generic_function_arity_schema_matches_golden`.
 
 ## Build Graph
 `build.zen` is constrained. `zen check build.zen` validates a deterministic
-graph and verifies declared target sources exist. `zen emit build.zen` emits C
-for one target. `zen build build.zen` compiles executable targets, and direct
-`zen build.zen` aliases that path. `zen test build.zen` compiles and runs test
-targets. Executable target dependencies compile before their dependents;
-dependency cycles are rejected before execution. test target execution, target C
-emission, dependency-ordered multi-executable build tests, library target graph
-emission, host-effect arrays, and legacy `emit-json ast|symbols|typed|diagnostics`
+graph and declared target sources. `zen emit build.zen` emits C for one target;
+`zen build build.zen` compiles executable targets; direct `zen build.zen`
+aliases that path; `zen test build.zen` compiles and runs test targets.
+Executable target dependencies compile before dependents, and dependency cycles
+are rejected before execution. test target execution, target C emission,
+dependency-ordered multi-executable build tests, library target graph emission,
+host-effect arrays, and legacy `emit-json ast|symbols|typed|diagnostics`
 rejection are the current proof shape.
 
 Constrained `build.zen` execution already has positive and negative evidence:

@@ -1,75 +1,29 @@
 # Zen Language Support for VS Code
 
-This extension provides language support for the Zen programming language in Visual Studio Code.
+This rewrite-baseline extension ships editor basics for `.zen` files:
 
-## Features
-
-- **Syntax highlighting**: TextMate grammar support for `.zen` files.
+- **Syntax highlighting** through the TextMate grammar.
 - **Command palette actions**: `Zen: Run Zen Function` and
   `Zen: Build Zen Function` call the local `zen` compiler for the active file.
-- **Language configuration**: comments, brackets, indentation, and word
-  patterns for editor basics.
+- **Language configuration** for comments, brackets, indentation, and words.
 
-Language server, semantic diagnostics, hover, completion, formatting, and inline
-editor actions are not shipped in this rewrite package. They stay gated until a
-tested `zen lsp` binary is backed by the CLI parser, resolver, typechecker,
-build graph, and diagnostics.
+Semantic diagnostics, hover, completion, formatting, inline actions, and server
+settings are gated until the compiler exposes a tested `zen lsp` path backed by
+the CLI parser, resolver, typechecker, build graph, and diagnostics.
 
-## Requirements
+## Use
 
-- The Zen compiler must be installed and available in your PATH
+Install dependencies, compile, then press F5 in VS Code:
 
-## Installation
-
-1. Install dependencies:
 ```bash
 cd vscode-extension
 npm install
-```
-
-2. Compile the extension:
-```bash
 npm run compile
 ```
 
-3. In VS Code, press F5 to launch a new Extension Development Host window with the extension loaded.
-
-## Extension Settings
-
-This extension contributes the following settings:
-
-- No stable language-server settings are exposed by the rewrite baseline.
-
-## Usage
-
-1. Open any `.zen` file in VS Code
-2. You'll see syntax highlighting immediately
-3. Use the command palette to run `Zen: Run Zen Function` or
-   `Zen: Build Zen Function`
-
-### Using Command Palette Actions
-
-The commands use the active `.zen` file and write output to "Zen Run" or
-"Zen Build" output channels.
-
-## Development
-
-To work on this extension:
-
-1. Open the `vscode-extension` folder in VS Code
-2. Run `npm install` to install dependencies
-3. Press F5 to launch the Extension Development Host
-4. Make changes and reload the window to test
-
-## Known Issues
-
-- Language server features are gated and not shipped in this rewrite package
-- Performance may vary with large files
+Open a `.zen` file for highlighting. The command palette runs write to the "Zen Run"
+or "Zen Build" output channel. The `zen` compiler must be available in `PATH`.
 
 ## Release Notes
 
-### 0.1.0
-
-Initial release with basic language support:
-- Syntax highlighting
-- Command palette integration
+0.1.0: syntax highlighting and command palette integration.
