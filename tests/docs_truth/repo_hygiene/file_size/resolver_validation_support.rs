@@ -146,3 +146,37 @@ fn resolver_backed_type_info_constructors_live_in_focused_helper() {
         );
     }
 }
+
+#[test]
+fn imported_method_signature_support_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation_support.rs");
+    let field_variant = read("src/typechecker/resolver_validation_support/field_variant_scope.rs");
+    let imported_signature =
+        read("src/typechecker/resolver_validation_support/imported_method_signature.rs");
+
+    for helper in [
+        "ImportedMethodSignature",
+        "from_function_declaration",
+        "from_method_declaration",
+        "func_info",
+        "generic_template",
+    ] {
+        assert!(
+            !field_variant.contains(helper),
+            "field_variant_scope.rs should not own imported method signature helper: {helper}"
+        );
+        assert!(
+            imported_signature.contains(helper),
+            "imported method signature helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        field_variant.lines().count() < 170,
+        "field_variant_scope.rs should stay focused on field and variant metadata"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation_support/imported_method_signature.rs\");"),
+        "resolver validation support should include focused imported method signature helper"
+    );
+}
