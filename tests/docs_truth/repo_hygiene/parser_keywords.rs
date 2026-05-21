@@ -89,6 +89,8 @@ fn parser_this_methods_use_owned_method_enum() {
 
 #[test]
 fn parser_module_roots_use_owned_root_enum() {
+    let module_roots = read("src/parser/atoms/module_roots.rs");
+
     for path in ["src/parser/atoms.rs", "src/parser/import_declarations.rs"] {
         let source = read(path);
         for forbidden in [
@@ -103,6 +105,28 @@ fn parser_module_roots_use_owned_root_enum() {
         }
     }
 
+    let atoms = read("src/parser/atoms.rs");
+    for forbidden in [
+        "ParserModuleRoot::AtBuiltin",
+        "ParserModuleRoot::AtStd",
+        "module_parts",
+    ] {
+        assert!(
+            !atoms.contains(forbidden),
+            "parser atom dispatch should not own module-root parsing detail: {forbidden}"
+        );
+    }
+
+    for helper in [
+        "parse_builtin_module_call_expr",
+        "parse_std_module_root_expr",
+    ] {
+        assert!(
+            module_roots.contains(&format!("fn {helper}")),
+            "module-root atom parsing should live in module_roots.rs: {helper}"
+        );
+    }
+
     let keywords = read("src/parser/keywords.rs");
     for required in [
         "enum ParserModuleRoot",
@@ -114,6 +138,7 @@ fn parser_module_roots_use_owned_root_enum() {
     ] {
         assert!(
             keywords.contains(required)
+                || module_roots.contains(required)
                 || read("src/parser/atoms.rs").contains(required)
                 || read("src/parser/import_declarations.rs").contains(required),
             "parser module root spelling should live in ParserModuleRoot: {required}"
