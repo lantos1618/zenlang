@@ -1,4 +1,7 @@
-use super::*;
+use std::path::PathBuf;
+
+use crate::error::CompileError;
+use crate::module_system::ModuleSystem;
 
 impl ModuleSystem {
     pub(in crate::module_system) fn resolve_stdlib_file_path(

@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
@@ -8,6 +7,7 @@ use super::root_prefix::parse_module_root_prefix;
 use super::ModuleSystem;
 
 mod imported_declarations;
+mod local_imports;
 mod stdlib_gates;
 mod stdlib_paths;
 
@@ -98,54 +98,6 @@ impl ModuleSystem {
         }
 
         program.declarations.extend(imported_decls);
-        Ok(())
-    }
-
-    pub(super) fn local_import_file_path(
-        &self,
-        base_dir: &Path,
-        module_path: &[String],
-        span: Span,
-    ) -> Result<PathBuf, Vec<CompileError>> {
-        let rel_path: PathBuf = module_path.iter().collect();
-        let mut file_path = base_dir.join(&rel_path);
-        if file_path.extension().is_none() {
-            file_path.set_extension("zen");
-        }
-
-        if !file_path.exists() {
-            return Err(vec![CompileError::Resolution(
-                format!(
-                    "cannot find imported module '{}' (looked for {})",
-                    module_path.join("."),
-                    file_path.display()
-                ),
-                Some(span),
-            )]);
-        }
-
-        Ok(file_path)
-    }
-
-    pub(super) fn reject_duplicate_requested_imports(
-        &self,
-        names: &[String],
-        module_path: &[String],
-        span: Span,
-    ) -> Result<(), Vec<CompileError>> {
-        let mut requested_names = HashSet::new();
-        for name in names {
-            if !requested_names.insert(name.as_str()) {
-                return Err(vec![CompileError::Resolution(
-                    format!(
-                        "duplicate import '{}' from module '{}'",
-                        name,
-                        module_path.join(".")
-                    ),
-                    Some(span),
-                )]);
-            }
-        }
         Ok(())
     }
 
