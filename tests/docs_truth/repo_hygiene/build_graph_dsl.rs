@@ -57,6 +57,36 @@ fn build_graph_dependency_order_lives_in_focused_helper() {
 }
 
 #[test]
+fn build_graph_error_types_live_in_focused_helper() {
+    let root = read("src/build_graph.rs");
+    let errors = read("src/build_graph/errors.rs");
+
+    for helper in [
+        "enum BuildGraphError",
+        "impl fmt::Display for BuildGraphError",
+        "impl std::error::Error for BuildGraphError",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "build graph root should not own error type/formatting helper: {helper}"
+        );
+        assert!(
+            errors.contains(helper),
+            "build graph error helper should live in errors.rs: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 220,
+        "build_graph.rs should stay focused on graph shapes and construction"
+    );
+    assert!(
+        root.contains("mod errors;") && root.contains("pub use errors::BuildGraphError;"),
+        "build graph root should include and re-export the focused error helper"
+    );
+}
+
+#[test]
 fn build_target_field_extraction_lives_in_focused_helper() {
     let targets = read("src/build_graph/lowering/targets.rs");
     let fields = read("src/build_graph/lowering/target_fields.rs");
