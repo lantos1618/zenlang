@@ -12,6 +12,7 @@ mod enum_variant;
 mod function_checking;
 mod gated_methods;
 mod generic_call_validation;
+mod leaf_forms;
 mod method_call_support;
 mod return_flow;
 mod simple_forms;
