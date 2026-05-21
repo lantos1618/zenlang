@@ -119,3 +119,38 @@ fn resolver_collection_behavior_impl_method_tests_live_in_focused_modules() {
         "resolver collection behavior impl method tests should live in focused modules"
     );
 }
+
+#[test]
+fn typechecker_resolver_entry_association_helpers_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let entry = read("src/typechecker/resolver_validation/entry_symbols.rs");
+    let associations = read("src/typechecker/resolver_validation/entry_associations.rs");
+
+    for helper in [
+        "validate_resolver_impl_block_entry",
+        "validate_resolver_requires_entry",
+        "validate_resolver_behavior_extends_entry",
+    ] {
+        assert!(
+            !entry.contains(&format!("fn {helper}")),
+            "resolver entry traversal should not own behavior-association helper: {helper}"
+        );
+        assert!(
+            entry.contains(&format!("self.{helper}(")),
+            "resolver entry traversal should delegate behavior-association work through {helper}"
+        );
+        assert!(
+            associations.contains(&format!("fn {helper}")),
+            "resolver behavior-association entry helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        entry.lines().count() < 220,
+        "resolver entry traversal should stay focused on declaration dispatch"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation/entry_associations.rs\");"),
+        "resolver validation should include focused entry behavior-association helpers"
+    );
+}
