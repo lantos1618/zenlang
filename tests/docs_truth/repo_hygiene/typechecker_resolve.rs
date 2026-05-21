@@ -68,6 +68,8 @@ fn typechecker_type_resolution_uses_named_and_generic_helpers() {
 #[test]
 fn generic_type_reference_walker_bounds_live_in_focused_helper() {
     let root = read("src/typechecker/generic_type_reference_walker.rs");
+    let expressions = read("src/typechecker/generic_type_reference_walker/expressions.rs");
+    let statements = read("src/typechecker/generic_type_reference_walker/statements.rs");
     let type_refs = read("src/typechecker/generic_type_reference_walker/type_refs.rs");
 
     assert!(
@@ -89,6 +91,22 @@ fn generic_type_reference_walker_bounds_live_in_focused_helper() {
     assert!(
         type_refs.contains("fn is_known_named_type"),
         "type_refs.rs should own named type lookup for generic type-ref validation"
+    );
+    assert!(
+        expressions.lines().count() < 170,
+        "generic expression type-reference traversal should not own statement traversal"
+    );
+    assert!(
+        root.contains("mod statements;"),
+        "generic type-reference walker should include the focused statements helper"
+    );
+    assert!(
+        !expressions.contains("fn validate_generic_statement_type_references"),
+        "generic expression type-reference traversal should not own statement traversal"
+    );
+    assert!(
+        statements.contains("fn validate_generic_statement_type_references"),
+        "statements.rs should own generic statement type-reference traversal"
     );
 }
 

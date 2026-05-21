@@ -1,6 +1,7 @@
 use super::*;
 
 mod expressions;
+mod statements;
 mod type_refs;
 
 impl TypeChecker {
