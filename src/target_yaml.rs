@@ -3,44 +3,11 @@ use std::path::Path;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug)]
-pub enum TargetYamlError {
-    Io(std::io::Error),
-    Parse(serde_yaml::Error),
-    Schema(String),
-    Json(serde_json::Error),
-}
+mod error;
+mod validation;
 
-impl std::fmt::Display for TargetYamlError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Io(err) => write!(f, "failed to read target YAML: {err}"),
-            Self::Parse(err) => write!(f, "invalid target YAML: {err}"),
-            Self::Schema(message) => f.write_str(message),
-            Self::Json(err) => write!(f, "json emit error: {err}"),
-        }
-    }
-}
-
-impl std::error::Error for TargetYamlError {}
-
-impl From<std::io::Error> for TargetYamlError {
-    fn from(err: std::io::Error) -> Self {
-        Self::Io(err)
-    }
-}
-
-impl From<serde_yaml::Error> for TargetYamlError {
-    fn from(err: serde_yaml::Error) -> Self {
-        Self::Parse(err)
-    }
-}
-
-impl From<serde_json::Error> for TargetYamlError {
-    fn from(err: serde_json::Error) -> Self {
-        Self::Json(err)
-    }
-}
+pub use error::TargetYamlError;
+use validation::validate_target_yaml;
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -161,49 +128,4 @@ impl From<TargetBackendInput> for TargetBackendJson {
             c_flags: input.c_flags,
         }
     }
-}
-
-fn validate_target_yaml(input: &TargetYamlInput) -> Result<(), TargetYamlError> {
-    if input.layout.is_some() || input.overrides.is_some() {
-        return Err(TargetYamlError::Schema(
-            "target YAML cannot override compiler-owned type layouts".into(),
-        ));
-    }
-    if input.triple.trim().is_empty() {
-        return Err(TargetYamlError::Schema(
-            "target YAML `triple` cannot be empty".into(),
-        ));
-    }
-    if !matches!(input.pointer_width, 32 | 64) {
-        return Err(TargetYamlError::Schema(
-            "target YAML `pointer_width` must be 32 or 64".into(),
-        ));
-    }
-    if input.abi.trim().is_empty() {
-        return Err(TargetYamlError::Schema(
-            "target YAML `abi` cannot be empty".into(),
-        ));
-    }
-    if let Some(backend) = &input.backend {
-        if matches!(backend.codegen, TargetBackendCodegen::Unsupported) {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.codegen` supports only `c` in this phase".into(),
-            ));
-        }
-        if backend
-            .c_compiler
-            .as_ref()
-            .is_some_and(|compiler| compiler.trim().is_empty())
-        {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.c_compiler` cannot be empty".into(),
-            ));
-        }
-        if backend.c_flags.iter().any(|flag| flag.trim().is_empty()) {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.c_flags` entries cannot be empty".into(),
-            ));
-        }
-    }
-    Ok(())
 }
