@@ -2,7 +2,6 @@
 Zen is a systems language for explicit programs: declarations are prefix-first,
 blocks produce their final expression, pattern matching is the branch form,
 loops use explicit control handles, and ownership/effects stay visible in types.
-
 Use this page as the quick language tour. Stable examples can be copied today.
 Preview examples cover gated surfaces: allocator-backed strings, sync/async
 effects, raw memory, actors, and comptime type matching.
@@ -38,12 +37,10 @@ String literals are `StaticString`, not allocator-backed strings.
 `StaticString` is baked into the program: static bytes plus a fixed byte count
 known after compilation. Passing it around copies a pointer-and-length view into
 program storage; it does not allocate, resize, free, or transfer heap ownership.
-
 `String<A>` is preview syntax for owned runtime text. It can grow or be
 released, so the owner must carry allocator state. A literal such as `"Zen"`
 never silently becomes `String<A>`; runtime text construction belongs on an
 allocator-aware API.
-
 `value.method(args)` and `method(value, args)` are call-site spellings for the
 same attached function, not alternate declaration forms. Struct literals name
 fields explicitly; field access uses dot syntax.
@@ -59,18 +56,14 @@ unwrap_or<T> = (value: Option<T>, fallback: T) T {
         | None { fallback }
 }
 ```
-
-The `?` operator is the pattern-match form for bools, enums, `Option`, and
-`Result`.
+The `?` operator is the pattern-match form for bools, enums, `Option`, and `Result`.
 
 ## Result And Error Handling
 Zen models failure with data. There are no exceptions and no null.
-Nested generic types are written directly, such as
-`Result<Option<i32>, StaticString>`.
+Nested generic types are written directly, such as `Result<Option<i32>, StaticString>`.
 
 ## Behaviors
-Behaviors describe required methods. Generic functions use behavior bounds when
-they need a capability.
+Behaviors describe required methods. Generic functions use behavior bounds when they need a capability.
 
 ```zen
 Display: behavior { display: (Self) StaticString }
@@ -81,7 +74,6 @@ show<T: Display> = (value: T) StaticString {
     value.display()
 }
 ```
-
 Relationship declarations keep the changed type or behavior on the left:
 `Point.implements(Display)`, `Point.requires(Display)`, and
 `PrettyDisplay.extends(Display)`. There is no `impl Type for Behavior` spelling.
@@ -89,7 +81,6 @@ Relationship declarations keep the changed type or behavior on the left:
 ## Loops
 Zen has one loop entry form. The handle is compiler-owned, and `done`/`next`
 are closed control verbs for that handle, not user methods or stringly names.
-
 Counted loop:
 
 ```zen
@@ -108,7 +99,6 @@ sum_to = (limit: i32) i32 {
     total
 }
 ```
-
 Nested loop exit:
 
 ```zen
@@ -121,7 +111,6 @@ loop((outer) {
     outer.next()
 })
 ```
-
 UFC loop control:
 
 ```zen
@@ -130,7 +119,6 @@ loop((l) {
     next(l)
 })
 ```
-
 There is no `while`, `for`, `break`, `continue`, suffix loop, or hidden result
 channel. Accumulated values live in explicit mutable bindings outside the loop.
 
@@ -138,19 +126,15 @@ channel. Accumulated values live in explicit mutable bindings outside the loop.
 `defer` runs cleanup expressions before leaving the current scope.
 
 ## Imports And Modules
-Imports use destructuring-style binding from a module path; local files import
-by module name, and dotted paths resolve through subdirectories.
+Imports use destructuring-style binding from a module path; local files import by module name, and dotted paths resolve through subdirectories.
 
 ## Memory And Ownership
-Stable Zen does not hide heap allocation behind literals, interpolation, method
-calls, or generic containers. Heap APIs show the owner and allocator path.
+Stable Zen does not hide heap allocation behind literals, interpolation, method calls, or generic containers. Heap APIs show the owner and allocator path.
 
 ```zen
 OwnedBytes<T, A>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
 ```
-
-Pointer, length, capacity, and allocator travel together; a pointer alone is
-just an address.
+Pointer, length, capacity, and allocator travel together; a pointer alone is just an address.
 
 ## Sync, Async, And Allocator Preview
 `Sync` and `Async` are effect modes in type surfaces, not source keywords; there
@@ -161,7 +145,6 @@ returns task-shaped data.
 Allocator<T, Sync>: behavior { alloc: (Self, count: usize) Result<RawPtr<T>, AllocError> }
 Allocator<T, Async>: behavior { alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>> }
 ```
-
 Read the outer type first:
 
 | Surface | Meaning |
@@ -172,8 +155,7 @@ Read the outer type first:
 | `Allocator<T, Async>` | allocation returns as task-shaped work |
 | `String<A>` | owned dynamic bytes plus allocator ownership |
 
-There is no hidden conversion between sync and async allocation. `Result<...>`
-is complete now; `Task<Result<...>>` completes later at a scheduler boundary.
+There is no hidden conversion between sync and async allocation. `Result<...>` is complete now; `Task<Result<...>>` completes later at a scheduler boundary.
 
 ```zen
 Buffer<T, A: Allocator<T, Sync>>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
@@ -183,18 +165,13 @@ make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer
         | Err(error) { Result<Buffer<T, A>, AllocError>.Err(error) }
 }
 ```
-
-Raw allocation intrinsics such as `@builtin.raw_allocate`,
-`@builtin.raw_deallocate`, and `@builtin.raw_reallocate` are compiler-owned
-preview names; stable source should not call them directly.
+Raw allocation intrinsics such as `@builtin.raw_allocate`, `@builtin.raw_deallocate`, and `@builtin.raw_reallocate` are compiler-owned preview names; stable source should not call them directly.
 
 ## Pointer, Slice, Array, Actor, And Comptime Preview
 `RawPtr<T>` is the raw-memory spelling used in allocator previews. `Ptr<T>`,
 `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer, slice, and
 fixed-array shapes. Raw pointer offset, casts, integer conversion, load, store,
-atomics, raw syscalls, comptime type matching, actor framework types, and
-scheduler operations stay gated until layout, ownership, effects, and runtime
-contracts are promoted.
+atomics, raw syscalls, comptime type matching, actor framework types, and scheduler operations stay gated until layout, ownership, effects, and runtime contracts are promoted.
 
 ## Translation Cheat Sheet
 | If you reach for | Use |
@@ -227,7 +204,6 @@ main = () i32 {
     point.sum()
 }
 ```
-
 That example shows prefix declarations, typed data, attached methods, behavior
 implementations, bounded generics, expression-oriented control flow, static text,
 and explicit loop control.
