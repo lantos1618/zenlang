@@ -55,3 +55,45 @@ fn parser_core_navigation_and_lookahead_live_in_focused_helpers() {
         );
     }
 }
+
+#[test]
+fn parser_pratt_infix_lives_in_focused_helper() {
+    let expressions = read("src/parser/expressions.rs");
+    let infix = read("src/parser/expressions/infix.rs");
+
+    for helper in [
+        "fn parse_infix_or_range_expr",
+        "enum InfixParse",
+        "fn binary_op_for_token",
+    ] {
+        assert!(
+            !expressions.contains(helper),
+            "parser expression root should not own Pratt infix helper: {helper}"
+        );
+        assert!(
+            infix.contains(helper),
+            "Pratt infix helper should live in focused helper: {helper}"
+        );
+    }
+
+    for forbidden in [
+        "REMOVED_AS_CAST_L_BP",
+        "REMOVED_INFIX_AS_CAST_MESSAGE",
+        "Token::DotDot",
+        "Token::DotDotEq",
+    ] {
+        assert!(
+            !expressions.contains(forbidden),
+            "parser expression root should not own infix/range detail: {forbidden}"
+        );
+    }
+
+    assert!(
+        expressions.contains("mod infix;"),
+        "parser expression root should include the focused infix module"
+    );
+    assert!(
+        expressions.lines().count() < 220,
+        "parser expression root should stay focused on Pratt dispatch"
+    );
+}
