@@ -33,6 +33,41 @@ fn typechecker_struct_default_validation_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_behavior_association_validation_lives_in_focused_helper() {
+    let semantic = read("src/typechecker/semantic_validation.rs");
+    let associations = read("src/typechecker/semantic_validation_behavior_associations.rs");
+
+    for helper in [
+        "validate_behavior_association_tasks",
+        "validate_behavior_impl_tasks",
+        "push_behavior_requires_replay_task",
+        "validate_behavior_requires_tasks",
+        "validate_collected_behavior_impl_declaration",
+        "validate_collected_behavior_requires_declaration",
+        "validate_collected_behavior_extends_semantics",
+    ] {
+        assert!(
+            !semantic.contains(&format!("fn {helper}")),
+            "semantic validation entry point should not own behavior association helper: {helper}"
+        );
+        assert!(
+            associations.contains(&format!("fn {helper}")),
+            "behavior association semantic validation should live in focused helper: {helper}"
+        );
+    }
+
+    let root = read("src/typechecker/mod.rs");
+    assert!(
+        root.contains("mod semantic_validation_behavior_associations;"),
+        "typechecker should load focused behavior association semantic validation"
+    );
+    assert!(
+        semantic.lines().count() < 120,
+        "semantic_validation.rs should stay focused on semantic validation entry points and task collection"
+    );
+}
+
+#[test]
 fn typechecker_self_type_validation_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/self_type_validation.rs");
     let tasks = read("src/typechecker/self_type_validation/tasks.rs");

@@ -52,6 +52,7 @@ mod resolver_validation;
 mod scope_management;
 mod self_type_validation;
 mod semantic_validation;
+mod semantic_validation_behavior_associations;
 mod semantic_validation_struct_defaults;
 mod statements;
 mod std_runtime_calls;
