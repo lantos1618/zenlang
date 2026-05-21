@@ -54,6 +54,7 @@ fn typechecker_gated_methods_use_owned_action_enum() {
 #[test]
 fn typechecker_gated_intrinsics_use_owned_name_enum() {
     let gated = read("src/typechecker/gated_intrinsics.rs");
+    let messages = read("src/typechecker/gated_intrinsics/messages.rs");
     let calls = read("src/typechecker/expressions/call_support.rs");
 
     for forbidden in [
@@ -163,7 +164,6 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         "pub(super) const SYSCALL5: &'static str = \"syscall5\"",
         "pub(super) const SYSCALL6: &'static str = \"syscall6\"",
         "pub(super) const TYPE_MATCH: &'static str = \"type_match\"",
-        "pub(super) const fn gate_message(self) -> &'static str",
         ".find(|intrinsic| intrinsic.as_str() == name)",
     ] {
         assert!(
@@ -171,6 +171,22 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
             "gated intrinsic spelling should live in GatedIntrinsic: {required}"
         );
     }
+    assert!(
+        gated.contains("mod messages;"),
+        "gated_intrinsics.rs should include the focused gate-message helper"
+    );
+    assert!(
+        gated.lines().count() < 180,
+        "gated_intrinsics.rs should stay focused on intrinsic spelling and parsing"
+    );
+    assert!(
+        !gated.contains("gate_message(self)"),
+        "gated intrinsic gate-message text should live in messages.rs"
+    );
+    assert!(
+        messages.contains("pub(in crate::typechecker) const fn gate_message(self) -> &'static str"),
+        "messages.rs should own GatedIntrinsic gate-message text"
+    );
     assert!(
         calls.contains("name.parse::<GatedIntrinsic>()") && calls.contains("gated.gate_message()"),
         "function-call checking should route gated intrinsics through GatedIntrinsic"
