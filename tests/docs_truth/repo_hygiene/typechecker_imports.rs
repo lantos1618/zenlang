@@ -60,3 +60,33 @@ fn typechecker_imported_method_seeding_lives_in_focused_helper() {
         "resolver validation should include focused imported method seeding"
     );
 }
+
+#[test]
+fn typechecker_imported_type_method_dependencies_live_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let dependencies = read("src/typechecker/resolver_validation/imports_source_dependencies.rs");
+    let type_methods = read("src/typechecker/resolver_validation/imports_source_type_methods.rs");
+
+    for helper in [
+        "insert_source_import_type_method_dependencies",
+        "insert_source_imported_type_method_dependency",
+    ] {
+        assert!(
+            !dependencies.contains(&format!("fn {helper}")),
+            "source dependency collection should not own imported type-method dependency helper: {helper}"
+        );
+        assert!(
+            type_methods.contains(&format!("fn {helper}")),
+            "imported type-method dependency helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        dependencies.lines().count() < 205,
+        "source dependency collection should stay focused on local source dependency collection"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation/imports_source_type_methods.rs\");"),
+        "resolver validation should include focused imported type-method dependencies"
+    );
+}
