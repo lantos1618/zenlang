@@ -117,11 +117,13 @@ fn build_target_field_extraction_lives_in_focused_helper() {
 #[test]
 fn build_graph_host_effect_detection_lives_in_focused_helper() {
     let lowering = read("src/build_graph/lowering.rs");
+    let traversal = read("src/build_graph/lowering/traversal.rs");
     let host_effects = read("src/build_graph/lowering/host_effects.rs");
+    let lowering_source = format!("{lowering}\n{traversal}");
 
     assert!(
-        lowering.lines().count() < 240,
-        "build graph lowering should stay focused on traversal and target collection"
+        lowering.lines().count() < 110,
+        "build graph lowering should stay focused on build-function discovery and helper wiring"
     );
     for helper in [
         "declared_host_effect",
@@ -130,7 +132,7 @@ fn build_graph_host_effect_detection_lives_in_focused_helper() {
         "is_builder_os",
     ] {
         assert!(
-            !lowering.contains(&format!("fn {helper}")),
+            !lowering_source.contains(&format!("fn {helper}")),
             "build graph host-effect detection should live in host_effects.rs: {helper}"
         );
         assert!(
@@ -143,7 +145,42 @@ fn build_graph_host_effect_detection_lives_in_focused_helper() {
         "build graph lowering should include the focused host-effect helper"
     );
     assert!(
-        lowering.contains("use host_effects::{declared_host_effect, host_effect};"),
-        "build graph lowering should import host-effect detection from the focused helper"
+        traversal.contains("use super::host_effects::{declared_host_effect, host_effect};"),
+        "build graph traversal should import host-effect detection from the focused helper"
+    );
+}
+
+#[test]
+fn build_graph_ast_traversal_lives_in_focused_helper() {
+    let lowering = read("src/build_graph/lowering.rs");
+    let traversal = read("src/build_graph/lowering/traversal.rs");
+
+    assert!(
+        lowering.lines().count() < 110,
+        "build graph lowering should stay focused on build-function discovery and helper wiring"
+    );
+    assert!(
+        lowering.contains("mod traversal;"),
+        "build graph lowering should include the focused AST traversal helper"
+    );
+    for helper in [
+        "struct BuildProgramLowering",
+        "enum BuildTargetAddContext",
+        "fn collect_expr",
+        "fn collect_statement",
+        "fn is_builder_add_call",
+    ] {
+        assert!(
+            !lowering.contains(helper),
+            "build graph lowering root should not own traversal helper: {helper}"
+        );
+        assert!(
+            traversal.contains(helper),
+            "build graph AST traversal helper should own: {helper}"
+        );
+    }
+    assert!(
+        traversal.contains("build_target_from_builder_add"),
+        "build graph AST traversal should own target collection from builder.add calls"
     );
 }
