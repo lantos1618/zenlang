@@ -6,6 +6,7 @@ mod enum_assignment_and_modules;
 mod feature_gates;
 mod intrinsic_gates;
 mod match_semantics;
+mod module_calls;
 mod struct_literal_defaults;
 mod struct_literals;
 mod type_helpers;
