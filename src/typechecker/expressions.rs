@@ -5,6 +5,7 @@ mod aggregate_constructors;
 mod aggregate_support;
 mod call_support;
 mod call_validation;
+mod closure_forms;
 mod control_flow_support;
 mod enum_variant;
 mod function_checking;
