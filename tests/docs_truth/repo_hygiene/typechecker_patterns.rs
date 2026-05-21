@@ -33,14 +33,7 @@ fn enum_match_validation_lives_in_focused_helper() {
     let enums = read("src/typechecker/patterns/match_validation_enum.rs");
     let patterns = read("src/typechecker/patterns.rs");
 
-    for helper in [
-        "check_match_exhaustiveness",
-        "check_enum_match_patterns",
-        "enum_variants_for_match",
-        "enum_variant_payloads_for_match",
-        "enum_variant_name_from_pattern",
-        "explicit_enum_variant_pattern",
-    ] {
+    for helper in ["check_match_exhaustiveness", "check_enum_match_patterns"] {
         assert!(
             !root.contains(&format!("fn {helper}")),
             "match validation root should not own enum-specific helper: {helper}"
@@ -58,5 +51,38 @@ fn enum_match_validation_lives_in_focused_helper() {
     assert!(
         patterns.contains("mod match_validation_enum;"),
         "pattern helpers should load focused enum match validation"
+    );
+}
+
+#[test]
+fn enum_match_metadata_helpers_live_in_focused_helper() {
+    let enums = read("src/typechecker/patterns/match_validation_enum.rs");
+    let metadata = read("src/typechecker/patterns/match_validation_enum/metadata.rs");
+
+    for helper in [
+        "EnumVariantPayloads",
+        "enum_variants_for_match",
+        "enum_variant_payloads_for_match",
+        "enum_variant_name_from_pattern",
+        "explicit_enum_variant_pattern",
+    ] {
+        assert!(
+            !enums.contains(&format!("type {helper}")) && !enums.contains(&format!("fn {helper}")),
+            "enum match diagnostics should not own metadata helper: {helper}"
+        );
+        assert!(
+            metadata.contains(&format!("type {helper}"))
+                || metadata.contains(&format!("fn {helper}")),
+            "enum match metadata helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        enums.contains("mod metadata;"),
+        "enum match diagnostics should include focused metadata helper"
+    );
+    assert!(
+        enums.lines().count() < 140,
+        "enum match diagnostics should stay focused on validation flow"
     );
 }
