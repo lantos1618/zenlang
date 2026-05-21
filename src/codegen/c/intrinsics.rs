@@ -1,6 +1,7 @@
 use super::*;
 use names::CIntrinsic;
 
+mod atomics;
 mod memory;
 mod names;
 mod pointers;
@@ -29,46 +30,11 @@ impl CEmitter {
         if let Some(emitted) = intrinsic.emit_memory(self, args, result_ty) {
             return emitted;
         }
+        if let Some(emitted) = intrinsic.emit_atomic(self, args) {
+            return emitted;
+        }
 
         match intrinsic {
-            // -- Atomic operations ----------------------------------------
-            CIntrinsic::AtomicLoad => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                format!("__atomic_load_n({}, __ATOMIC_SEQ_CST)", ptr)
-            }
-            CIntrinsic::AtomicStore => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                format!("__atomic_store_n({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
-            }
-            CIntrinsic::AtomicAdd => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                format!("__atomic_fetch_add({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
-            }
-            CIntrinsic::AtomicSub => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                format!("__atomic_fetch_sub({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
-            }
-            CIntrinsic::AtomicCas => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let expected = self.emit_expr_inline(&args[1]);
-                let desired = self.emit_expr_inline(&args[2]);
-                let tmp = self.fresh_tmp();
-                self.line(&format!("uint64_t {} = {};", tmp, expected));
-                format!(
-                    "__atomic_compare_exchange_n({}, &{}, {}, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)",
-                    ptr, tmp, desired
-                )
-            }
-            CIntrinsic::AtomicXchg => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let val = self.emit_expr_inline(&args[1]);
-                format!("__atomic_exchange_n({}, {}, __ATOMIC_SEQ_CST)", ptr, val)
-            }
-            CIntrinsic::Fence => "(__atomic_thread_fence(__ATOMIC_SEQ_CST), (void)0)".into(),
-
             // -- Debug / trap / panic -------------------------------------
             CIntrinsic::Trap => "(__builtin_trap(), (void)0)".into(),
             CIntrinsic::Debugtrap => "(__builtin_debugtrap(), (void)0)".into(),
