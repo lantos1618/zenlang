@@ -108,6 +108,53 @@ fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
 }
 
 #[test]
+fn resolver_metadata_impl_and_method_helper_tests_stay_split_by_responsibility() {
+    let root = read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers.rs");
+    let behavior_collection = read(
+        "src/typechecker/tests/resolver_metadata/impl_and_method_helpers/behavior_collection.rs",
+    );
+    let impl_methods =
+        read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers/impl_methods.rs");
+    let signatures =
+        read("src/typechecker/tests/resolver_metadata/impl_and_method_helpers/signatures.rs");
+
+    assert!(
+        root.lines().count() < 80,
+        "impl_and_method_helpers.rs should only route focused impl/method helper tests"
+    );
+    for module in [
+        "mod behavior_collection;",
+        "mod impl_methods;",
+        "mod signatures;",
+    ] {
+        assert!(
+            root.contains(module),
+            "impl_and_method_helpers.rs should include focused module `{module}`"
+        );
+    }
+    assert!(
+        !root.contains(
+            "fn impl_effective_method_name_prefers_resolver_then_ast_then_collected_signature"
+        ),
+        "impl method selection tests should live in impl_methods.rs"
+    );
+    assert!(
+        behavior_collection
+            .contains("fn resolver_backed_behavior_collection_defers_generic_metadata_to_resolver"),
+        "behavior_collection.rs should cover resolver-backed behavior collection"
+    );
+    assert!(
+        impl_methods
+            .contains("fn effective_behavior_impl_methods_carry_named_declaration_and_method_name"),
+        "impl_methods.rs should cover effective impl method metadata"
+    );
+    assert!(
+        signatures.contains("fn resolver_backed_method_signature_requires_resolver_collection"),
+        "signatures.rs should cover resolver-backed method signatures"
+    );
+}
+
+#[test]
 fn resolver_metadata_restoration_tests_stay_split_by_responsibility() {
     let root = read("src/typechecker/tests/resolver_metadata/metadata_restoration.rs");
     let aggregates =
