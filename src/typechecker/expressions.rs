@@ -8,6 +8,7 @@ mod call_validation;
 mod control_flow_support;
 mod enum_variant;
 mod function_checking;
+mod gated_methods;
 mod generic_call_validation;
 mod method_call_support;
 mod simple_forms;
