@@ -7,6 +7,7 @@ mod ci_configs;
 mod codegen_c;
 mod error_diagnostics;
 mod file_size;
+mod frontend_diagnostics;
 mod ir_json;
 mod module_system;
 mod parser_behavior_declarations;
