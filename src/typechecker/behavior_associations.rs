@@ -1,5 +1,6 @@
 use super::*;
 
+mod implementation_queries;
 mod inheritance;
 
 impl TypeChecker {
