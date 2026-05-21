@@ -4,6 +4,8 @@ use super::*;
 fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
     let source = read("src/parser/declarations.rs");
     let ast_declarations = read("src/ast/declarations.rs");
+    let type_keywords = read("src/ast/declarations/type_keywords.rs");
+    let keyword_source = format!("{ast_declarations}\n{type_keywords}");
 
     for forbidden in [
         r#"method_name == "impl""#,
@@ -30,7 +32,7 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         "value == Self::Extends.as_str()",
     ] {
         assert!(
-            !ast_declarations.contains(forbidden),
+            !keyword_source.contains(forbidden),
             "TypeDeclarationKeyword parsing should use the enum-owned static table, not raw if-chain spelling checks: {forbidden}"
         );
     }
@@ -40,10 +42,23 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         ".find(|keyword| keyword.as_str() == value)",
     ] {
         assert!(
-            ast_declarations.contains(required),
+            keyword_source.contains(required),
             "TypeDeclarationKeyword spelling should parse through its static table: {required}"
         );
     }
+    assert!(
+        !ast_declarations.contains("pub enum TypeDeclarationKeyword"),
+        "declaration AST root should not own parser-facing type declaration keyword spelling"
+    );
+    assert!(
+        ast_declarations.contains("mod type_keywords;")
+            && ast_declarations.contains("pub use type_keywords::TypeDeclarationKeyword;"),
+        "declaration AST root should re-export the focused type keyword helper"
+    );
+    assert!(
+        ast_declarations.lines().count() < 210,
+        "declarations.rs should stay focused on declaration shapes and accessors"
+    );
 }
 
 #[test]
