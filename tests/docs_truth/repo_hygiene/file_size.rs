@@ -11,3 +11,4 @@ mod resolver_validation_support;
 mod thresholds;
 mod typechecker_expressions;
 mod typechecker_program;
+mod typechecker_resolver_metadata_collection;
