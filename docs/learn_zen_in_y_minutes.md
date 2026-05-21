@@ -37,10 +37,8 @@ first:
 main = () i32 {
     answer = 42
     label: StaticString = "zen"
-
     count ::= 0
     count = count + 1
-
     answer + count
 }
 ```
@@ -84,19 +82,9 @@ fields explicitly; field access uses dot syntax.
 ## Enums And Matching
 
 ```zen
-Direction:
-    North,
-    South,
-    East,
-    West
-
-Option<T>:
-    None,
-    Some(T)
-
-Result<T, E>:
-    Ok(T),
-    Err(E)
+Direction: North, South, East, West
+Option<T>: None, Some(T)
+Result<T, E>: Ok(T), Err(E)
 
 unwrap_or<T> = (value: Option<T>, fallback: T) T {
     value ?
@@ -129,14 +117,10 @@ Behaviors describe required methods. Generic functions use behavior bounds when
 they need a capability.
 
 ```zen
-Display: behavior {
-    display: (Self) StaticString
-}
+Display: behavior { display: (Self) StaticString }
 
 Point.implements(Display) {
-    display = (self: Point) StaticString {
-        "Point"
-    }
+    display = (self: Point) StaticString { "Point" }
 }
 
 show<T: Display> = (value: T) StaticString {
@@ -236,13 +220,8 @@ read_later = (source: Source, allocator: Allocator<u8, Async>) Task<Result<Bytes
     source.read_all_async(allocator)
 }
 
-Allocator<T, Sync>: behavior {
-    alloc: (Self, count: usize) Result<RawPtr<T>, AllocError>
-}
-
-Allocator<T, Async>: behavior {
-    alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>>
-}
+Allocator<T, Sync>: behavior { alloc: (Self, count: usize) Result<RawPtr<T>, AllocError> }
+Allocator<T, Async>: behavior { alloc: (Self, count: usize) Task<Result<RawPtr<T>, AllocError>> }
 ```
 
 Read the outer type first:
@@ -260,13 +239,14 @@ is complete now; `Task<Result<...>>` completes later at a scheduler boundary.
 Allocator-backed construction carries the allocator through the owner:
 
 ```zen
-Buffer<T, A: Allocator<T, Sync>>: {
-    ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A,
-}
+Buffer<T, A: Allocator<T, Sync>>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
 
 make_buffer<T, A: Allocator<T, Sync>> = (allocator: A, len: usize) Result<Buffer<T, A>, AllocError> {
     allocator.alloc(len) ?
-        | Ok(ptr) { Result<Buffer<T, A>, AllocError>.Ok(Buffer<T, A> { ptr: ptr, len: len, capacity: len, allocator: allocator }) }
+        | Ok(ptr) {
+            buffer = Buffer<T, A> { ptr: ptr, len: len, capacity: len, allocator: allocator }
+            Result<Buffer<T, A>, AllocError>.Ok(buffer)
+        }
         | Err(error) { Result<Buffer<T, A>, AllocError>.Err(error) }
 }
 ```
