@@ -1,28 +1,13 @@
-use crate::ast::patterns::Pattern;
 use crate::ast::statements::Statement;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 use serde::Serialize;
 
+mod expression_parts;
 mod operators;
+mod span;
+pub use expression_parts::{MatchArm, StringPart};
 pub use operators::{BinaryOp, LoopControlAction, UnaryOp};
-
-/// Parts of a string interpolation: `"Hello, ${name}!"` becomes
-/// `[Literal("Hello, "), Expr(<name>), Literal("!")]`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum StringPart {
-    Literal(String),
-    Expr(Expression),
-}
-
-/// A match arm: `| pattern guard? { body }`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct MatchArm {
-    pub pattern: Pattern,
-    pub guard: Option<Expression>,
-    pub body: Expression,
-    pub span: Span,
-}
 
 /// Expression — the parser's output for any value-producing construct.
 ///
@@ -209,40 +194,4 @@ pub enum Expression {
     Error {
         span: Span,
     },
-}
-
-impl Expression {
-    /// Returns the span of this expression.
-    pub fn span(&self) -> Span {
-        match self {
-            Expression::IntLiteral { span, .. }
-            | Expression::FloatLiteral { span, .. }
-            | Expression::StringLiteral { span, .. }
-            | Expression::BoolLiteral { span, .. }
-            | Expression::Identifier { span, .. }
-            | Expression::BinaryOp { span, .. }
-            | Expression::UnaryOp { span, .. }
-            | Expression::FunctionCall { span, .. }
-            | Expression::MethodCall { span, .. }
-            | Expression::MemberAccess { span, .. }
-            | Expression::IndexAccess { span, .. }
-            | Expression::StructLiteral { span, .. }
-            | Expression::EnumVariant { span, .. }
-            | Expression::ArrayLiteral { span, .. }
-            | Expression::Match { span, .. }
-            | Expression::WhileLoop { span, .. }
-            | Expression::Loop { span, .. }
-            | Expression::LoopControl { span, .. }
-            | Expression::If { span, .. }
-            | Expression::Block { span, .. }
-            | Expression::Break { span, .. }
-            | Expression::Continue { span, .. }
-            | Expression::Closure { span, .. }
-            | Expression::Cast { span, .. }
-            | Expression::StringInterpolation { span, .. }
-            | Expression::Range { span, .. }
-            | Expression::Defer { span, .. }
-            | Expression::Error { span, .. } => *span,
-        }
-    }
 }
