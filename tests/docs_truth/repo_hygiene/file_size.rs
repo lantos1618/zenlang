@@ -3,6 +3,7 @@ mod focused_tests;
 mod intrinsics;
 mod ir_json;
 mod lexer_and_monomorphize;
+mod resolver_declaration_validation;
 mod resolver_phase2;
 mod resolver_validation;
 mod resolver_validation_support;

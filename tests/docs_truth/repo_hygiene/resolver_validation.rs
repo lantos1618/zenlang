@@ -73,7 +73,9 @@ fn resolver_type_declaration_validation_lives_in_focused_helper() {
 #[test]
 fn resolver_callable_declaration_validation_lives_in_focused_helper() {
     let declaration_validation = read("src/resolver/declaration_validation.rs");
-    let callables = read("src/resolver/declaration_validation/callables.rs");
+    let callables_root = read("src/resolver/declaration_validation/callables.rs");
+    let impl_blocks = read("src/resolver/declaration_validation/callables/impl_blocks.rs");
+    let callables = format!("{callables_root}\n{impl_blocks}");
 
     for validation_helper in [
         "validate_function_declaration",
