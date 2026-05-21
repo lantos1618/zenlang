@@ -90,3 +90,45 @@ fn typechecker_imported_type_method_dependencies_live_in_focused_helper() {
         "resolver validation should include focused imported type-method dependencies"
     );
 }
+
+#[test]
+fn typechecker_resolver_module_symbol_validation_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolver_validation.rs");
+    let imports_modules = read("src/typechecker/resolver_validation/imports_modules.rs");
+    let module_symbols = read("src/typechecker/resolver_validation/module_symbols.rs");
+
+    assert!(
+        imports_modules.lines().count() < 150,
+        "resolver import/module validation should stay focused on import collection and stripped imports"
+    );
+    assert!(
+        !imports_modules.contains("fn require_resolver_module_symbol"),
+        "resolver import/module validation should not own module symbol validation"
+    );
+    assert!(
+        module_symbols.contains("fn require_resolver_module_symbol"),
+        "module symbol validation should live in focused helper"
+    );
+
+    for required in [
+        "VisibilityValidation::module_resolver_code()",
+        "SourceValidation::module_resolver_code()",
+        "ValueSignatureAbsenceValidation::module_resolver_codes()",
+        "TypeParameterAbsenceValidation::module_resolver_codes()",
+        "FieldAbsenceValidation::module_resolver_codes()",
+        "VariantAbsenceValidation::module_resolver_codes()",
+        "BehaviorAssociationAbsenceValidation::module_resolver_codes()",
+        "BehaviorDeclarationAbsenceValidation::module_resolver_codes()",
+        "MutabilityAbsenceValidation::module_resolver_code()",
+    ] {
+        assert!(
+            module_symbols.contains(required),
+            "module symbol helper should keep resolver metadata evidence: {required}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"resolver_validation/module_symbols.rs\");"),
+        "resolver validation should include focused module symbol validation"
+    );
+}
