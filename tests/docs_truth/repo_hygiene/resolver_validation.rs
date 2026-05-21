@@ -127,3 +127,29 @@ fn resolver_top_level_expr_declaration_validation_lives_in_focused_helper() {
         "top-level expression declaration validation should live in focused helper"
     );
 }
+
+#[test]
+fn resolver_type_reference_validation_lives_in_focused_helper() {
+    let root = read("src/resolver/type_validation.rs");
+    let type_refs = read("src/resolver/type_validation/type_refs.rs");
+
+    for helper in ["validate_type_ref", "is_known_type_name"] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "resolver type validation root should not own recursive type-ref helper: {helper}"
+        );
+        assert!(
+            type_refs.contains(&format!("fn {helper}")),
+            "recursive resolver type-ref validation should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 120,
+        "type_validation.rs should stay focused on param and behavior constraints"
+    );
+    assert!(
+        root.contains("mod type_refs;"),
+        "resolver type validation root should load the focused type-ref helper"
+    );
+}

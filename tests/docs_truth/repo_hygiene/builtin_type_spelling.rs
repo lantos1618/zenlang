@@ -75,6 +75,7 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
 
     for path in [
         "src/resolver/type_validation.rs",
+        "src/resolver/type_validation/type_refs.rs",
         "src/typechecker/generic_type_reference_walker.rs",
         "src/typechecker/resolve.rs",
     ] {
