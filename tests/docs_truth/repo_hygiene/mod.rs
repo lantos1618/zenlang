@@ -32,3 +32,4 @@ mod typechecker_resolver_validation;
 mod typechecker_runtime;
 mod typechecker_semantic_validation;
 mod typechecker_state;
+mod typechecker_statements;
