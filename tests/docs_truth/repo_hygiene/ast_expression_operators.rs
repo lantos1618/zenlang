@@ -115,3 +115,43 @@ fn typed_ast_expression_parts_live_in_focused_helper() {
         "typed.rs should stay focused on typed expression, declaration, and program shells"
     );
 }
+
+#[test]
+fn typed_ast_declaration_parts_live_in_focused_helper() {
+    let typed = read("src/ast/typed.rs");
+    let declarations = read("src/ast/typed/declarations.rs");
+
+    for helper in [
+        "TypedFunction",
+        "TypedParam",
+        "TypedTypeDef",
+        "TypeDefKind",
+        "TypedVariant",
+        "TypedGlobal",
+        "TypedProgram",
+    ] {
+        assert!(
+            !typed.contains(&format!("pub struct {helper}"))
+                && !typed.contains(&format!("pub enum {helper}")),
+            "typed AST root should not own declaration/program helper: {helper}"
+        );
+        assert!(
+            declarations.contains(&format!("pub struct {helper}"))
+                || declarations.contains(&format!("pub enum {helper}")),
+            "typed AST declaration/program helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        typed.contains("mod declarations;"),
+        "typed AST root should include focused declaration helper"
+    );
+    assert!(
+        typed.contains("pub use declarations::{"),
+        "typed AST root should preserve public re-exports for declarations"
+    );
+    assert!(
+        typed.lines().count() < 170,
+        "typed.rs should stay focused on typed expression, statement, and block shells"
+    );
+}
