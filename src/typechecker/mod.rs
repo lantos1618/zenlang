@@ -45,6 +45,7 @@ mod program_checking;
 mod program_globals;
 mod program_module_graph;
 mod resolve;
+mod resolve_aggregates;
 mod resolve_binary_ops;
 mod resolver_backed_collection;
 mod resolver_lookup;

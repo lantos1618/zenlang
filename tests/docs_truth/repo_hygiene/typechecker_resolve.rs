@@ -31,18 +31,35 @@ fn typechecker_binary_op_checking_lives_in_focused_helper() {
 #[test]
 fn typechecker_type_resolution_uses_named_and_generic_helpers() {
     let root = read("src/typechecker/resolve.rs");
+    let aggregates = read("src/typechecker/resolve_aggregates.rs");
+    let module = read("src/typechecker/mod.rs");
 
     for helper in [
         "resolve_named_type",
         "resolve_generic_type",
         "resolve_struct_type",
         "resolve_enum_type",
+        "generic_type_substitutions",
+        "resolve_aggregate_member_type",
     ] {
         assert!(
-            root.contains(&format!("fn {helper}")),
-            "type resolution should route aggregate construction through focused helper: {helper}"
+            !root.contains(&format!("fn {helper}")),
+            "type resolution root should not own aggregate construction helper: {helper}"
+        );
+        assert!(
+            aggregates.contains(&format!("fn {helper}")),
+            "aggregate type resolution should live in focused helper: {helper}"
         );
     }
+
+    assert!(
+        root.lines().count() < 150,
+        "type resolution root should stay focused on AstType dispatch, field lookup, and compatibility"
+    );
+    assert!(
+        module.contains("mod resolve_aggregates;"),
+        "typechecker root should include focused aggregate type resolution module"
+    );
 
     let named_branch = root
         .split("AstType::Named(name) =>")
