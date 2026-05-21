@@ -126,3 +126,33 @@ fn resolver_type_reference_collected_metadata_lives_in_focused_helper() {
         );
     }
 }
+
+#[test]
+fn generic_type_validation_ast_tasks_live_in_focused_helper() {
+    let root = read("src/typechecker/generic_type_validation.rs");
+    let ast_tasks = read("src/typechecker/generic_type_validation/ast_type_references.rs");
+
+    assert!(
+        root.lines().count() < 120,
+        "generic_type_validation.rs should stay focused on module wiring and resolver-name helpers"
+    );
+    assert!(
+        root.contains("mod ast_type_references;"),
+        "generic type validation should include focused AST type-reference task helper"
+    );
+    for helper in [
+        "collect_ast_type_reference_validation_tasks",
+        "push_ast_type_reference_validation_task",
+        "validate_ast_type_reference_tasks",
+        "validate_ast_callable_type_references",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {helper}")),
+            "generic type validation root should not own AST task helper: {helper}"
+        );
+        assert!(
+            ast_tasks.contains(&format!("fn {helper}")),
+            "AST type-reference task helper should own: {helper}"
+        );
+    }
+}
