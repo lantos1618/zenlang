@@ -101,3 +101,32 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("Choice_T"));
 }
+
+#[test]
+fn multi_file_generic_enum_method_worklist_specializations_emit_reachable_methods_once() {
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_enum_method_worklist/main.zen"),
+    );
+
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source.contains("typedef struct Option_bool Option_bool;"));
+    assert!(c_source.contains("int32_t Option_value_or_i32(Option_i32 self, int32_t fallback)"));
+    assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
+    assert!(c_source.contains("bool Option_value_or_bool(Option_bool self, bool fallback)"));
+    assert!(c_source.contains("bool Option_unwrap_or_bool(Option_bool self, bool fallback)"));
+    assert!(c_source.contains("Option_value_or_i32(some_int, 0LL)"));
+    assert!(c_source.contains("Option_value_or_i32(none_int, 97LL)"));
+    assert!(c_source.contains("Option_value_or_bool(some_bool, false)"));
+    assert!(c_source.contains("Option_value_or_bool(none_bool, true)"));
+    assert!(c_source.contains("Option_unwrap_or_i32(self, fallback)"));
+    assert!(c_source.contains("Option_unwrap_or_bool(self, fallback)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_value_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_value_or_bool");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_bool");
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T Option_value_or"));
+    assert!(!c_source.contains("T Option_unwrap_or"));
+    assert!(!c_source.contains("Option_value_or(some"));
+    assert!(!c_source.contains("Option_unwrap_or(self"));
+}

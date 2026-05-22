@@ -1,0 +1,15 @@
+{ io } = std
+{ Option } = option
+
+main = () i32 {
+    some_int = Option<i32>.Some(31)
+    none_int = Option<i32>.None
+    some_bool = Option<bool>.Some(true)
+    none_bool = Option<bool>.None
+
+    io.println("${some_int.value_or(0)}")
+    io.println("${none_int.value_or(97)}")
+    io.println("${some_bool.value_or(false)}")
+    io.println("${none_bool.value_or(true)}")
+    0
+}
