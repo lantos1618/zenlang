@@ -1,0 +1,9 @@
+pub Result<T, E>:
+    Ok(T),
+    Err(E)
+
+pub Result.unwrap_err<T, E> = (self: Self, fallback: E) E {
+    self ?
+        | Ok(_) { fallback }
+        | Err(error) { error }
+}
