@@ -66,3 +66,35 @@ fn replay_behavior_association_tasks_live_in_focused_module() {
         "resolver_validation.rs should include focused behavior association replay helpers"
     );
 }
+
+#[test]
+fn expected_behavior_edge_helpers_live_in_focused_support_module() {
+    let root = read("src/typechecker/resolver_validation_support/behavior_refs.rs");
+    let edges = read("src/typechecker/resolver_validation_support/expected_behavior_edges.rs");
+    let includes = read("src/typechecker/resolver_validation_support.rs");
+
+    for helper in [
+        "struct ExpectedBehaviorEdge",
+        "struct ExpectedBehaviorEdgeMetadata",
+        "struct ExpectedBehaviorEdges",
+        "struct ExpectedBehaviorAssociations",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "behavior_refs.rs should not own expected behavior edge helper `{helper}`"
+        );
+        assert!(
+            edges.contains(helper),
+            "expected behavior edge helper should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 170,
+        "behavior_refs.rs should stay focused on role validation and actual metadata selection"
+    );
+    assert!(
+        includes.contains("include!(\"resolver_validation_support/expected_behavior_edges.rs\");"),
+        "resolver_validation_support.rs should include focused expected behavior edge helpers"
+    );
+}
