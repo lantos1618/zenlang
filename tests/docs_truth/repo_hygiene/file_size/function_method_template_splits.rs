@@ -66,3 +66,36 @@ fn generic_function_mutability_tests_live_in_focused_helper() {
         "generic_functions.rs should include the focused parameter mutability module"
     );
 }
+
+#[test]
+fn generic_method_mutability_tests_live_in_focused_helper() {
+    let root = read(
+        "src/typechecker/tests/resolver_collection/function_method_templates/generic_methods.rs",
+    );
+    let mutability = read(
+        "src/typechecker/tests/resolver_collection/function_method_templates/generic_methods/param_mutability.rs",
+    );
+
+    for test_name in [
+        "collect_declarations_with_symbols_preserves_generic_method_template_param_mutability_by_position",
+        "collect_declarations_with_symbols_ignores_stale_generic_method_template_param_names_for_mutability",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "generic_methods.rs should not own parameter mutability replay test: {test_name}"
+        );
+        assert!(
+            mutability.contains(&format!("fn {test_name}")),
+            "generic method parameter mutability replay should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "generic_methods.rs should stay focused on generic method template shape metadata"
+    );
+    assert!(
+        root.contains("mod param_mutability;"),
+        "generic_methods.rs should include the focused parameter mutability module"
+    );
+}
