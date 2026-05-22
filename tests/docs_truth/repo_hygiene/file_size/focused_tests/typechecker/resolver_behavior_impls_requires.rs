@@ -9,6 +9,10 @@ fn resolver_behavior_impls_requires_tests_stay_split_by_metadata_surface() {
         read("src/typechecker/tests/resolver_behavior_impls_requires/requires_metadata.rs");
     let extra_metadata =
         read("src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata.rs");
+    let extra_impls =
+        read("src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata/impls.rs");
+    let extra_requires =
+        read("src/typechecker/tests/resolver_behavior_impls_requires/extra_metadata/requires.rs");
 
     assert!(
         root.lines().count() < 80,
@@ -60,8 +64,33 @@ fn resolver_behavior_impls_requires_tests_stay_split_by_metadata_surface() {
         "requires_metadata.rs should cover generic behavior requires refs"
     );
     assert!(
-        extra_metadata
-            .contains("fn check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs",),
-        "extra_metadata.rs should keep extra impl metadata rejection tests"
+        extra_metadata.lines().count() < 80,
+        "extra_metadata.rs should only route focused extra behavior relation metadata tests"
+    );
+    for module in ["mod impls;", "mod requires;"] {
+        assert!(
+            extra_metadata.contains(module),
+            "extra_metadata.rs should include focused module `{module}`"
+        );
+    }
+    for test_name in [
+        "check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs",
+        "check_program_with_symbols_rejects_extra_resolver_behavior_required_refs",
+    ] {
+        assert!(
+            !extra_metadata.contains(&format!("fn {test_name}")),
+            "extra_metadata.rs should not own concrete extra metadata test: {test_name}"
+        );
+    }
+    assert!(
+        extra_impls
+            .contains("fn check_program_with_symbols_rejects_extra_resolver_behavior_impl_refs"),
+        "impls.rs should keep extra impl metadata rejection tests"
+    );
+    assert!(
+        extra_requires.contains(
+            "fn check_program_with_symbols_rejects_extra_resolver_behavior_required_refs"
+        ),
+        "requires.rs should keep extra requires metadata rejection tests"
     );
 }
