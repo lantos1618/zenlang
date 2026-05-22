@@ -64,3 +64,42 @@ fn resolver_phase2_struct_metadata_tests_live_in_focused_modules() {
         "literals.rs should cover struct literal field validation"
     );
 }
+
+#[test]
+fn resolver_phase2_enum_metadata_tests_live_in_focused_modules() {
+    let root = read("tests/resolver_phase2/enum_metadata.rs");
+    let generic_payloads = read("tests/resolver_phase2/enum_metadata/generic_payloads.rs");
+    let payloads = read("tests/resolver_phase2/enum_metadata/payloads.rs");
+    let variant_shape = read("tests/resolver_phase2/enum_metadata/variant_shape.rs");
+
+    assert!(
+        root.lines().count() < 60,
+        "resolver_phase2 enum_metadata.rs should only route focused enum metadata modules"
+    );
+    for module in [
+        r#"#[path = "enum_metadata/generic_payloads.rs"]"#,
+        r#"#[path = "enum_metadata/payloads.rs"]"#,
+        r#"#[path = "enum_metadata/variant_shape.rs"]"#,
+    ] {
+        assert!(
+            root.contains(module),
+            "resolver_phase2 enum_metadata.rs should include focused module path `{module}`"
+        );
+    }
+    assert!(
+        !root.contains("fn resolver_records_enum_variant_payload_counts"),
+        "enum payload metadata tests should live in payloads.rs"
+    );
+    assert!(
+        generic_payloads.contains("fn resolver_records_generic_enum_variant_payload_types"),
+        "generic_payloads.rs should cover generic enum payload metadata"
+    );
+    assert!(
+        payloads.contains("fn resolver_records_enum_function_type_payloads"),
+        "payloads.rs should cover concrete enum payload metadata"
+    );
+    assert!(
+        variant_shape.contains("fn resolver_rejects_duplicate_variant_names_in_same_enum"),
+        "variant_shape.rs should cover enum variant naming diagnostics"
+    );
+}
