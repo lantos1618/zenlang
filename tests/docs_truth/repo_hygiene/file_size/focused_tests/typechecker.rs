@@ -4,6 +4,7 @@ mod core_semantics;
 mod core_semantics_router;
 mod generic_behaviors;
 mod resolve_guards;
+mod resolver_absence;
 mod resolver_behavior_impls_requires;
 mod resolver_behavior_parents;
 mod resolver_collection;
