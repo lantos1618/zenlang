@@ -81,34 +81,39 @@ fn resolver_behavior_ref_helpers_share_pop_and_peek_selection() {
     let mut refs_by_type = HashMap::from([("Point".to_string(), refs.clone())]);
 
     assert_eq!(
-        TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Debug")
+        TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Debug", &[])
             .map(|reference| reference.name.as_str()),
         Some("Debug")
     );
     assert_eq!(
-        TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Debug")
+        TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Debug", &[])
             .map(|reference| reference.name),
         Some("Debug".to_string())
     );
 
     let mut refs_by_type = HashMap::from([("Point".to_string(), refs)]);
     assert_eq!(
-        TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Missing")
+        TypeChecker::peek_resolver_behavior_ref(true, &refs_by_type, "Point", "Missing", &[])
             .map(|reference| reference.name.as_str()),
         Some("Json")
     );
     assert_eq!(
-        TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Missing")
+        TypeChecker::pop_resolver_behavior_ref(true, &mut refs_by_type, "Point", "Missing", &[])
             .map(|reference| reference.name),
         Some("Json".to_string())
     );
     assert!(
-        TypeChecker::peek_resolver_behavior_ref(false, &refs_by_type, "Point", "Debug").is_none()
-    );
-    assert!(
-        TypeChecker::pop_resolver_behavior_ref(false, &mut refs_by_type, "Point", "Debug")
+        TypeChecker::peek_resolver_behavior_ref(false, &refs_by_type, "Point", "Debug", &[])
             .is_none()
     );
+    assert!(TypeChecker::pop_resolver_behavior_ref(
+        false,
+        &mut refs_by_type,
+        "Point",
+        "Debug",
+        &[]
+    )
+    .is_none());
 }
 
 #[test]
@@ -131,17 +136,17 @@ fn resolver_behavior_ref_for_selects_impl_and_required_queues_by_role() {
     );
 
     assert_eq!(
-        tc.resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json")
+        tc.resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json", &[AstType::I32])
             .map(|reference| reference.name),
         Some("Json".to_string())
     );
     assert_eq!(
-        tc.resolver_behavior_ref_for(BehaviorRefRole::Required, "Point", "Debug")
+        tc.resolver_behavior_ref_for(BehaviorRefRole::Required, "Point", "Debug", &[])
             .map(|reference| reference.name),
         Some("Debug".to_string())
     );
     assert!(tc
-        .resolver_behavior_ref_for(BehaviorRefRole::Parent, "Point", "Json")
+        .resolver_behavior_ref_for(BehaviorRefRole::Parent, "Point", "Json", &[])
         .is_none());
 
     tc.resolver_behavior_impl_refs.insert(
@@ -153,6 +158,6 @@ fn resolver_behavior_ref_for_selects_impl_and_required_queues_by_role() {
     );
     tc.resolver_backed_collection = false;
     assert!(tc
-        .resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json")
+        .resolver_behavior_ref_for(BehaviorRefRole::Impl, "Point", "Json", &[])
         .is_none());
 }

@@ -7,8 +7,14 @@ impl TypeChecker {
         &mut self,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
-        self.resolver_behavior_ref_for(BehaviorRefRole::Impl, type_name, behavior)
+        self.resolver_behavior_ref_for(
+            BehaviorRefRole::Impl,
+            type_name,
+            behavior,
+            behavior_type_args,
+        )
     }
 
     pub(super) fn resolver_behavior_ref_for(
@@ -16,6 +22,7 @@ impl TypeChecker {
         role: BehaviorRefRole,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
         match role {
             BehaviorRefRole::Impl => Self::pop_resolver_behavior_ref(
@@ -23,12 +30,14 @@ impl TypeChecker {
                 &mut self.resolver_behavior_impl_refs,
                 type_name,
                 behavior,
+                behavior_type_args,
             ),
             BehaviorRefRole::Required => Self::pop_resolver_behavior_ref(
                 self.resolver_backed_collection,
                 &mut self.resolver_behavior_required_refs,
                 type_name,
                 behavior,
+                behavior_type_args,
             ),
             BehaviorRefRole::Parent => None,
         }
@@ -49,13 +58,14 @@ impl TypeChecker {
         refs_by_type: &mut HashMap<String, VecDeque<BehaviorRefMetadata>>,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
         if !resolver_backed_collection {
             return None;
         }
 
         let refs = refs_by_type.get_mut(type_name)?;
-        Self::pop_resolver_behavior_ref_from_queue(refs, behavior)
+        Self::pop_resolver_behavior_ref_from_queue(refs, behavior, behavior_type_args)
     }
 
     pub(super) fn should_skip_missing_resolver_behavior_ref(
@@ -72,8 +82,9 @@ impl TypeChecker {
     pub(super) fn pop_resolver_behavior_ref_from_queue(
         refs: &mut VecDeque<BehaviorRefMetadata>,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
-        let index = Self::resolver_behavior_ref_queue_index(refs, behavior)?;
+        let index = Self::resolver_behavior_ref_queue_index(refs, behavior, behavior_type_args)?;
         refs.remove(index)
     }
 
@@ -81,12 +92,14 @@ impl TypeChecker {
         &self,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<&BehaviorRefMetadata> {
         Self::peek_resolver_behavior_ref(
             self.resolver_backed_collection,
             &self.resolver_behavior_impl_refs,
             type_name,
             behavior,
+            behavior_type_args,
         )
     }
 
@@ -95,20 +108,29 @@ impl TypeChecker {
         refs_by_type: &'a HashMap<String, VecDeque<BehaviorRefMetadata>>,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<&'a BehaviorRefMetadata> {
         if !resolver_backed_collection {
             return None;
         }
 
         let refs = refs_by_type.get(type_name)?;
-        Self::resolver_behavior_ref_queue_index(refs, behavior).and_then(|index| refs.get(index))
+        Self::resolver_behavior_ref_queue_index(refs, behavior, behavior_type_args)
+            .and_then(|index| refs.get(index))
     }
 
     pub(super) fn resolver_behavior_ref_queue_index(
         refs: &VecDeque<BehaviorRefMetadata>,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<usize> {
-        Self::named_queue_index(refs, behavior, |reference| reference.name.as_str())
+        refs.iter()
+            .position(|reference| {
+                reference.name == behavior && reference.type_args == behavior_type_args
+            })
+            .or_else(|| {
+                Self::named_queue_index(refs, behavior, |reference| reference.name.as_str())
+            })
     }
 
     pub(super) fn named_queue_index<T>(
@@ -145,7 +167,7 @@ impl TypeChecker {
         behavior: &'a str,
         behavior_type_args: &'a [AstType],
     ) -> (&'a str, &'a [AstType]) {
-        match self.resolver_behavior_impl_ref_for_peek(type_name, behavior) {
+        match self.resolver_behavior_impl_ref_for_peek(type_name, behavior, behavior_type_args) {
             Some(implementation) => (
                 implementation.name.as_str(),
                 implementation.type_args.as_slice(),

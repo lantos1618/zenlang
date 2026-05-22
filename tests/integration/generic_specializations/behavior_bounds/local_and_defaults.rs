@@ -48,6 +48,20 @@ fn local_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("T_encode"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("behavior_generic_target_distinct_behavior_args.zen"),
+    );
+    assert!(c_source.contains("zen_str Box_encode__Json_StaticString_bool(Box_bool self)"));
+    assert!(c_source.contains("int32_t Box_encode__Json_i32_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_encode__Json_StaticString_bool(value)"));
+    assert!(c_source.contains("Box_encode__Json_i32_i32(value)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_encode__Json_StaticString_bool");
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_encode__Json_i32_i32");
+    assert!(!c_source.contains("Box_encode__Json_StaticString_i32"));
+    assert!(!c_source.contains("Box_encode__Json_i32_bool"));
+    assert!(!c_source.contains("Box_encode__Json_T"));
+    assert!(!c_source.contains("Json_T"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("behavior_generic_target_default_method.zen"),
     );
     assert!(c_source.contains("zen_str Box_describe_i32(Box_i32 self)"));

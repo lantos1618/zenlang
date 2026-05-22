@@ -10,7 +10,8 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         span: Span,
     ) {
-        let resolver_required_ref = self.resolver_required_ref_for(type_name, behavior);
+        let resolver_required_ref =
+            self.resolver_required_ref_for(type_name, behavior, behavior_type_args);
         if self.should_skip_missing_resolver_behavior_ref(
             resolver_required_ref.as_ref(),
             type_name,
@@ -60,8 +61,14 @@ impl TypeChecker {
         &mut self,
         type_name: &str,
         behavior: &str,
+        behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
-        self.resolver_behavior_ref_for(BehaviorRefRole::Required, type_name, behavior)
+        self.resolver_behavior_ref_for(
+            BehaviorRefRole::Required,
+            type_name,
+            behavior,
+            behavior_type_args,
+        )
     }
 
     pub(super) fn check_behavior_extends(
