@@ -4,6 +4,7 @@ mod intrinsics;
 mod ir_json;
 mod lexer_and_monomorphize;
 mod parser_enums;
+mod parser_keywords;
 mod resolver_declaration_validation;
 mod resolver_metadata_helpers;
 mod resolver_phase2;
