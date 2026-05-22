@@ -28,6 +28,15 @@ fn emit_json_mir_generic_worklist_dedup_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_mir_multi_file_generic_imported_worklist_chain_schema_matches_golden() {
+    assert_mir_golden(
+        "tests/zen/multi_file_generic_imported_worklist_chain/main.zen",
+        "tests/fixtures/ir_json/mir_multi_file_generic_imported_worklist_chain.golden.json",
+        "multi-file imported generic worklist chain input",
+    );
+}
+
+#[test]
 fn emit_json_mir_generic_recursive_function_schema_matches_golden() {
     assert_mir_golden(
         "tests/zen/generic_recursive_function.zen",
