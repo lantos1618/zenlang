@@ -2,6 +2,7 @@ use super::*;
 
 mod generic_templates;
 mod integrity;
+mod param_mutability;
 
 #[test]
 fn collect_declarations_with_symbols_uses_resolver_type_impl_method_name_metadata() {
