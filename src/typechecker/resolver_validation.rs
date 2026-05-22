@@ -14,6 +14,7 @@ include!("resolver_validation/replay_task_association_lists.rs");
 include!("resolver_validation/imports_modules.rs");
 include!("resolver_validation/imports_graph_seeding.rs");
 include!("resolver_validation/imports_dependencies.rs");
+include!("resolver_validation/imports_behavior_extends.rs");
 include!("resolver_validation/imports_behavior_dependencies.rs");
 include!("resolver_validation/imported_generic_behavior_impls.rs");
 include!("resolver_validation/imports_source_dependencies.rs");
