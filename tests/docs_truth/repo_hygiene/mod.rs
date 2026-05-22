@@ -24,6 +24,7 @@ mod typechecker_aggregate_constructors;
 mod typechecker_behavior_impls;
 mod typechecker_call_validation;
 mod typechecker_declaration_collection;
+mod typechecker_generic_type_references;
 mod typechecker_imports;
 mod typechecker_patterns;
 mod typechecker_program_checking;
