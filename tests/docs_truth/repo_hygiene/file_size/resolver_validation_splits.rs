@@ -36,6 +36,33 @@ fn source_dependency_callable_helpers_live_in_focused_module() {
 }
 
 #[test]
+fn imported_declaration_graph_seeding_lives_in_focused_module() {
+    let root = read("src/typechecker/resolver_validation/imports_dependencies.rs");
+    let graph_seeding = read("src/typechecker/resolver_validation/imports_graph_seeding.rs");
+    let includes = read("src/typechecker/resolver_validation.rs");
+
+    for helper in ["fn seed_module_graph_import("] {
+        assert!(
+            !root.contains(helper),
+            "imports_dependencies.rs should not own imported graph seeding helper `{helper}`"
+        );
+        assert!(
+            graph_seeding.contains(helper),
+            "imported graph seeding helper should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "imports_dependencies.rs should stay focused on imported dependency traversal"
+    );
+    assert!(
+        includes.contains("include!(\"resolver_validation/imports_graph_seeding.rs\");"),
+        "resolver_validation.rs should include focused imported graph seeding helpers"
+    );
+}
+
+#[test]
 fn replay_behavior_association_tasks_live_in_focused_module() {
     let root = read("src/typechecker/resolver_validation/replay_tasks.rs");
     let associations = read("src/typechecker/resolver_validation/replay_task_association_lists.rs");
