@@ -128,8 +128,18 @@ impl Parser {
                 break;
             }
             args.push(self.parse_type()?);
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
+            self.skip_newlines();
+            match self.peek() {
+                Token::Comma => {
+                    self.advance();
+                }
+                Token::Gt | Token::ShiftRight => break,
+                other => {
+                    return Err(CompileError::Syntax(
+                        format!("expected `,` or `>` in type argument list, found {other:?}"),
+                        Some(self.peek_span()),
+                    ));
+                }
             }
         }
         self.expect_gt()?;

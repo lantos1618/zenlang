@@ -31,18 +31,28 @@ impl Parser {
             }
         }
 
-        let type_args = if matches!(self.peek(), Token::Lt) {
-            let saved = self.pos;
-            match self.parse_type_arg_list() {
-                Ok(type_args) if matches!(self.peek(), Token::LParen) => type_args,
-                _ => {
-                    self.pos = saved;
-                    Vec::new()
+        let type_args =
+            if matches!(self.peek(), Token::Lt) && self.peek_span().start == name_span.end {
+                let type_args_start = self.pos;
+                let checkpoint = self.checkpoint();
+                match self.parse_type_arg_list() {
+                    Ok(type_args)
+                        if matches!(self.peek(), Token::LParen)
+                            && self.peek_span().start == self.prev_span().end =>
+                    {
+                        type_args
+                    }
+                    Err(err) if self.generic_close_has_attached_suffix_from(type_args_start) => {
+                        return Err(err);
+                    }
+                    _ => {
+                        self.restore(checkpoint);
+                        Vec::new()
+                    }
                 }
-            }
-        } else {
-            Vec::new()
-        };
+            } else {
+                Vec::new()
+            };
 
         if matches!(self.peek(), Token::LParen) {
             self.advance();

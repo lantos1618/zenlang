@@ -113,36 +113,57 @@ impl Parser {
                             break;
                         }
 
-                        let saved = self.pos;
-                        if let Ok(type_args) = self.parse_type_arg_list() {
-                            if matches!(self.peek(), Token::LParen) {
-                                let name = name.clone();
-                                self.advance(); // consume (
-                                let args = self.parse_arg_list()?;
-                                let end = self.expect(&Token::RParen)?;
-                                let span = id_span.merge(end);
-                                lhs = Expression::FunctionCall {
-                                    name,
-                                    module: None,
-                                    type_args,
-                                    args,
-                                    span,
-                                };
-                                continue;
+                        if self.peek_span().start == id_span.end {
+                            let type_args_start = self.pos;
+                            let checkpoint = self.checkpoint();
+                            match self.parse_type_arg_list() {
+                                Ok(type_args) => {
+                                    let type_args_end = self.prev_span();
+                                    if matches!(self.peek(), Token::LParen)
+                                        && self.peek_span().start == type_args_end.end
+                                    {
+                                        let name = name.clone();
+                                        self.advance(); // consume (
+                                        let args = self.parse_arg_list()?;
+                                        let end = self.expect(&Token::RParen)?;
+                                        let span = id_span.merge(end);
+                                        lhs = Expression::FunctionCall {
+                                            name,
+                                            module: None,
+                                            type_args,
+                                            args,
+                                            span,
+                                        };
+                                        continue;
+                                    }
+                                    if matches!(self.peek(), Token::Dot)
+                                        && self.peek_span().start == type_args_end.end
+                                        && first_char_is_upper(name)
+                                    {
+                                        let enum_name = name.clone();
+                                        lhs = self.parse_generic_enum_variant(
+                                            enum_name, type_args, id_span,
+                                        )?;
+                                        continue;
+                                    }
+                                    if matches!(self.peek(), Token::LBrace)
+                                        && first_char_is_upper(name)
+                                    {
+                                        let name = name.clone();
+                                        lhs =
+                                            self.parse_struct_literal(name, type_args, id_span)?;
+                                        continue;
+                                    }
+                                }
+                                Err(err) => {
+                                    if self.generic_close_has_attached_suffix_from(type_args_start)
+                                    {
+                                        return Err(err);
+                                    }
+                                }
                             }
-                            if matches!(self.peek(), Token::Dot) && first_char_is_upper(name) {
-                                let enum_name = name.clone();
-                                lhs =
-                                    self.parse_generic_enum_variant(enum_name, type_args, id_span)?;
-                                continue;
-                            }
-                            if matches!(self.peek(), Token::LBrace) && first_char_is_upper(name) {
-                                let name = name.clone();
-                                lhs = self.parse_struct_literal(name, type_args, id_span)?;
-                                continue;
-                            }
+                            self.restore(checkpoint);
                         }
-                        self.pos = saved;
                     }
                 }
 
