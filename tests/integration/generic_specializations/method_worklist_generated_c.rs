@@ -43,6 +43,19 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("inner_T"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_method_method_worklist.zen"),
+    );
+    assert!(c_source.contains("int32_t Box_inner_i32(Box_i32 self)"));
+    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
+    assert!(c_source.contains("Box_inner_i32(self)"));
+    assert!(c_source.contains("Box_get_inner_i32(box)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_inner_i32");
+    assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
+    assert_c_function_definition_count(&c_source, "Box_inner_i32", 1);
+    assert_c_function_definition_count(&c_source, "Box_get_inner_i32", 1);
+    assert!(!c_source.contains("T Box_inner"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("generic_method_nested_result.zen"),
     );
     assert!(c_source

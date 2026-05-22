@@ -37,6 +37,15 @@ fn emit_json_hir_generic_method_worklist_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_generic_method_method_worklist_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/generic_method_method_worklist.zen",
+        "tests/fixtures/ir_json/hir_generic_method_method_worklist.golden.json",
+        "generic method-to-method worklist input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_result_method_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_result_enum_method.zen",
