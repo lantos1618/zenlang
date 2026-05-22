@@ -2,11 +2,14 @@ use std::collections::BTreeMap;
 
 use crate::ast::typed::{Type, TypeDefKind, TypedProgram, TypedTypeDef};
 
+#[path = "layout/builtins.rs"]
+mod builtins;
 #[path = "layout/metrics.rs"]
 mod metrics;
 #[path = "layout/schema.rs"]
 mod schema;
 
+use builtins::{builtin_layout_name, seed_builtin_layouts};
 use metrics::{align_to, scalar_layout, POINTER_ALIGN, POINTER_SIZE, USIZE_SIZE};
 use schema::{
     LayoutJsonField, LayoutJsonProgram, LayoutJsonTarget, LayoutJsonType, LayoutJsonVariant,
@@ -44,7 +47,7 @@ impl<'a> LayoutContext<'a> {
                 .collect(),
             layouts: BTreeMap::new(),
         };
-        context.seed_builtin_layouts();
+        seed_builtin_layouts(&mut context.layouts);
         for type_def in &program.types {
             context.layout_type_def(type_def);
         }
@@ -53,39 +56,6 @@ impl<'a> LayoutContext<'a> {
 
     fn layouts(self) -> BTreeMap<String, LayoutJsonType> {
         self.layouts
-    }
-
-    fn seed_builtin_layouts(&mut self) {
-        for (name, size, alignment) in [
-            ("bool", 1, 1),
-            ("i8", 1, 1),
-            ("u8", 1, 1),
-            ("i16", 2, 2),
-            ("u16", 2, 2),
-            ("i32", 4, 4),
-            ("u32", 4, 4),
-            ("f32", 4, 4),
-            ("i64", 8, 8),
-            ("u64", 8, 8),
-            ("usize", USIZE_SIZE, POINTER_ALIGN),
-            ("f64", 8, 8),
-            ("void", 0, 1),
-        ] {
-            self.layouts
-                .insert(name.into(), scalar_layout("primitive", size, alignment));
-        }
-        self.layouts.insert(
-            "StaticString".into(),
-            scalar_layout("static_string", POINTER_SIZE + USIZE_SIZE, POINTER_ALIGN),
-        );
-        self.layouts.insert(
-            "String".into(),
-            scalar_layout(
-                "dynamic_string",
-                POINTER_SIZE + USIZE_SIZE * 2 + POINTER_SIZE,
-                POINTER_ALIGN,
-            ),
-        );
     }
 
     fn layout_type_def(&mut self, type_def: &'a TypedTypeDef) -> LayoutJsonType {
@@ -162,22 +132,11 @@ impl<'a> LayoutContext<'a> {
     }
 
     fn layout_type(&mut self, ty: &Type) -> LayoutJsonType {
+        if let Some(name) = builtin_layout_name(ty) {
+            return self.layout_by_name(name);
+        }
+
         match ty {
-            Type::I8 => self.layout_by_name("i8"),
-            Type::I16 => self.layout_by_name("i16"),
-            Type::I32 => self.layout_by_name("i32"),
-            Type::I64 => self.layout_by_name("i64"),
-            Type::U8 => self.layout_by_name("u8"),
-            Type::U16 => self.layout_by_name("u16"),
-            Type::U32 => self.layout_by_name("u32"),
-            Type::U64 => self.layout_by_name("u64"),
-            Type::Usize => self.layout_by_name("usize"),
-            Type::F32 => self.layout_by_name("f32"),
-            Type::F64 => self.layout_by_name("f64"),
-            Type::Bool => self.layout_by_name("bool"),
-            Type::Void | Type::Never | Type::Unknown => self.layout_by_name("void"),
-            Type::Str => self.layout_by_name("StaticString"),
-            Type::String => self.layout_by_name("String"),
             Type::Named(name) => self.layout_named(name),
             Type::Struct { fields, .. } => self.layout_struct(fields),
             Type::Enum { name, .. } => self.layout_named(name),
@@ -195,6 +154,25 @@ impl<'a> LayoutContext<'a> {
             }
             Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) | Type::Function { .. } => {
                 self.cache_compound_layout(ty, "pointer", POINTER_SIZE, POINTER_ALIGN)
+            }
+            Type::I8
+            | Type::I16
+            | Type::I32
+            | Type::I64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::Usize
+            | Type::F32
+            | Type::F64
+            | Type::Bool
+            | Type::Void
+            | Type::Never
+            | Type::Unknown
+            | Type::Str
+            | Type::String => {
+                unreachable!("builtin layout types are handled before compound types")
             }
         }
     }

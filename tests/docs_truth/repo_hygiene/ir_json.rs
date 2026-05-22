@@ -102,3 +102,46 @@ fn layout_json_schema_types_live_in_focused_helper() {
         "layout JSON lowering should stay focused on layout calculation"
     );
 }
+
+#[test]
+fn layout_json_builtin_layouts_live_in_focused_helper() {
+    let layout = read("src/ir_json/layout.rs");
+    let builtins = read("src/ir_json/layout/builtins.rs");
+
+    assert!(
+        !layout.contains("fn seed_builtin_layouts"),
+        "layout JSON lowering should not own builtin layout seeding"
+    );
+    assert!(
+        builtins.contains("pub(super) fn seed_builtin_layouts"),
+        "builtin layout seeding should live in the focused builtins helper"
+    );
+    assert!(
+        builtins.contains("pub(super) fn builtin_layout_name"),
+        "builtin layout helper should own builtin Type-to-layout-name mapping"
+    );
+    for required in ["enum BuiltinLayout", "const ALL: &[Self]", "fn from_type"] {
+        assert!(
+            builtins.contains(required),
+            "builtin layout helper should centralize builtin layout spelling through an enum table: {required}"
+        );
+    }
+    for builtin in ["StaticString", "dynamic_string", "primitive"] {
+        assert!(
+            !layout.contains(builtin),
+            "layout JSON lowering should not own builtin layout spelling: {builtin}"
+        );
+        assert!(
+            builtins.contains(builtin),
+            "builtin layout helper should own builtin layout spelling: {builtin}"
+        );
+    }
+    assert!(
+        layout.contains("mod builtins;"),
+        "layout JSON lowering should include the focused builtin layout helper"
+    );
+    assert!(
+        layout.contains("use builtins::{builtin_layout_name, seed_builtin_layouts};"),
+        "layout JSON lowering should delegate builtin layout handling through the focused helper"
+    );
+}
