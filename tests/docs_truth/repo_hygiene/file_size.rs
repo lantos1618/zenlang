@@ -4,6 +4,7 @@ mod focused_tests;
 mod function_method_template_splits;
 mod generic_behavior_splits;
 mod lexer_and_monomorphize;
+mod module_system_splits;
 mod resolver_phase2_splits;
 mod thresholds;
 mod typechecker_test_splits;
