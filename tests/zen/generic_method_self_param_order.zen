@@ -1,0 +1,16 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box.tag<U, T> = (self: Self, label: U) T {
+    self.value
+}
+
+main = () i32 {
+    box = Box<i32> { value: 42 }
+    value = box.tag("ok")
+    io.println("${value}")
+    0
+}

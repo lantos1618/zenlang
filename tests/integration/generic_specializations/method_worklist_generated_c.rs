@@ -42,6 +42,14 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Marker_T"));
     assert!(!c_source.contains("Token_T"));
 
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_method_self_param_order.zen"),
+    );
+    assert!(c_source.contains("int32_t Box_tag_StaticString_i32(Box_i32 self, zen_str label)"));
+    assert!(c_source.contains("Box_tag_StaticString_i32(box,"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_tag_StaticString_i32");
+    assert!(!c_source.contains("Box_tag_i32_StaticString"));
+
     let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("generic_method_worklist.zen"));
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));

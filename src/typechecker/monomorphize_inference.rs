@@ -77,22 +77,33 @@ impl TypeChecker {
         receiver_name: &str,
         type_params: &[String],
     ) -> Vec<AstType> {
-        let receiver_arity = self
-            .structs
+        let Some(receiver_params) = self.generic_receiver_type_params(receiver_name) else {
+            return Vec::new();
+        };
+
+        receiver_params
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, param)| {
+                let method_param = if type_params.contains(param) {
+                    param
+                } else {
+                    type_params.get(idx)?
+                };
+                Some(AstType::Named(method_param.clone()))
+            })
+            .collect()
+    }
+
+    fn generic_receiver_type_params(&self, receiver_name: &str) -> Option<Vec<String>> {
+        self.structs
             .get(receiver_name)
-            .map(|info| info.type_params.len())
+            .map(|info| info.type_params.clone())
             .or_else(|| {
                 self.enums
                     .get(receiver_name)
-                    .map(|info| info.type_params.len())
+                    .map(|info| info.type_params.clone())
             })
-            .unwrap_or(0);
-
-        type_params
-            .iter()
-            .take(receiver_arity)
-            .map(|param| AstType::Named(param.clone()))
-            .collect()
     }
 
     pub(super) fn match_type_param(
