@@ -31,3 +31,30 @@ fn generic_single_file_fixture_tests_live_in_focused_helper() {
         "single_file_fixtures.rs should include the focused generic fixture module by path"
     );
 }
+
+#[test]
+fn generic_multi_file_fixture_tests_live_in_phase5_helper() {
+    let root = read("tests/integration/multi_file_fixtures.rs");
+    let phase5 = read("tests/integration/multi_file_phase5_fixtures.rs");
+
+    for test_name in [
+        "test_multi_file_generic_imports",
+        "test_multi_file_generic_imported_worklist_chain_imports",
+        "test_multi_file_generic_result_enum_multi_specialization_imports",
+        "test_multi_file_generic_imported_transitive_dependency_imports",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "multi_file_fixtures.rs should not own generic Phase 5 fixture test: {test_name}"
+        );
+        assert!(
+            phase5.contains(&format!("fn {test_name}")),
+            "generic multi-file Phase 5 fixture tests should live in focused helper: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "multi_file_fixtures.rs should stay focused on non-generic multi-file fixture tests"
+    );
+}

@@ -32,7 +32,10 @@ fn all_expected_outputs_are_exercised_by_runtime_tests() {
         "tests/integration/single_file_fixtures",
     ]);
     let runtime_tests = runtime_test_sources(["tests/integration/runtime_fixtures.rs"]);
-    let multi_file_tests = runtime_test_sources(["tests/integration/multi_file_fixtures.rs"]);
+    let multi_file_tests = runtime_test_sources([
+        "tests/integration/multi_file_fixtures.rs",
+        "tests/integration/multi_file_phase5_fixtures.rs",
+    ]);
 
     let mut uncovered = Vec::new();
     for entry in std::fs::read_dir(&expected_dir).expect("read tests/zen/expected") {
