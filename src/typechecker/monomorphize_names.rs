@@ -93,6 +93,23 @@ impl TypeChecker {
         self.specialized_types_seen.get(&key).cloned()
     }
 
+    pub(crate) fn remember_specialized_type_source(&mut self, concrete: &str, generic: &str) {
+        self.specialized_type_generic_names
+            .insert(concrete.to_string(), generic.to_string());
+    }
+
+    pub(crate) fn concrete_type_name_matches_generic(
+        &self,
+        concrete_name: &str,
+        generic_name: &str,
+    ) -> bool {
+        super::monomorphize_types::concrete_name_matches_generic(concrete_name, generic_name)
+            || self
+                .specialized_type_generic_names
+                .get(concrete_name)
+                .is_some_and(|source| source == generic_name)
+    }
+
     pub(crate) fn generic_specialization_key(
         &self,
         kind: &str,

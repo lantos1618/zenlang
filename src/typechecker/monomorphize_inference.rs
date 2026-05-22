@@ -159,7 +159,7 @@ impl TypeChecker {
             Type::Struct {
                 name: actual_name,
                 fields: actual_fields,
-            } if super::monomorphize::concrete_name_matches_generic(actual_name, generic_name) => {
+            } if self.concrete_type_name_matches_generic(actual_name, generic_name) => {
                 if let Some(info) = self.structs.get(generic_name) {
                     for ((_, expected), (_, actual)) in info.fields.iter().zip(actual_fields.iter())
                     {
@@ -170,7 +170,7 @@ impl TypeChecker {
             Type::Enum {
                 name: actual_name,
                 variants: actual_variants,
-            } if super::monomorphize::concrete_name_matches_generic(actual_name, generic_name) => {
+            } if self.concrete_type_name_matches_generic(actual_name, generic_name) => {
                 if let Some(info) = self.enums.get(generic_name) {
                     for ((_, expected_payload), (_, actual_payload)) in
                         info.variants.iter().zip(actual_variants.iter())

@@ -22,6 +22,8 @@ mod import_visibility_dependencies;
 mod import_visibility_private_methods;
 #[path = "integration/multi_file_fixtures.rs"]
 mod multi_file_fixtures;
+#[path = "integration/multi_file_phase5_fixtures.rs"]
+mod multi_file_phase5_fixtures;
 #[path = "integration/public_examples.rs"]
 mod public_examples;
 #[path = "integration/runtime_fixtures.rs"]
