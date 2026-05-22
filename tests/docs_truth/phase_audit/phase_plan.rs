@@ -107,3 +107,19 @@ fn nested_generic_result_generated_c_pins_definition_counts() {
         );
     }
 }
+
+#[test]
+fn multi_file_nested_generic_method_generated_c_pins_definition_counts() {
+    let method_worklist =
+        read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
+
+    for required in [
+        "multi_file_type_method_nested_result_dependency",
+        r#"assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1)"#,
+    ] {
+        assert!(
+            method_worklist.contains(required),
+            "multi-file nested generic method generated-C tests should pin exact definition counts: {required}"
+        );
+    }
+}

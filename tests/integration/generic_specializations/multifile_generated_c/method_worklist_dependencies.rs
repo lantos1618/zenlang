@@ -156,6 +156,7 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(c_source.contains("Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_wrap_result_i32(box)"));
     assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
+    assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1);
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("Result_Option_T"));
     assert!(!c_source.contains("T Box_wrap_result"));
