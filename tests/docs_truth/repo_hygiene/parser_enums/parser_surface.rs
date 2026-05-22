@@ -4,6 +4,7 @@ use super::*;
 fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
     let source = read("src/parser/declarations.rs");
     let ast_declarations = read("src/ast/declarations.rs");
+    let ast_declaration_support = read("src/ast/declarations/support.rs");
 
     for forbidden in [
         r#"method_name == "impl""#,
@@ -40,10 +41,48 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         ".find(|keyword| keyword.as_str() == value)",
     ] {
         assert!(
-            ast_declarations.contains(required),
+            ast_declaration_support.contains(required),
             "TypeDeclarationKeyword spelling should parse through its static table: {required}"
         );
     }
+}
+
+#[test]
+fn ast_declaration_support_types_live_in_focused_helper() {
+    let root = read("src/ast/declarations.rs");
+    let support = read("src/ast/declarations/support.rs");
+
+    for support_type in [
+        "TypeDeclarationKeyword",
+        "StructField",
+        "EnumVariant",
+        "BehaviorMethod",
+        "TypeParam",
+    ] {
+        assert!(
+            !root.contains(&format!("enum {support_type}"))
+                && !root.contains(&format!("struct {support_type}")),
+            "AST declaration root should not own declaration support type: {support_type}"
+        );
+        assert!(
+            support.contains(&format!("enum {support_type}"))
+                || support.contains(&format!("struct {support_type}")),
+            "AST declaration support type should live in focused helper: {support_type}"
+        );
+    }
+
+    assert!(
+        root.contains("mod support;"),
+        "AST declaration root should include focused declaration support helper"
+    );
+    assert!(
+        root.contains("pub use support::{"),
+        "AST declaration root should re-export support types to keep public ast API stable"
+    );
+    assert!(
+        root.lines().count() < 170,
+        "AST declaration root should stay focused on the Declaration enum and declaration methods"
+    );
 }
 
 #[test]
