@@ -8,7 +8,7 @@ fn assert_c_function_definition(c_source: &str, name: &str) {
     );
 }
 
-pub fn assert_c_function_definition_count(c_source: &str, name: &str, expected: usize) {
+fn assert_c_function_definition_count(c_source: &str, name: &str, expected: usize) {
     let actual = c_function_definitions(c_source)
         .iter()
         .filter(|definition| definition.as_str() == name)
@@ -41,7 +41,7 @@ pub fn assert_generated_c_function_definitions_are_unique(c_source: &str) {
     );
 }
 
-pub fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
+fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     assert_c_function_definition(c_source, name);
     assert!(
         has_c_call_outside_signature(c_source, name),

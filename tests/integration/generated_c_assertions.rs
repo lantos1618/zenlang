@@ -50,9 +50,13 @@ int32_t inner_i32(int32_t value);
 int32_t inner_i32(int32_t value) {
     return value;
 }
+
+int32_t outer_i32(void) {
+    return inner_i32(1LL);
+}
 "#;
 
-    assert_c_function_definition_count(c_source, "inner_i32", 1);
+    assert_c_call_resolves_to_single_definition(c_source, "inner_i32");
 }
 
 // ── Individual test cases ───────────────────────────────────────────
