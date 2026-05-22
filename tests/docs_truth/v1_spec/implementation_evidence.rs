@@ -68,3 +68,17 @@ fn v1_spec_records_resolver_generic_and_behavior_evidence() {
         "docs/V1_SPEC.md should stay compact; move exhaustive evidence to tests, golden fixtures, or git history"
     );
 }
+
+#[test]
+fn generic_generated_c_definition_checks_discover_fixtures() {
+    let tests = read("tests/integration/generic_specializations.rs");
+
+    assert!(
+        tests.contains("generic_specialization_fixture_paths"),
+        "generic generated-C definition checks should discover generic fixtures instead of relying on a hand-maintained list"
+    );
+    assert!(
+        !tests.contains("let fixtures = ["),
+        "generic generated-C definition checks should not use a hard-coded fixture table"
+    );
+}
