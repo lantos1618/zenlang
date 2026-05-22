@@ -55,6 +55,15 @@ fn emit_json_hir_multi_file_type_method_worklist_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_multi_file_generic_imported_type_dependency_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_generic_imported_type_dependency/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_generic_imported_type_dependency.golden.json",
+        "multi-file generic imported type dependency input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_recursive_method_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_recursive_method.zen",
