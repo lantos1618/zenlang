@@ -1,5 +1,7 @@
 use super::*;
 
+mod program_generation;
+
 #[test]
 fn expression_emission_tests_stay_split_by_expression_form() {
     let root = read("src/codegen/c/tests/expression_emission.rs");
