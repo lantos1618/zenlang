@@ -3,7 +3,11 @@ impl TypeChecker {
         source_module: &ResolvedModule,
         graph: &ResolvedModuleGraph,
     ) -> SourceModuleDependencies {
-        let mut dependencies = SourceModuleDependencies::default();
+        let source_scope = Self::source_module_specialization_scope(source_module);
+        let mut dependencies = SourceModuleDependencies {
+            specialization_scope: Some(source_scope.clone()),
+            ..SourceModuleDependencies::default()
+        };
         for binding in &source_module.imports {
             let Some(imported_module) = graph.module(binding.source_module) else {
                 continue;
@@ -16,7 +20,13 @@ impl TypeChecker {
             else {
                 continue;
             };
-            Self::insert_source_import_dependency(&binding.local_name, decl, &mut dependencies);
+            let imported_scope = Self::source_module_specialization_scope(imported_module);
+            Self::insert_source_import_dependency(
+                &binding.local_name,
+                decl,
+                &mut dependencies,
+                Some(&imported_scope),
+            );
             if matches!(decl, Declaration::Struct { .. } | Declaration::Enum { .. }) {
                 Self::insert_source_import_type_method_dependencies(
                     &binding.local_name,
@@ -53,6 +63,7 @@ impl TypeChecker {
                         decl,
                         &mut dependencies.functions,
                         &mut dependencies.generic_functions,
+                        Some(&source_scope),
                     );
                 }
                 Declaration::Method {
@@ -65,6 +76,7 @@ impl TypeChecker {
                         decl,
                         &mut dependencies.methods,
                         &mut dependencies.generic_methods,
+                        Some(&source_scope),
                     );
                 }
                 Declaration::ImplBlock {
@@ -86,6 +98,7 @@ impl TypeChecker {
                                 method,
                                 &mut dependencies.methods,
                                 &mut dependencies.generic_methods,
+                                Some(&source_scope),
                             );
                         }
                     }
@@ -96,10 +109,15 @@ impl TypeChecker {
         dependencies
     }
 
+    fn source_module_specialization_scope(source_module: &ResolvedModule) -> String {
+        source_module.info.canonical_path.clone()
+    }
+
     fn insert_source_import_dependency(
         local_name: &str,
         decl: &Declaration,
         dependencies: &mut SourceModuleDependencies,
+        specialization_scope: Option<&str>,
     ) {
         match decl {
             Declaration::Struct { .. } | Declaration::Enum { .. } => {
@@ -111,6 +129,7 @@ impl TypeChecker {
                     decl,
                     &mut dependencies.functions,
                     &mut dependencies.generic_functions,
+                    specialization_scope,
                 );
             }
             _ => {}
