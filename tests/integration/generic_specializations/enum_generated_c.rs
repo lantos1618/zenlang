@@ -35,10 +35,8 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Option_unwrap_or_i32(none_int, 55LL)"));
     assert!(c_source.contains("Option_unwrap_or_bool(some_bool, false)"));
     assert!(c_source.contains("Option_unwrap_or_bool(none_bool, true)"));
-    assert_c_call_resolves_to_definition(&c_source, "Option_unwrap_or_i32");
-    assert_c_call_resolves_to_definition(&c_source, "Option_unwrap_or_bool");
-    assert_c_function_definition_count(&c_source, "Option_unwrap_or_i32", 1);
-    assert_c_function_definition_count(&c_source, "Option_unwrap_or_bool", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_bool");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Option_unwrap_or"));
     assert!(!c_source.contains("Option_unwrap_or(some"));
@@ -92,10 +90,8 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err_int, 34LL)"));
     assert!(c_source.contains("Result_unwrap_or_bool_StaticString(ok_bool, true)"));
     assert!(c_source.contains("Result_unwrap_or_bool_StaticString(err_bool, true)"));
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_StaticString");
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_bool_StaticString");
-    assert_c_function_definition_count(&c_source, "Result_unwrap_or_i32_StaticString", 1);
-    assert_c_function_definition_count(&c_source, "Result_unwrap_or_bool_StaticString", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_bool_StaticString");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T Result_unwrap_or"));
     assert!(!c_source.contains("Result_unwrap_or(err"));
