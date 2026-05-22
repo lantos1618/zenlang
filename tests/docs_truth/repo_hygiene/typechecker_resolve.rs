@@ -64,3 +64,26 @@ fn typechecker_type_resolution_uses_named_and_generic_helpers() {
         "generic type branch should delegate to resolve_generic_type"
     );
 }
+
+#[test]
+fn typechecker_type_compatibility_lives_in_focused_helper() {
+    let root = read("src/typechecker/resolve.rs");
+    let compatibility = read("src/typechecker/resolve/compatibility.rs");
+
+    assert!(
+        !root.contains("fn types_compatible("),
+        "resolve.rs should not own type compatibility checking"
+    );
+    assert!(
+        compatibility.contains("fn types_compatible("),
+        "type compatibility checking should live in focused resolve helper"
+    );
+    assert!(
+        root.contains("mod compatibility;"),
+        "type resolution should load the focused compatibility helper"
+    );
+    assert!(
+        root.lines().count() < 210,
+        "resolve.rs should stay focused on AstType resolution and field lookup"
+    );
+}
