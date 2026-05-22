@@ -124,3 +124,31 @@ fn monomorphize_specialized_type_name_recovery_lives_in_focused_helper() {
         "typechecker module should include the focused specialized type-name helper"
     );
 }
+
+#[test]
+fn monomorphize_inference_substitution_lives_in_focused_helper() {
+    let shapes = read("src/typechecker/monomorphize_inference_shapes.rs");
+    let substitution = read("src/typechecker/monomorphize_inference_substitution.rs");
+    let module = read("src/typechecker/mod.rs");
+
+    assert!(
+        shapes.lines().count() < 200,
+        "monomorphize_inference_shapes.rs should stay focused on generic shape matching"
+    );
+    assert!(
+        !shapes.contains("fn substitute_inference_ast_type"),
+        "inference AstType substitution should live in monomorphize_inference_substitution.rs"
+    );
+    assert!(
+        substitution.contains("pub(super) fn substitute_inference_ast_type"),
+        "monomorphize_inference_substitution.rs should own recursive inference AstType substitution"
+    );
+    assert!(
+        substitution.contains("pub(super) fn ast_type_substitutions"),
+        "monomorphize_inference_substitution.rs should own inference substitution map construction"
+    );
+    assert!(
+        module.contains("mod monomorphize_inference_substitution;"),
+        "typechecker module should include the focused monomorphize inference substitution helper"
+    );
+}
