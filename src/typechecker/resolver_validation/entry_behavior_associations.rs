@@ -1,5 +1,6 @@
 struct ResolverImplBlockEntry<'a> {
     type_name: &'a str,
+    type_args: &'a [AstType],
     behavior: &'a Option<String>,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],
@@ -41,11 +42,12 @@ impl TypeChecker {
                 ..
             } = method
             {
-                let method_key = Self::behavior_impl_method_key(
+                let method_key = Self::behavior_impl_method_key_with_target_args(
                     entry.type_name,
                     name,
                     entry.behavior.as_deref(),
                     entry.behavior_type_args,
+                    entry.type_args,
                 );
                 self.require_resolver_value_symbol(
                     symbols,

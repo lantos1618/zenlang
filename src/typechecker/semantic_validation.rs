@@ -1,3 +1,4 @@
+use super::behavior_impl_validation::BehaviorImplValidationInput;
 use super::*;
 
 impl TypeChecker {
@@ -88,14 +89,7 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         for task in &tasks.impls {
-            self.validate_collected_behavior_impl_declaration(
-                symbols,
-                task.ast_type_name,
-                task.behavior,
-                task.behavior_type_args,
-                task.methods,
-                task.span,
-            );
+            self.validate_collected_behavior_impl_declaration(symbols, task);
         }
     }
 
@@ -141,30 +135,27 @@ impl TypeChecker {
     fn validate_collected_behavior_impl_declaration(
         &mut self,
         symbols: Option<&SymbolTable>,
-        type_name: &str,
-        behavior: &str,
-        behavior_type_args: &[AstType],
-        methods: &[Declaration],
-        span: Span,
+        task: &ResolverBehaviorImplBlockDeclarationTask<'_>,
     ) {
         let restored_type_name = symbols
             .map(|symbols| {
                 self.resolver_impl_type_name_for(
                     symbols,
-                    type_name,
-                    methods,
-                    Some((behavior, behavior_type_args)),
+                    task.ast_type_name,
+                    task.methods,
+                    Some((task.behavior, task.behavior_type_args)),
                 )
             })
-            .unwrap_or_else(|| type_name.to_string());
-        self.check_behavior_impl(
-            &restored_type_name,
-            behavior,
-            behavior_type_args,
-            methods,
-            span,
+            .unwrap_or_else(|| task.ast_type_name.to_string());
+        self.check_behavior_impl(BehaviorImplValidationInput {
+            type_name: &restored_type_name,
+            type_args: task.type_args,
+            behavior: task.behavior,
+            behavior_type_args: task.behavior_type_args,
+            methods: task.methods,
+            span: task.span,
             symbols,
-        );
+        });
     }
 
     fn validate_collected_behavior_requires_declaration(

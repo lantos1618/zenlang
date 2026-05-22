@@ -1,21 +1,4 @@
 impl TypeChecker {
-    pub(super) fn collect_resolver_validation_replay_tasks<'a>(
-        program: &'a ast::Program,
-        symbols: &'a SymbolTable,
-    ) -> ResolverValidationReplayTasks<'a> {
-        let declaration_tasks =
-            Self::collect_resolver_validation_replay_declaration_tasks(program, symbols);
-        let behavior_associations =
-            Self::collect_resolver_behavior_association_list_tasks_from_declaration_tasks(
-                &declaration_tasks,
-            );
-
-        ResolverValidationReplayTasks {
-            expected_symbols: declaration_tasks.expected_symbols,
-            behavior_associations,
-        }
-    }
-
     pub(super) fn collect_resolver_validation_replay_declaration_tasks<'a>(
         program: &'a ast::Program,
         symbols: &'a SymbolTable,
@@ -124,6 +107,7 @@ impl TypeChecker {
                 }
                 Declaration::ImplBlock {
                     type_name,
+                    type_args,
                     behavior: Some(behavior),
                     methods,
                     behavior_type_args,
@@ -131,6 +115,7 @@ impl TypeChecker {
                 } => {
                     collect_expected_resolver_impl_method_symbols(
                         type_name,
+                        type_args,
                         Some(behavior),
                         behavior_type_args,
                         methods,
@@ -145,10 +130,14 @@ impl TypeChecker {
                     );
                 }
                 Declaration::ImplBlock {
-                    type_name, methods, ..
+                    type_name,
+                    type_args,
+                    methods,
+                    ..
                 } => {
                     collect_expected_resolver_impl_method_symbols(
                         type_name,
+                        type_args,
                         None,
                         &[],
                         methods,

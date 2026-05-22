@@ -1,0 +1,13 @@
+pub Json<T>: behavior {
+    encode: (Self) T
+}
+
+pub Box<T>: {
+    value: T
+}
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Box<T>) T {
+        self.value
+    }
+}

@@ -40,6 +40,7 @@ mod monomorphize_types;
 mod patterns;
 mod program_checking;
 mod program_globals;
+mod program_impl_blocks;
 mod program_module_graph;
 mod program_type_defs;
 mod resolve;
@@ -59,7 +60,8 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::ast::typed::*;
 use crate::ast::{
-    self, AstType, BehaviorMethod, Declaration, EnumVariant, Expression, Param, StructField,
+    self, behavior_type_args_match_target_params, named_type_arg_names, AstType, BehaviorMethod,
+    Declaration, EnumVariant, Expression, Param, StructField, TypeParam,
 };
 use crate::error::{Diagnostic, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
@@ -70,8 +72,8 @@ use crate::resolver::{
 
 pub use environment::{BehaviorBound, BehaviorInfo, EnumInfo, FuncInfo, StructInfo};
 pub(crate) use environment::{
-    GenericFunctionTemplate, SourceModuleDependencies, TemplateDependencyEntry,
-    TemplateDependencyState,
+    GenericBehaviorImplTemplate, GenericFunctionTemplate, SourceModuleDependencies,
+    TemplateDependencyEntry, TemplateDependencyState,
 };
 
 include!("declaration_tasks.rs");

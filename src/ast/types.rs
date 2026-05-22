@@ -121,6 +121,27 @@ impl AstType {
     }
 }
 
+pub(crate) fn behavior_type_args_match_target_params(
+    behavior_type_args: &[AstType],
+    target_type_args: &[AstType],
+) -> bool {
+    behavior_type_args == target_type_args && behavior_type_args.iter().all(is_named_type_arg)
+}
+
+pub(crate) fn named_type_arg_names(type_args: &[AstType]) -> Vec<String> {
+    type_args
+        .iter()
+        .filter_map(|arg| match arg {
+            AstType::Named(name) => Some(name.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn is_named_type_arg(type_arg: &AstType) -> bool {
+    matches!(type_arg, AstType::Named(_))
+}
+
 /// A typed parameter in a function/method/closure signature.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Param {
@@ -132,10 +153,31 @@ pub struct Param {
 
 #[cfg(test)]
 mod tests {
-    use super::AstType;
+    use super::{behavior_type_args_match_target_params, AstType};
 
     #[test]
     fn static_string_display_uses_public_type_name() {
         assert_eq!(AstType::Str.display_name(), "StaticString");
+    }
+
+    #[test]
+    fn behavior_type_arg_target_param_match_requires_same_named_args() {
+        assert!(behavior_type_args_match_target_params(
+            &[AstType::Named("T".into())],
+            &[AstType::Named("T".into())]
+        ));
+        assert!(behavior_type_args_match_target_params(&[], &[]));
+        assert!(!behavior_type_args_match_target_params(
+            &[AstType::I32],
+            &[AstType::Named("T".into())]
+        ));
+        assert!(!behavior_type_args_match_target_params(
+            &[AstType::Named("E".into())],
+            &[AstType::Named("T".into())]
+        ));
+        assert!(!behavior_type_args_match_target_params(
+            &[AstType::Named("U".into()), AstType::Named("T".into())],
+            &[AstType::Named("T".into()), AstType::Named("U".into())]
+        ));
     }
 }

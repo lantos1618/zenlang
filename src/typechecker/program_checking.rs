@@ -1,4 +1,5 @@
 use super::program_globals::push_typed_global;
+use super::program_impl_blocks::impl_self_ast_type;
 use super::*;
 
 impl TypeChecker {
@@ -6,7 +7,6 @@ impl TypeChecker {
         &mut self,
         program: &ast::Program,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
-        // Phase 1: Collect type definitions and function signatures
         self.collect_declarations(&program.declarations);
         self.validate_collected_declaration_semantics(&program.declarations, None);
         self.check_program_after_collection(program)
@@ -16,7 +16,6 @@ impl TypeChecker {
         &mut self,
         program: &ast::Program,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
-        // Phase 2: Check function bodies and produce typed AST
         let mut functions = Vec::new();
         let mut types = Vec::new();
         let mut globals = Vec::new();
@@ -58,7 +57,6 @@ impl TypeChecker {
                         continue;
                     }
                     let full_name = Self::method_key(type_name, method_name);
-                    // Set Self type for method body
                     self.current_self_type =
                         Some(self.resolve_type(&AstType::Named(type_name.clone())));
                     match self.check_function(&full_name, params, return_type, body, span) {
@@ -91,21 +89,17 @@ impl TypeChecker {
                     }
                     types.push(self.typed_enum_def(name, variants, *span));
                 }
-                Declaration::TopLevelExpr { expr, span } => {
-                    // Top-level expressions like main() call
-                    match self.check_expr(expr) {
-                        Ok(typed_expr) => {
-                            push_typed_global(&mut globals, typed_expr, *span);
-                        }
-                        Err(d) => self.diagnostics.push(d),
+                Declaration::TopLevelExpr { expr, span } => match self.check_expr(expr) {
+                    Ok(typed_expr) => {
+                        push_typed_global(&mut globals, typed_expr, *span);
                     }
-                }
-                Declaration::Import { .. } => {
-                    // Imports are handled by the module system, not the typechecker
-                }
+                    Err(d) => self.diagnostics.push(d),
+                },
+                Declaration::Import { .. } => {}
                 Declaration::Behavior { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
+                    type_args,
                     behavior,
                     behavior_type_args,
                     methods,
@@ -125,14 +119,15 @@ impl TypeChecker {
                             if !type_params.is_empty() {
                                 continue;
                             }
-                            let full_name = Self::behavior_impl_method_key(
+                            let full_name = Self::behavior_impl_method_key_with_target_args(
                                 type_name,
                                 name,
                                 behavior.as_deref(),
                                 behavior_type_args,
+                                type_args,
                             );
                             self.current_self_type =
-                                Some(self.resolve_type(&AstType::Named(type_name.clone())));
+                                Some(self.resolve_type(&impl_self_ast_type(type_name, type_args)));
                             match self.check_function(&full_name, params, return_type, body, span) {
                                 Ok(func) => functions.push(func),
                                 Err(d) => self.diagnostics.push(d),
@@ -144,13 +139,17 @@ impl TypeChecker {
                     if let Some(behavior) = behavior {
                         for default in self.behavior_default_methods_for_impl(
                             type_name,
+                            type_args,
                             behavior,
                             behavior_type_args,
                             methods,
                         ) {
+                            if !default.type_params.is_empty() {
+                                continue;
+                            }
                             let full_name = Self::method_key(type_name, &default.name);
                             self.current_self_type =
-                                Some(self.resolve_type(&AstType::Named(type_name.clone())));
+                                Some(self.resolve_type(&impl_self_ast_type(type_name, type_args)));
                             match self.check_function(
                                 &full_name,
                                 &default.params,

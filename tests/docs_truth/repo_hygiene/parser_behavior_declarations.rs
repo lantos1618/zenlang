@@ -3,9 +3,11 @@ use super::*;
 #[test]
 fn parser_behavior_relationships_share_parenthesized_ref_parser() {
     let source = read("src/parser/behavior_declarations.rs");
+    let impl_blocks = read("src/parser/behavior_declarations/impl_blocks.rs");
+    let combined = format!("{source}\n{impl_blocks}");
 
     assert!(
-        source.contains("fn parse_parenthesized_behavior_ref"),
+        combined.contains("fn parse_parenthesized_behavior_ref"),
         "behavior relationship parsing should share a helper for `(Behavior<T>)` references"
     );
 
@@ -15,10 +17,10 @@ fn parser_behavior_relationships_share_parenthesized_ref_parser() {
         "parse_behavior_derive",
         "parse_behavior_extends",
     ] {
-        let start = source
+        let start = combined
             .find(&format!("fn {parser}"))
             .unwrap_or_else(|| panic!("missing parser helper: {parser}"));
-        let body = &source[start..];
+        let body = &combined[start..];
         let next_fn = body[1..]
             .find("\n    fn ")
             .or_else(|| body[1..].find("\n    pub(super) fn "))

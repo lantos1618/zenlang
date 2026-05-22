@@ -1,7 +1,24 @@
 use super::*;
 
+pub(super) struct ResolverBehaviorImplMethodSignatureCollection<'a> {
+    pub(super) symbols: &'a SymbolTable,
+    pub(super) ast_type_name: &'a str,
+    pub(super) type_name: &'a str,
+    pub(super) target_type_args: &'a [AstType],
+    pub(super) behavior: &'a str,
+    pub(super) behavior_type_args: &'a [AstType],
+    pub(super) methods: &'a [Declaration],
+}
+
 impl TypeChecker {
-    pub(super) fn collect_impl_method_signature(&mut self, type_name: &str, method: &Declaration) {
+    pub(super) fn collect_impl_method_signature(
+        &mut self,
+        type_name: &str,
+        type_args: &[AstType],
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
+        method: &Declaration,
+    ) {
         let Declaration::Function {
             name,
             type_params,
@@ -16,7 +33,13 @@ impl TypeChecker {
         };
 
         self.validate_generic_bounds(type_params);
-        let key = Self::method_key(type_name, name);
+        let key = Self::behavior_impl_method_key_with_target_args(
+            type_name,
+            name,
+            behavior,
+            behavior_type_args,
+            type_args,
+        );
         self.methods.insert(
             key.clone(),
             func_info_from_ast_signature(key.clone(), type_params, params, return_type),
@@ -54,19 +77,25 @@ impl TypeChecker {
 
     pub(super) fn collect_resolver_behavior_impl_method_signatures(
         &mut self,
-        symbols: &SymbolTable,
-        ast_type_name: &str,
-        type_name: &str,
-        behavior: &str,
-        behavior_type_args: &[AstType],
-        methods: &[Declaration],
+        task: ResolverBehaviorImplMethodSignatureCollection<'_>,
     ) {
+        let ResolverBehaviorImplMethodSignatureCollection {
+            symbols,
+            ast_type_name,
+            type_name,
+            target_type_args,
+            behavior,
+            behavior_type_args,
+            methods,
+        } = task;
         let (behavior, behavior_type_args) =
             self.resolver_behavior_impl_ref_parts(type_name, behavior, behavior_type_args);
+        let behavior = behavior.to_string();
+        let behavior_type_args = behavior_type_args.to_vec();
         let behavior_substitutions =
-            self.behavior_type_param_substitutions(behavior, behavior_type_args);
+            self.behavior_type_param_substitutions(&behavior, &behavior_type_args);
         let mut required_methods: VecDeque<ast::BehaviorMethod> = self
-            .behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
+            .behavior_methods_for_impl(&behavior, &behavior_substitutions, &mut HashSet::new())
             .into_iter()
             .collect();
 
@@ -86,8 +115,15 @@ impl TypeChecker {
             let Some(restored_name) = restored_name else {
                 continue;
             };
-            let restored_key =
-                resolver_owned_key.unwrap_or_else(|| Self::method_key(type_name, &restored_name));
+            let restored_key = resolver_owned_key.unwrap_or_else(|| {
+                Self::behavior_impl_method_key_with_target_args(
+                    type_name,
+                    &restored_name,
+                    Some(&behavior),
+                    &behavior_type_args,
+                    target_type_args,
+                )
+            });
             self.collect_resolver_callable_signature_for_key(
                 symbols,
                 &ast_key,
@@ -100,6 +136,7 @@ impl TypeChecker {
     pub(super) fn collect_behavior_default_method_signatures(
         &mut self,
         type_name: &str,
+        type_args: &[AstType],
         behavior: &str,
         behavior_type_args: &[AstType],
         methods: &[Declaration],
@@ -109,9 +146,13 @@ impl TypeChecker {
         }
         let (behavior, behavior_type_args) =
             self.resolver_behavior_impl_ref_parts(type_name, behavior, behavior_type_args);
-        for default in
-            self.behavior_default_methods_for_impl(type_name, behavior, behavior_type_args, methods)
-        {
+        for default in self.behavior_default_methods_for_impl(
+            type_name,
+            type_args,
+            behavior,
+            behavior_type_args,
+            methods,
+        ) {
             self.seed_behavior_default_method_signature(type_name, &default);
         }
     }

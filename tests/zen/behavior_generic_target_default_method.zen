@@ -1,0 +1,23 @@
+{ io } = std
+
+Describe<T>: behavior {
+    describe: (self: Self) StaticString {
+        "box"
+    }
+}
+
+Box<T>: {
+    value: T
+}
+
+Box<T>.implements(Describe<T>) {
+}
+
+main = () i32 {
+    int_box = Box<i32> { value: 41 }
+    bool_box = Box<bool> { value: true }
+
+    io.println(int_box.describe())
+    io.println(bool_box.describe())
+    0
+}

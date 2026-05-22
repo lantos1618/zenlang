@@ -6,6 +6,7 @@ use super::super::{BehaviorRefMetadata, Resolver, SymbolTable};
 
 pub(super) struct ImplBlockValidationInput<'a> {
     pub(super) type_name: &'a str,
+    pub(super) type_args: &'a [AstType],
     pub(super) behavior: Option<&'a str>,
     pub(super) behavior_type_args: &'a [AstType],
     pub(super) methods: &'a [Declaration],
@@ -21,13 +22,16 @@ impl Resolver {
     ) {
         let ImplBlockValidationInput {
             type_name,
+            type_args,
             behavior,
             behavior_type_args,
             methods,
             span,
         } = input;
 
-        if !self.is_known_type_name(table, &[], type_name) {
+        let scoped_type_params = target_type_params(type_args);
+
+        if !self.is_known_type_name(table, &scoped_type_params, type_name) {
             diagnostics.push(Diagnostic::error(
                 "E0201",
                 format!("unknown type symbol '{type_name}'"),
@@ -45,7 +49,14 @@ impl Resolver {
             );
         }
         for type_arg in behavior_type_args {
-            self.validate_type_ref(table, &[], type_arg, span, false, diagnostics);
+            self.validate_type_ref(
+                table,
+                &scoped_type_params,
+                type_arg,
+                span,
+                false,
+                diagnostics,
+            );
         }
         for method in methods {
             self.validate_impl_block_method(table, method, diagnostics);
@@ -116,4 +127,19 @@ impl Resolver {
         let mut locals = self.param_locals(table, params, scope_id, diagnostics);
         self.validate_expr_refs(table, type_params, body, &mut locals, true, diagnostics);
     }
+}
+
+fn target_type_params(type_args: &[AstType]) -> Vec<crate::ast::TypeParam> {
+    type_args
+        .iter()
+        .filter_map(|arg| match arg {
+            AstType::Named(name) => Some(crate::ast::TypeParam {
+                name: name.clone(),
+                constraint: None,
+                constraint_type_args: Vec::new(),
+                span: Span::dummy(),
+            }),
+            _ => None,
+        })
+        .collect()
 }

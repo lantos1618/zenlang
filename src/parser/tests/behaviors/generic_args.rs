@@ -3,7 +3,6 @@ use super::super::*;
 #[test]
 fn generic_type_association_keywords_are_explicitly_gated() {
     for (keyword, source) in [
-        ("implements", "Box<T>.implements(Json<T>) { }"),
         ("requires", "Box<T>.requires(Json<T>)"),
         ("extends", "Box<T>.extends(Json<T>)"),
         ("derive", "Box<T>.derive(Json<T>)"),
@@ -20,6 +19,34 @@ fn generic_type_association_keywords_are_explicitly_gated() {
             )),
             "expected explicit generic association gate for {keyword}, got {errors:?}"
         );
+    }
+}
+
+#[test]
+fn parse_generic_target_behavior_impl_with_type_args() {
+    let prog = parse_ok("Box<T>.implements(Json<T>) { encode = (self: Box<T>) T { self.value } }");
+    match &prog.declarations[0] {
+        Declaration::ImplBlock {
+            type_name,
+            behavior,
+            behavior_type_args,
+            type_args,
+            methods,
+            ..
+        } => {
+            assert_eq!(type_name, "Box");
+            assert_eq!(type_args, &vec![AstType::Named("T".into())]);
+            assert_eq!(behavior.as_deref(), Some("Json"));
+            assert_eq!(behavior_type_args, &vec![AstType::Named("T".into())]);
+            match &methods[0] {
+                Declaration::Function { type_params, .. } => {
+                    assert_eq!(type_params.len(), 1);
+                    assert_eq!(type_params[0].name, "T");
+                }
+                other => panic!("expected Function, got {:?}", other),
+            }
+        }
+        other => panic!("expected ImplBlock, got {:?}", other),
     }
 }
 

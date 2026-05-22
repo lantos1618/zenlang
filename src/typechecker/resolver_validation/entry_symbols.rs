@@ -148,6 +148,7 @@ impl TypeChecker {
                 }
                 Declaration::ImplBlock {
                     type_name,
+                    type_args,
                     behavior,
                     behavior_type_args,
                     methods,
@@ -158,6 +159,7 @@ impl TypeChecker {
                         symbols,
                         ResolverImplBlockEntry {
                             type_name,
+                            type_args,
                             behavior,
                             behavior_type_args,
                             methods,

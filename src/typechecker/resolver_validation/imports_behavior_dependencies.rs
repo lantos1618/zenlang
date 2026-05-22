@@ -108,6 +108,7 @@ impl TypeChecker {
         for decl in &source_module.program.declarations {
             let Declaration::ImplBlock {
                 type_name,
+                type_args,
                 behavior: Some(behavior),
                 behavior_type_args,
                 methods,
@@ -127,20 +128,28 @@ impl TypeChecker {
             self.seed_behavior_decl_for_imported_impl_from_imports(behavior, source_module, graph);
 
             self.insert_behavior_impl_ref(local_name, behavior, behavior_type_args);
+            self.seed_imported_generic_behavior_impl_template(
+                local_name,
+                type_args,
+                behavior,
+                behavior_type_args,
+            );
 
             let dependencies = Self::source_module_dependencies(source_module, graph);
             for method in methods {
-                self.seed_imported_impl_method(
-                    local_name,
-                    Some(behavior),
+                self.seed_imported_impl_method(ImportedImplMethodSeed {
+                    local_type_name: local_name,
+                    behavior: Some(behavior),
                     behavior_type_args,
+                    target_type_args: type_args,
                     method,
-                    false,
-                    &dependencies,
-                );
+                    public_only: false,
+                    dependencies: &dependencies,
+                });
             }
             for default in self.behavior_default_methods_for_impl(
                 local_name,
+                type_args,
                 behavior,
                 behavior_type_args,
                 methods,

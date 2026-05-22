@@ -4,12 +4,14 @@ impl TypeChecker {
     pub(in crate::typechecker) fn behavior_default_methods_for_impl(
         &self,
         type_name: &str,
+        type_args: &[AstType],
         behavior: &str,
         behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) -> Vec<DefaultBehaviorMethod> {
         let behavior_substitutions =
             self.behavior_type_param_substitutions(behavior, behavior_type_args);
+        let type_params = default_behavior_type_params(type_args);
         self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
             .iter()
             .filter(|required| {
@@ -24,12 +26,13 @@ impl TypeChecker {
                 let body = required.default_body.clone()?;
                 Some(DefaultBehaviorMethod {
                     name: required.name.clone(),
+                    type_params: type_params.clone(),
                     params: required
                         .params
                         .iter()
                         .map(|param| Param {
                             name: param.name.clone(),
-                            ty: concrete_self_ast_type(&param.ty, type_name),
+                            ty: concrete_self_ast_type_for_target(&param.ty, type_name, type_args),
                             mutable: param.mutable,
                             span: param.span,
                         })
@@ -37,7 +40,7 @@ impl TypeChecker {
                     return_type: required
                         .return_type
                         .as_ref()
-                        .map(|ty| concrete_self_ast_type(ty, type_name)),
+                        .map(|ty| concrete_self_ast_type_for_target(ty, type_name, type_args)),
                     body,
                     span: required.span,
                 })
@@ -53,8 +56,22 @@ impl TypeChecker {
         let key = Self::method_key(type_name, &default.name);
         self.methods.insert(
             key.clone(),
-            func_info_from_behavior_method(key, &default.params, &default.return_type),
+            func_info_from_ast_signature(
+                key.clone(),
+                &default.type_params,
+                &default.params,
+                &default.return_type,
+            ),
         );
+        if let Some(template) = generic_template_from_type_params(
+            &default.type_params,
+            &default.params,
+            &default.return_type,
+            &default.body,
+            default.span,
+        ) {
+            self.generic_methods.insert(key, template);
+        }
     }
 
     pub(in crate::typechecker) fn impl_methods_include_behavior_method(
@@ -193,4 +210,19 @@ impl TypeChecker {
             _ => ty.display_name(),
         }
     }
+}
+
+fn default_behavior_type_params(type_args: &[AstType]) -> Vec<ast::TypeParam> {
+    type_args
+        .iter()
+        .filter_map(|arg| match arg {
+            AstType::Named(name) => Some(ast::TypeParam {
+                name: name.clone(),
+                constraint: None,
+                constraint_type_args: Vec::new(),
+                span: Span::dummy(),
+            }),
+            _ => None,
+        })
+        .collect()
 }

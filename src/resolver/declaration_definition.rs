@@ -2,7 +2,7 @@ use crate::ast::Declaration;
 use crate::error::Diagnostic;
 
 use super::metadata_helpers::{
-    resolver_behavior_impl_method_key, resolver_behavior_method_signatures,
+    resolver_behavior_impl_method_key_with_target_args, resolver_behavior_method_signatures,
     resolver_behavior_method_types, resolver_field_types, resolver_method_key,
     resolver_value_signature, resolver_variant_names,
 };
@@ -124,6 +124,7 @@ impl Resolver {
             }
             Declaration::ImplBlock {
                 type_name,
+                type_args,
                 behavior,
                 behavior_type_args,
                 methods,
@@ -144,11 +145,12 @@ impl Resolver {
                     } = method
                     {
                         let key = if let Some(behavior) = behavior {
-                            resolver_behavior_impl_method_key(
+                            resolver_behavior_impl_method_key_with_target_args(
                                 type_name,
                                 name,
                                 behavior,
                                 behavior_type_args,
+                                type_args,
                             )
                         } else {
                             resolver_method_key(type_name, name)

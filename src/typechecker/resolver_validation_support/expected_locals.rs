@@ -1,5 +1,6 @@
 fn collect_expected_resolver_impl_method_symbols(
     type_name: &str,
+    type_args: &[AstType],
     behavior: Option<&str>,
     behavior_type_args: &[AstType],
     methods: &[Declaration],
@@ -12,7 +13,13 @@ fn collect_expected_resolver_impl_method_symbols(
         } = method
         {
             push_expected_resolver_callable_symbol(
-                expected_resolver_impl_method_key(type_name, name, behavior, behavior_type_args),
+                expected_resolver_impl_method_key(
+                    type_name,
+                    type_args,
+                    name,
+                    behavior,
+                    behavior_type_args,
+                ),
                 params,
                 body,
                 scope_cursor,
@@ -24,11 +31,21 @@ fn collect_expected_resolver_impl_method_symbols(
 
 fn expected_resolver_impl_method_key(
     type_name: &str,
+    type_args: &[AstType],
     method_name: &str,
     behavior: Option<&str>,
     behavior_type_args: &[AstType],
 ) -> String {
-    behavior_impl_method_signature_key(type_name, method_name, behavior, behavior_type_args)
+    if type_args.is_empty() {
+        return behavior_impl_method_signature_key(type_name, method_name, behavior, behavior_type_args);
+    }
+    TypeChecker::behavior_impl_method_key_with_target_args(
+        type_name,
+        method_name,
+        behavior,
+        behavior_type_args,
+        type_args,
+    )
 }
 
 fn push_resolver_validation_association_source<'a>(

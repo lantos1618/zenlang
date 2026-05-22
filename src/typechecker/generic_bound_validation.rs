@@ -1,3 +1,4 @@
+use super::monomorphize_types::substitute_ast_type;
 use super::*;
 
 impl TypeChecker {
@@ -131,7 +132,9 @@ impl TypeChecker {
                 ));
                 continue;
             };
-            if !self.type_implements_behavior(&type_name, &behavior_key) {
+            if !self.type_implements_behavior(&type_name, &behavior_key)
+                && !self.generic_type_implements_behavior(concrete, &behavior_key)
+            {
                 self.diagnostics.push(Diagnostic::error(
                     "E6004",
                     format!(
@@ -142,6 +145,52 @@ impl TypeChecker {
                 ));
             }
         }
+    }
+
+    fn generic_type_implements_behavior(&self, concrete: &Type, behavior_key: &str) -> bool {
+        let type_name = match concrete {
+            Type::Struct { name, .. } | Type::Enum { name, .. } => name,
+            _ => return false,
+        };
+        let Some((generic_name, type_args)) = self.generic_type_args_from_type(type_name, concrete)
+        else {
+            return false;
+        };
+
+        self.generic_behavior_impls.iter().any(|template| {
+            if template.type_name != generic_name || template.type_params.len() != type_args.len() {
+                return false;
+            }
+            let substitutions: HashMap<String, Type> = template
+                .type_params
+                .iter()
+                .zip(type_args.iter())
+                .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
+                .collect();
+            let behavior_type_args: Vec<AstType> = template
+                .behavior_type_args
+                .iter()
+                .map(|arg| substitute_ast_type(arg, &substitutions))
+                .collect();
+            let implemented_key =
+                self.behavior_reference_key(&template.behavior, &behavior_type_args);
+            implemented_key == behavior_key
+                || self.generic_behavior_ref_inherits_from(
+                    &template.behavior,
+                    &behavior_type_args,
+                    behavior_key,
+                )
+        })
+    }
+
+    fn generic_behavior_ref_inherits_from(
+        &self,
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        parent_key: &str,
+    ) -> bool {
+        let behavior_ref = self.behavior_parent_ref(behavior, behavior_type_args);
+        self.behavior_ref_inherits_from_inner(&behavior_ref, parent_key, &mut HashSet::new())
     }
 
     fn behavior_bound_key(

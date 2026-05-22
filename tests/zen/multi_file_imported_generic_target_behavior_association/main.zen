@@ -1,0 +1,19 @@
+{ io } = std
+{ Box, Json } = traits
+
+encode_i32<T: Json<i32>> = (value: T) i32 {
+    value.encode()
+}
+
+encode_bool<T: Json<bool>> = (value: T) bool {
+    value.encode()
+}
+
+main = () i32 {
+    int_box = Box<i32> { value: 41 }
+    bool_box = Box<bool> { value: true }
+
+    io.println("${encode_i32(int_box)}")
+    io.println("${encode_bool(bool_box)}")
+    0
+}

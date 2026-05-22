@@ -152,39 +152,72 @@ fn collect_ast_type_names(ast_type: &AstType, names: &mut HashSet<String>) {
     }
 }
 
-fn concrete_self_ast_type(ast_type: &AstType, self_type_name: &str) -> AstType {
+fn concrete_self_ast_type_for_target(
+    ast_type: &AstType,
+    self_type_name: &str,
+    self_type_args: &[AstType],
+) -> AstType {
     match ast_type {
-        AstType::SelfType => AstType::Named(self_type_name.to_string()),
+        AstType::SelfType => concrete_self_target_type(self_type_name, self_type_args),
         AstType::Ptr(inner) => {
-            AstType::Ptr(Box::new(concrete_self_ast_type(inner, self_type_name)))
+            AstType::Ptr(Box::new(concrete_self_ast_type_for_target(
+                inner,
+                self_type_name,
+                self_type_args,
+            )))
         }
-        AstType::MutPtr(inner) => {
-            AstType::MutPtr(Box::new(concrete_self_ast_type(inner, self_type_name)))
-        }
-        AstType::RawPtr(inner) => {
-            AstType::RawPtr(Box::new(concrete_self_ast_type(inner, self_type_name)))
-        }
-        AstType::Slice(inner) => {
-            AstType::Slice(Box::new(concrete_self_ast_type(inner, self_type_name)))
-        }
+        AstType::MutPtr(inner) => AstType::MutPtr(Box::new(concrete_self_ast_type_for_target(
+            inner,
+            self_type_name,
+            self_type_args,
+        ))),
+        AstType::RawPtr(inner) => AstType::RawPtr(Box::new(concrete_self_ast_type_for_target(
+            inner,
+            self_type_name,
+            self_type_args,
+        ))),
+        AstType::Slice(inner) => AstType::Slice(Box::new(concrete_self_ast_type_for_target(
+            inner,
+            self_type_name,
+            self_type_args,
+        ))),
         AstType::Array { elem, size } => AstType::Array {
-            elem: Box::new(concrete_self_ast_type(elem, self_type_name)),
+            elem: Box::new(concrete_self_ast_type_for_target(
+                elem,
+                self_type_name,
+                self_type_args,
+            )),
             size: *size,
         },
         AstType::Function { params, ret } => AstType::Function {
             params: params
                 .iter()
-                .map(|param| concrete_self_ast_type(param, self_type_name))
+                .map(|param| concrete_self_ast_type_for_target(param, self_type_name, self_type_args))
                 .collect(),
-            ret: Box::new(concrete_self_ast_type(ret, self_type_name)),
+            ret: Box::new(concrete_self_ast_type_for_target(
+                ret,
+                self_type_name,
+                self_type_args,
+            )),
         },
         AstType::Generic { name, type_args } => AstType::Generic {
             name: name.clone(),
             type_args: type_args
                 .iter()
-                .map(|arg| concrete_self_ast_type(arg, self_type_name))
+                .map(|arg| concrete_self_ast_type_for_target(arg, self_type_name, self_type_args))
                 .collect(),
         },
         _ => ast_type.clone(),
+    }
+}
+
+fn concrete_self_target_type(self_type_name: &str, self_type_args: &[AstType]) -> AstType {
+    if self_type_args.is_empty() {
+        AstType::Named(self_type_name.to_string())
+    } else {
+        AstType::Generic {
+            name: self_type_name.to_string(),
+            type_args: self_type_args.to_vec(),
+        }
     }
 }

@@ -106,6 +106,21 @@ fn test_multi_file_imported_generic_behavior_defaults() {
 }
 
 #[test]
+fn test_multi_file_imported_generic_target_behavior_association() {
+    let zen_path =
+        test_dir().join("multi_file_imported_generic_target_behavior_association/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "41\ntrue\n");
+}
+
+#[test]
+fn test_multi_file_imported_generic_target_default_method() {
+    let zen_path = test_dir().join("multi_file_imported_generic_target_default_method/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "box\nbox\n");
+}
+
+#[test]
 fn test_multi_file_imported_impl_with_imported_behavior() {
     let zen_path = test_dir().join("multi_file_imported_impl_imported_behavior/main.zen");
     let actual = compile_and_run(&zen_path);

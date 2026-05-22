@@ -1,15 +1,28 @@
+mod generic_templates;
+
 use super::*;
 
+pub(super) struct BehaviorImplValidationInput<'a> {
+    pub(super) type_name: &'a str,
+    pub(super) type_args: &'a [AstType],
+    pub(super) behavior: &'a str,
+    pub(super) behavior_type_args: &'a [AstType],
+    pub(super) methods: &'a [Declaration],
+    pub(super) span: Span,
+    pub(super) symbols: Option<&'a SymbolTable>,
+}
+
 impl TypeChecker {
-    pub(super) fn check_behavior_impl(
-        &mut self,
-        type_name: &str,
-        behavior: &str,
-        behavior_type_args: &[AstType],
-        methods: &[Declaration],
-        span: Span,
-        symbols: Option<&SymbolTable>,
-    ) {
+    pub(super) fn check_behavior_impl(&mut self, input: BehaviorImplValidationInput<'_>) {
+        let BehaviorImplValidationInput {
+            type_name,
+            type_args,
+            behavior,
+            behavior_type_args,
+            methods,
+            span,
+            symbols,
+        } = input;
         let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
         if self.should_skip_missing_resolver_behavior_ref(
             resolver_impl_ref.as_ref(),
@@ -27,6 +40,18 @@ impl TypeChecker {
                 format!("undefined type `{}`", type_name),
                 span,
             ));
+            return;
+        }
+
+        if !type_args.is_empty() {
+            self.check_generic_behavior_impl_template(
+                type_name,
+                type_args,
+                behavior,
+                behavior_type_args,
+                methods,
+                span,
+            );
             return;
         }
 
