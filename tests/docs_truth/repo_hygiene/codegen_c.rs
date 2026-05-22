@@ -169,4 +169,8 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         !behavior_bounds.contains("assert_c_call_resolves_to_definition(&c_source"),
         "local behavior-bound generated-C tests should use the single-definition helper for generated call checks"
     );
+    assert!(
+        !local_worklist.contains("assert_c_call_resolves_to_definition(&c_source"),
+        "local method/worklist generated-C tests should use the single-definition helper for generated call checks"
+    );
 }
