@@ -1,28 +1,13 @@
-use crate::ast::patterns::Pattern;
 use crate::ast::statements::Statement;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 use serde::Serialize;
 
 mod operators;
+mod parts;
+mod spans;
 pub use operators::{BinaryOp, LoopControlAction, UnaryOp};
-
-/// Parts of a string interpolation: `"Hello, ${name}!"` becomes
-/// `[Literal("Hello, "), Expr(<name>), Literal("!")]`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum StringPart {
-    Literal(String),
-    Expr(Expression),
-}
-
-/// A match arm: `| pattern guard? { body }`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct MatchArm {
-    pub pattern: Pattern,
-    pub guard: Option<Expression>,
-    pub body: Expression,
-    pub span: Span,
-}
+pub use parts::{MatchArm, StringPart};
 
 /// Expression — the parser's output for any value-producing construct.
 ///
@@ -32,7 +17,6 @@ pub struct MatchArm {
 /// - `FunctionCall` has `module: Option<String>` — module is NEVER encoded in the name
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Expression {
-    // ─── Literals ────────────────────────────────────────────────────
     IntLiteral {
         value: i64,
         span: Span,
@@ -50,13 +34,11 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Identifiers / Names ─────────────────────────────────────────
     Identifier {
         name: String,
         span: Span,
     },
 
-    // ─── Operators ───────────────────────────────────────────────────
     BinaryOp {
         op: BinaryOp,
         left: Box<Expression>,
@@ -69,7 +51,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Calls ───────────────────────────────────────────────────────
     /// Free function call: `add(1, 2)` or `io.println("hi")`.
     /// Module is NEVER encoded in the name — it goes in `module`.
     /// Generics are NEVER encoded in the name — they go in `type_args`.
@@ -90,7 +71,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Access ──────────────────────────────────────────────────────
     MemberAccess {
         object: Box<Expression>,
         field: String,
@@ -102,7 +82,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Composite Literals ──────────────────────────────────────────
     StructLiteral {
         name: String,
         type_args: Vec<AstType>,
@@ -121,7 +100,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Control Flow ────────────────────────────────────────────────
     /// Pattern match: `expr ? | arm | arm ...`
     Match {
         scrutinee: Box<Expression>,
@@ -166,7 +144,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Closures / Lambdas ──────────────────────────────────────────
     Closure {
         params: Vec<Param>,
         return_type: Option<AstType>,
@@ -174,7 +151,6 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Type Operations ─────────────────────────────────────────────
     /// `cast(expr, TargetType)`
     Cast {
         expr: Box<Expression>,
@@ -182,14 +158,12 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Strings ─────────────────────────────────────────────────────
     /// `"Hello, ${name}!"`
     StringInterpolation {
         parts: Vec<StringPart>,
         span: Span,
     },
 
-    // ─── Ranges ──────────────────────────────────────────────────────
     Range {
         start: Box<Expression>,
         end: Box<Expression>,
@@ -197,52 +171,14 @@ pub enum Expression {
         span: Span,
     },
 
-    // ─── Defer ───────────────────────────────────────────────────────
     /// `@this.defer(expr)` — runs at scope exit in LIFO order
     Defer {
         expr: Box<Expression>,
         span: Span,
     },
 
-    // ─── Error Recovery ──────────────────────────────────────────────
     /// Placeholder for parse errors — allows the parser to continue.
     Error {
         span: Span,
     },
-}
-
-impl Expression {
-    /// Returns the span of this expression.
-    pub fn span(&self) -> Span {
-        match self {
-            Expression::IntLiteral { span, .. }
-            | Expression::FloatLiteral { span, .. }
-            | Expression::StringLiteral { span, .. }
-            | Expression::BoolLiteral { span, .. }
-            | Expression::Identifier { span, .. }
-            | Expression::BinaryOp { span, .. }
-            | Expression::UnaryOp { span, .. }
-            | Expression::FunctionCall { span, .. }
-            | Expression::MethodCall { span, .. }
-            | Expression::MemberAccess { span, .. }
-            | Expression::IndexAccess { span, .. }
-            | Expression::StructLiteral { span, .. }
-            | Expression::EnumVariant { span, .. }
-            | Expression::ArrayLiteral { span, .. }
-            | Expression::Match { span, .. }
-            | Expression::WhileLoop { span, .. }
-            | Expression::Loop { span, .. }
-            | Expression::LoopControl { span, .. }
-            | Expression::If { span, .. }
-            | Expression::Block { span, .. }
-            | Expression::Break { span, .. }
-            | Expression::Continue { span, .. }
-            | Expression::Closure { span, .. }
-            | Expression::Cast { span, .. }
-            | Expression::StringInterpolation { span, .. }
-            | Expression::Range { span, .. }
-            | Expression::Defer { span, .. }
-            | Expression::Error { span, .. } => *span,
-        }
-    }
 }

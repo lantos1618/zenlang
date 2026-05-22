@@ -64,3 +64,48 @@ fn typed_ast_expression_parts_live_in_focused_helper() {
         "typed.rs should stay focused on typed expression, declaration, and program shells"
     );
 }
+
+#[test]
+fn ast_expression_parts_and_spans_live_in_focused_helpers() {
+    let expressions = read("src/ast/expressions.rs");
+    let parts = read("src/ast/expressions/parts.rs");
+    let spans = read("src/ast/expressions/spans.rs");
+
+    for helper in ["StringPart", "MatchArm"] {
+        assert!(
+            !expressions.contains(&format!("pub struct {helper}"))
+                && !expressions.contains(&format!("pub enum {helper}")),
+            "expression AST root should not own expression part helper: {helper}"
+        );
+        assert!(
+            parts.contains(&format!("pub struct {helper}"))
+                || parts.contains(&format!("pub enum {helper}")),
+            "expression part helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        !expressions.contains("pub fn span(&self) -> Span"),
+        "expression AST root should not own the span accessor implementation"
+    );
+    assert!(
+        spans.contains("pub fn span(&self) -> Span"),
+        "expression span accessor should live in focused helper"
+    );
+
+    for required in [
+        "mod parts;",
+        "mod spans;",
+        "pub use parts::{MatchArm, StringPart};",
+    ] {
+        assert!(
+            expressions.contains(required),
+            "expression AST root should include focused expression helper: {required}"
+        );
+    }
+
+    assert!(
+        expressions.lines().count() < 190,
+        "expressions.rs should stay focused on the Expression enum shell"
+    );
+}
