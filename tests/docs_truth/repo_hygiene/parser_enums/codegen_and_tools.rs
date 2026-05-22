@@ -7,6 +7,7 @@ fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
     let lowering = read("src/build_graph/lowering.rs");
     let host_effects = read("src/build_graph/lowering/host_effects.rs");
     let dsl = read("src/build_graph/lowering/dsl.rs");
+    let idents = read("src/build_graph/lowering/dsl/idents.rs");
     let source = format!("{lowering}\n{host_effects}");
 
     for forbidden in [
@@ -24,8 +25,12 @@ fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
         "build graph host-effect method dispatch should parse method names through BuildTargetDslIdent"
     );
     assert!(
-        dsl.contains("impl FromStr for BuildTargetDslIdent"),
+        idents.contains("impl FromStr for BuildTargetDslIdent"),
         "BuildTargetDslIdent should own parsing for build DSL method names"
+    );
+    assert!(
+        dsl.contains("mod idents;"),
+        "build graph DSL root should include the focused method-name spelling helper"
     );
 }
 
