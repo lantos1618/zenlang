@@ -69,3 +69,37 @@ fn resolver_type_declaration_validation_lives_in_focused_helper() {
         );
     }
 }
+
+#[test]
+fn resolver_impl_block_validation_lives_in_focused_helper() {
+    let declaration_validation = read("src/resolver/declaration_validation.rs");
+    let impl_blocks = read("src/resolver/declaration_validation/impl_blocks.rs");
+
+    for owned_detail in [
+        "table.record_behavior_impl",
+        "duplicate behavior implementation",
+        "BehaviorRefMetadata",
+    ] {
+        assert!(
+            !declaration_validation.contains(owned_detail),
+            "main resolver declaration validation should not own impl-block detail: {owned_detail}"
+        );
+        assert!(
+            impl_blocks.contains(owned_detail),
+            "resolver impl-block validation should live in focused helper: {owned_detail}"
+        );
+    }
+
+    assert!(
+        declaration_validation.contains("self.validate_impl_block_declaration"),
+        "main resolver declaration validation should dispatch impl-block validation through helper"
+    );
+    assert!(
+        impl_blocks.contains("pub(super) fn validate_impl_block_declaration"),
+        "impl-block helper should own the resolver impl-block validation entry point"
+    );
+    assert!(
+        declaration_validation.lines().count() < 180,
+        "declaration_validation.rs should stay compact after impl-block validation split"
+    );
+}

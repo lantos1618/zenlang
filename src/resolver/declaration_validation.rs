@@ -1,11 +1,11 @@
 use crate::ast::Declaration;
 use crate::error::Diagnostic;
 
-use super::metadata_helpers::behavior_ref_display;
 use super::symbol_table::ScopeStack;
-use super::{BehaviorRefMetadata, Resolver, SymbolTable};
+use super::{Resolver, SymbolTable};
 
 mod behavior_associations;
+mod impl_blocks;
 mod type_declarations;
 
 impl Resolver {
@@ -103,78 +103,17 @@ impl Resolver {
                 span,
                 ..
             } => {
-                if !self.is_known_type_name(table, &[], type_name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0201",
-                        format!("unknown type symbol '{type_name}'"),
-                        *span,
-                    ));
-                }
-                if let Some(behavior) = behavior {
-                    let behavior_known = self.is_known_behavior_name(table, behavior);
-                    if !behavior_known {
-                        diagnostics.push(Diagnostic::error(
-                            "E0202",
-                            format!("unknown behavior symbol '{behavior}'"),
-                            *span,
-                        ));
-                    }
-                    if self.is_known_type_name(table, &[], type_name) && behavior_known {
-                        let behavior_display = behavior_ref_display(behavior, behavior_type_args);
-                        if !table.record_behavior_impl(
-                            type_name,
-                            BehaviorRefMetadata {
-                                name: behavior.clone(),
-                                type_args: behavior_type_args.clone(),
-                            },
-                        ) {
-                            diagnostics.push(Diagnostic::error(
-                                "E0217",
-                                format!(
-                                    "duplicate behavior implementation `{behavior_display}` for `{type_name}`"
-                                ),
-                                *span,
-                            ));
-                        }
-                    }
-                }
-                for type_arg in behavior_type_args {
-                    self.validate_type_ref(table, &[], type_arg, *span, false, diagnostics);
-                }
-                for method in methods {
-                    if let Declaration::Function {
-                        type_params,
-                        params,
-                        return_type,
-                        body,
-                        span,
-                        ..
-                    } = method
-                    {
-                        self.validate_type_param_constraints(table, type_params, true, diagnostics);
-                        self.validate_params(table, type_params, params, true, diagnostics);
-                        if let Some(return_type) = return_type {
-                            self.validate_type_ref(
-                                table,
-                                type_params,
-                                return_type,
-                                *span,
-                                true,
-                                diagnostics,
-                            );
-                        }
-                        let scope_id = table.new_scope();
-                        let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-                        self.validate_expr_refs(
-                            table,
-                            type_params,
-                            body,
-                            &mut locals,
-                            true,
-                            diagnostics,
-                        );
-                    }
-                }
+                self.validate_impl_block_declaration(
+                    table,
+                    impl_blocks::ImplBlockValidationInput {
+                        type_name,
+                        behavior: behavior.as_deref(),
+                        behavior_type_args,
+                        methods,
+                        span: *span,
+                    },
+                    diagnostics,
+                );
             }
             Declaration::Import { .. } | Declaration::Error { .. } => {}
             Declaration::Requires {
