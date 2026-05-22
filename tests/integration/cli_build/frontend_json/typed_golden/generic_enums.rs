@@ -19,6 +19,15 @@ fn emit_json_typed_generic_option_multi_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_duplicate_generic_enum_variant_names_schema_matches_golden() {
+    assert_typed_golden(
+        "duplicate_enum_variant_names.zen",
+        "tests/fixtures/ir_json/typed_duplicate_generic_enum_variant_names.golden.json",
+        "duplicate generic enum variant names",
+    );
+}
+
+#[test]
 fn emit_json_typed_generic_result_schema_matches_golden() {
     assert_typed_golden(
         "generic_result_enum.zen",

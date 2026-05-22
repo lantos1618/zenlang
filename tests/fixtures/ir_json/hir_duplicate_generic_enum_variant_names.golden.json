@@ -1,0 +1,81 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "First_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "None",
+            "tag": 0,
+            "payload": []
+          },
+          {
+            "name": "Some",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Second_bool",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "None",
+            "tag": 0,
+            "payload": []
+          },
+          {
+            "name": "Some",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "bool"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "describe_first",
+        "params": [
+          {
+            "name": "value",
+            "type": "First_i32"
+          }
+        ],
+        "return_type": "StaticString"
+      },
+      {
+        "name": "describe_second",
+        "params": [
+          {
+            "name": "value",
+            "type": "Second_bool"
+          }
+        ],
+        "return_type": "StaticString"
+      },
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}
