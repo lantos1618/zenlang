@@ -8,5 +8,6 @@ mod lexer_and_monomorphize;
 mod module_system_splits;
 mod resolver_phase2_splits;
 mod resolver_validation_splits;
+mod resolver_validation_test_splits;
 mod thresholds;
 mod typechecker_test_splits;
