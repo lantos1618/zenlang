@@ -49,10 +49,8 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_inner_i32(self)"));
     assert!(c_source.contains("Box_get_inner_i32(box)"));
-    assert_c_call_resolves_to_definition(&c_source, "Box_inner_i32");
-    assert_c_call_resolves_to_definition(&c_source, "Box_get_inner_i32");
-    assert_c_function_definition_count(&c_source, "Box_inner_i32", 1);
-    assert_c_function_definition_count(&c_source, "Box_get_inner_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_inner_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_get_inner_i32");
     assert!(!c_source.contains("T Box_inner"));
 
     let c_source = compile_to_c_with_generated_call_check(
@@ -64,12 +62,9 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Box_wrap_result_i32(box)"));
     assert!(c_source.contains("unwrap_result_Option_i32_StaticString(wrapped,"));
     assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_StaticString");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
-    assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1);
-    assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1);
-    assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Box_wrap_result"));
@@ -111,9 +106,8 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
     assert_c_call_resolves_to_definition(&c_source, "outer_i32");
-    assert_c_function_definition_count(&c_source, "inner_i32", 1);
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
@@ -122,10 +116,9 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t left_i32(int32_t value)"));
     assert!(c_source.contains("int32_t right_i32(int32_t value)"));
     assert!(c_source.contains("inner_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
     assert_c_call_resolves_to_definition(&c_source, "left_i32");
     assert_c_call_resolves_to_definition(&c_source, "right_i32");
-    assert_c_function_definition_count(&c_source, "inner_i32", 1);
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("inner_T"));
 
@@ -134,8 +127,7 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
     assert!(c_source.contains("repeat_i32(value, (remaining - 1LL))"));
     assert!(c_source.contains("repeat_i32(41LL, 3LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "repeat_i32");
-    assert_c_function_definition_count(&c_source, "repeat_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "repeat_i32");
     assert!(!c_source.contains("T repeat"));
     assert!(!c_source.contains("repeat_T"));
 
@@ -144,8 +136,7 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t Box_repeat_i32(Box_i32 self, int32_t remaining)"));
     assert!(c_source.contains("Box_repeat_i32(self, (remaining - 1LL))"));
     assert!(c_source.contains("Box_repeat_i32(box, 3LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Box_repeat_i32");
-    assert_c_function_definition_count(&c_source, "Box_repeat_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_repeat_i32");
     assert!(!c_source.contains("T Box_repeat"));
 
     let c_source =
@@ -161,8 +152,7 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));
     assert!(c_source.contains("id_i32(30LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "id_i32");
-    assert_c_function_definition_count(&c_source, "id_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "id_i32");
     assert!(!c_source.contains("id(12LL)"));
     assert!(!c_source.contains("id(30LL)"));
     assert!(!c_source.contains("T id"));

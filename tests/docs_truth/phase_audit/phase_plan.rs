@@ -115,7 +115,7 @@ fn multi_file_nested_generic_method_generated_c_pins_definition_counts() {
 
     for required in [
         "multi_file_type_method_nested_result_dependency",
-        r#"assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1)"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
     ] {
         assert!(
             method_worklist.contains(required),
@@ -131,9 +131,9 @@ fn local_nested_generic_method_generated_c_pins_definition_counts() {
 
     for required in [
         "generic_method_nested_result.zen",
-        r#"assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1)"#,
-        r#"assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1)"#,
-        r#"assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1)"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32")"#,
     ] {
         assert!(
             method_worklist.contains(required),
@@ -149,9 +149,9 @@ fn imported_transitive_worklist_generated_c_pins_definition_counts() {
 
     for required in [
         "multi_file_generic_imported_transitive_dependency/main.zen",
-        r#"assert_c_function_definition_count(&c_source, "inner_i32", 1)"#,
-        r#"assert_c_function_definition_count(&c_source, "middle_i32", 1)"#,
-        r#"assert_c_function_definition_count(&c_source, "outer_i32", 1)"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "inner_i32")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "middle_i32")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "outer_i32")"#,
     ] {
         assert!(
             method_worklist.contains(required),

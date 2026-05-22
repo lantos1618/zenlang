@@ -49,6 +49,11 @@ pub fn assert_c_call_resolves_to_definition(c_source: &str, name: &str) {
     );
 }
 
+pub fn assert_c_call_resolves_to_single_definition(c_source: &str, name: &str) {
+    assert_c_call_resolves_to_definition(c_source, name);
+    assert_c_function_definition_count(c_source, name, 1);
+}
+
 pub fn assert_generated_c_calls_resolve_to_definitions(c_source: &str) {
     let undefined = undefined_generated_c_calls(c_source);
     assert!(

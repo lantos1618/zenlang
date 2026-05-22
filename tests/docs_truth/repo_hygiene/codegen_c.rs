@@ -72,3 +72,46 @@ fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
         "C codegen should load focused aggregate literal helper"
     );
 }
+
+#[test]
+fn generated_c_tests_use_single_definition_assertion_helper() {
+    let support = read("tests/integration/support.rs");
+    let generated_c = read("tests/integration/support/generated_c.rs");
+    let local_worklist =
+        read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
+    let multi_file_worklist =
+        read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
+
+    assert!(
+        generated_c.contains("fn assert_c_call_resolves_to_single_definition("),
+        "generated-C support should expose a helper for call resolution plus exactly-one definition"
+    );
+    assert!(
+        support.contains("assert_c_call_resolves_to_single_definition"),
+        "integration support should re-export the generated-C single-definition helper"
+    );
+
+    for (fixture, helper_call) in [
+        (
+            local_worklist.as_str(),
+            r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
+        ),
+        (
+            local_worklist.as_str(),
+            r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
+        ),
+        (
+            multi_file_worklist.as_str(),
+            r#"assert_c_call_resolves_to_single_definition(&c_source, "inner_i32")"#,
+        ),
+        (
+            multi_file_worklist.as_str(),
+            r#"assert_c_call_resolves_to_single_definition(&c_source, "outer_i32")"#,
+        ),
+    ] {
+        assert!(
+            fixture.contains(helper_call),
+            "Phase 5 generated-C evidence should use the single-definition helper: {helper_call}"
+        );
+    }
+}

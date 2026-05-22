@@ -11,8 +11,8 @@ use zen::typechecker::TypeChecker;
 mod generated_c;
 
 pub use generated_c::{
-    assert_c_call_resolves_to_definition, assert_c_function_definition_count,
-    assert_generated_c_calls_resolve_to_definitions,
+    assert_c_call_resolves_to_definition, assert_c_call_resolves_to_single_definition,
+    assert_c_function_definition_count, assert_generated_c_calls_resolve_to_definitions,
     assert_generated_c_function_definitions_are_unique, has_c_call_outside_signature,
     undefined_generated_c_calls,
 };

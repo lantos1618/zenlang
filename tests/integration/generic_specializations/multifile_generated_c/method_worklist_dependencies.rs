@@ -25,12 +25,9 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(c_source.contains("inner_i32(value)"));
     assert!(c_source.contains("middle_i32(value)"));
     assert!(c_source.contains("outer_i32(83LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "inner_i32");
-    assert_c_call_resolves_to_definition(&c_source, "middle_i32");
-    assert_c_call_resolves_to_definition(&c_source, "outer_i32");
-    assert_c_function_definition_count(&c_source, "inner_i32", 1);
-    assert_c_function_definition_count(&c_source, "middle_i32", 1);
-    assert_c_function_definition_count(&c_source, "outer_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "middle_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "outer_i32");
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("T middle"));
 
@@ -40,8 +37,7 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
     assert!(c_source.contains("repeat_i32(value, (remaining - 1LL))"));
     assert!(c_source.contains("repeat_i32(97LL, 4LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "repeat_i32");
-    assert_c_function_definition_count(&c_source, "repeat_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "repeat_i32");
     assert!(!c_source.contains("T repeat"));
     assert!(!c_source.contains("repeat_T"));
 
@@ -158,8 +154,7 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         .contains("typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;"));
     assert!(c_source.contains("Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)"));
     assert!(c_source.contains("Box_wrap_result_i32(box)"));
-    assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
-    assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1);
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("Result_Option_T"));
     assert!(!c_source.contains("T Box_wrap_result"));
