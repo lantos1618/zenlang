@@ -17,6 +17,7 @@ mod parser_function_forms;
 mod parser_keywords;
 mod removed_syntax;
 mod resolver_expression_validation;
+mod resolver_metadata_helpers;
 mod resolver_symbol_table;
 mod resolver_validation;
 mod semantic_overlap;
