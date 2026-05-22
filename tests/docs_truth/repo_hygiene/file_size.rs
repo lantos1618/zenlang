@@ -1,3 +1,4 @@
+mod build_graph_splits;
 mod core_semantics_splits;
 mod declaration_validation_splits;
 mod focused_tests;
