@@ -1,6 +1,7 @@
 use super::*;
 
 mod default_methods;
+mod type_matching;
 
 impl TypeChecker {
     pub(super) fn resolver_impl_ref_for(

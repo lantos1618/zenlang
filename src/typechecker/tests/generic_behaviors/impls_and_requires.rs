@@ -22,27 +22,6 @@ Point.implements(Json) {
 }
 
 #[test]
-fn behavior_impl_required_method_accepts_self_parameter() {
-    let program = parse_program(
-        r#"
-Point: { x: i32 }
-
-Json: behavior {
-    to_json: (Self) StaticString
-}
-
-Point.implements(Json) {
-    to_json = (value: Self) StaticString { "point" }
-}
-"#,
-    );
-
-    TypeChecker::new()
-        .check_program(&program)
-        .expect("behavior impl method may use Self for the impl target");
-}
-
-#[test]
 fn behavior_impl_missing_required_method_is_error() {
     let program = parse_program(
         r#"

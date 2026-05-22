@@ -6,6 +6,7 @@ mod generic_bounds;
 mod generic_function_diagnostics;
 mod generic_target_alpha_impls;
 mod generic_target_impls;
+mod impl_self_types;
 mod impl_type_args;
 mod impls_and_requires;
 mod requires;

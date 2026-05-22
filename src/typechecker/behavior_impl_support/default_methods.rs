@@ -187,31 +187,6 @@ impl TypeChecker {
             .collect();
         self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args)
     }
-
-    pub(in crate::typechecker) fn impl_ast_types_compatible(
-        &self,
-        expected: &AstType,
-        actual: &AstType,
-        self_type_name: &str,
-    ) -> bool {
-        match (expected, actual) {
-            (AstType::SelfType, AstType::SelfType) => true,
-            (AstType::SelfType, AstType::Named(name))
-            | (AstType::Named(name), AstType::SelfType) => name == self_type_name,
-            _ => expected == actual,
-        }
-    }
-
-    pub(in crate::typechecker) fn impl_type_display(
-        &self,
-        ty: &AstType,
-        self_type_name: &str,
-    ) -> String {
-        match ty {
-            AstType::SelfType => self_type_name.to_string(),
-            _ => ty.display_name(),
-        }
-    }
 }
 
 fn default_behavior_type_params(type_args: &[AstType]) -> Vec<ast::TypeParam> {

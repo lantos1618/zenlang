@@ -49,6 +49,58 @@ Box<T>.implements(Json<T>) {
 }
 
 #[test]
+fn generic_target_behavior_impl_accepts_nested_self_types() {
+    let program = parse_program(
+        r#"
+Holder<T>: { value: T }
+
+Json<T>: behavior {
+    take: (Holder<Self>) T
+}
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    take = (holder: Holder<Self>) T { holder.value.value }
+}
+"#,
+    );
+
+    TypeChecker::new()
+        .check_program(&program)
+        .expect("generic target behavior impl may use nested Self");
+}
+
+#[test]
+fn generic_target_behavior_impl_rejects_nested_type_arg_shape() {
+    let program = parse_program(
+        r#"
+Holder<T>: { value: T }
+
+Json<T>: behavior {
+    take: (Holder<Self>) T
+}
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    take = (holder: Holder<T>) T { holder.value }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("generic target behavior impl nested mismatch should fail");
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "parameter 1 for method `take` in behavior `Json<T>` expects `Holder<Box<T>>`, found `Holder<T>`"
+        )),
+        "expected generic target behavior impl nested diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn generic_target_behavior_impl_checks_return_shape() {
     let program = parse_program(
         r#"
