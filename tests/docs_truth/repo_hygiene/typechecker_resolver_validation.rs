@@ -1,6 +1,7 @@
 use super::*;
 
 mod entry_helpers;
+mod entry_helpers_router;
 mod focused_modules;
 mod local_traversal;
 mod support_helpers;
