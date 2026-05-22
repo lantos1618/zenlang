@@ -90,7 +90,6 @@ fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
         "stdlib/sys/seccomp.zen",
         "stdlib/memory/allocator.zen",
         "stdlib/memory/arena.zen",
-        "stdlib/memory/async_allocator.zen",
         "stdlib/memory/async_helpers.zen",
         "stdlib/memory/async_pool.zen",
         "stdlib/memory/heap.zen",

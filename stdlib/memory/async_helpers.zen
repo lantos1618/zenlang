@@ -1,32 +1,79 @@
-// Zen Standard Library: Async Helpers
-//
-// Shared utilities for async operations across allocators.
-// These helpers work with any Allocator that supports async I/O.
+// Zen Standard Library: Async Operation Helpers
 
-{ compiler } = @std
 { CompletionFn } = @std.memory.allocator
 
 // ============================================================================
-// Completion Promise - Tracks async operation state
+// Shared Async Operation State
 // ============================================================================
 
-// Promise state for tracking async operation completion
-PromiseState:
+AsyncOperationState:
     Pending,
     Completed,
     Failed
 
-// Simple promise for single async operation
-Promise: {
-    state: i32,      // 0 = Pending, 1 = Completed, 2 = Failed
-    result: i64,     // Operation result
-    user_data: u64   // User-provided context
+AsyncOp: {
+    id: u64,
+    user_data: u64,
+    callback: CompletionFn,
+    state: AsyncOperationState,
+    result: i64
 }
 
-// Create a new pending promise
+async_op_new = (id: u64, user_data: u64, callback: CompletionFn) AsyncOp {
+    AsyncOp {
+        id: id,
+        user_data: user_data,
+        callback: callback,
+        state: AsyncOperationState.Pending,
+        result: 0
+    }
+}
+
+async_op_completed = (op: AsyncOp, result: i64) AsyncOp {
+    AsyncOp {
+        id: op.id,
+        user_data: op.user_data,
+        callback: op.callback,
+        state: AsyncOperationState.Completed,
+        result: result
+    }
+}
+
+async_op_failed = (op: AsyncOp, result: i64) AsyncOp {
+    AsyncOp {
+        id: op.id,
+        user_data: op.user_data,
+        callback: op.callback,
+        state: AsyncOperationState.Failed,
+        result: result
+    }
+}
+
+async_op_is_pending = (op: AsyncOp) bool {
+    op.state == AsyncOperationState.Pending
+}
+
+async_op_is_complete = (op: AsyncOp) bool {
+    op.state == AsyncOperationState.Completed
+}
+
+async_op_is_error = (op: AsyncOp) bool {
+    op.state == AsyncOperationState.Failed
+}
+
+// ============================================================================
+// Completion Promise
+// ============================================================================
+
+Promise: {
+    state: AsyncOperationState,
+    result: i64,
+    user_data: u64
+}
+
 Promise.new = () Promise {
     Promise {
-        state: 0,
+        state: AsyncOperationState.Pending,
         result: 0,
         user_data: 0
     }
@@ -34,26 +81,24 @@ Promise.new = () Promise {
 
 Promise.new_with_data = (data: u64) Promise {
     Promise {
-        state: 0,
+        state: AsyncOperationState.Pending,
         result: 0,
         user_data: data
     }
 }
 
-// Check if promise is complete
 Promise.is_pending = (self: Promise) bool {
-    self.state == 0
+    self.state == AsyncOperationState.Pending
 }
 
 Promise.is_completed = (self: Promise) bool {
-    self.state == 1
+    self.state == AsyncOperationState.Completed
 }
 
 Promise.is_failed = (self: Promise) bool {
-    self.state == 2
+    self.state == AsyncOperationState.Failed
 }
 
-// Get result (only valid after completion)
 Promise.get_result = (self: Promise) i64 {
     self.result
 }
