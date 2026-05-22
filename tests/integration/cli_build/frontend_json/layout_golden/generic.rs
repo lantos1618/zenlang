@@ -36,3 +36,12 @@ fn emit_json_layout_generic_enum_method_nested_result_schema_matches_golden() {
         "tests/fixtures/ir_json/layout_generic_enum_method_nested_result.golden.json",
     );
 }
+
+#[test]
+fn emit_json_layout_multi_file_generic_method_nested_result_schema_matches_golden() {
+    assert_layout_matches_fixture(
+        &fixture("tests/zen/multi_file_type_method_nested_result_dependency/main.zen"),
+        "multi-file generic method nested Result program input",
+        "tests/fixtures/ir_json/layout_multi_file_generic_method_nested_result.golden.json",
+    );
+}
