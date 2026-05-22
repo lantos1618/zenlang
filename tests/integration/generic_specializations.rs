@@ -18,6 +18,34 @@ fn generic_specializations_emit_each_generated_c_definition_once() {
     }
 }
 
+#[test]
+fn generic_specialization_definition_sweep_includes_all_multifile_fixtures() {
+    let root = test_dir();
+    let fixtures = generic_specialization_fixture_paths();
+    let mut missing = Vec::new();
+
+    for entry in std::fs::read_dir(&root).expect("read tests/zen fixture directories") {
+        let entry = entry.expect("read tests/zen fixture directory entry");
+        let path = entry.path();
+        let dir_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("");
+        let main = path.join("main.zen");
+        if path.is_dir() && dir_name.starts_with("multi_file") && main.exists() {
+            let fixture = relative_fixture_path(&root, main);
+            if !fixtures.contains(&fixture) {
+                missing.push(fixture);
+            }
+        }
+    }
+
+    assert!(
+        missing.is_empty(),
+        "generic generated-C definition sweep should include all multi-file fixtures: {missing:?}"
+    );
+}
+
 fn generic_specialization_fixture_paths() -> Vec<PathBuf> {
     let root = test_dir();
     let mut fixtures = Vec::new();
@@ -49,10 +77,7 @@ fn generic_specialization_fixture_paths() -> Vec<PathBuf> {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("");
-        if dir_name.contains("generic")
-            || dir_name.starts_with("multi_file_type_impl")
-            || dir_name.starts_with("multi_file_type_method")
-        {
+        if dir_name.contains("generic") || dir_name.starts_with("multi_file") {
             let main = path.join("main.zen");
             if main.exists() {
                 fixtures.push(relative_fixture_path(&root, main));
