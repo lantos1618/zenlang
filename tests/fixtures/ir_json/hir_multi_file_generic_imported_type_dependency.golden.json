@@ -1,0 +1,48 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Holder_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Holder.get_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Holder_i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "get_held_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}
