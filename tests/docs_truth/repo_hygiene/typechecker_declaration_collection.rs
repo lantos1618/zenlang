@@ -93,3 +93,41 @@ fn declaration_callable_tasks_live_in_focused_helper() {
         "declaration_tasks.rs should stay focused on shared declaration task wiring"
     );
 }
+
+#[test]
+fn declaration_ast_tasks_live_in_focused_helper() {
+    let root = read("src/typechecker/declaration_tasks.rs");
+    let ast_tasks = read("src/typechecker/declaration_tasks_ast.rs");
+
+    for helper in [
+        "AstTypeDeclarationTask",
+        "BehaviorDeclarationTask",
+        "AstImportDeclarationTask",
+        "AstDeclarationCollectionTasks",
+        "AstStructFieldDefaultValidationTask",
+        "AstTypeReferenceValidationTask",
+        "SelfTypeContextValidationTask",
+        "AstDeclarationValidationTasks",
+        "AstPrecollectionValidationTasks",
+    ] {
+        assert!(
+            !root.contains(&format!("struct {helper}"))
+                && !root.contains(&format!("enum {helper}")),
+            "declaration_tasks.rs should not own AST task shape: {helper}"
+        );
+        assert!(
+            ast_tasks.contains(&format!("struct {helper}"))
+                || ast_tasks.contains(&format!("enum {helper}")),
+            "AST declaration task shape should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("include!(\"declaration_tasks_ast.rs\");"),
+        "declaration tasks should include focused AST task shapes"
+    );
+    assert!(
+        root.lines().count() < 160,
+        "declaration_tasks.rs should stay focused on resolver task wiring after AST task split"
+    );
+}
