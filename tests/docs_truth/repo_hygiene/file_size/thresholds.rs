@@ -32,7 +32,7 @@ fn production_rust_files_stay_below_cleanup_threshold() {
 
 #[test]
 fn zen_source_files_stay_below_cleanup_threshold() {
-    const MAX_LINES: usize = 600;
+    const MAX_LINES: usize = 500;
 
     let output = std::process::Command::new("git")
         .args(["ls-files", "*.zen"])

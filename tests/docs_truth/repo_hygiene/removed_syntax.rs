@@ -68,6 +68,7 @@ fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
         "stdlib/io/io.zen",
         "stdlib/io/mux/epoll.zen",
         "stdlib/io/mux/poll.zen",
+        "stdlib/io/mux/uring_constants.zen",
         "stdlib/io/mux/uring.zen",
         "stdlib/io/net/socket.zen",
         "stdlib/io/net/unix_socket.zen",

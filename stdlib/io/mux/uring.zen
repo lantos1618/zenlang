@@ -1,70 +1,11 @@
 // Zen Standard Library: io_uring (Syscall-based)
-// No FFI - uses compiler.syscall* intrinsics
-// High-performance async I/O for Linux 5.1+
-
 { compiler } = @std
 { Result } = @std.core.result
 { Option } = @std.core.option
-{ Allocator } = @std.memory.allocator
-{ SYS_IO_URING_SETUP, SYS_IO_URING_ENTER, SYS_IO_URING_REGISTER,
-  SYS_MMAP, SYS_MUNMAP, SYS_CLOSE } = @std.sys.syscall
-
-// io_uring Setup Flags
-
-IORING_SETUP_IOPOLL = 1       // Use polling for I/O completion
-IORING_SETUP_SQPOLL = 2       // Kernel-side submission queue polling
-IORING_SETUP_SQ_AFF = 4       // SQ polling CPU affinity
-IORING_SETUP_CQSIZE = 8       // Custom CQ size
-IORING_SETUP_CLAMP = 16       // Clamp ring sizes
-IORING_SETUP_ATTACH_WQ = 32   // Share workqueue
-IORING_SETUP_SINGLE_ISSUER = 2048  // Single task submits
-
-// io_uring Enter Flags
-
-IORING_ENTER_GETEVENTS = 1    // Wait for completions
-IORING_ENTER_SQ_WAKEUP = 2    // Wake SQ polling thread
-IORING_ENTER_SQ_WAIT = 4      // Wait for SQ space
-IORING_ENTER_EXT_ARG = 8      // Extended arguments
-
-// io_uring Operation Codes
-
-IORING_OP_NOP = 0
-IORING_OP_READV = 1
-IORING_OP_WRITEV = 2
-IORING_OP_FSYNC = 3
-IORING_OP_READ_FIXED = 4
-IORING_OP_WRITE_FIXED = 5
-IORING_OP_POLL_ADD = 6
-IORING_OP_POLL_REMOVE = 7
-IORING_OP_SYNC_FILE_RANGE = 8
-IORING_OP_SENDMSG = 9
-IORING_OP_RECVMSG = 10
-IORING_OP_TIMEOUT = 11
-IORING_OP_TIMEOUT_REMOVE = 12
-IORING_OP_ACCEPT = 13
-IORING_OP_ASYNC_CANCEL = 14
-IORING_OP_LINK_TIMEOUT = 15
-IORING_OP_CONNECT = 16
-IORING_OP_FALLOCATE = 17
-IORING_OP_OPENAT = 18
-IORING_OP_CLOSE = 19
-IORING_OP_READ = 22
-IORING_OP_WRITE = 23
-IORING_OP_SEND = 26
-IORING_OP_RECV = 27
-
-// Memory mapping constants
-
-PROT_READ = 1
-PROT_WRITE = 2
-MAP_SHARED = 1
-MAP_POPULATE = 32768
-
-IORING_OFF_SQ_RING = 0
-IORING_OFF_CQ_RING = 134217728      // 0x8000000
-IORING_OFF_SQES = 268435456         // 0x10000000
-
-// Submission Queue Entry (SQE) - 64 bytes
+{ SYS_IO_URING_SETUP, SYS_IO_URING_ENTER, SYS_MMAP, SYS_MUNMAP, SYS_CLOSE } = @std.sys.syscall
+{ IORING_ENTER_GETEVENTS, IORING_OP_ACCEPT, IORING_OP_CLOSE, IORING_OP_READ, IORING_OP_WRITE,
+  IORING_OFF_CQ_RING, IORING_OFF_SQ_RING, IORING_OFF_SQES, MAP_POPULATE, MAP_SHARED,
+  PROT_READ, PROT_WRITE } = @std.io.mux.uring_constants
 
 SQE: {
     opcode: u8,
@@ -76,7 +17,6 @@ SQE: {
     len: u32,      // length or splice_flags
     op_flags: u32, // operation-specific flags
     user_data: u64,
-    // Union fields for different operations
     buf_index: u16,
     personality: u16,
     splice_fd_in: i32,
@@ -84,15 +24,11 @@ SQE: {
     pad3: u64
 }
 
-// Completion Queue Entry (CQE) - 16 bytes
-
 CQE: {
     user_data: u64,  // Copied from SQE
     res: i32,        // Result (bytes transferred or error)
     flags: u32       // Completion flags
 }
-
-// io_uring Parameters (for setup)
 
 IoUringParams: {
     sq_entries: u32,
@@ -104,7 +40,6 @@ IoUringParams: {
     wq_fd: u32,
     resv: u64,       // Reserved (3 u32s)
     resv2: u64,
-    // SQ offsets
     sq_off_head: u32,
     sq_off_tail: u32,
     sq_off_ring_mask: u32,
@@ -114,7 +49,6 @@ IoUringParams: {
     sq_off_array: u32,
     sq_off_resv1: u32,
     sq_off_resv2: u64,
-    // CQ offsets
     cq_off_head: u32,
     cq_off_tail: u32,
     cq_off_ring_mask: u32,
@@ -126,13 +60,10 @@ IoUringParams: {
     cq_off_resv2: u64
 }
 
-// IoUring - Main interface
-
 IoUring: {
     ring_fd: i32,
     sq_entries: u32,
     cq_entries: u32,
-    // Submission queue
     sq_ring_ptr: i64,
     sq_ring_size: usize,
     sqes_ptr: i64,
@@ -141,7 +72,6 @@ IoUring: {
     sq_tail: i64,      // Pointer to tail
     sq_mask: u32,
     sq_array: i64,     // Pointer to array
-    // Completion queue
     cq_ring_ptr: i64,
     cq_ring_size: usize,
     cq_head: i64,
@@ -150,14 +80,9 @@ IoUring: {
     cqes: i64          // Pointer to CQEs
 }
 
-// IoUring Creation
-
 IoUring.new = (entries: u32) Result<IoUring, i32> {
-    // Allocate params struct (120 bytes)
     params_ptr = compiler.raw_allocate(120)
     compiler.memset(params_ptr, 0, 120)
-
-    // Call io_uring_setup
     fd = compiler.syscall2(SYS_IO_URING_SETUP, entries, compiler.ptr_to_int(params_ptr))
     fd < 0 ?
         | true {
@@ -168,28 +93,19 @@ IoUring.new = (entries: u32) Result<IoUring, i32> {
 }
 
 IoUring.map_rings = (fd: i32, params_ptr: i64) Result<IoUring, i32> {
-    // Read params
     sq_entries = compiler.load<u32>(params_ptr)
     cq_entries = compiler.load<u32>(compiler.gep(params_ptr, 4))
-
-    // Read SQ offsets
     sq_off_head = compiler.load<u32>(compiler.gep(params_ptr, 32))
     sq_off_tail = compiler.load<u32>(compiler.gep(params_ptr, 36))
     sq_off_ring_mask = compiler.load<u32>(compiler.gep(params_ptr, 40))
     sq_off_array = compiler.load<u32>(compiler.gep(params_ptr, 52))
-
-    // Read CQ offsets
     cq_off_head = compiler.load<u32>(compiler.gep(params_ptr, 72))
     cq_off_tail = compiler.load<u32>(compiler.gep(params_ptr, 76))
     cq_off_ring_mask = compiler.load<u32>(compiler.gep(params_ptr, 80))
     cq_off_cqes = compiler.load<u32>(compiler.gep(params_ptr, 88))
-
-    // Calculate ring sizes
     sq_ring_size = cast(sq_off_array, usize) + cast(sq_entries, usize) * 4
     cq_ring_size = cast(cq_off_cqes, usize) + cast(cq_entries, usize) * 16
     sqes_size = cast(sq_entries, usize) * 64
-
-    // Map SQ ring
     sq_ring_ptr = compiler.syscall6(
         SYS_MMAP, 0, sq_ring_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
@@ -241,7 +157,6 @@ IoUring.map_sqes = (
     sqes_size: usize,
     sq_ring_ptr: i64
 ) Result<IoUring, i32> {
-    // Map SQEs
     sqes_ptr = compiler.syscall6(
         SYS_MMAP, 0, sqes_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
@@ -296,7 +211,6 @@ IoUring.map_cq_ring = (
     sq_ring_ptr: i64,
     sqes_ptr: i64
 ) Result<IoUring, i32> {
-    // Map CQ ring
     cq_ring_ptr = compiler.syscall6(
         SYS_MMAP, 0, cq_ring_size,
         PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
@@ -354,10 +268,8 @@ IoUring.finish_new = (
     sqes_ptr: i64,
     cq_ring_ptr: i64
 ) Result<IoUring, i32> {
-    // Read masks
     sq_mask = compiler.load<u32>(compiler.int_to_ptr(sq_ring_ptr + cast(sq_off_ring_mask, i64)))
     cq_mask = compiler.load<u32>(compiler.int_to_ptr(cq_ring_ptr + cast(cq_off_ring_mask, i64)))
-
     ring = IoUring {
         ring_fd: fd,
         sq_entries: sq_entries,
@@ -377,51 +289,36 @@ IoUring.finish_new = (
         cq_mask: cq_mask,
         cqes: cq_ring_ptr + cast(cq_off_cqes, i64)
     }
-
     compiler.raw_deallocate(params_ptr, 120)
     Result.Ok(ring)
 }
 
-// Submission Operations
-
-// Get next SQE slot (returns null if queue full)
 IoUring.get_sqe = (self: MutPtr<IoUring>) i64 {
     head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.sq_head))), u32)
     tail = compiler.load<u32>(compiler.int_to_ptr(self.val.sq_tail))
-
-    // Check if queue is full
     (tail - head) >= self.val.sq_entries ?
         | true { 0 }
         | false {
             idx = tail & self.val.sq_mask
             sqe_ptr = self.val.sqes_ptr + (cast(idx, i64) * 64)
-
-            // Clear the SQE
             compiler.memset(compiler.int_to_ptr(sqe_ptr), 0, 64)
-
             sqe_ptr
         }
 }
 
-// Submit SQE after filling it
 IoUring.submit_sqe = (self: MutPtr<IoUring>, sqe_ptr: i64) void {
     tail = compiler.load<u32>(compiler.int_to_ptr(self.val.sq_tail))
     idx = tail & self.val.sq_mask
-
-    // Write index to array
     compiler.store<u32>(
         compiler.int_to_ptr(self.val.sq_array + cast(idx, i64) * 4),
         idx
     )
-
-    // Increment tail
     compiler.atomic_store(
         compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.sq_tail)),
         cast(tail + 1, u64)
     )
 }
 
-// Submit all pending SQEs to kernel
 IoUring.submit = (self: MutPtr<IoUring>) Result<i32, i32> {
     result = compiler.syscall3(SYS_IO_URING_ENTER, self.val.ring_fd, 0, 0)
     result < 0 ?
@@ -429,7 +326,6 @@ IoUring.submit = (self: MutPtr<IoUring>) Result<i32, i32> {
         | false { Result.Ok(cast(result, i32)) }
 }
 
-// Submit and wait for at least min_complete completions
 IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32, i32> {
     result = compiler.syscall4(
         SYS_IO_URING_ENTER,
@@ -443,30 +339,23 @@ IoUring.submit_and_wait = (self: MutPtr<IoUring>, min_complete: u32) Result<i32,
         | false { Result.Ok(cast(result, i32)) }
 }
 
-// Completion Operations
-
-// Get next CQE (returns None if no completions)
 IoUring.peek_cqe = (self: MutPtr<IoUring>) Option<CQE> {
     head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_head))), u32)
     tail = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_tail))), u32)
-
     head == tail ?
         | true { Option.None }
         | false {
             idx = head & self.val.cq_mask
             cqe_ptr = self.val.cqes + (cast(idx, i64) * 16)
-
             cqe = CQE {
                 user_data: compiler.load<u64>(compiler.int_to_ptr(cqe_ptr)),
                 res: compiler.load<i32>(compiler.int_to_ptr(cqe_ptr + 8)),
                 flags: compiler.load<u32>(compiler.int_to_ptr(cqe_ptr + 12))
             }
-
             Option.Some(cqe)
         }
 }
 
-// Advance CQ head after processing CQE
 IoUring.cqe_seen = (self: MutPtr<IoUring>) void {
     head = cast(compiler.atomic_load(compiler.raw_ptr_cast(compiler.int_to_ptr(self.val.cq_head))), u32)
     compiler.atomic_store(
@@ -475,14 +364,11 @@ IoUring.cqe_seen = (self: MutPtr<IoUring>) void {
     )
 }
 
-// Wait for at least one completion
 IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
-    // Check if already available
     cqe_check = self.peek_cqe()
     cqe_check ? {
         | Some(c) { Result.Ok(c) }
         | None {
-            // Wait for completion
             result = compiler.syscall4(
                 SYS_IO_URING_ENTER,
                 self.val.ring_fd,
@@ -493,7 +379,6 @@ IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
             result < 0 ?
                 | true { Result.Err(cast(0 - result, i32)) }
                 | false {
-                    // Get the CQE
                     cqe = self.peek_cqe()
                     cqe ? {
                         | Some(c) { Result.Ok(c) }
@@ -504,9 +389,6 @@ IoUring.wait_cqe = (self: MutPtr<IoUring>) Result<CQE, i32> {
     }
 }
 
-// High-Level Operations
-
-// Prepare a read operation
 IoUring.prep_read = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset: u64, user_data: u64) Result<(), i32> {
     sqe_ptr = self.get_sqe()
     sqe_ptr == 0 ?
@@ -518,13 +400,11 @@ IoUring.prep_read = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset:
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(buf, u64))    // addr
             compiler.store<u32>(compiler.int_to_ptr(sqe_ptr + 24), len)           // len
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)     // user_data
-
             self.submit_sqe(sqe_ptr)
             Result.Ok(())
         }
 }
 
-// Prepare a write operation
 IoUring.prep_write = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset: u64, user_data: u64) Result<(), i32> {
     sqe_ptr = self.get_sqe()
     sqe_ptr == 0 ?
@@ -536,13 +416,11 @@ IoUring.prep_write = (self: MutPtr<IoUring>, fd: i32, buf: i64, len: u32, offset
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(buf, u64))
             compiler.store<u32>(compiler.int_to_ptr(sqe_ptr + 24), len)
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)
-
             self.submit_sqe(sqe_ptr)
             Result.Ok(())
         }
 }
 
-// Prepare an accept operation
 IoUring.prep_accept = (self: MutPtr<IoUring>, fd: i32, addr: i64, addrlen: i64, user_data: u64) Result<(), i32> {
     sqe_ptr = self.get_sqe()
     sqe_ptr == 0 ?
@@ -553,13 +431,11 @@ IoUring.prep_accept = (self: MutPtr<IoUring>, fd: i32, addr: i64, addrlen: i64, 
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 16), cast(addr, u64))
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 8), cast(addrlen, u64))  // off field used for addrlen ptr
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)
-
             self.submit_sqe(sqe_ptr)
             Result.Ok(())
         }
 }
 
-// Prepare a close operation
 IoUring.prep_close = (self: MutPtr<IoUring>, fd: i32, user_data: u64) Result<(), i32> {
     sqe_ptr = self.get_sqe()
     sqe_ptr == 0 ?
@@ -568,13 +444,10 @@ IoUring.prep_close = (self: MutPtr<IoUring>, fd: i32, user_data: u64) Result<(),
             compiler.store<u8>(compiler.int_to_ptr(sqe_ptr), IORING_OP_CLOSE)
             compiler.store<i32>(compiler.int_to_ptr(sqe_ptr + 4), fd)
             compiler.store<u64>(compiler.int_to_ptr(sqe_ptr + 32), user_data)
-
             self.submit_sqe(sqe_ptr)
             Result.Ok(())
         }
 }
-
-// Cleanup
 
 IoUring.close = (self: MutPtr<IoUring>) void {
     compiler.syscall2(SYS_MUNMAP, self.val.cq_ring_ptr, self.val.cq_ring_size)

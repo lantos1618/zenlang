@@ -98,3 +98,14 @@ fn stdlib_sync_runtime_import_is_gated_before_loading_sketch() {
         "sync",
     );
 }
+
+#[test]
+fn stdlib_io_uring_import_is_gated_before_loading_sketch() {
+    assert_stdlib_import_is_gated_before_loading_sketch(
+        "io/mux",
+        "uring.zen",
+        "{ IoUring } = @std.io.mux.uring",
+        "std io_uring modules are gated",
+        "io_uring",
+    );
+}

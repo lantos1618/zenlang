@@ -87,6 +87,8 @@ fn v1_spec_records_feature_matrix_gates_and_ux_requirements() {
         "@builtin.store<T>",
         "Host syscalls",
         "syscall_intrinsics_are_rejected_as_host_effect_gates",
+        "stdlib_io_uring_import_is_gated_before_loading_sketch",
+        "module_graph_gates_stdlib_io_uring_import_before_loading_sketch",
         "@builtin.syscall0",
         "@builtin.syscall6",
     ] {
