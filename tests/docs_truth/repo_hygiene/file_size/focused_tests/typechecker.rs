@@ -1,6 +1,7 @@
 use super::*;
 
 mod core_semantics;
+mod core_semantics_router;
 mod generic_behaviors;
 mod resolve_guards;
 mod resolver_collection;
