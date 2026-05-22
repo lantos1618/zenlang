@@ -81,3 +81,12 @@ fn emit_json_layout_multi_file_generic_result_multi_specialization_schema_matche
         "tests/fixtures/ir_json/layout_multi_file_generic_result_multi_specialization.golden.json",
     );
 }
+
+#[test]
+fn emit_json_layout_multi_file_generic_imported_type_same_name_schema_matches_golden() {
+    assert_layout_matches_fixture(
+        &fixture("tests/zen/multi_file_generic_imported_type_same_name_collision/main.zen"),
+        "multi-file imported generic type same-name program input",
+        "tests/fixtures/ir_json/layout_multi_file_generic_imported_type_same_name.golden.json",
+    );
+}

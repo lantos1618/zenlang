@@ -1,0 +1,117 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Box_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "Choice_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Value",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "right_Box_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          },
+          {
+            "name": "extra",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      },
+      {
+        "name": "right_Choice_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Extra",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "inner_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "left_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "right_inner_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "right_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}
