@@ -45,3 +45,45 @@ fn resolver_struct_enum_enum_metadata_tests_stay_split_by_responsibility() {
         "variant_shape.rs should cover enum variant ownership metadata"
     );
 }
+
+#[test]
+fn resolver_struct_enum_metadata_root_stays_split_by_aggregate_kind() {
+    let root = read("src/typechecker/tests/resolver_struct_enum_metadata.rs");
+    let struct_fields =
+        read("src/typechecker/tests/resolver_struct_enum_metadata/struct_fields.rs");
+    let absent_kind = read("src/typechecker/tests/resolver_struct_enum_metadata/absent_kind.rs");
+
+    assert!(
+        root.lines().count() < 80,
+        "resolver_struct_enum_metadata.rs should route focused struct/enum metadata test modules"
+    );
+    for module in [
+        "mod absent_kind;",
+        "mod enum_metadata;",
+        "mod struct_fields;",
+        "mod variant_absence;",
+    ] {
+        assert!(
+            root.contains(module),
+            "resolver_struct_enum_metadata.rs should include focused module `{module}`"
+        );
+    }
+    assert!(
+        !root.contains("fn check_program_with_symbols_validates_resolver_struct_field_counts"),
+        "struct field metadata tests should live in struct_fields.rs"
+    );
+    assert!(
+        struct_fields
+            .contains("fn check_program_with_symbols_validates_resolver_struct_field_counts")
+            && struct_fields.contains(
+                "fn check_program_with_symbols_validates_resolver_generic_struct_field_types"
+            ),
+        "struct_fields.rs should cover concrete and generic struct field metadata"
+    );
+    assert!(
+        absent_kind.contains(
+            "fn check_program_with_symbols_validates_resolver_struct_and_enum_absent_kind_metadata"
+        ),
+        "absent_kind.rs should cover impossible struct/enum metadata combinations"
+    );
+}
