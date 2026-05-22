@@ -33,6 +33,36 @@ fn typechecker_ast_behavior_collection_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_ast_callable_resolver_templates_live_in_focused_helper() {
+    let callables = read("src/typechecker/declaration_collection_ast_callables.rs");
+    let resolver_templates =
+        read("src/typechecker/declaration_collection_ast_callables/resolver_templates.rs");
+
+    for helper in [
+        "collect_resolver_backed_function_template",
+        "collect_resolver_backed_method_template",
+    ] {
+        assert!(
+            !callables.contains(&format!("fn {helper}")),
+            "AST callable collection should not own resolver-backed template helper: {helper}"
+        );
+        assert!(
+            resolver_templates.contains(&format!("fn {helper}")),
+            "resolver-backed callable template collection should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        callables.contains("mod resolver_templates;"),
+        "AST callable collection should load focused resolver-backed template helper"
+    );
+    assert!(
+        callables.lines().count() < 180,
+        "declaration_collection_ast_callables.rs should stay focused on callable task dispatch and AST signatures"
+    );
+}
+
+#[test]
 fn typechecker_resolver_callable_replay_lives_in_focused_helper() {
     let replay_kinds =
         read("src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs");
