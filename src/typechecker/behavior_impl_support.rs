@@ -1,6 +1,7 @@
 use super::*;
 
 mod default_methods;
+mod inherited_methods;
 mod resolver_refs;
 
 impl TypeChecker {
