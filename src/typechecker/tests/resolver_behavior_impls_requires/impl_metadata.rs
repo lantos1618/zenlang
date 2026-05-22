@@ -1,0 +1,111 @@
+use super::*;
+
+#[test]
+fn check_program_with_symbols_validates_resolver_behavior_impl_names() {
+    let program = parse_program(
+        r#"
+Json: behavior {
+    encode: (Self) StaticString
+}
+
+Point: { x: i32 }
+
+Point.implements(Json) {
+    encode = (value: Point) StaticString { "point" }
+}
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_behavior_impl_names_for_test(Namespace::Type, "Point", None);
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program_with_symbols(&program, &symbols)
+        .expect_err("resolver behavior impl metadata mismatch should fail");
+
+    let expected =
+        "resolver type symbol 'Point' has behavior impls 'none', expected to include 'Json'";
+    assert!(
+        err.iter().any(|d| d.message.contains(expected)),
+        "expected resolver behavior impl metadata diagnostic, got {err:?}"
+    );
+}
+
+#[test]
+fn check_program_with_symbols_validates_resolver_generic_behavior_impl_names() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
+}
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_behavior_impl_names_for_test(
+        Namespace::Type,
+        "Point",
+        Some(vec!["Json<i32>".to_string()]),
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program_with_symbols(&program, &symbols)
+        .expect_err("resolver generic behavior impl metadata mismatch should fail");
+
+    let expected =
+            "resolver type symbol 'Point' has behavior impls 'Json<i32>', expected to include 'Json<StaticString>'";
+    assert!(
+        err.iter().any(|d| d.message.contains(expected)),
+        "expected resolver generic behavior impl metadata diagnostic, got {err:?}"
+    );
+}
+
+#[test]
+fn check_program_with_symbols_validates_resolver_generic_behavior_impl_refs() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Point: { x: i32 }
+
+Point.implements(Json<StaticString>) {
+    encode = (value: Point) StaticString { "point" }
+}
+"#,
+    );
+    let mut symbols = crate::resolver::Resolver::new()
+        .resolve_program(&program)
+        .expect("resolver succeeds");
+    symbols.set_behavior_impl_refs_for_test(
+        Namespace::Type,
+        "Point",
+        Some(vec![BehaviorRefMetadata {
+            name: "Json".to_string(),
+            type_args: vec![AstType::I32],
+        }]),
+    );
+    let mut tc = TypeChecker::new();
+
+    let err = tc
+        .check_program_with_symbols(&program, &symbols)
+        .expect_err("resolver generic behavior impl ref mismatch should fail");
+
+    let expected =
+            "resolver type symbol 'Point' has behavior impl refs 'Json<i32>', expected to include 'Json<StaticString>'";
+    assert!(
+        err.iter().any(|d| d.message.contains(expected)),
+        "expected resolver generic behavior impl ref diagnostic, got {err:?}"
+    );
+}
