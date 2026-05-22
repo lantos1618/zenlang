@@ -49,22 +49,50 @@ impl TypeChecker {
     ) -> (HashMap<String, Type>, Vec<InferenceConflict>) {
         let mut map = HashMap::new();
         let mut conflicts = Vec::new();
-        if let (Some(receiver_name), Some(receiver_ty)) = (
-            super::method_signature_receiver_name(method_name),
-            arg_types.first(),
-        ) {
-            self.match_generic_type_params(
-                receiver_name,
-                receiver_ty,
-                type_params,
-                &mut map,
-                &mut conflicts,
-            );
+        if method_uses_self_receiver(param_types) {
+            if let (Some(receiver_name), Some(receiver_ty)) = (
+                super::method_signature_receiver_name(method_name),
+                arg_types.first(),
+            ) {
+                let receiver_type_args =
+                    self.generic_method_receiver_type_args(receiver_name, type_params);
+                self.match_generic_type_with_args(
+                    receiver_name,
+                    &receiver_type_args,
+                    receiver_ty,
+                    type_params,
+                    &mut map,
+                    &mut conflicts,
+                );
+            }
         }
         for ((_name, param_ty), arg_ty) in param_types.iter().zip(arg_types.iter()) {
             self.match_type_param(param_ty, arg_ty, type_params, &mut map, &mut conflicts);
         }
         (map, conflicts)
+    }
+
+    fn generic_method_receiver_type_args(
+        &self,
+        receiver_name: &str,
+        type_params: &[String],
+    ) -> Vec<AstType> {
+        let receiver_arity = self
+            .structs
+            .get(receiver_name)
+            .map(|info| info.type_params.len())
+            .or_else(|| {
+                self.enums
+                    .get(receiver_name)
+                    .map(|info| info.type_params.len())
+            })
+            .unwrap_or(0);
+
+        type_params
+            .iter()
+            .take(receiver_arity)
+            .map(|param| AstType::Named(param.clone()))
+            .collect()
     }
 
     pub(super) fn match_type_param(
@@ -153,4 +181,10 @@ impl TypeChecker {
 
         map.insert(name.to_string(), actual.clone());
     }
+}
+
+fn method_uses_self_receiver(param_types: &[(String, AstType)]) -> bool {
+    param_types
+        .first()
+        .is_some_and(|(_, ty)| matches!(ty, AstType::SelfType))
 }

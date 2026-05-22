@@ -1,0 +1,17 @@
+{ io } = std
+
+Choice<T, E>:
+    Left(T),
+    Right(E)
+
+Choice.left_or<A, B> = (self: Self, fallback: A) A {
+    self ?
+        | Left(value) { value }
+        | Right(_) { fallback }
+}
+
+main = () i32 {
+    choice = Choice<i32, bool>.Left(77)
+    io.println("${choice.left_or(0)}")
+    0
+}

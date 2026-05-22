@@ -147,4 +147,16 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Box_T"));
     assert!(!c_source.contains("Choice_T"));
     assert!(!c_source.contains("T unwrap_left"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_enum_method_self_renamed_params.zen"),
+    );
+    assert!(c_source.contains("typedef struct Choice_i32_bool Choice_i32_bool;"));
+    assert!(c_source
+        .contains("int32_t Choice_left_or_i32_bool(Choice_i32_bool self, int32_t fallback)"));
+    assert!(c_source.contains("Choice_left_or_i32_bool(choice, 0LL)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Choice_left_or_i32_bool");
+    assert!(!c_source.contains("void /* unknown */ self"));
+    assert!(!c_source.contains("Choice_T"));
+    assert!(!c_source.contains("A Choice_left_or"));
 }
