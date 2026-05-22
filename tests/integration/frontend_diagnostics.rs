@@ -6,6 +6,8 @@ mod behavior_extends;
 mod generic_behavior_imports;
 #[path = "frontend_diagnostics/imported_generic_arity.rs"]
 mod imported_generic_arity;
+#[path = "frontend_diagnostics/imported_generic_calls.rs"]
+mod imported_generic_calls;
 #[path = "frontend_diagnostics/support.rs"]
 mod support;
 
