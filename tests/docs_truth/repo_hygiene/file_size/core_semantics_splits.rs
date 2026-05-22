@@ -37,3 +37,34 @@ fn core_feature_gate_type_tests_live_in_focused_helper() {
         "core_semantics.rs should include feature gate tests"
     );
 }
+
+#[test]
+fn core_assignment_tests_live_in_focused_helper() {
+    let root = read("src/typechecker/tests/core_semantics/enum_assignment_and_modules.rs");
+    let assignments =
+        read("src/typechecker/tests/core_semantics/enum_assignment_and_modules/assignments.rs");
+
+    for test_name in [
+        "assignment_to_immutable_binding_is_error",
+        "assignment_to_mutable_closure_parameter_is_allowed",
+        "assignment_type_mismatch_is_error",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "enum_assignment_and_modules.rs should not own assignment test: {test_name}"
+        );
+        assert!(
+            assignments.contains(&format!("fn {test_name}")),
+            "assignment tests should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 200,
+        "enum_assignment_and_modules.rs should stay focused on enum, module, field, conversion, and fallthrough checks"
+    );
+    assert!(
+        root.contains("mod assignments;"),
+        "enum_assignment_and_modules.rs should include the focused assignments module"
+    );
+}
