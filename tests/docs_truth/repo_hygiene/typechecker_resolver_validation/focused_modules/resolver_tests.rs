@@ -88,6 +88,12 @@ fn typechecker_resolver_declaration_tests_live_in_focused_modules() {
     let root = read("src/typechecker/tests/resolver_declarations.rs");
     let symbols = read("src/typechecker/tests/resolver_declarations/symbols.rs");
     let imports = read("src/typechecker/tests/resolver_declarations/imports.rs");
+    let import_extra_symbols =
+        read("src/typechecker/tests/resolver_declarations/imports/extra_symbols.rs");
+    let import_restored_bindings =
+        read("src/typechecker/tests/resolver_declarations/imports/restored_bindings.rs");
+    let import_stripped_metadata =
+        read("src/typechecker/tests/resolver_declarations/imports/stripped_metadata.rs");
     let methods = read("src/typechecker/tests/resolver_declarations/methods.rs");
 
     for test_name in [
@@ -107,6 +113,26 @@ fn typechecker_resolver_declaration_tests_live_in_focused_modules() {
     for test_name in [
         "check_program_with_symbols_rejects_extra_resolver_imports_when_ast_imports_are_present",
         "check_program_with_symbols_rejects_extra_resolver_modules_when_ast_imports_are_present",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_declarations.rs should not own resolver import test: {test_name}"
+        );
+        assert!(
+            !imports.contains(&format!("fn {test_name}")),
+            "imports.rs should not own extra import/module test body: {test_name}"
+        );
+        assert!(
+            import_extra_symbols.contains(&format!("fn {test_name}")),
+            "extra import/module tests should live in focused module: {test_name}"
+        );
+    }
+    assert!(
+        import_restored_bindings
+            .contains("fn check_program_with_symbols_uses_resolver_import_bindings"),
+        "restored_bindings.rs should cover resolver-backed import seeding"
+    );
+    for test_name in [
         "check_program_with_symbols_uses_resolver_import_bindings",
         "check_program_with_symbols_validates_stripped_resolver_import_sources",
         "check_program_with_symbols_validates_stripped_resolver_import_visibility",
@@ -117,8 +143,24 @@ fn typechecker_resolver_declaration_tests_live_in_focused_modules() {
             "resolver_declarations.rs should not own resolver import test: {test_name}"
         );
         assert!(
-            imports.contains(&format!("fn {test_name}")),
-            "resolver declaration import tests should live in focused module: {test_name}"
+            !imports.contains(&format!("fn {test_name}")),
+            "imports.rs should not own resolver import test body: {test_name}"
+        );
+    }
+    for test_name in [
+        "check_program_with_symbols_validates_stripped_resolver_import_sources",
+        "check_program_with_symbols_validates_stripped_resolver_import_visibility",
+        "check_program_with_symbols_requires_stripped_resolver_import_modules",
+    ] {
+        assert!(
+            import_stripped_metadata.contains(&format!("fn {test_name}")),
+            "stripped import metadata tests should live in focused module: {test_name}"
+        );
+    }
+    for module_name in ["extra_symbols", "restored_bindings", "stripped_metadata"] {
+        assert!(
+            imports.contains(&format!("mod {module_name};")),
+            "resolver declaration imports router should include focused module: {module_name}"
         );
     }
 
