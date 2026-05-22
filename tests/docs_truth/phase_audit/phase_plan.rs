@@ -92,3 +92,18 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
         "docs/PHASE_PLAN.md still claims generic behavior inheritance is gated"
     );
 }
+
+#[test]
+fn nested_generic_result_generated_c_pins_definition_counts() {
+    let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
+
+    for required in [
+        r#"assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1)"#,
+        r#"assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1)"#,
+    ] {
+        assert!(
+            enum_generated_c.contains(required),
+            "nested generic Result<Option<T>, E> generated-C tests should pin exact definition counts: {required}"
+        );
+    }
+}
