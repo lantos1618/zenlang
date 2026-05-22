@@ -25,6 +25,13 @@ MoonBit-style toolchain integration is the benchmark: compiler, build graph, pac
 Required Dev UX: syntax/semantic diagnostics, go-to-definition, hover, completion, formatting, run/test code lenses, target selection, language server restart, compiler version display, local toolchain validation, and `zen lsp`.
 Required Agent UX: agent-readable diagnostics with stable codes, spans, related locations, suggested_fixes, feature_gate metadata, CLI/editor-aligned JSON, Machine-readable project graph and symbol graph output, deterministic quiet commands, structured fix suggestions, retrieval-friendly docs, and quiet normal branch pushes.
 
+## Compiler And Stdlib Boundary
+Compiler-owned: parsing, typing, resolver metadata, diagnostics, checked IR/JSON, build graph output, lowering, backend emission, and primitive `@builtin` hooks. Rust may expose raw hooks such as allocation, byte memory, syscalls, atomics, and scheduler primitives, but it must not own allocator policy, async API shape, collection semantics, or user-facing runtime composition.
+
+Stdlib-owned: allocator implementations, dynamic string construction, collections, IO wrappers, sync/async runtime APIs, actors, and higher-level wrappers over compiler hooks. Raw `@builtin` calls should stay behind `stdlib/compiler.zen`; other stdlib modules should import compiler wrappers or typed stdlib abstractions.
+
+Stdlib anti-slop pass: audit `stdlib/` for stale LLVM-era wording, direct raw-intrinsic leakage, gated syntax claims, oversized sketch files, duplicate allocator/async APIs, and modules that present experimental surfaces as promoted. Promote only APIs with parse/typecheck/build evidence and docs-truth coverage.
+
 ## Compressed Evidence Map
 This is a capability index, not a changelog. Granular evidence belongs in tests,
 golden fixtures, and git history.

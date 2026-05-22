@@ -39,13 +39,15 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
     for required in [
         "enum CIntrinsic",
         "mod spelling;",
-        "const ALL: &[CIntrinsic]",
+        "macro_rules! c_intrinsic_spellings",
+        "const SPELLINGS: &[(CIntrinsic, &str)]",
         "impl fmt::Display for CIntrinsic",
         "impl FromStr for CIntrinsic",
         "name.parse::<CIntrinsic>()",
-        "Self::RAW_ALLOCATE",
-        "Self::ATOMIC_LOAD",
-        "Self::SYSCALL6",
+        "CIntrinsic::$variant",
+        r#"RawAllocate => "raw_allocate""#,
+        r#"AtomicLoad => "atomic_load""#,
+        r#"Syscall6 => "syscall6""#,
     ] {
         assert!(
             source.contains(required),
@@ -59,7 +61,7 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
     );
     assert!(
         !names.contains("const ADD_OVERFLOW"),
-        "intrinsic spelling constants should live in names/spelling.rs"
+        "intrinsic spelling table should live in names/spelling.rs"
     );
     assert!(
         spelling.contains("pub(super) const fn as_str"),
