@@ -1,5 +1,7 @@
 use super::*;
 
+mod behavior_extends;
+
 #[test]
 fn imported_generic_behavior_diagnostics_stay_split_by_responsibility() {
     let root = read("tests/integration/frontend_diagnostics/generic_behavior_imports.rs");
