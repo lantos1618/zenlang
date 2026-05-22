@@ -41,6 +41,11 @@ fn test_loops() {
 }
 
 #[test]
+fn test_loop_control() {
+    run_test("loop_control");
+}
+
+#[test]
 fn test_strings() {
     run_test("strings");
 }
