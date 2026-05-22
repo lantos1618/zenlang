@@ -63,6 +63,50 @@ fn emit_json_symbols_reports_multi_file_generic_result_method_surface() {
 }
 
 #[test]
+fn emit_json_symbols_reports_multi_file_generic_function_return_enum_surface() {
+    let modules = symbols_modules_for_fixture(
+        "tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen",
+        "multi-file imported generic function return enum symbols",
+    );
+
+    assert_eq!(
+        modules.len(),
+        3,
+        "fixture should report main, model, and types modules: {modules:?}"
+    );
+
+    let main = module_by_file(&modules, "main.zen");
+    assert_symbol(main, "Import", "wrap", |symbol| {
+        symbol["import_source"] == "model"
+    });
+    assert_symbol(main, "Import", "unwrap", |symbol| {
+        symbol["import_source"] == "model"
+    });
+
+    let model = module_by_file(&modules, "model.zen");
+    assert_symbol(model, "Import", "Option", |symbol| {
+        symbol["import_source"] == "types"
+    });
+    assert_symbol(model, "Value", "wrap", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["parameter_type_names"], &["T"])
+            && symbol["return_type_name"] == "Option<T>"
+    });
+    assert_symbol(model, "Value", "unwrap", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["parameter_type_names"], &["Option<T>", "T"])
+            && symbol["return_type_name"] == "T"
+    });
+
+    let types = module_by_file(&modules, "types.zen");
+    assert_symbol(types, "Type", "Option", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["type_parameter_names"], &["T"])
+            && string_array_eq(&symbol["variant_names"], &["None", "Some"])
+    });
+}
+
+#[test]
 fn emit_json_symbols_reports_multi_file_generic_method_nested_result_surface() {
     let modules = symbols_modules_for_fixture(
         "tests/zen/multi_file_type_method_nested_result_dependency/main.zen",

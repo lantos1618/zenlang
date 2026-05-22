@@ -56,6 +56,15 @@ fn emit_json_layout_multi_file_generic_result_method_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_layout_multi_file_generic_function_return_enum_schema_matches_golden() {
+    assert_layout_matches_fixture(
+        &fixture("tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen"),
+        "multi-file generic function return enum program input",
+        "tests/fixtures/ir_json/layout_multi_file_generic_function_return_enum.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_layout_multi_file_generic_method_nested_result_schema_matches_golden() {
     assert_layout_matches_fixture(
         &fixture("tests/zen/multi_file_type_method_nested_result_dependency/main.zen"),
