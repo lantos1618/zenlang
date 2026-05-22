@@ -126,3 +126,32 @@ fn behavior_impl_signature_collection_lives_in_focused_helper() {
         "typechecker root should include focused behavior impl signature collection"
     );
 }
+
+#[test]
+fn behavior_impl_method_validation_lives_in_focused_helper() {
+    let root = read("src/typechecker/behavior_impl_validation.rs");
+    let methods = read("src/typechecker/behavior_impl_validation/methods.rs");
+
+    for helper in [
+        "fn check_behavior_impl_extra_methods(",
+        "fn check_behavior_impl_required_methods(",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "behavior_impl_validation.rs should not own method validation helper `{helper}`"
+        );
+        assert!(
+            methods.contains(helper),
+            "behavior impl method validation helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "behavior_impl_validation.rs should stay focused on impl validation orchestration"
+    );
+    assert!(
+        root.contains("mod methods;"),
+        "behavior impl validation should load the focused method validation helper"
+    );
+}
