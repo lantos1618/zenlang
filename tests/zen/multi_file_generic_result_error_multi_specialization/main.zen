@@ -1,0 +1,15 @@
+{ io } = std
+{ Result } = result
+
+main = () i32 {
+    err_bool = Result<i32, bool>.Err(true)
+    ok_bool = Result<i32, bool>.Ok(12)
+    err_i32 = Result<i32, i32>.Err(44)
+    ok_i32 = Result<i32, i32>.Ok(5)
+
+    io.println("${err_bool.unwrap_err(false)}")
+    io.println("${ok_bool.unwrap_err(false)}")
+    io.println("${err_i32.unwrap_err(0)}")
+    io.println("${ok_i32.unwrap_err(88)}")
+    0
+}
