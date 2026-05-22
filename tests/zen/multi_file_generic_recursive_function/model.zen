@@ -1,0 +1,5 @@
+pub repeat<T> = (value: T, remaining: i32) T {
+    remaining > 0 ?
+        | true { repeat(value, remaining - 1) }
+        | false { value }
+}

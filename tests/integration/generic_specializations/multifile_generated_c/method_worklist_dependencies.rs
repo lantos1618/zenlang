@@ -32,6 +32,17 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(!c_source.contains("T middle"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_recursive_function/main.zen"),
+    );
+    assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
+    assert!(c_source.contains("repeat_i32(value, (remaining - 1LL))"));
+    assert!(c_source.contains("repeat_i32(97LL, 4LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "repeat_i32");
+    assert_c_function_definition_count(&c_source, "repeat_i32", 1);
+    assert!(!c_source.contains("T repeat"));
+    assert!(!c_source.contains("repeat_T"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen"),
     );
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));

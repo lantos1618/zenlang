@@ -29,6 +29,13 @@ fn test_multi_file_generic_imported_worklist_chain_imports() {
 }
 
 #[test]
+fn test_multi_file_generic_recursive_function_imports() {
+    let zen_path = test_dir().join("multi_file_generic_recursive_function/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "97\n");
+}
+
+#[test]
 fn test_multi_file_generic_imported_transitive_dependency_imports() {
     let zen_path = test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen");
     let actual = compile_and_run(&zen_path);

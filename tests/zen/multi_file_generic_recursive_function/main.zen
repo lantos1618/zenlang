@@ -1,0 +1,7 @@
+{ io } = std
+{ repeat } = model
+
+main = () i32 {
+    io.println("${repeat<i32>(97, 4)}")
+    0
+}
