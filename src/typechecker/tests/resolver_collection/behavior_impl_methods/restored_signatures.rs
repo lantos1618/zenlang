@@ -1,5 +1,7 @@
 use super::*;
 
+mod generic_templates;
+
 #[test]
 fn collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_impl_method_signature()
 {
@@ -139,111 +141,4 @@ Point.implements(Json) {
         "resolver-restored behavior impl method signature should avoid stale AST diagnostics: {:?}",
         tc.diagnostics
     );
-}
-
-#[test]
-fn collect_declarations_with_symbols_uses_resolver_behavior_impl_generic_method_template_target_and_name_metadata(
-) {
-    let mut program = parse_program(
-        r#"
-Point: { x: i32 }
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point.implements(Json) {
-    encode<T> = (value: Point) StaticString { "point" }
-}
-"#,
-    );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
-    if let Declaration::ImplBlock {
-        type_name, methods, ..
-    } = &mut program.declarations[2]
-    {
-        *type_name = "Missing".to_string();
-        if let Declaration::Function {
-            name,
-            params,
-            return_type,
-            ..
-        } = &mut methods[0]
-        {
-            *name = "missing".to_string();
-            params.pop();
-            *return_type = None;
-        }
-    }
-    let mut tc = TypeChecker::new();
-
-    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
-
-    let template = tc
-        .generic_methods
-        .get("Point.encode")
-        .expect("generic behavior impl method template");
-    assert!(!tc.generic_methods.contains_key("Missing.missing"));
-    assert!(!tc.generic_methods.contains_key("Point.missing"));
-    assert_eq!(template.type_params, vec!["T".to_string()]);
-    assert_eq!(template.params.len(), 1);
-    assert_eq!(template.params[0].name, "value");
-    assert_eq!(template.params[0].ty, AstType::Named("Point".to_string()));
-    assert_eq!(template.return_type, Some(AstType::Str));
-    assert!(
-        tc.diagnostics.is_empty(),
-        "resolver-restored behavior impl generic template should avoid stale AST diagnostics: {:?}",
-        tc.diagnostics
-    );
-}
-
-#[test]
-fn collect_declarations_with_symbols_clears_stale_behavior_impl_generic_method_template_after_key_restore(
-) {
-    let mut program = parse_program(
-        r#"
-Point: { x: i32 }
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point.implements(Json) {
-    encode<T> = (value: Point) StaticString { "point" }
-}
-"#,
-    );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
-    symbols.set_return_type_for_test(Namespace::Value, "Point.encode", None);
-    if let Declaration::ImplBlock {
-        type_name, methods, ..
-    } = &mut program.declarations[2]
-    {
-        *type_name = "Missing".to_string();
-        if let Declaration::Function {
-            name,
-            params,
-            return_type,
-            ..
-        } = &mut methods[0]
-        {
-            *name = "missing".to_string();
-            params[0].ty = AstType::Named("Stale".to_string());
-            *return_type = Some(AstType::Named("AlsoStale".to_string()));
-        }
-    }
-    let mut tc = TypeChecker::new();
-
-    tc.collect_declarations_with_symbols(&program.declarations, &symbols);
-
-    assert!(
-        !tc.generic_methods.contains_key("Missing.missing"),
-        "resolver-backed behavior impl collection should clear stale AST generic method templates"
-    );
-    assert!(
-            !tc.generic_methods.contains_key("Point.encode"),
-            "resolver-backed behavior impl collection should clear restored generic method templates when resolver signature metadata is incomplete"
-        );
 }
