@@ -1,5 +1,6 @@
 mod behavior_impl_method_splits;
 mod build_graph_splits;
+mod codegen_test_splits;
 mod core_semantics_splits;
 mod declaration_validation_splits;
 mod focused_tests;
