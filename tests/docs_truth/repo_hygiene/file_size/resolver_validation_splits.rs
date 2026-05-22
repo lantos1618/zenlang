@@ -186,3 +186,33 @@ fn scalar_absence_descriptors_live_in_focused_support_module() {
         "resolver_validation_support.rs should include focused scalar absence descriptors"
     );
 }
+
+#[test]
+fn expected_pattern_local_traversal_lives_in_focused_support_module() {
+    let root = read("src/typechecker/resolver_validation_support/expected_local_traversal.rs");
+    let patterns = read("src/typechecker/resolver_validation_support/expected_pattern_locals.rs");
+    let includes = read("src/typechecker/resolver_validation_support.rs");
+
+    for helper in [
+        "fn expected_resolver_pattern_locals(",
+        "fn expected_resolver_pattern_binding(",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "expected_local_traversal.rs should not own pattern-local helper `{helper}`"
+        );
+        assert!(
+            patterns.contains(helper),
+            "expected pattern-local helper should live in focused support module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 200,
+        "expected_local_traversal.rs should stay focused on expression and statement traversal"
+    );
+    assert!(
+        includes.contains("include!(\"resolver_validation_support/expected_pattern_locals.rs\");"),
+        "resolver_validation_support.rs should include focused expected pattern-local helpers"
+    );
+}
