@@ -70,6 +70,8 @@ fn typechecker_behavior_association_validation_lives_in_focused_helper() {
 #[test]
 fn typechecker_self_type_validation_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/self_type_validation.rs");
+    let expressions = read("src/typechecker/self_type_validation/expressions.rs");
+    let statements = read("src/typechecker/self_type_validation/statements.rs");
     let tasks = read("src/typechecker/self_type_validation/tasks.rs");
 
     for helper in [
@@ -85,7 +87,19 @@ fn typechecker_self_type_validation_tasks_live_in_focused_helper() {
             "self-type task collection should live in focused helper: {helper}"
         );
     }
+    assert!(
+        !expressions.contains("fn validate_self_type_statement"),
+        "self-type expression traversal should not own statement traversal"
+    );
+    assert!(
+        statements.contains("fn validate_self_type_statement"),
+        "self-type statement traversal should live in focused helper"
+    );
 
+    assert!(
+        root.contains("mod statements;"),
+        "self_type_validation.rs should load focused statement traversal helper"
+    );
     assert!(
         root.contains("mod tasks;"),
         "self_type_validation.rs should load focused task collection helper"
