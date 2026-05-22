@@ -45,3 +45,12 @@ fn emit_json_layout_multi_file_generic_method_nested_result_schema_matches_golde
         "tests/fixtures/ir_json/layout_multi_file_generic_method_nested_result.golden.json",
     );
 }
+
+#[test]
+fn emit_json_layout_multi_file_generic_result_multi_specialization_schema_matches_golden() {
+    assert_layout_matches_fixture(
+        &fixture("tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen"),
+        "multi-file generic Result multi-specialization program input",
+        "tests/fixtures/ir_json/layout_multi_file_generic_result_multi_specialization.golden.json",
+    );
+}
