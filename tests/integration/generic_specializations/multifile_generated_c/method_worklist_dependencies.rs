@@ -28,6 +28,9 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert_c_call_resolves_to_definition(&c_source, "inner_i32");
     assert_c_call_resolves_to_definition(&c_source, "middle_i32");
     assert_c_call_resolves_to_definition(&c_source, "outer_i32");
+    assert_c_function_definition_count(&c_source, "inner_i32", 1);
+    assert_c_function_definition_count(&c_source, "middle_i32", 1);
+    assert_c_function_definition_count(&c_source, "outer_i32", 1);
     assert!(!c_source.contains("T inner"));
     assert!(!c_source.contains("T middle"));
 
