@@ -72,6 +72,60 @@ fn generic_behavior_bound_tests_stay_split_by_responsibility() {
 }
 
 #[test]
+fn generic_behavior_extends_tests_stay_split_by_parent_surface() {
+    let root = read("src/typechecker/tests/generic_behaviors/extends.rs");
+    let inherited_requirements =
+        read("src/typechecker/tests/generic_behaviors/extends/inherited_requirements.rs");
+    let generic_parents =
+        read("src/typechecker/tests/generic_behaviors/extends/generic_parents.rs");
+    let specialization_overlap =
+        read("src/typechecker/tests/generic_behaviors/extends/specialization_overlap.rs");
+
+    assert!(
+        root.lines().count() < 80,
+        "extends.rs should only route focused behavior extension tests"
+    );
+    for module in [
+        "mod diagnostics;",
+        "mod generic_parents;",
+        "mod inherited_requirements;",
+        "mod specialization_overlap;",
+    ] {
+        assert!(
+            root.contains(module),
+            "extends.rs should include focused module `{module}`"
+        );
+    }
+    for test_name in [
+        "behavior_extends_requires_parent_methods",
+        "behavior_extends_generic_parent_requires_substituted_methods",
+        "behavior_impl_distinct_generic_specializations_do_not_overlap",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "extends.rs should not own concrete test body: {test_name}"
+        );
+    }
+    assert!(
+        inherited_requirements.contains("fn behavior_extends_requires_parent_methods")
+            && inherited_requirements
+                .contains("fn behavior_extends_impl_satisfies_parent_requires"),
+        "inherited_requirements.rs should cover non-generic parent requirement flow"
+    );
+    assert!(
+        generic_parents.contains("fn behavior_extends_generic_parent_requires_substituted_methods")
+            && generic_parents
+                .contains("fn behavior_extends_generic_parent_accepts_child_type_parameter_arg"),
+        "generic_parents.rs should cover specialized and child-parameter parent edges"
+    );
+    assert!(
+        specialization_overlap
+            .contains("fn behavior_impl_distinct_generic_specializations_do_not_overlap"),
+        "specialization_overlap.rs should cover distinct generic behavior impl overlap"
+    );
+}
+
+#[test]
 fn generic_behavior_method_dispatch_tests_stay_split_by_dispatch_surface() {
     let root = read("src/typechecker/tests/generic_behaviors/method_dispatch.rs");
     let ambiguity = read("src/typechecker/tests/generic_behaviors/method_dispatch/ambiguity.rs");
