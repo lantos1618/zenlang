@@ -81,6 +81,10 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
     let multi_file_worklist =
         read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
+    let transitive_worklist_block = generated_c_fixture_block(
+        &multi_file_worklist,
+        "multi_file_generic_imported_transitive_dependency/main.zen",
+    );
     let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
     let behavior_bounds =
         read("tests/integration/generic_specializations/behavior_bounds/local_and_defaults.rs");
@@ -107,11 +111,11 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
             r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
         ),
         (
-            multi_file_worklist.as_str(),
+            transitive_worklist_block,
             r#"assert_c_call_resolves_to_single_definition(&c_source, "inner_i32")"#,
         ),
         (
-            multi_file_worklist.as_str(),
+            transitive_worklist_block,
             r#"assert_c_call_resolves_to_single_definition(&c_source, "outer_i32")"#,
         ),
     ] {
