@@ -5,6 +5,7 @@ mod association_inheritance;
 mod default_methods;
 mod impl_methods;
 mod impl_signatures;
+mod resolver_refs;
 
 #[test]
 fn typechecker_behavior_impl_guards_stay_split_by_surface() {
@@ -20,6 +21,8 @@ fn typechecker_behavior_impl_guards_stay_split_by_surface() {
         read("tests/docs_truth/repo_hygiene/typechecker_behavior_impls/impl_methods.rs");
     let impl_signatures =
         read("tests/docs_truth/repo_hygiene/typechecker_behavior_impls/impl_signatures.rs");
+    let resolver_refs =
+        read("tests/docs_truth/repo_hygiene/typechecker_behavior_impls/resolver_refs.rs");
 
     assert!(
         root.lines().count() < 80,
@@ -31,6 +34,7 @@ fn typechecker_behavior_impl_guards_stay_split_by_surface() {
         "default_methods",
         "impl_methods",
         "impl_signatures",
+        "resolver_refs",
     ] {
         assert!(
             root.contains(&format!("mod {module_name};")),
@@ -58,5 +62,9 @@ fn typechecker_behavior_impl_guards_stay_split_by_surface() {
     assert!(
         impl_signatures.contains("fn behavior_impl_signature_collection_lives_in_focused_helper"),
         "impl signature guards should live in impl_signatures.rs"
+    );
+    assert!(
+        resolver_refs.contains("fn behavior_impl_resolver_refs_live_in_focused_helper"),
+        "resolver behavior-ref guards should live in resolver_refs.rs"
     );
 }
