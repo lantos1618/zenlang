@@ -76,3 +76,32 @@ fn build_graph_json_output_lives_in_focused_helper() {
         "build graph root should include focused JSON output helper"
     );
 }
+
+#[test]
+fn build_graph_formatting_lives_in_focused_helper() {
+    let root = read("src/build_graph.rs");
+    let formatting = read("src/build_graph/formatting.rs");
+
+    for helper in [
+        "fn diagnostic_name",
+        "impl fmt::Display for BuildTargetKind",
+        "impl fmt::Display for HostEffect",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "build_graph.rs should not own formatting helper: {helper}"
+        );
+        assert!(
+            formatting.contains(helper),
+            "build graph formatting should live in focused helper: {helper}"
+        );
+    }
+    assert!(
+        root.contains("mod formatting;"),
+        "build graph root should include focused formatting helper"
+    );
+    assert!(
+        root.lines().count() < 180,
+        "build_graph.rs should stay focused on graph shapes and construction"
+    );
+}
