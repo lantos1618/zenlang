@@ -1,5 +1,6 @@
 mod core_semantics;
 mod focused_tests;
+mod generic_diagnostics;
 mod integration;
 mod intrinsics;
 mod ir_json;
