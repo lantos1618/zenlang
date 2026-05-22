@@ -62,3 +62,12 @@ fn emit_json_typed_generic_method_nested_result_schema_matches_golden() {
         "generic method nested Result",
     );
 }
+
+#[test]
+fn emit_json_typed_multi_file_generic_method_nested_result_schema_matches_golden() {
+    assert_typed_golden(
+        "multi_file_type_method_nested_result_dependency/main.zen",
+        "tests/fixtures/ir_json/typed_multi_file_generic_method_nested_result.golden.json",
+        "multi-file generic method nested Result",
+    );
+}

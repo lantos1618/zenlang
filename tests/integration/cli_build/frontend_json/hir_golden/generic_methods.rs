@@ -64,6 +64,15 @@ fn emit_json_hir_generic_method_nested_result_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_multi_file_generic_method_nested_result_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_type_method_nested_result_dependency/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_generic_method_nested_result.golden.json",
+        "multi-file generic method nested result input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_result_method_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_result_enum_method.zen",
