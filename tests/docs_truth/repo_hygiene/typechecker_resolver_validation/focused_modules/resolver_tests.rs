@@ -5,23 +5,58 @@ fn typechecker_resolver_type_behavior_metadata_tests_live_in_focused_modules() {
     let root = read("src/typechecker/tests/resolver_type_behavior_metadata.rs");
     let type_metadata =
         read("src/typechecker/tests/resolver_type_behavior_metadata/type_symbols.rs");
+    let type_generic_parameters = read(
+        "src/typechecker/tests/resolver_type_behavior_metadata/type_symbols/generic_parameters.rs",
+    );
+    let type_visibility =
+        read("src/typechecker/tests/resolver_type_behavior_metadata/type_symbols/visibility.rs");
+    let type_absent_value_metadata = read(
+        "src/typechecker/tests/resolver_type_behavior_metadata/type_symbols/absent_value_metadata.rs",
+    );
     let behavior_metadata =
         read("src/typechecker/tests/resolver_type_behavior_metadata/behavior_symbols.rs");
 
     for test_name in [
         "check_program_with_symbols_validates_resolver_type_parameter_counts",
         "check_program_with_symbols_validates_resolver_type_parameter_names",
-        "check_program_with_symbols_validates_resolver_type_visibility",
         "check_program_with_symbols_validates_resolver_type_parameter_bounds",
-        "check_program_with_symbols_validates_resolver_type_like_absent_value_metadata",
     ] {
         assert!(
             !root.contains(&format!("fn {test_name}")),
             "resolver_type_behavior_metadata.rs should not own type metadata test: {test_name}"
         );
         assert!(
-            type_metadata.contains(&format!("fn {test_name}")),
-            "type metadata tests should live in focused module: {test_name}"
+            !type_metadata.contains(&format!("fn {test_name}")),
+            "type_symbols.rs should not own generic parameter test body: {test_name}"
+        );
+        assert!(
+            type_generic_parameters.contains(&format!("fn {test_name}")),
+            "generic type-parameter metadata tests should live in focused module: {test_name}"
+        );
+    }
+    for (test_name, module, label) in [
+        (
+            "check_program_with_symbols_validates_resolver_type_visibility",
+            type_visibility.as_str(),
+            "type visibility",
+        ),
+        (
+            "check_program_with_symbols_validates_resolver_type_like_absent_value_metadata",
+            type_absent_value_metadata.as_str(),
+            "type-like absent value metadata",
+        ),
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_type_behavior_metadata.rs should not own {label} test: {test_name}"
+        );
+        assert!(
+            !type_metadata.contains(&format!("fn {test_name}")),
+            "type_symbols.rs should not own {label} test body: {test_name}"
+        );
+        assert!(
+            module.contains(&format!("fn {test_name}")),
+            "{label} tests should live in focused module: {test_name}"
         );
     }
 
