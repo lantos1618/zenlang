@@ -156,3 +156,72 @@ Box<T>.implements(Pretty<T>) {
         "expected generic target behavior overlap diagnostic, got {errors:?}"
     );
 }
+
+#[test]
+fn generic_target_behavior_impl_rejects_alpha_equivalent_duplicate() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Box<T>) T { self.value }
+}
+
+Box<U>.implements(Json<U>) {
+    encode = (self: Box<U>) U { self.value }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("alpha-equivalent generic target behavior impl should fail");
+    assert!(
+        errors.iter().any(|d| d
+            .message
+            .contains("duplicate implementation of behavior `Json_T` for generic type `Box<U>`")),
+        "expected alpha-equivalent generic target duplicate diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
+fn generic_target_behavior_impl_rejects_alpha_equivalent_parent_child_overlap() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Pretty<T>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Json<T>)
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Box<T>) T { self.value }
+}
+
+Box<U>.implements(Pretty<U>) {
+    encode = (self: Box<U>) U { self.value }
+    pretty = (self: Box<U>) U { self.value }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("alpha-equivalent generic target parent/child overlap should fail");
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "overlapping implementations of behaviors `Json_T` and `Pretty_T` for generic type `Box<U>`"
+        )),
+        "expected alpha-equivalent generic target overlap diagnostic, got {errors:?}"
+    );
+}

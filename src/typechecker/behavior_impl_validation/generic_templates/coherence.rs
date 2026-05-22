@@ -9,10 +9,18 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         span: Span,
     ) -> bool {
-        let behavior_ref = self.behavior_parent_ref(behavior, behavior_type_args);
+        let type_params = named_type_arg_names(type_args);
+        let behavior_ref = self.generic_behavior_impl_behavior_ref(
+            type_name,
+            &type_params,
+            behavior,
+            behavior_type_args,
+        );
         if self.generic_behavior_impls.iter().any(|implementation| {
             implementation.type_name == type_name && {
-                let existing = self.behavior_parent_ref(
+                let existing = self.generic_behavior_impl_behavior_ref(
+                    type_name,
+                    &implementation.type_params,
                     &implementation.behavior,
                     &implementation.behavior_type_args,
                 );
@@ -69,7 +77,9 @@ impl TypeChecker {
             .iter()
             .filter(|implementation| implementation.type_name == type_name)
             .map(|implementation| {
-                self.behavior_parent_ref(
+                self.generic_behavior_impl_behavior_ref(
+                    type_name,
+                    &implementation.type_params,
                     &implementation.behavior,
                     &implementation.behavior_type_args,
                 )
@@ -86,6 +96,52 @@ impl TypeChecker {
                 )
             })
             .map(|existing| existing.key)
+    }
+
+    fn generic_behavior_impl_behavior_ref(
+        &self,
+        type_name: &str,
+        type_params: &[String],
+        behavior: &str,
+        behavior_type_args: &[AstType],
+    ) -> BehaviorParentRef {
+        let substitutions = self.generic_target_param_substitutions(type_name, type_params);
+        let type_args = behavior_type_args
+            .iter()
+            .map(|arg| substitute_behavior_ast_type(arg, &substitutions))
+            .collect::<Vec<_>>();
+        self.behavior_parent_ref(behavior, &type_args)
+    }
+
+    fn generic_target_param_substitutions(
+        &self,
+        type_name: &str,
+        type_params: &[String],
+    ) -> HashMap<String, AstType> {
+        let canonical_params = self.generic_target_canonical_type_params(type_name);
+        type_params
+            .iter()
+            .enumerate()
+            .map(|(index, name)| {
+                let canonical = canonical_params
+                    .get(index)
+                    .cloned()
+                    .unwrap_or_else(|| name.clone());
+                (name.clone(), AstType::Named(canonical))
+            })
+            .collect()
+    }
+
+    fn generic_target_canonical_type_params(&self, type_name: &str) -> Vec<String> {
+        self.structs
+            .get(type_name)
+            .map(|info| info.type_params.clone())
+            .or_else(|| {
+                self.enums
+                    .get(type_name)
+                    .map(|info| info.type_params.clone())
+            })
+            .unwrap_or_default()
     }
 }
 
