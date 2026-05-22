@@ -29,3 +29,36 @@ fn typechecker_resolver_statement_local_traversal_lives_in_focused_helper() {
         "resolver validation should include focused statement-local traversal"
     );
 }
+
+#[test]
+fn typechecker_resolver_expr_local_traversal_stays_split_by_surface() {
+    let root = read("src/typechecker/resolver_validation/local_traversal.rs");
+    let scopes = read("src/typechecker/resolver_validation/local_traversal/scopes.rs");
+    let expressions = read("src/typechecker/resolver_validation/local_traversal/expressions.rs");
+
+    assert!(
+        root.lines().count() < 40,
+        "resolver local traversal root should only route focused traversal helpers"
+    );
+    for include in [
+        "include!(\"local_traversal/scopes.rs\");",
+        "include!(\"local_traversal/expressions.rs\");",
+    ] {
+        assert!(
+            root.contains(include),
+            "resolver local traversal should include focused helper: {include}"
+        );
+    }
+    assert!(
+        !root.contains("fn require_resolver_expr_locals"),
+        "resolver local traversal root should not own expression traversal bodies"
+    );
+    assert!(
+        scopes.contains("fn require_resolver_child_expr_locals"),
+        "child-scope traversal helpers should live in local_traversal/scopes.rs"
+    );
+    assert!(
+        expressions.contains("fn require_resolver_expr_locals"),
+        "expression traversal should live in local_traversal/expressions.rs"
+    );
+}
