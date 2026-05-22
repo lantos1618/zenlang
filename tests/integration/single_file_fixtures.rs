@@ -106,6 +106,11 @@ fn test_generic_method_nested_result() {
 }
 
 #[test]
+fn test_generic_enum_method_nested_result() {
+    run_test("generic_enum_method_nested_result");
+}
+
+#[test]
 fn test_type_impl_methods() {
     run_test("type_impl_methods");
 }
