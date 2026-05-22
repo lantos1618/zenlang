@@ -96,13 +96,14 @@ fn phase_plan_records_recovered_progress_and_next_slice() {
 #[test]
 fn nested_generic_result_generated_c_pins_definition_counts() {
     let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
+    let normalized_enum_generated_c = enum_generated_c.split_whitespace().collect::<String>();
 
     for required in [
-        r#"assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1)"#,
-        r#"assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1)"#,
+        "assert_c_call_resolves_to_single_definition(&c_source,\"unwrap_result_Option_i32_StaticString\"",
+        "assert_c_call_resolves_to_single_definition(&c_source,\"unwrap_option_i32\"",
     ] {
         assert!(
-            enum_generated_c.contains(required),
+            normalized_enum_generated_c.contains(required),
             "nested generic Result<Option<T>, E> generated-C tests should pin exact definition counts: {required}"
         );
     }
