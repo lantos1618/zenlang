@@ -8,8 +8,8 @@ fn imported_function_behavior_bound_dependencies_do_not_emit_unspecialized_c_sym
     assert!(c_source.contains("int32_t Point_encode__Json_i32(Point value)"));
     assert!(c_source.contains("int32_t encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_i32");
-    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 }
 
@@ -23,9 +23,9 @@ fn imported_function_signature_type_dependencies_do_not_emit_unspecialized_c_sym
     assert!(c_source.contains("int32_t Point_encode__Json_i32(Point value)"));
     assert!(c_source.contains("int32_t encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "make_point");
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_i32");
-    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "make_point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
     let c_source = compile_to_c_with_generated_call_check(
@@ -37,9 +37,9 @@ fn imported_function_signature_type_dependencies_do_not_emit_unspecialized_c_sym
     assert!(c_source.contains("int32_t encode_point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
     assert!(c_source.contains("encode_point(point)"));
-    assert_c_call_resolves_to_definition(&c_source, "make_point");
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_i32");
-    assert_c_call_resolves_to_definition(&c_source, "encode_point");
+    assert_c_call_resolves_to_single_definition(&c_source, "make_point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_point");
     assert!(!c_source.contains("T_encode"));
 
     let c_source = compile_to_c_with_generated_call_check(
@@ -50,8 +50,8 @@ fn imported_function_signature_type_dependencies_do_not_emit_unspecialized_c_sym
     assert!(c_source.contains("int32_t Point_encode__Json_i32(Point value)"));
     assert!(c_source.contains("int32_t encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "make_point");
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_i32");
-    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "make_point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 }

@@ -92,6 +92,9 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
     let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
     let behavior_bounds =
         read("tests/integration/generic_specializations/behavior_bounds/local_and_defaults.rs");
+    let imported_function_behavior_bounds = read(
+        "tests/integration/generic_specializations/behavior_bounds/imported_function_dependencies.rs",
+    );
     let multi_file_enums = read(
         "tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs",
     );
@@ -150,4 +153,9 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
             "enum generated-C tests should use the single-definition helper for generated call checks"
         );
     }
+
+    assert!(
+        !imported_function_behavior_bounds.contains("assert_c_call_resolves_to_definition(&c_source"),
+        "imported function behavior-bound generated-C tests should use the single-definition helper for generated call checks"
+    );
 }
