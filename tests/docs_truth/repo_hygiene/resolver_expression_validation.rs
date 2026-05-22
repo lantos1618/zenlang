@@ -1,201 +1,44 @@
 use super::*;
 
-#[test]
-fn resolver_aggregate_expression_validation_lives_in_focused_helper() {
-    let constructs = read("src/resolver/expression_validation_constructs.rs");
-    let aggregates = read("src/resolver/expression_validation_constructs/aggregate_literals.rs");
+mod calls;
+mod constructs;
+mod dispatch;
+mod traversal;
 
-    for helper in [
-        "StructLiteralRef",
-        "EnumVariantRef",
-        "validate_struct_literal_refs",
-        "validate_enum_variant_refs",
-    ] {
+#[test]
+fn resolver_expression_validation_guards_stay_split_by_surface() {
+    let root = read("tests/docs_truth/repo_hygiene/resolver_expression_validation.rs");
+    let calls = read("tests/docs_truth/repo_hygiene/resolver_expression_validation/calls.rs");
+    let constructs =
+        read("tests/docs_truth/repo_hygiene/resolver_expression_validation/constructs.rs");
+    let dispatch = read("tests/docs_truth/repo_hygiene/resolver_expression_validation/dispatch.rs");
+    let traversal =
+        read("tests/docs_truth/repo_hygiene/resolver_expression_validation/traversal.rs");
+
+    assert!(
+        root.lines().count() < 80,
+        "resolver_expression_validation.rs should route focused hygiene guard modules"
+    );
+    for module_name in ["calls", "constructs", "dispatch", "traversal"] {
         assert!(
-            !constructs.contains(&format!("struct {helper}"))
-                && !constructs.contains(&format!("fn {helper}")),
-            "general resolver expression constructs should not own aggregate helper: {helper}"
-        );
-        assert!(
-            aggregates.contains(&format!("struct {helper}"))
-                || aggregates.contains(&format!("fn {helper}")),
-            "aggregate expression validation should live in focused helper: {helper}"
+            root.contains(&format!("mod {module_name};")),
+            "resolver_expression_validation.rs should include focused module: {module_name}"
         );
     }
-
     assert!(
-        constructs.contains("mod aggregate_literals;"),
-        "resolver expression construct helpers should load aggregate literal validation"
-    );
-}
-
-#[test]
-fn resolver_scoped_construct_validation_lives_in_focused_helper() {
-    let constructs = read("src/resolver/expression_validation_constructs.rs");
-    let scoped = read("src/resolver/expression_validation_constructs/scoped_constructs.rs");
-
-    assert!(
-        constructs.lines().count() < 135,
-        "general resolver expression constructs should stay focused on shared argument and match-arm traversal"
-    );
-
-    for helper in [
-        "BlockRef",
-        "ClosureRef",
-        "validate_child_scope_expr_refs",
-        "validate_block_refs",
-        "validate_closure_refs",
-    ] {
-        assert!(
-            !constructs.contains(&format!("struct {helper}"))
-                && !constructs.contains(&format!("fn {helper}")),
-            "general resolver expression constructs should not own scoped construct helper: {helper}"
-        );
-        assert!(
-            scoped.contains(&format!("struct {helper}"))
-                || scoped.contains(&format!("fn {helper}")),
-            "scoped expression construct validation should live in focused helper: {helper}"
-        );
-    }
-
-    assert!(
-        constructs.contains("mod scoped_constructs;"),
-        "resolver expression construct helpers should load scoped construct validation"
-    );
-}
-
-#[test]
-fn resolver_call_expression_validation_lives_in_focused_helper() {
-    let validation = read("src/resolver/expression_validation.rs");
-    let calls = read("src/resolver/expression_validation/calls.rs");
-
-    for helper in [
-        "validate_function_call_expr_refs",
-        "validate_identifier_expr_refs",
-        "validate_method_call_expr_refs",
-    ] {
-        assert!(
-            !validation.contains(&format!("fn {helper}")),
-            "resolver expression dispatch should not own call helper: {helper}"
-        );
-        assert!(
-            calls.contains(&format!("fn {helper}")),
-            "resolver call expression validation should live in focused helper: {helper}"
-        );
-    }
-
-    assert!(
-        validation.contains("mod calls;"),
-        "resolver expression validation should load focused call validation"
-    );
-}
-
-#[test]
-fn resolver_expression_traversal_lives_in_focused_helper() {
-    let validation = read("src/resolver/expression_validation.rs");
-    let traversal = read("src/resolver/expression_validation/traversal.rs");
-
-    for helper in [
-        "validate_binary_expr_refs",
-        "validate_unary_expr_refs",
-        "validate_index_expr_refs",
-        "validate_string_interpolation_refs",
-    ] {
-        assert!(
-            !validation.contains(&format!("fn {helper}")),
-            "resolver expression dispatch should not own traversal helper: {helper}"
-        );
-        assert!(
-            traversal.contains(&format!("fn {helper}")),
-            "resolver expression traversal should live in focused helper: {helper}"
-        );
-    }
-
-    assert!(
-        validation.contains("mod traversal;"),
-        "resolver expression validation should load focused traversal validation"
-    );
-}
-
-#[test]
-fn resolver_control_flow_traversal_lives_in_focused_helper() {
-    let traversal = read("src/resolver/expression_validation/traversal.rs");
-    let control_flow = read("src/resolver/expression_validation/traversal/control_flow.rs");
-
-    for helper in [
-        "IfOrWhileExprRef",
-        "RangeExprRef",
-        "validate_if_or_while_expr_refs",
-        "validate_range_expr_refs",
-        "validate_defer_expr_refs",
-    ] {
-        assert!(
-            !traversal.contains(&format!("struct {helper}"))
-                && !traversal.contains(&format!("fn {helper}")),
-            "general traversal helper should not own control-flow traversal helper: {helper}"
-        );
-        assert!(
-            control_flow.contains(&format!("struct {helper}"))
-                || control_flow.contains(&format!("fn {helper}")),
-            "control-flow traversal helper should live in focused helper: {helper}"
-        );
-    }
-
-    assert!(
-        traversal.contains("mod control_flow;"),
-        "resolver expression traversal should include focused control-flow traversal helper"
+        calls.contains("fn resolver_call_expression_validation_lives_in_focused_helper"),
+        "call expression guards should live in resolver_expression_validation/calls.rs"
     );
     assert!(
-        traversal.lines().count() < 145,
-        "resolver expression traversal should stay focused on direct child traversal"
-    );
-}
-
-#[test]
-fn resolver_expression_dispatch_stays_as_category_router() {
-    let validation = read("src/resolver/expression_validation.rs");
-    let dispatch = read("src/resolver/expression_validation/dispatch.rs");
-    let construct_dispatch = read("src/resolver/expression_validation/construct_dispatch.rs");
-    let calls = read("src/resolver/expression_validation/calls.rs");
-    let traversal = read("src/resolver/expression_validation/traversal.rs");
-    let constructs = read("src/resolver/expression_validation_constructs.rs");
-
-    assert!(
-        validation.lines().count() < 180,
-        "resolver expression validation should stay a compact dispatch router"
+        constructs.contains("fn resolver_aggregate_expression_validation_lives_in_focused_helper"),
+        "construct guards should live in resolver_expression_validation/constructs.rs"
     );
     assert!(
-        validation.contains("mod dispatch;"),
-        "resolver expression validation should load focused expression dispatch"
+        dispatch.contains("fn resolver_expression_dispatch_stays_as_category_router"),
+        "dispatch guards should live in resolver_expression_validation/dispatch.rs"
     );
     assert!(
-        validation.contains("mod construct_dispatch;"),
-        "resolver expression validation should load focused construct dispatch"
-    );
-    assert!(
-        dispatch.lines().count() < 220,
-        "resolver expression category dispatch should stay compact"
-    );
-    assert!(
-        construct_dispatch.lines().count() < 140,
-        "resolver construct expression dispatch should stay compact"
-    );
-    assert!(
-        dispatch.contains("fn validate_call_expr_refs"),
-        "dispatch.rs should route call-like expressions through calls.rs"
-    );
-    assert!(
-        dispatch.contains("fn validate_traversal_expr_refs"),
-        "dispatch.rs should route traversal expressions through traversal.rs"
-    );
-    assert!(
-        construct_dispatch.contains("fn validate_construct_expr_refs"),
-        "construct_dispatch.rs should route construct/scoped expressions through expression_validation_constructs.rs"
-    );
-    assert!(
-        !calls.contains("fn validate_call_expr_refs")
-            && !traversal.contains("fn validate_traversal_expr_refs")
-            && !constructs.contains("fn validate_construct_expr_refs"),
-        "category dispatch should stay out of leaf validation helpers"
+        traversal.contains("fn resolver_expression_traversal_lives_in_focused_helper"),
+        "traversal guards should live in resolver_expression_validation/traversal.rs"
     );
 }
