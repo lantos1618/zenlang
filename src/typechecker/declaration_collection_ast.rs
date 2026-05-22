@@ -75,7 +75,13 @@ impl TypeChecker {
     ) {
         for task in tasks {
             if self.resolver_backed_collection {
-                self.collect_resolver_backed_impl_block_templates(task.type_name, task.methods);
+                self.collect_resolver_backed_impl_block_templates(
+                    task.type_name,
+                    task.type_args,
+                    task.behavior,
+                    task.behavior_type_args,
+                    task.methods,
+                );
             } else {
                 self.collect_ast_impl_block_declaration(
                     task.type_name,
@@ -119,10 +125,19 @@ impl TypeChecker {
     fn collect_resolver_backed_impl_block_templates(
         &mut self,
         type_name: &str,
+        type_args: &[AstType],
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) {
         for method in methods {
-            self.collect_resolver_backed_impl_method_template(type_name, method);
+            self.collect_resolver_backed_impl_method_template(
+                type_name,
+                type_args,
+                behavior,
+                behavior_type_args,
+                method,
+            );
         }
     }
 

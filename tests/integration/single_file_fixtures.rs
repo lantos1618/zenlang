@@ -104,6 +104,11 @@ fn test_behavior_generic_target_default_method() {
 }
 
 #[test]
+fn test_behavior_generic_target_distinct_behavior_args() {
+    run_test("behavior_generic_target_distinct_behavior_args");
+}
+
+#[test]
 fn test_behavior_distinct_generic_specialization_dispatch() {
     run_test("behavior_distinct_generic_specialization_dispatch");
 }

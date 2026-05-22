@@ -54,6 +54,9 @@ impl TypeChecker {
     pub(super) fn collect_resolver_backed_impl_method_template(
         &mut self,
         type_name: &str,
+        type_args: &[AstType],
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
         method: &Declaration,
     ) {
         let Declaration::Function {
@@ -70,8 +73,14 @@ impl TypeChecker {
         if let Some(template) =
             generic_template_body_stub_from_type_params(type_params, params, body, *span)
         {
-            self.generic_methods
-                .insert(Self::method_key(type_name, name), template);
+            let key = Self::behavior_impl_method_key_with_target_args(
+                type_name,
+                name,
+                behavior,
+                behavior_type_args,
+                type_args,
+            );
+            self.generic_methods.insert(key, template);
         }
     }
 
@@ -103,7 +112,13 @@ impl TypeChecker {
             let Declaration::Function { name, span, .. } = method else {
                 continue;
             };
-            let ast_key = Self::method_key(ast_type_name, name);
+            let ast_key = Self::behavior_impl_method_key_with_target_args(
+                ast_type_name,
+                name,
+                Some(&behavior),
+                &behavior_type_args,
+                target_type_args,
+            );
             let resolver_owned_key =
                 self.resolver_backed_impl_method_key(Some(symbols), &ast_key, type_name, *span);
             let restored_name = self.resolver_backed_behavior_impl_method_signature_name(

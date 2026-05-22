@@ -23,7 +23,7 @@ impl TypeChecker {
             span,
             symbols,
         } = input;
-        let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior);
+        let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior, behavior_type_args);
         if self.should_skip_missing_resolver_behavior_ref(
             resolver_impl_ref.as_ref(),
             type_name,

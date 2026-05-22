@@ -14,16 +14,39 @@ fn resolver_behavior_ref_queue_selection_prefers_exact_then_front() {
     ]);
 
     assert_eq!(
-        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Debug"),
+        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Debug", &[]),
         Some(1)
     );
     assert_eq!(
-        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Missing"),
+        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Missing", &[]),
         Some(0)
     );
     assert_eq!(
-        TypeChecker::resolver_behavior_ref_queue_index(&VecDeque::new(), "Missing"),
+        TypeChecker::resolver_behavior_ref_queue_index(&VecDeque::new(), "Missing", &[]),
         None
+    );
+}
+
+#[test]
+fn resolver_behavior_ref_queue_selection_prefers_matching_type_args() {
+    let refs = VecDeque::from(vec![
+        BehaviorRefMetadata {
+            name: "Json".to_string(),
+            type_args: vec![AstType::Str],
+        },
+        BehaviorRefMetadata {
+            name: "Json".to_string(),
+            type_args: vec![AstType::I32],
+        },
+    ]);
+
+    assert_eq!(
+        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Json", &[AstType::I32]),
+        Some(1)
+    );
+    assert_eq!(
+        TypeChecker::resolver_behavior_ref_queue_index(&refs, "Json", &[AstType::Bool]),
+        Some(0)
     );
 }
 
