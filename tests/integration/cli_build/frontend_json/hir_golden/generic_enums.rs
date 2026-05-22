@@ -44,3 +44,12 @@ fn emit_json_hir_generic_result_multi_schema_matches_golden() {
         "generic Result multi-specialization",
     );
 }
+
+#[test]
+fn emit_json_hir_multi_file_generic_result_multi_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_generic_result_multi_specialization.golden.json",
+        "multi-file generic Result multi-specialization",
+    );
+}
