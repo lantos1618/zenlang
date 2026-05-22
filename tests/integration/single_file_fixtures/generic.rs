@@ -41,6 +41,11 @@ fn test_generic_method_self() {
 }
 
 #[test]
+fn test_generic_method_self_phantom() {
+    run_test("generic_method_self_phantom");
+}
+
+#[test]
 fn test_generic_enum_method_self_renamed_params() {
     run_test("generic_enum_method_self_renamed_params");
 }

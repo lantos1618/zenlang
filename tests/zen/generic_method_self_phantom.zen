@@ -1,0 +1,33 @@
+{ io } = std
+
+Marker<T>: {
+    id: i32
+}
+
+Token<T>:
+    One(i32)
+
+Marker.copy<T> = (self: Self) Self {
+    self
+}
+
+Token.copy<T> = (self: Self) Self {
+    self
+}
+
+wrap<T> = (value: Marker<T>) Marker<T> {
+    value.copy()
+}
+
+main = () i32 {
+    marker = Marker<i32> { id: 7 }
+    copied = wrap<i32>(marker)
+    io.println("${copied.id}")
+
+    token = Token<i32>.One(8)
+    copied_token = token.copy()
+    token_value = copied_token ?
+        | One(id) { id }
+    io.println("${token_value}")
+    0
+}

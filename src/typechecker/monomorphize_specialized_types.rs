@@ -52,7 +52,8 @@ impl TypeChecker {
             &requested,
             info.specialization_scope.as_deref(),
         );
-        self.remember_specialized_type_source(&mangled, name);
+        let concrete_type_args = self.concrete_specialized_type_args(type_args);
+        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
         if !already_emitted {
             self.specialized_types.push(TypedTypeDef {
                 name: mangled,
@@ -113,7 +114,8 @@ impl TypeChecker {
             &requested,
             info.specialization_scope.as_deref(),
         );
-        self.remember_specialized_type_source(&mangled, name);
+        let concrete_type_args = self.concrete_specialized_type_args(type_args);
+        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
         if !already_emitted {
             let typed_variants = variants
                 .into_iter()
@@ -136,5 +138,12 @@ impl TypeChecker {
             });
         }
         variant_map
+    }
+
+    fn concrete_specialized_type_args(&self, type_args: &[AstType]) -> Vec<AstType> {
+        type_args
+            .iter()
+            .map(|arg| self.type_to_ast_ref(&self.resolve_type(arg)))
+            .collect()
     }
 }

@@ -49,6 +49,19 @@ impl TypeChecker {
         None
     }
 
+    pub(crate) fn remembered_specialized_type_args(
+        &self,
+        concrete_name: &str,
+        generic_name: &str,
+    ) -> Option<Vec<AstType>> {
+        let source_name = self.specialized_type_generic_names.get(concrete_name)?;
+        if source_name != generic_name {
+            return None;
+        }
+        let type_args = self.specialized_type_args.get(concrete_name)?;
+        Some(type_args.clone())
+    }
+
     fn infer_specialized_type_args(
         &self,
         generic_name: &str,

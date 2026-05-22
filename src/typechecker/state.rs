@@ -18,6 +18,7 @@ pub struct TypeChecker {
     specialized_types_seen: HashMap<String, String>,
     specialized_type_name_owners: HashMap<String, String>,
     specialized_type_generic_names: HashMap<String, String>,
+    specialized_type_args: HashMap<String, Vec<AstType>>,
     type_substitutions: Vec<HashMap<String, Type>>,
     imports: HashMap<String, Vec<String>>, // imported name -> source module path
     scopes: Vec<Scope>,
@@ -60,6 +61,7 @@ impl TypeChecker {
             specialized_types_seen: HashMap::new(),
             specialized_type_name_owners: HashMap::new(),
             specialized_type_generic_names: HashMap::new(),
+            specialized_type_args: HashMap::new(),
             type_substitutions: Vec::new(),
             imports: HashMap::new(),
             scopes: vec![Scope::new()], // global scope
