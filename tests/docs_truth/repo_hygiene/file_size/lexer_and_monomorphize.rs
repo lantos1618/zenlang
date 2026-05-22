@@ -96,3 +96,31 @@ fn monomorphize_type_substitution_lives_in_focused_helper() {
         "typechecker module should include the focused monomorphize_names helper"
     );
 }
+
+#[test]
+fn monomorphize_specialized_type_name_recovery_lives_in_focused_helper() {
+    let specialized_types = read("src/typechecker/monomorphize_specialized_types.rs");
+    let specialized_type_names = read("src/typechecker/monomorphize_specialized_type_names.rs");
+    let module = read("src/typechecker/mod.rs");
+
+    assert!(
+        specialized_types.lines().count() < 210,
+        "monomorphize_specialized_types.rs should stay focused on emitting specialized definitions"
+    );
+    assert!(
+        !specialized_types.contains("fn generic_type_args_from_type"),
+        "specialized type-name recovery should live in monomorphize_specialized_type_names.rs"
+    );
+    assert!(
+        specialized_type_names.contains("fn generic_type_args_from_type"),
+        "monomorphize_specialized_type_names.rs should recover generic args from specialized type names"
+    );
+    assert!(
+        specialized_type_names.contains("pub(crate) fn type_to_ast_ref"),
+        "monomorphize_specialized_type_names.rs should own Type-to-AstType recovery for monomorphization"
+    );
+    assert!(
+        module.contains("mod monomorphize_specialized_type_names;"),
+        "typechecker module should include the focused specialized type-name helper"
+    );
+}
