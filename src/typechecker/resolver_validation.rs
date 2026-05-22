@@ -10,6 +10,7 @@ include!("resolver_validation/entry_associations.rs");
 include!("resolver_validation/entry_types.rs");
 include!("resolver_validation/post_pass.rs");
 include!("resolver_validation/replay_tasks.rs");
+include!("resolver_validation/replay_task_declarations.rs");
 include!("resolver_validation/replay_task_associations.rs");
 include!("resolver_validation/imports_modules.rs");
 include!("resolver_validation/imports_dependencies.rs");

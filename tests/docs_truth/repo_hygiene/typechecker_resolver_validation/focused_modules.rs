@@ -193,6 +193,7 @@ fn typechecker_resolver_replay_association_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/resolver_validation.rs");
     let replay = read("src/typechecker/resolver_validation/replay_tasks.rs");
     let associations = read("src/typechecker/resolver_validation/replay_task_associations.rs");
+    let declarations = read("src/typechecker/resolver_validation/replay_task_declarations.rs");
 
     for helper in [
         "collect_resolver_behavior_association_list_tasks_from_declaration_tasks",
@@ -210,11 +211,31 @@ fn typechecker_resolver_replay_association_tasks_live_in_focused_helper() {
     }
 
     assert!(
-        replay.lines().count() < 210,
-        "resolver replay task root should stay focused on declaration replay collection"
+        !replay.contains("fn collect_resolver_validation_replay_declaration_tasks"),
+        "resolver replay task root should delegate declaration replay collection"
+    );
+    assert!(
+        declarations.contains("fn collect_resolver_validation_replay_declaration_tasks"),
+        "declaration replay collection should live in focused helper"
+    );
+    assert!(
+        declarations.contains("push_expected_resolver_callable_symbol"),
+        "declaration replay helper should own callable declaration replay collection"
+    );
+    assert!(
+        declarations.contains("push_expected_behavior_impl_edge"),
+        "declaration replay helper should own behavior impl edge collection"
+    );
+    assert!(
+        replay.lines().count() < 80,
+        "resolver replay task root should only coordinate replay task collection"
     );
     assert!(
         root.contains("include!(\"resolver_validation/replay_task_associations.rs\");"),
         "resolver validation should include focused behavior-association replay helpers"
+    );
+    assert!(
+        root.contains("include!(\"resolver_validation/replay_task_declarations.rs\");"),
+        "resolver validation should include focused declaration replay helper"
     );
 }
