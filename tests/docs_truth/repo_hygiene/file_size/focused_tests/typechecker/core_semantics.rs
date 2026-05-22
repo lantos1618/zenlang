@@ -1,5 +1,6 @@
 use super::*;
 
+mod calls_and_returns;
 mod declaration_validation;
 mod enum_assignment_and_modules;
 mod gated_intrinsics;
