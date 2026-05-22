@@ -8,7 +8,7 @@
 // ============================================================================
 // Memory Ordering
 // ============================================================================
-// These map to LLVM atomics ordering semantics
+// These map to compiler atomic ordering semantics
 
 ORDERING_RELAXED = 0    // No synchronization
 ORDERING_ACQUIRE = 1    // Acquire semantics (loads)

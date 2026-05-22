@@ -1,7 +1,7 @@
 //! Compiler Intrinsics
 //!
 //! This is the SINGLE SOURCE OF TRUTH for all compiler intrinsic type information.
-//! These are low-level primitives that map directly to LLVM IR or syscalls.
+//! These are low-level primitives that map directly to backend code or host calls.
 //!
 //! Everything else (io, math, collections, etc.) should be written in Zen
 //! using these intrinsics.
