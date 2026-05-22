@@ -154,54 +154,17 @@ impl TypeChecker {
                     span,
                     ..
                 } => {
-                    let type_symbol = symbols.lookup(Namespace::Type, type_name);
-                    if type_symbol.is_none() {
-                        self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
-                    }
-                    if let Some(behavior) = behavior {
-                        self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
-                        if let Some(symbol) = type_symbol {
-                            self.validate_resolver_behavior_impl_names(
-                                symbol,
-                                type_name,
-                                expected_behavior_edge(behavior, behavior_type_args),
-                                *span,
-                            );
-                        }
-                    }
-                    self.validate_generic_type_arg_refs_allow_unknowns(behavior_type_args, *span);
-                    for method in methods {
-                        if let Declaration::Function {
-                            name,
-                            params,
-                            return_type,
-                            type_params,
-                            public,
-                            span,
-                            body,
-                            ..
-                        } = method
-                        {
-                            let method_key = Self::behavior_impl_method_key(
-                                type_name,
-                                name,
-                                behavior.as_deref(),
-                                behavior_type_args,
-                            );
-                            self.require_resolver_value_symbol(
-                                symbols,
-                                &method_key,
-                                expected_value_symbol(params, return_type, type_params, *public),
-                                *span,
-                            );
-                            self.require_resolver_callable_locals(
-                                symbols,
-                                params,
-                                body,
-                                &mut scope_cursor,
-                            );
-                        }
-                    }
+                    self.validate_resolver_impl_block_entry_symbols(
+                        symbols,
+                        ResolverImplBlockEntry {
+                            type_name,
+                            behavior,
+                            behavior_type_args,
+                            methods,
+                            span: *span,
+                        },
+                        &mut scope_cursor,
+                    );
                 }
                 Declaration::Requires {
                     type_name,
@@ -209,20 +172,13 @@ impl TypeChecker {
                     behavior_type_args,
                     span,
                 } => {
-                    let type_symbol = symbols.lookup(Namespace::Type, type_name);
-                    if type_symbol.is_none() {
-                        self.require_resolver_symbol(symbols, Namespace::Type, type_name, *span);
-                    }
-                    self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
-                    if let Some(symbol) = type_symbol {
-                        self.validate_resolver_behavior_required_names(
-                            symbol,
-                            type_name,
-                            expected_behavior_edge(behavior, behavior_type_args),
-                            *span,
-                        );
-                    }
-                    self.validate_generic_type_arg_refs_allow_unknowns(behavior_type_args, *span);
+                    self.validate_resolver_requires_entry_symbols(
+                        symbols,
+                        type_name,
+                        behavior,
+                        behavior_type_args,
+                        *span,
+                    );
                 }
                 Declaration::BehaviorExtends {
                     behavior,
@@ -230,17 +186,13 @@ impl TypeChecker {
                     parent_type_args,
                     span,
                 } => {
-                    self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, *span);
-                    self.require_resolver_symbol(symbols, Namespace::Behavior, parent, *span);
-                    self.validate_generic_type_arg_refs_allow_unknowns(parent_type_args, *span);
-                    if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
-                        self.validate_resolver_behavior_parent_names(
-                            symbol,
-                            behavior,
-                            expected_behavior_edge(parent, parent_type_args),
-                            *span,
-                        );
-                    }
+                    self.validate_resolver_behavior_extends_entry_symbols(
+                        symbols,
+                        behavior,
+                        parent,
+                        parent_type_args,
+                        *span,
+                    );
                 }
                 Declaration::TopLevelExpr { expr, .. } => {
                     self.require_resolver_scoped_expr_locals(symbols, expr, &mut scope_cursor);
