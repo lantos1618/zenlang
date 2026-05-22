@@ -8,7 +8,7 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t unwrap_or_i32(Option_i32 value, int32_t fallback)"));
     assert!(c_source.contains("Option_i32_Some"));
     assert!(c_source.contains("unwrap_or_i32(x, 0LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_or_i32");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(x"));
@@ -19,7 +19,7 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
     assert!(c_source.contains("Option_unwrap_or_i32(some, 0LL)"));
     assert!(c_source.contains("Option_unwrap_or_i32(none, 55LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Option_unwrap_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Option_unwrap_or"));
     assert!(!c_source.contains("Option_unwrap_or(some"));
@@ -57,7 +57,7 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     ));
     assert!(c_source.contains("Result_i32_StaticString_Err"));
     assert!(c_source.contains("unwrap_or_i32_StaticString(err, 9LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_or_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_or_i32_StaticString");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_or"));
     assert!(!c_source.contains("unwrap_or(err"));
@@ -70,7 +70,7 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     ));
     assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok, 0LL)"));
     assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err, 34LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_i32_StaticString");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T Result_unwrap_or"));
     assert!(!c_source.contains("Result_unwrap_or(err"));

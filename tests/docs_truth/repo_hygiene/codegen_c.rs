@@ -137,10 +137,17 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         );
     }
 
-    for source in [enum_generated_c, behavior_bounds, multi_file_enums] {
+    for source in [&enum_generated_c, &behavior_bounds, &multi_file_enums] {
         assert!(
             !source.contains("assert_c_function_definition_count"),
             "Phase 5 generated-C tests should use the single-definition helper instead of split call/count assertions"
+        );
+    }
+
+    for source in [&enum_generated_c, &multi_file_enums] {
+        assert!(
+            !source.contains("assert_c_call_resolves_to_definition(&c_source"),
+            "enum generated-C tests should use the single-definition helper for generated call checks"
         );
     }
 }
