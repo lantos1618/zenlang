@@ -70,3 +70,51 @@ fn generic_behavior_bound_tests_stay_split_by_responsibility() {
         "collection_metadata.rs should cover non-generic function metadata"
     );
 }
+
+#[test]
+fn generic_behavior_method_dispatch_tests_stay_split_by_dispatch_surface() {
+    let root = read("src/typechecker/tests/generic_behaviors/method_dispatch.rs");
+    let ambiguity = read("src/typechecker/tests/generic_behaviors/method_dispatch/ambiguity.rs");
+    let context =
+        read("src/typechecker/tests/generic_behaviors/method_dispatch/context_disambiguation.rs");
+
+    assert!(
+        root.lines().count() < 80,
+        "method_dispatch.rs should only route focused behavior method dispatch tests"
+    );
+    for module in ["mod ambiguity;", "mod context_disambiguation;"] {
+        assert!(
+            root.contains(module),
+            "method_dispatch.rs should include focused module `{module}`"
+        );
+    }
+    for test_name in [
+        "local_behavior_method_call_does_not_use_enclosing_return_type_to_pick_candidate",
+        "local_annotation_disambiguates_behavior_method_call",
+        "assignment_target_disambiguates_behavior_method_call",
+        "function_argument_type_disambiguates_behavior_method_call",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "method_dispatch.rs should not own concrete test body: {test_name}"
+        );
+    }
+    assert!(
+        ambiguity.contains(
+            "fn local_behavior_method_call_does_not_use_enclosing_return_type_to_pick_candidate",
+        ),
+        "ambiguity.rs should cover ambiguous behavior method dispatch"
+    );
+    assert!(
+        context.contains("fn local_annotation_disambiguates_behavior_method_call"),
+        "context_disambiguation.rs should cover local annotation dispatch context"
+    );
+    assert!(
+        context.contains("fn assignment_target_disambiguates_behavior_method_call"),
+        "context_disambiguation.rs should cover assignment target dispatch context"
+    );
+    assert!(
+        context.contains("fn function_argument_type_disambiguates_behavior_method_call"),
+        "context_disambiguation.rs should cover function argument dispatch context"
+    );
+}
