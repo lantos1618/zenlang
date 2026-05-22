@@ -127,6 +127,54 @@ fn emit_json_symbols_reports_multi_file_generic_method_nested_result_surface() {
     });
 }
 
+#[test]
+fn emit_json_symbols_reports_multi_file_generic_result_multi_specialization_surface() {
+    let source_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/zen/multi_file_generic_result_enum_multi_specialization/main.zen");
+
+    let output = emit_json(
+        "symbols",
+        &source_path,
+        "multi-file generic Result multi-specialization symbols",
+    );
+
+    assert!(
+        output.status.success(),
+        "zen emit-json symbols failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("emit-json symbols stdout is json");
+    assert_eq!(json["format"], "zen.symbols.v0");
+    assert_eq!(json["semantic_status"], "resolved");
+
+    let modules = json["modules"].as_array().expect("modules array");
+    assert_eq!(
+        modules.len(),
+        2,
+        "fixture should report main and result modules: {json}"
+    );
+
+    let main = module_by_file(modules, "main.zen");
+    assert_symbol(main, "Import", "Result", |symbol| {
+        symbol["import_source"] == "result"
+    });
+
+    let result = module_by_file(modules, "result.zen");
+    assert_symbol(result, "Type", "Result", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["type_parameter_names"], &["T", "E"])
+            && string_array_eq(&symbol["variant_names"], &["Ok", "Err"])
+    });
+    assert_symbol(result, "Value", "Result.unwrap_or", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["parameter_type_names"], &["Self", "T"])
+            && symbol["return_type_name"] == "T"
+    });
+}
+
 fn module_by_file<'a>(modules: &'a [serde_json::Value], file_name: &str) -> &'a serde_json::Value {
     modules
         .iter()
