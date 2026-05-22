@@ -1,0 +1,42 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Box_i32",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "variants": []
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Box.repeat_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Box_i32"
+          },
+          {
+            "name": "remaining",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}

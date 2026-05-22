@@ -1,0 +1,357 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "repeat_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 41
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 195,
+                                              "end": 197
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 3
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 199,
+                                              "end": 200
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 188,
+                                      "end": 201
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 186,
+                            "end": 202
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 174,
+                    "end": 204
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 174,
+                "end": 204
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 209,
+              "end": 210
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 168,
+            "end": 212
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 154,
+          "end": 212
+        }
+      },
+      {
+        "name": "repeat_i32",
+        "params": [
+          {
+            "name": "value",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 27,
+              "end": 35
+            }
+          },
+          {
+            "name": "remaining",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 37,
+              "end": 51
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "BinaryOp": {
+                      "op": "Gt",
+                      "left": {
+                        "kind": {
+                          "Variable": "remaining"
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 61,
+                          "end": 70
+                        }
+                      },
+                      "right": {
+                        "kind": {
+                          "IntLiteral": 0
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 73,
+                          "end": 74
+                        }
+                      }
+                    }
+                  },
+                  "ty": "Bool",
+                  "span": {
+                    "file_id": 0,
+                    "start": 61,
+                    "end": 74
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "Bool": true
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "FunctionCall": {
+                                  "function": "repeat_i32",
+                                  "args": [
+                                    {
+                                      "kind": {
+                                        "Variable": "value"
+                                      },
+                                      "ty": "I32",
+                                      "span": {
+                                        "file_id": 0,
+                                        "start": 101,
+                                        "end": 106
+                                      }
+                                    },
+                                    {
+                                      "kind": {
+                                        "BinaryOp": {
+                                          "op": "Sub",
+                                          "left": {
+                                            "kind": {
+                                              "Variable": "remaining"
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 108,
+                                              "end": 117
+                                            }
+                                          },
+                                          "right": {
+                                            "kind": {
+                                              "IntLiteral": 1
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 120,
+                                              "end": 121
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "ty": "I32",
+                                      "span": {
+                                        "file_id": 0,
+                                        "start": 108,
+                                        "end": 121
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 94,
+                                "end": 122
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 92,
+                              "end": 124
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 92,
+                          "end": 124
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 92,
+                        "end": 124
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 87,
+                      "end": 124
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "Bool": false
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "value"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 143,
+                                "end": 148
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 141,
+                              "end": 150
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 141,
+                          "end": 150
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 141,
+                        "end": 150
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 135,
+                      "end": 150
+                    }
+                  }
+                ],
+                "kind": "ConditionalElse"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 61,
+              "end": 150
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 55,
+            "end": 152
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 14,
+          "end": 152
+        }
+      }
+    ],
+    "types": [],
+    "globals": [],
+    "entry_point": "main"
+  }
+}

@@ -28,6 +28,15 @@ fn emit_json_hir_generic_worklist_dedup_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_generic_recursive_function_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/generic_recursive_function.zen",
+        "tests/fixtures/ir_json/hir_generic_recursive_function.golden.json",
+        "generic recursive function input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_ufc_dedup_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_ufc_dedup.zen",

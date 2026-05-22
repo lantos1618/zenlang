@@ -1,0 +1,493 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "box",
+                  "ty": {
+                    "Struct": {
+                      "name": "Box_i32",
+                      "fields": [
+                        [
+                          "value",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "StructLiteral": {
+                        "type_name": "Box_i32",
+                        "fields": [
+                          [
+                            "value",
+                            {
+                              "kind": {
+                                "IntLiteral": 43
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 235,
+                                "end": 237
+                              }
+                            }
+                          ]
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Struct": {
+                        "name": "Box_i32",
+                        "fields": [
+                          [
+                            "value",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 217,
+                      "end": 239
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 211,
+                "end": 239
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "Box.repeat_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "box"
+                                            },
+                                            "ty": {
+                                              "Struct": {
+                                                "name": "Box_i32",
+                                                "fields": [
+                                                  [
+                                                    "value",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 258,
+                                              "end": 261
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 3
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 269,
+                                              "end": 270
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 258,
+                                      "end": 271
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 256,
+                            "end": 272
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 244,
+                    "end": 274
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 244,
+                "end": 274
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 279,
+              "end": 280
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 205,
+            "end": 282
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 191,
+          "end": 282
+        }
+      },
+      {
+        "name": "Box.repeat_i32",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Struct": {
+                "name": "Box_i32",
+                "fields": [
+                  [
+                    "value",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 57,
+              "end": 69
+            }
+          },
+          {
+            "name": "remaining",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 71,
+              "end": 85
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "BinaryOp": {
+                      "op": "Gt",
+                      "left": {
+                        "kind": {
+                          "Variable": "remaining"
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 95,
+                          "end": 104
+                        }
+                      },
+                      "right": {
+                        "kind": {
+                          "IntLiteral": 0
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 107,
+                          "end": 108
+                        }
+                      }
+                    }
+                  },
+                  "ty": "Bool",
+                  "span": {
+                    "file_id": 0,
+                    "start": 95,
+                    "end": 108
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "Bool": true
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "FunctionCall": {
+                                  "function": "Box.repeat_i32",
+                                  "args": [
+                                    {
+                                      "kind": {
+                                        "Variable": "self"
+                                      },
+                                      "ty": {
+                                        "Struct": {
+                                          "name": "Box_i32",
+                                          "fields": [
+                                            [
+                                              "value",
+                                              "I32"
+                                            ]
+                                          ]
+                                        }
+                                      },
+                                      "span": {
+                                        "file_id": 0,
+                                        "start": 128,
+                                        "end": 132
+                                      }
+                                    },
+                                    {
+                                      "kind": {
+                                        "BinaryOp": {
+                                          "op": "Sub",
+                                          "left": {
+                                            "kind": {
+                                              "Variable": "remaining"
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 140,
+                                              "end": 149
+                                            }
+                                          },
+                                          "right": {
+                                            "kind": {
+                                              "IntLiteral": 1
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 152,
+                                              "end": 153
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "ty": "I32",
+                                      "span": {
+                                        "file_id": 0,
+                                        "start": 140,
+                                        "end": 153
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 128,
+                                "end": 154
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 126,
+                              "end": 156
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 126,
+                          "end": 156
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 126,
+                        "end": 156
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 121,
+                      "end": 156
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "Bool": false
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "FieldAccess": {
+                                  "object": {
+                                    "kind": {
+                                      "Variable": "self"
+                                    },
+                                    "ty": {
+                                      "Struct": {
+                                        "name": "Box_i32",
+                                        "fields": [
+                                          [
+                                            "value",
+                                            "I32"
+                                          ]
+                                        ]
+                                      }
+                                    },
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 175,
+                                      "end": 179
+                                    }
+                                  },
+                                  "field": "value"
+                                }
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 175,
+                                "end": 185
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 173,
+                              "end": 187
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 173,
+                          "end": 187
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 173,
+                        "end": 187
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 167,
+                      "end": 187
+                    }
+                  }
+                ],
+                "kind": "ConditionalElse"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 95,
+              "end": 187
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 89,
+            "end": 189
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 40,
+          "end": 189
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Box_i32",
+        "kind": {
+          "Struct": {
+            "fields": [
+              [
+                "value",
+                "I32"
+              ]
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 217,
+          "end": 239
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}

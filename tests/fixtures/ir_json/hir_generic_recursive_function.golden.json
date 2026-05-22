@@ -1,0 +1,30 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "repeat_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          },
+          {
+            "name": "remaining",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "repeat_i32",
+      "params": [
+        {
+          "name": "value",
+          "type": "i32"
+        },
+        {
+          "name": "remaining",
+          "type": "i32"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "match",
+              "type": "i32",
+              "target": {
+                "kind": "binary",
+                "type": "bool",
+                "op": ">",
+                "left": {
+                  "kind": "local",
+                  "type": "i32",
+                  "name": "remaining"
+                },
+                "right": {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 0
+                }
+              },
+              "match_kind": "conditional_else",
+              "arms": [
+                {
+                  "pattern": {
+                    "kind": "bool",
+                    "value": true,
+                    "bindings": []
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "args": [
+                              {
+                                "kind": "local",
+                                "name": "value",
+                                "type": "i32"
+                              },
+                              {
+                                "kind": "binary",
+                                "left": {
+                                  "kind": "local",
+                                  "name": "remaining",
+                                  "type": "i32"
+                                },
+                                "op": "-",
+                                "right": {
+                                  "kind": "int",
+                                  "type": "i32",
+                                  "value": 1
+                                },
+                                "type": "i32"
+                              }
+                            ],
+                            "function": "repeat_i32",
+                            "kind": "call",
+                            "type": "i32"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "pattern": {
+                    "kind": "bool",
+                    "value": false,
+                    "bindings": []
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "value",
+                            "type": "i32"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
