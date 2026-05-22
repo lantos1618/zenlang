@@ -170,6 +170,30 @@ fn imported_transitive_worklist_generated_c_pins_definition_counts() {
 }
 
 #[test]
+fn scoped_imported_generic_ufc_generated_c_pins_recovery_evidence() {
+    let scoped_type_inference = read(
+        "tests/integration/generic_specializations/multifile_generated_c/scoped_type_inference.rs",
+    );
+
+    for required in [
+        "multi_file_generic_imported_scoped_type_inference/main.zen",
+        r#"typedef struct right_Box_i32 right_Box_i32;"#,
+        r#"typedef struct Holder_right_Box_i32 Holder_right_Box_i32;"#,
+        r#"int32_t take_box_i32(right_Box_i32 box)"#,
+        r#"int32_t Box_extra_i32(right_Box_i32 self)"#,
+        r#"int32_t Holder_extra_right_Box_i32(Holder_right_Box_i32 self)"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "take_box_i32")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_extra_i32")"#,
+        r#"assert_c_call_resolves_to_single_definition(&c_source, "Holder_extra_right_Box_i32")"#,
+    ] {
+        assert!(
+            scoped_type_inference.contains(required),
+            "scoped imported generic UFC generated-C proof should pin recovery evidence: {required}"
+        );
+    }
+}
+
+#[test]
 fn phase5_generic_diagnostics_pin_codes_in_unit_tests() {
     let generic_diagnostics = read("tests/generic_diagnostics.rs");
     let function_inference =
