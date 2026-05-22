@@ -58,15 +58,17 @@ impl TypeChecker {
                 self.check_call_signature("method", &method_key, &info.params, &typed_args, &span);
                 (method_key.clone(), self.resolve_type(&info.return_type))
             };
-            Ok(TypedExpression {
+            return Ok(TypedExpression {
                 kind: TypedExprKind::FunctionCall {
                     function: resolved_method,
                     args: typed_args,
                 },
                 ty: ret_type,
                 span,
-            })
-        } else if let Some(generic_base) = self.generic_base_type_name(&type_name) {
+            });
+        }
+
+        if let Some(generic_base) = self.generic_base_type_name(&type_name) {
             let generic_method_key = Self::method_key(&generic_base, method);
             if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                 if !info.type_params.is_empty() {
@@ -77,14 +79,14 @@ impl TypeChecker {
                         &typed_args,
                         span,
                     );
-                    Ok(TypedExpression {
+                    return Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
                             function: mangled,
                             args: typed_args,
                         },
                         ty: ret_type,
                         span,
-                    })
+                    });
                 } else {
                     if !type_args.is_empty() {
                         self.diagnostics.push(Diagnostic::error(
@@ -103,19 +105,19 @@ impl TypeChecker {
                         &typed_args,
                         &span,
                     );
-                    Ok(TypedExpression {
+                    return Ok(TypedExpression {
                         kind: TypedExprKind::FunctionCall {
                             function: format!("{}_{}", generic_base, method),
                             args: typed_args,
                         },
                         ty: self.resolve_type(&info.return_type),
                         span,
-                    })
+                    });
                 }
-            } else {
-                self.unknown_method_expr(&type_name, method, typed_args, span)
             }
-        } else if let Some(info) = self.functions.get(method).cloned() {
+        }
+
+        if let Some(info) = self.functions.get(method).cloned() {
             // UFC: x.f(args) -> f(x, args)
             let (resolved_function, ret_type) = if !info.type_params.is_empty() {
                 self.resolve_generic_function_call(method, &info, type_args, &typed_args, span)

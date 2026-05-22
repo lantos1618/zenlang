@@ -59,13 +59,13 @@ impl TypeChecker {
         self.structs
             .values()
             .filter(|info| !info.type_params.is_empty())
-            .find(|info| concrete_name_matches_generic(concrete_name, &info.name))
+            .find(|info| self.concrete_type_name_matches_generic(concrete_name, &info.name))
             .map(|info| info.name.clone())
             .or_else(|| {
                 self.enums
                     .values()
                     .filter(|info| !info.type_params.is_empty())
-                    .find(|info| concrete_name_matches_generic(concrete_name, &info.name))
+                    .find(|info| self.concrete_type_name_matches_generic(concrete_name, &info.name))
                     .map(|info| info.name.clone())
             })
     }

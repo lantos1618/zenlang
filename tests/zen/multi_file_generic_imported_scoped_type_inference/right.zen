@@ -1,0 +1,28 @@
+Box<T>: {
+    value: T,
+    extra: i32
+}
+
+Holder<T>: {
+    value: T
+}
+
+take_box<T> = (box: Box<T>) T {
+    box.value
+}
+
+Box.extra<T> = (self: Self) i32 {
+    self.extra
+}
+
+Holder.extra<T> = (self: Self) i32 {
+    found = self.value.extra
+    found
+}
+
+pub right<T> = (value: T) i32 {
+    box = Box<T> { value: value, extra: 29 }
+    holder = Holder<Box<T>> { value: box }
+    checked = box.take_box()
+    checked + box.extra() + holder.extra()
+}

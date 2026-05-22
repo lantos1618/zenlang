@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
-use super::monomorphize_types::{concrete_name_matches_generic, type_to_ast};
+use super::monomorphize_types::type_to_ast;
 use super::TypeChecker;
 
 impl TypeChecker {
@@ -19,7 +19,7 @@ impl TypeChecker {
             .iter()
             .find(|(name, info)| {
                 concrete_name != name.as_str()
-                    && concrete_name_matches_generic(concrete_name, name)
+                    && self.concrete_type_name_matches_generic(concrete_name, name)
                     && !info.type_params.is_empty()
             })
             .map(|(name, info)| (name.clone(), info.type_params.clone()))
@@ -35,7 +35,7 @@ impl TypeChecker {
             .iter()
             .find(|(name, info)| {
                 concrete_name != name.as_str()
-                    && concrete_name_matches_generic(concrete_name, name)
+                    && self.concrete_type_name_matches_generic(concrete_name, name)
                     && !info.type_params.is_empty()
             })
             .map(|(name, info)| (name.clone(), info.type_params.clone()))

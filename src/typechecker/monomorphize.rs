@@ -6,7 +6,6 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 use crate::error::{Diagnostic, Span};
 
-pub(super) use super::monomorphize_types::concrete_name_matches_generic;
 pub(crate) use super::monomorphize_types::type_to_ast;
 use super::TypeChecker;
 

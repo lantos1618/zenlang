@@ -1,0 +1,8 @@
+Box<T>: {
+    value: T
+}
+
+pub left<T> = (value: T) T {
+    box = Box<T> { value: value }
+    box.value
+}

@@ -52,6 +52,7 @@ impl TypeChecker {
             &requested,
             info.specialization_scope.as_deref(),
         );
+        self.remember_specialized_type_source(&mangled, name);
         if !already_emitted {
             self.specialized_types.push(TypedTypeDef {
                 name: mangled,
@@ -112,6 +113,7 @@ impl TypeChecker {
             &requested,
             info.specialization_scope.as_deref(),
         );
+        self.remember_specialized_type_source(&mangled, name);
         if !already_emitted {
             let typed_variants = variants
                 .into_iter()
