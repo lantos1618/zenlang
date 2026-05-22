@@ -130,4 +130,21 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Option_wrap_result"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_enum_nested_payload_inference.zen"),
+    );
+    assert!(c_source.contains("typedef struct Box_i32 Box_i32;"));
+    assert!(c_source.contains("typedef struct Box_bool Box_bool;"));
+    assert!(c_source.contains("typedef struct Choice_i32_bool Choice_i32_bool;"));
+    assert!(c_source.contains("Choice_i32_bool pick_left_i32_bool(int32_t value)"));
+    assert!(
+        c_source.contains("int32_t unwrap_left_i32_bool(Choice_i32_bool choice, int32_t fallback)")
+    );
+    assert!(c_source.contains("unwrap_left_i32_bool(choice, 0LL)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "pick_left_i32_bool");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_left_i32_bool");
+    assert!(!c_source.contains("Box_T"));
+    assert!(!c_source.contains("Choice_T"));
+    assert!(!c_source.contains("T unwrap_left"));
 }

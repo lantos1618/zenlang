@@ -26,6 +26,11 @@ fn test_generic_enum_multi_specialization() {
 }
 
 #[test]
+fn test_generic_enum_nested_payload_inference() {
+    run_test("generic_enum_nested_payload_inference");
+}
+
+#[test]
 fn test_generic_method() {
     run_test("generic_method");
 }

@@ -1,0 +1,25 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Choice<T, E>:
+    Left(Box<T>),
+    Right(Box<E>)
+
+pick_left<T, E> = (value: T) Choice<T, E> {
+    Choice<T, E>.Left(Box<T> { value: value })
+}
+
+unwrap_left<T, E> = (choice: Choice<T, E>, fallback: T) T {
+    choice ?
+        | Left(box) { box.value }
+        | Right(_) { fallback }
+}
+
+main = () i32 {
+    choice = pick_left<i32, bool>(55)
+    io.println("${unwrap_left(choice, 0)}")
+    0
+}
