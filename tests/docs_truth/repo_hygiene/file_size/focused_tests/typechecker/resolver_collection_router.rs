@@ -8,6 +8,9 @@ fn resolver_collection_docs_truth_guards_stay_split_by_surface() {
     let generic_templates = read(
         "tests/docs_truth/repo_hygiene/file_size/focused_tests/typechecker/resolver_collection/generic_templates.rs",
     );
+    let function_method_templates = read(
+        "tests/docs_truth/repo_hygiene/file_size/focused_tests/typechecker/resolver_collection/function_method_templates.rs",
+    );
     let metadata_helpers = read(
         "tests/docs_truth/repo_hygiene/file_size/focused_tests/typechecker/resolver_collection/metadata_helpers.rs",
     );
@@ -24,6 +27,7 @@ fn resolver_collection_docs_truth_guards_stay_split_by_surface() {
     );
     for module in [
         "mod generic_templates;",
+        "mod function_method_templates;",
         "mod metadata_helpers;",
         "mod metadata_requirements;",
         "mod metadata_restoration;",
@@ -47,6 +51,12 @@ fn resolver_collection_docs_truth_guards_stay_split_by_surface() {
             "fn resolver_collection_generic_method_template_tests_stay_split_by_responsibility"
         ),
         "generic template guards should live in generic_templates.rs"
+    );
+    assert!(
+        function_method_templates.contains(
+            "fn resolver_collection_function_signature_tests_stay_split_by_responsibility"
+        ),
+        "function/method template guards should live in function_method_templates.rs"
     );
     assert!(
         metadata_helpers
