@@ -85,6 +85,36 @@ fn resolver_metadata_validation_descriptor_tests_live_in_focused_modules() {
 }
 
 #[test]
+fn resolver_import_absence_tests_live_in_focused_helper() {
+    let root = read("src/typechecker/tests/resolver_import_metadata.rs");
+    let absence = read("src/typechecker/tests/resolver_import_metadata/absent_metadata.rs");
+
+    for test_name in [
+        "check_program_with_symbols_validates_resolver_import_absent_declaration_metadata",
+        "check_program_with_symbols_validates_resolver_import_absent_type_metadata",
+        "check_program_with_symbols_validates_resolver_import_and_module_absent_mutability",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_import_metadata.rs should not own import absence test: {test_name}"
+        );
+        assert!(
+            absence.contains(&format!("fn {test_name}")),
+            "resolver import absence tests should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 170,
+        "resolver_import_metadata.rs should stay focused on import source/visibility metadata"
+    );
+    assert!(
+        root.contains("mod absent_metadata;"),
+        "resolver_import_metadata.rs should include the focused absent_metadata module"
+    );
+}
+
+#[test]
 fn declaration_validation_precollection_tasks_live_in_focused_helper() {
     let tasks = read("src/typechecker/tests/declaration_validation/tasks.rs");
     let precollection = read("src/typechecker/tests/declaration_validation/precollection_tasks.rs");
