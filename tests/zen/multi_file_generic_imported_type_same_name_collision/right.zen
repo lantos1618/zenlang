@@ -1,0 +1,18 @@
+Box<T>: {
+    value: T
+    extra: i32
+}
+
+Choice<T>:
+    Extra(i32)
+
+inner<T> = (value: T) i32 {
+    box = Box<T> { value: value, extra: 29 }
+    choice = Choice<T>.Extra(box.extra)
+    choice ?
+        | Extra(found) { found }
+}
+
+pub right<T> = (value: T) i32 {
+    inner(value)
+}
