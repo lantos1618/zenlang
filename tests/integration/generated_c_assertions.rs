@@ -28,13 +28,17 @@ int32_t inner_i32(int32_t value) {
 int32_t outer_i32(int32_t value) {
     printf("%d", value);
     missing_stmt_i32(value);
-    return missing_i32(value) + inner_i32(value);
+    return missing_i32(value) + inner_i32(value) + id(12LL);
 }
 "#;
 
     assert_eq!(
         undefined_generated_c_calls(c_source),
-        vec!["missing_stmt_i32".to_string(), "missing_i32".to_string()]
+        vec![
+            "missing_stmt_i32".to_string(),
+            "missing_i32".to_string(),
+            "id".to_string()
+        ]
     );
 }
 

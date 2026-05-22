@@ -105,7 +105,7 @@ fn c_function_definition_name(trimmed: &str) -> Option<String> {
         .map_or(0, |idx| idx + 1);
     let name = &before[name_start..];
 
-    if is_generated_c_function_name(name) {
+    if is_tracked_c_function_name(name) {
         Some(name.to_string())
     } else {
         None
@@ -129,7 +129,7 @@ fn is_any_c_function_signature_line(trimmed: &str) -> bool {
     let name = before[name_start..].trim();
 
     !return_type.is_empty()
-        && is_generated_c_function_name(name)
+        && is_tracked_c_function_name(name)
         && !before.contains('=')
         && !before.contains("return")
 }
@@ -152,7 +152,7 @@ fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
         }
 
         let name = &trimmed[start..paren];
-        if is_generated_c_function_name(name) && !calls.iter().any(|call| call == name) {
+        if is_tracked_c_function_name(name) && !calls.iter().any(|call| call == name) {
             calls.push(name.to_string());
         }
 
@@ -162,15 +162,39 @@ fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
     calls
 }
 
-fn is_generated_c_function_name(name: &str) -> bool {
-    name.contains('_')
-        && name
-            .chars()
-            .next()
-            .is_some_and(|ch| ch.is_ascii_alphabetic())
+fn is_tracked_c_function_name(name: &str) -> bool {
+    name.chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_alphabetic() || ch == '_')
         && name
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+        && !is_untracked_c_call_name(name)
+}
+
+fn is_untracked_c_call_name(name: &str) -> bool {
+    matches!(
+        name,
+        "abort"
+            | "ceil"
+            | "floor"
+            | "for"
+            | "fprintf"
+            | "fputc"
+            | "free"
+            | "fwrite"
+            | "if"
+            | "malloc"
+            | "memcpy"
+            | "pow"
+            | "printf"
+            | "snprintf"
+            | "sizeof"
+            | "sqrt"
+            | "strlen"
+            | "switch"
+            | "while"
+    )
 }
 
 pub fn has_c_call_outside_signature(c_source: &str, name: &str) -> bool {
