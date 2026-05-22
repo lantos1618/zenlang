@@ -57,6 +57,13 @@ fn test_multi_file_generic_enum_method_imports() {
 }
 
 #[test]
+fn test_multi_file_generic_enum_method_worklist_imports() {
+    let zen_path = test_dir().join("multi_file_generic_enum_method_worklist/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "31\n97\ntrue\ntrue\n");
+}
+
+#[test]
 fn test_multi_file_generic_result_enum_method_imports() {
     let zen_path = test_dir().join("multi_file_generic_result_enum_method/main.zen");
     let actual = compile_and_run(&zen_path);
