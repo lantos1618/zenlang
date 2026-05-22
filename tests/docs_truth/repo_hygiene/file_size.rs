@@ -1,4 +1,5 @@
 mod core_semantics_splits;
+mod declaration_validation_splits;
 mod focused_tests;
 mod function_method_template_splits;
 mod generic_behavior_splits;
