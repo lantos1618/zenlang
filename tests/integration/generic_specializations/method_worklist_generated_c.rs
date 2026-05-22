@@ -127,6 +127,25 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("inner_T"));
 
     let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_recursive_function.zen"));
+    assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
+    assert!(c_source.contains("repeat_i32(value, (remaining - 1LL))"));
+    assert!(c_source.contains("repeat_i32(41LL, 3LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "repeat_i32");
+    assert_c_function_definition_count(&c_source, "repeat_i32", 1);
+    assert!(!c_source.contains("T repeat"));
+    assert!(!c_source.contains("repeat_T"));
+
+    let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_recursive_method.zen"));
+    assert!(c_source.contains("int32_t Box_repeat_i32(Box_i32 self, int32_t remaining)"));
+    assert!(c_source.contains("Box_repeat_i32(self, (remaining - 1LL))"));
+    assert!(c_source.contains("Box_repeat_i32(box, 3LL)"));
+    assert_c_call_resolves_to_definition(&c_source, "Box_repeat_i32");
+    assert_c_function_definition_count(&c_source, "Box_repeat_i32", 1);
+    assert!(!c_source.contains("T Box_repeat"));
+
+    let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_function.zen"));
     assert!(c_source.contains("int32_t id_i32(int32_t value)"));
     assert!(c_source.contains("id_i32(12LL)"));

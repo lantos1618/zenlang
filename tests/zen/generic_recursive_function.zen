@@ -1,0 +1,12 @@
+{ io } = std
+
+repeat<T> = (value: T, remaining: i32) T {
+    remaining > 0 ?
+        | true { repeat(value, remaining - 1) }
+        | false { value }
+}
+
+main = () i32 {
+    io.println("${repeat(41, 3)}")
+    0
+}
