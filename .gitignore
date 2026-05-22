@@ -72,6 +72,16 @@ test_*
 .agent/claude_output.jsonl
 agent/claude_output.jsonl
 
+# Local embedding/model caches and semantic audit output
+/.venv/
+/.cache/huggingface/
+/.cache/torch/
+/hf-cache/
+/model-cache/
+/models/
+/semantic-overlap-report.md
+/semantic-overlap-report.json
+
 # Security and sensitive files
 .env
 .env.local
