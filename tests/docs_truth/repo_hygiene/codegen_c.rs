@@ -110,6 +110,18 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         support.contains("assert_c_call_resolves_to_single_definition"),
         "integration support should re-export the generated-C single-definition helper"
     );
+    assert!(
+        !support.contains("assert_c_function_definition_count"),
+        "integration support should not re-export split generated-C definition-count assertions"
+    );
+    assert!(
+        !generated_c.contains("pub fn assert_c_call_resolves_to_definition("),
+        "generated-C support should keep the weaker call-only helper private"
+    );
+    assert!(
+        !generated_c.contains("pub fn assert_c_function_definition_count("),
+        "generated-C support should keep the split definition-count helper private"
+    );
 
     for (fixture, helper_call) in [
         (
