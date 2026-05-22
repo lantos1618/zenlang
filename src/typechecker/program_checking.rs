@@ -77,18 +77,7 @@ impl TypeChecker {
                     if !type_params.is_empty() {
                         continue;
                     }
-                    let resolved_fields: Vec<(String, Type)> = fields
-                        .iter()
-                        .map(|f| (f.name.clone(), self.resolve_type(&f.ty)))
-                        .collect();
-                    types.push(TypedTypeDef {
-                        name: name.clone(),
-                        kind: TypeDefKind::Struct {
-                            fields: resolved_fields,
-                        },
-                        methods: Vec::new(),
-                        span: *span,
-                    });
+                    types.push(self.typed_struct_def(name, fields, *span));
                 }
                 Declaration::Enum {
                     name,
@@ -100,26 +89,7 @@ impl TypeChecker {
                     if !type_params.is_empty() {
                         continue;
                     }
-                    let typed_variants: Vec<TypedVariant> = variants
-                        .iter()
-                        .enumerate()
-                        .map(|(i, v)| TypedVariant {
-                            name: v.name.clone(),
-                            tag: i as u32,
-                            payload: v
-                                .payload
-                                .as_ref()
-                                .map(|ty| vec![("payload".to_string(), self.resolve_type(ty))]),
-                        })
-                        .collect();
-                    types.push(TypedTypeDef {
-                        name: name.clone(),
-                        kind: TypeDefKind::Enum {
-                            variants: typed_variants,
-                        },
-                        methods: Vec::new(),
-                        span: *span,
-                    });
+                    types.push(self.typed_enum_def(name, variants, *span));
                 }
                 Declaration::TopLevelExpr { expr, span } => {
                     // Top-level expressions like main() call
