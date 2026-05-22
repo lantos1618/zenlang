@@ -3,7 +3,7 @@
 // All other stdlib modules should import from here
 //
 // Architecture:
-//   @builtin.*          - Raw Rust/LLVM intrinsics (only used in this file)
+//   @builtin.*          - Raw compiler intrinsics (only used in this file)
 //   @std.compiler.*     - This module (safe wrappers for other stdlib)
 //   { compiler } = @std - User-facing import
 

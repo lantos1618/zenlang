@@ -77,3 +77,31 @@ fn generated_vscode_packages_are_not_tracked() {
         ".gitignore should keep generated VSIX packages out of source control"
     );
 }
+
+#[test]
+fn live_compiler_and_stdlib_sources_do_not_claim_llvm_intrinsics() {
+    let output = std::process::Command::new("git")
+        .args(["ls-files", "src", "stdlib"])
+        .current_dir(repo_root())
+        .output()
+        .expect("list live compiler and stdlib sources");
+    assert!(
+        output.status.success(),
+        "git ls-files failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let tracked = String::from_utf8(output.stdout).expect("git ls-files output is utf-8");
+    for path in tracked
+        .lines()
+        .filter(|path| path.ends_with(".rs") || path.ends_with(".zen") || path.ends_with(".md"))
+    {
+        let source = std::fs::read_to_string(repo_root().join(path)).expect("read tracked file");
+        for stale in ["LLVM IR", "Raw Rust/LLVM", "LLVM atomics"] {
+            assert!(
+                !source.contains(stale),
+                "{path} should not claim live compiler or stdlib intrinsics are LLVM-specific: {stale}"
+            );
+        }
+    }
+}
