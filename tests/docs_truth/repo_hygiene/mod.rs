@@ -19,6 +19,7 @@ mod removed_syntax;
 mod resolver_expression_validation;
 mod resolver_symbol_table;
 mod resolver_validation;
+mod semantic_overlap;
 mod source_truth;
 mod typechecker_aggregate_constructors;
 mod typechecker_behavior_impls;
