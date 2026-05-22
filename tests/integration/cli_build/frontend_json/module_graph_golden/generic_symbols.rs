@@ -33,6 +33,14 @@ fn emit_json_symbols_generic_result_method_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_symbols_generic_enum_method_nested_result_schema_matches_golden() {
+    assert_symbols_fixture_matches(
+        "tests/zen/generic_enum_method_nested_result.zen",
+        "tests/fixtures/ir_json/symbols_generic_enum_method_nested_result.golden.json",
+    );
+}
+
+#[test]
 fn emit_json_symbols_generic_type_impl_methods_schema_matches_golden() {
     assert_symbols_fixture_matches(
         "tests/zen/generic_type_impl_methods.zen",
