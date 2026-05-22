@@ -34,3 +34,35 @@ fn source_dependency_callable_helpers_live_in_focused_module() {
         "resolver_validation.rs should include focused callable dependency helpers"
     );
 }
+
+#[test]
+fn replay_behavior_association_tasks_live_in_focused_module() {
+    let root = read("src/typechecker/resolver_validation/replay_tasks.rs");
+    let associations = read("src/typechecker/resolver_validation/replay_task_association_lists.rs");
+    let includes = read("src/typechecker/resolver_validation.rs");
+
+    for helper in [
+        "fn collect_resolver_behavior_association_list_tasks",
+        "fn collect_resolver_behavior_association_list_tasks_from_declaration_tasks",
+        "fn push_resolver_type_behavior_association_list_task",
+        "fn push_resolver_behavior_parent_list_task",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "replay_tasks.rs should not own behavior association helper `{helper}`"
+        );
+        assert!(
+            associations.contains(helper),
+            "behavior association replay helper should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 200,
+        "replay_tasks.rs should stay focused on declaration replay collection"
+    );
+    assert!(
+        includes.contains("include!(\"resolver_validation/replay_task_association_lists.rs\");"),
+        "resolver_validation.rs should include focused behavior association replay helpers"
+    );
+}
