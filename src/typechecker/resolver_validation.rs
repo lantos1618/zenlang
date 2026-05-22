@@ -14,6 +14,7 @@ include!("resolver_validation/imports_behavior_dependencies.rs");
 include!("resolver_validation/imports_source_dependencies.rs");
 include!("resolver_validation/imported_method_seeding.rs");
 include!("resolver_validation/symbols_locals.rs");
+include!("resolver_validation/local_scope_helpers.rs");
 include!("resolver_validation/local_traversal.rs");
 include!("resolver_validation/pattern_locals.rs");
 include!("resolver_validation/metadata_core.rs");
