@@ -2,6 +2,7 @@ use crate::error::Span;
 use serde::Serialize;
 
 mod gated;
+mod generic_names;
 mod names;
 
 pub use gated::{
@@ -9,7 +10,8 @@ pub use gated::{
     ACTOR_TYPE_NAME, ALLOCATOR_TYPE_NAME, ASYNC_EFFECT_TYPE_NAME, DYNAMIC_STRING_TYPE_NAME,
     MAILBOX_TYPE_NAME, SUPERVISOR_TYPE_NAME, SYNC_EFFECT_TYPE_NAME,
 };
-pub use names::{BuiltinGenericTypeName, BuiltinTypeName, STATIC_STRING_TYPE_NAME};
+pub use generic_names::BuiltinGenericTypeName;
+pub use names::{BuiltinTypeName, STATIC_STRING_TYPE_NAME};
 
 /// Parser-level type representation.
 ///

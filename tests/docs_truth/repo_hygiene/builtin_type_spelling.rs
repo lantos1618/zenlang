@@ -4,8 +4,9 @@ use super::*;
 fn semantic_builtin_type_checks_use_shared_spelling_helper() {
     let helper_root = read("src/ast/types.rs");
     let helper_names = read("src/ast/types/names.rs");
+    let helper_generic_names = read("src/ast/types/generic_names.rs");
     let helper_gated = read("src/ast/types/gated.rs");
-    let helper = format!("{helper_root}\n{helper_names}\n{helper_gated}");
+    let helper = format!("{helper_root}\n{helper_names}\n{helper_generic_names}\n{helper_gated}");
     assert!(
         helper.contains("pub const DYNAMIC_STRING_TYPE_NAME: &str = \"String\""),
         "dynamic String spelling should live in the AST type helper module"
@@ -69,8 +70,23 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         "names.rs should stay focused on stable builtin and generic type names"
     );
     assert!(
-        helper_names.lines().count() < 220,
-        "names.rs should stay compact after gated builtin types move out"
+        helper_root.contains("mod generic_names;")
+            && helper_root.contains("pub use generic_names::BuiltinGenericTypeName"),
+        "AST type module should expose builtin generic type names from a focused helper"
+    );
+    assert!(
+        !helper_names.contains("pub enum BuiltinGenericTypeName"),
+        "names.rs should stay focused on stable scalar/static builtin type names"
+    );
+    assert!(
+        helper_generic_names.contains("pub enum BuiltinGenericTypeName")
+            && helper_generic_names.contains("pub const ALL: &[BuiltinGenericTypeName]")
+            && helper_generic_names.contains("impl FromStr for BuiltinGenericTypeName"),
+        "generic_names.rs should own builtin generic type name spelling and lookup"
+    );
+    assert!(
+        helper_names.lines().count() < 160,
+        "names.rs should stay compact after gated and generic builtin types move out"
     );
 
     for path in [

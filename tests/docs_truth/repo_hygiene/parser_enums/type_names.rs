@@ -5,7 +5,8 @@ fn parser_type_names_use_owned_type_name_enums() {
     let parser_types = read("src/parser/types.rs");
     let type_names_root = read("src/ast/types.rs");
     let type_names_owned = read("src/ast/types/names.rs");
-    let type_names = format!("{type_names_root}\n{type_names_owned}");
+    let type_names_generic = read("src/ast/types/generic_names.rs");
+    let type_names = format!("{type_names_root}\n{type_names_owned}\n{type_names_generic}");
 
     for forbidden in [
         r#""i8" =>"#,
@@ -76,6 +77,7 @@ fn parser_type_names_use_owned_type_name_enums() {
         ".find(|name| name.as_str() == value)",
         "name.parse::<BuiltinTypeName>()",
         "base.parse::<BuiltinGenericTypeName>()",
+        "pub use generic_names::BuiltinGenericTypeName",
     ] {
         assert!(
             type_names.contains(required) || parser_types.contains(required),
