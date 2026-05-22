@@ -1,6 +1,7 @@
 mod core_semantics_splits;
 mod focused_tests;
 mod function_method_template_splits;
+mod generic_behavior_splits;
 mod lexer_and_monomorphize;
 mod resolver_phase2_splits;
 mod thresholds;
