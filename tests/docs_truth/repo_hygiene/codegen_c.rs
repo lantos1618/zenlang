@@ -81,6 +81,12 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
     let multi_file_worklist =
         read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
+    let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
+    let behavior_bounds =
+        read("tests/integration/generic_specializations/behavior_bounds/local_and_defaults.rs");
+    let multi_file_enums = read(
+        "tests/integration/generic_specializations/multifile_generated_c/enum_dependencies.rs",
+    );
 
     assert!(
         generated_c.contains("fn assert_c_call_resolves_to_single_definition("),
@@ -112,6 +118,13 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         assert!(
             fixture.contains(helper_call),
             "Phase 5 generated-C evidence should use the single-definition helper: {helper_call}"
+        );
+    }
+
+    for source in [enum_generated_c, behavior_bounds, multi_file_enums] {
+        assert!(
+            !source.contains("assert_c_function_definition_count"),
+            "Phase 5 generated-C tests should use the single-definition helper instead of split call/count assertions"
         );
     }
 }

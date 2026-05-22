@@ -27,12 +27,10 @@ fn local_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("int32_t encode_i32_Point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_StaticString(value)"));
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_StaticString");
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
     assert_c_call_resolves_to_definition(&c_source, "encode_str_Point");
     assert_c_call_resolves_to_definition(&c_source, "encode_i32_Point");
-    assert_c_function_definition_count(&c_source, "Point_encode__Json_StaticString", 1);
-    assert_c_function_definition_count(&c_source, "Point_encode__Json_i32", 1);
     assert!(!c_source.contains("Json_T"));
     assert!(!c_source.contains("T_encode"));
 }
