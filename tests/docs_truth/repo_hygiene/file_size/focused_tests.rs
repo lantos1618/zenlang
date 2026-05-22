@@ -115,6 +115,37 @@ fn resolver_import_absence_tests_live_in_focused_helper() {
 }
 
 #[test]
+fn resolver_function_value_tests_live_in_focused_helper() {
+    let root = read("src/typechecker/tests/resolver_impl_values.rs");
+    let function_values = read("src/typechecker/tests/resolver_impl_values/function_values.rs");
+
+    for test_name in [
+        "check_program_with_symbols_validates_resolver_function_arity",
+        "check_program_with_symbols_validates_resolver_function_parameter_types",
+        "check_program_with_symbols_validates_resolver_function_type_parameter_metadata",
+        "check_program_with_symbols_validates_resolver_function_parameter_names",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "resolver_impl_values.rs should not own function value test: {test_name}"
+        );
+        assert!(
+            function_values.contains(&format!("fn {test_name}")),
+            "resolver function value tests should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 180,
+        "resolver_impl_values.rs should stay focused on impl-method and enum-variant checks"
+    );
+    assert!(
+        root.contains("mod function_values;"),
+        "resolver_impl_values.rs should include the focused function_values module"
+    );
+}
+
+#[test]
 fn declaration_validation_precollection_tasks_live_in_focused_helper() {
     let tasks = read("src/typechecker/tests/declaration_validation/tasks.rs");
     let precollection = read("src/typechecker/tests/declaration_validation/precollection_tasks.rs");
