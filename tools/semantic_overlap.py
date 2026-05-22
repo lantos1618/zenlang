@@ -14,6 +14,7 @@ from pathlib import Path
 
 
 DEFAULT_MODEL = "Qwen/Qwen3-Embedding-0.6B"
+DEFAULT_CACHE_DIR = ".cache/huggingface"
 DEFAULT_EXTS = ".json,.md,.rs,.toml,.yaml,.yml,.zen"
 DEFAULT_EXCLUDES = (".git/", ".vscode/", "target/", "vscode-extension/out/")
 DEFAULT_INCLUDES = (
@@ -38,7 +39,11 @@ def args() -> argparse.Namespace:
     )
     add = p.add_argument
     add("--model", default=DEFAULT_MODEL, help=f"SentenceTransformers model (default: {DEFAULT_MODEL})")
-    add("--cache-dir", help="Optional Hugging Face cache dir, e.g. ~/.cache/huggingface")
+    add(
+        "--cache-dir",
+        default=DEFAULT_CACHE_DIR,
+        help=f"Hugging Face cache dir; keep this ignored (default: {DEFAULT_CACHE_DIR})",
+    )
     add("--device", help="Torch device override such as cpu, cuda, or mps")
     add("--batch-size", type=int, default=16)
     add("--max-seq-length", type=int, default=128)
@@ -166,15 +171,18 @@ def load_model(opts: argparse.Namespace):
     except ModuleNotFoundError as exc:
         raise SystemExit(
             "Missing dependency: sentence-transformers. Install locally with:\n"
-            "  uv pip install sentence-transformers torch\n"
+            "  uv pip install 'sentence-transformers>=2.7.0' 'transformers>=4.51.0' torch\n"
             "or run through uv:\n"
-            "  uv run --with sentence-transformers tools/semantic_overlap.py\n"
+            "  uv run --with 'sentence-transformers>=2.7.0' "
+            "--with 'transformers>=4.51.0' --with torch tools/semantic_overlap.py\n"
             "No lexical fallback is provided; this audit uses embeddings only."
         ) from exc
 
     kwargs: dict[str, object] = {}
     if opts.cache_dir:
-        kwargs["cache_folder"] = opts.cache_dir
+        cache_dir = Path(opts.cache_dir).expanduser()
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        kwargs["cache_folder"] = str(cache_dir)
     if opts.device:
         kwargs["device"] = opts.device
     model = SentenceTransformer(opts.model, **kwargs)
@@ -270,6 +278,7 @@ def write_reports(
         "# Semantic Overlap Report",
         "",
         f"- Model: `{opts.model}`",
+        f"- Cache dir: `{opts.cache_dir}`",
         f"- Files embedded: {len(files)}",
         f"- Scope: {scope}",
         f"- Tests included: {'yes' if opts.include_tests else 'no'}",
@@ -298,6 +307,7 @@ def write_reports(
         json.dumps(
             {
                 "model": opts.model,
+                "cache_dir": opts.cache_dir,
                 "file_count": len(files),
                 "scope": "all_tracked" if opts.all_tracked else "default",
                 "include_tests": opts.include_tests,
