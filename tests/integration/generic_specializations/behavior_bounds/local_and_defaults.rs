@@ -14,7 +14,7 @@ fn local_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols() {
     );
     assert!(c_source.contains("zen_str Point_encode(Point __arg0)"));
     assert!(c_source.contains("Point_encode(point)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode");
     assert!(!c_source.contains("Json_T"));
     assert!(!c_source.contains("T Point_encode"));
 
@@ -29,8 +29,8 @@ fn local_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(c_source.contains("Point_encode__Json_i32(value)"));
     assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_StaticString");
     assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_i32");
-    assert_c_call_resolves_to_definition(&c_source, "encode_str_Point");
-    assert_c_call_resolves_to_definition(&c_source, "encode_i32_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_str_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_i32_Point");
     assert!(!c_source.contains("Json_T"));
     assert!(!c_source.contains("T_encode"));
 }
@@ -43,8 +43,8 @@ fn multi_file_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols
     assert!(c_source.contains("Point Point_encode__Json_Point(Point value)"));
     assert!(c_source.contains("Point encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode__Json_Point(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode__Json_Point");
-    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode__Json_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 
     let c_source = compile_to_c_with_generated_call_check(
@@ -53,7 +53,7 @@ fn multi_file_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols
     assert!(c_source.contains("zen_str Point_encode(Point value)"));
     assert!(c_source.contains("zen_str encode_Point(Point value)"));
     assert!(c_source.contains("Point_encode(value)"));
-    assert_c_call_resolves_to_definition(&c_source, "Point_encode");
-    assert_c_call_resolves_to_definition(&c_source, "encode_Point");
+    assert_c_call_resolves_to_single_definition(&c_source, "Point_encode");
+    assert_c_call_resolves_to_single_definition(&c_source, "encode_Point");
     assert!(!c_source.contains("T_encode"));
 }
