@@ -55,6 +55,15 @@ fn emit_json_hir_multi_file_generic_imported_type_same_name_schema_matches_golde
 }
 
 #[test]
+fn emit_json_hir_multi_file_generic_imported_scoped_type_inference_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_generic_imported_scoped_type_inference/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_generic_imported_scoped_type_inference.golden.json",
+        "multi-file imported generic scoped type inference input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_recursive_function_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_recursive_function.zen",

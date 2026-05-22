@@ -90,3 +90,12 @@ fn emit_json_layout_multi_file_generic_imported_type_same_name_schema_matches_go
         "tests/fixtures/ir_json/layout_multi_file_generic_imported_type_same_name.golden.json",
     );
 }
+
+#[test]
+fn emit_json_layout_multi_file_generic_imported_scoped_type_inference_schema_matches_golden() {
+    assert_layout_matches_fixture(
+        &fixture("tests/zen/multi_file_generic_imported_scoped_type_inference/main.zen"),
+        "multi-file imported generic scoped type inference program input",
+        "tests/fixtures/ir_json/layout_multi_file_generic_imported_scoped_type_inference.golden.json",
+    );
+}
