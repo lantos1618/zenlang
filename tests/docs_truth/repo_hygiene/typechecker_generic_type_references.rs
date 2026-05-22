@@ -64,3 +64,32 @@ fn resolver_type_reference_collection_validation_lives_in_focused_helper() {
         "resolver_type_references.rs should stay focused on resolver task dispatch"
     );
 }
+
+#[test]
+fn ast_type_reference_task_collection_lives_in_focused_helper() {
+    let root = read("src/typechecker/generic_type_validation.rs");
+    let tasks = read("src/typechecker/generic_type_validation/ast_tasks.rs");
+
+    for helper in [
+        "fn collect_ast_type_reference_validation_tasks(",
+        "fn push_ast_type_reference_validation_task",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "generic_type_validation.rs should not own AST type-reference task collection helper `{helper}`"
+        );
+        assert!(
+            tasks.contains(helper),
+            "AST type-reference task collection helper should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.contains("mod ast_tasks;"),
+        "generic type validation should include focused AST task collection"
+    );
+    assert!(
+        root.lines().count() < 180,
+        "generic_type_validation.rs should stay focused on task execution and resolver helpers"
+    );
+}
