@@ -12,6 +12,7 @@ mod resolver_import_metadata;
 mod resolver_locals;
 mod resolver_struct_enum_metadata;
 mod resolver_validation;
+mod resolver_validation_absence;
 mod resolver_validation_callables;
 mod resolver_validation_expected_locals;
 mod resolver_validation_expected_symbols;
