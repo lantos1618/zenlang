@@ -49,6 +49,42 @@ fn resolver_metadata_queue_selection_tests_live_in_focused_helper() {
 }
 
 #[test]
+fn resolver_metadata_validation_descriptor_tests_live_in_focused_modules() {
+    let root = read("src/typechecker/tests/resolver_metadata/validation_descriptors.rs");
+    let type_variants =
+        read("src/typechecker/tests/resolver_metadata/validation_descriptors/type_variants.rs");
+
+    for test_name in [
+        "field_validation_formats_messages",
+        "field_validation_uses_resolver_codes",
+        "variant_payload_validation_formats_messages",
+        "variant_payload_validation_uses_resolver_codes",
+        "variant_owner_validation_formats_message",
+        "variant_owner_validation_uses_resolver_code",
+        "variant_name_validation_formats_message",
+        "variant_name_validation_uses_resolver_code",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "validation_descriptors.rs should not own type/variant descriptor test: {test_name}"
+        );
+        assert!(
+            type_variants.contains(&format!("fn {test_name}")),
+            "type/variant descriptor tests should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 230,
+        "validation_descriptors.rs should stay focused on shared/value descriptor tests"
+    );
+    assert!(
+        root.contains("mod type_variants;"),
+        "validation_descriptors.rs should include the focused type_variants module"
+    );
+}
+
+#[test]
 fn declaration_validation_precollection_tasks_live_in_focused_helper() {
     let tasks = read("src/typechecker/tests/declaration_validation/tasks.rs");
     let precollection = read("src/typechecker/tests/declaration_validation/precollection_tasks.rs");
