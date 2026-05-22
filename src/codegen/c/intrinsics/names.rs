@@ -3,144 +3,7 @@ use std::str::FromStr;
 
 mod spelling;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum CIntrinsic {
-    AddOverflow,
-    Alignof,
-    AtomicAdd,
-    AtomicCas,
-    AtomicLoad,
-    AtomicStore,
-    AtomicSub,
-    AtomicXchg,
-    Bswap16,
-    Bswap32,
-    Bswap64,
-    CallExternal,
-    Ctpop,
-    Ctlz,
-    Cttz,
-    Debugtrap,
-    Discriminant,
-    Dlerror,
-    Fence,
-    Gep,
-    GepStruct,
-    GetPayload,
-    GetSymbol,
-    InlineC,
-    IntToPtr,
-    IsNull,
-    LibcRead,
-    LibcWrite,
-    Load,
-    LoadLibrary,
-    Memcmp,
-    Memcpy,
-    Memmove,
-    Memset,
-    MulOverflow,
-    NullPtr,
-    Nullptr,
-    Panic,
-    PtrToInt,
-    RawAllocate,
-    RawDeallocate,
-    RawPtrCast,
-    RawPtrOffset,
-    RawReallocate,
-    SetDiscriminant,
-    SetPayload,
-    Sizeof,
-    SitofpI64F64,
-    StaticStringPtr,
-    Store,
-    Strlen,
-    SubOverflow,
-    Syscall0,
-    Syscall1,
-    Syscall2,
-    Syscall3,
-    Syscall4,
-    Syscall5,
-    Syscall6,
-    Trap,
-    TruncF32I32,
-    TruncF64I64,
-    UitofpU64F64,
-    UnloadLibrary,
-    Unreachable,
-}
-
-impl CIntrinsic {
-    pub(super) const ALL: &[CIntrinsic] = &[
-        Self::AddOverflow,
-        Self::Alignof,
-        Self::AtomicAdd,
-        Self::AtomicCas,
-        Self::AtomicLoad,
-        Self::AtomicStore,
-        Self::AtomicSub,
-        Self::AtomicXchg,
-        Self::Bswap16,
-        Self::Bswap32,
-        Self::Bswap64,
-        Self::CallExternal,
-        Self::Ctpop,
-        Self::Ctlz,
-        Self::Cttz,
-        Self::Debugtrap,
-        Self::Discriminant,
-        Self::Dlerror,
-        Self::Fence,
-        Self::Gep,
-        Self::GepStruct,
-        Self::GetPayload,
-        Self::GetSymbol,
-        Self::InlineC,
-        Self::IntToPtr,
-        Self::IsNull,
-        Self::LibcRead,
-        Self::LibcWrite,
-        Self::Load,
-        Self::LoadLibrary,
-        Self::Memcmp,
-        Self::Memcpy,
-        Self::Memmove,
-        Self::Memset,
-        Self::MulOverflow,
-        Self::NullPtr,
-        Self::Nullptr,
-        Self::Panic,
-        Self::PtrToInt,
-        Self::RawAllocate,
-        Self::RawDeallocate,
-        Self::RawPtrCast,
-        Self::RawPtrOffset,
-        Self::RawReallocate,
-        Self::SetDiscriminant,
-        Self::SetPayload,
-        Self::Sizeof,
-        Self::SitofpI64F64,
-        Self::StaticStringPtr,
-        Self::Store,
-        Self::Strlen,
-        Self::SubOverflow,
-        Self::Syscall0,
-        Self::Syscall1,
-        Self::Syscall2,
-        Self::Syscall3,
-        Self::Syscall4,
-        Self::Syscall5,
-        Self::Syscall6,
-        Self::Trap,
-        Self::TruncF32I32,
-        Self::TruncF64I64,
-        Self::UitofpU64F64,
-        Self::UnloadLibrary,
-        Self::Unreachable,
-    ];
-}
+pub(super) use spelling::CIntrinsic;
 
 impl fmt::Display for CIntrinsic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -152,10 +15,31 @@ impl FromStr for CIntrinsic {
     type Err = ();
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        Self::ALL
+        spelling::SPELLINGS
             .iter()
-            .copied()
-            .find(|intrinsic| intrinsic.as_str() == name)
+            .find(|(_, spelling)| *spelling == name)
+            .map(|(intrinsic, _)| *intrinsic)
             .ok_or(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn intrinsic_spellings_round_trip_through_single_table() {
+        let mut seen = HashSet::new();
+
+        for (intrinsic, spelling) in spelling::SPELLINGS {
+            assert!(
+                seen.insert(*spelling),
+                "duplicate intrinsic spelling: {spelling}"
+            );
+            assert_eq!(intrinsic.as_str(), *spelling);
+            assert_eq!(intrinsic.to_string(), *spelling);
+            assert_eq!(spelling.parse::<CIntrinsic>(), Ok(*intrinsic));
+        }
     }
 }
