@@ -93,9 +93,16 @@ impl TypeChecker {
         self.specialized_types_seen.get(&key).cloned()
     }
 
-    pub(crate) fn remember_specialized_type_source(&mut self, concrete: &str, generic: &str) {
+    pub(crate) fn remember_specialized_type_source(
+        &mut self,
+        concrete: &str,
+        generic: &str,
+        type_args: &[AstType],
+    ) {
         self.specialized_type_generic_names
             .insert(concrete.to_string(), generic.to_string());
+        self.specialized_type_args
+            .insert(concrete.to_string(), type_args.to_vec());
     }
 
     pub(crate) fn concrete_type_name_matches_generic(

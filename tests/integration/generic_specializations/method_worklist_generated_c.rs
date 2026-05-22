@@ -32,6 +32,17 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Unknown"));
 
     let c_source =
+        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_self_phantom.zen"));
+    assert!(c_source.contains("Marker_i32 Marker_copy_i32(Marker_i32 self)"));
+    assert!(c_source.contains("Token_i32 Token_copy_i32(Token_i32 self)"));
+    assert!(c_source.contains("Marker_copy_i32(value)"));
+    assert!(c_source.contains("Token_copy_i32(token)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Marker_copy_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Token_copy_i32");
+    assert!(!c_source.contains("Marker_T"));
+    assert!(!c_source.contains("Token_T"));
+
+    let c_source =
         compile_to_c_with_generated_call_check(&test_dir().join("generic_method_worklist.zen"));
     assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
     assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));

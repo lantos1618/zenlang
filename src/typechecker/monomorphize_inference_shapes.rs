@@ -35,6 +35,17 @@ impl TypeChecker {
         map: &mut HashMap<String, Type>,
         conflicts: &mut Vec<InferenceConflict>,
     ) {
+        if self.match_remembered_generic_type_args(
+            generic_name,
+            expected_type_args,
+            actual,
+            type_params,
+            map,
+            conflicts,
+        ) {
+            return;
+        }
+
         match actual {
             Type::Struct { name, fields }
                 if self.concrete_type_name_matches_generic(name, generic_name) =>
@@ -62,6 +73,39 @@ impl TypeChecker {
             }
             _ => {}
         }
+    }
+
+    fn match_remembered_generic_type_args(
+        &self,
+        generic_name: &str,
+        expected_type_args: &[AstType],
+        actual: &Type,
+        type_params: &[String],
+        map: &mut HashMap<String, Type>,
+        conflicts: &mut Vec<InferenceConflict>,
+    ) -> bool {
+        let actual_name = match actual {
+            Type::Struct { name, .. } | Type::Enum { name, .. }
+                if self.concrete_type_name_matches_generic(name, generic_name) =>
+            {
+                name
+            }
+            _ => return false,
+        };
+        let Some(actual_type_args) =
+            self.remembered_specialized_type_args(actual_name, generic_name)
+        else {
+            return false;
+        };
+        if actual_type_args.len() != expected_type_args.len() {
+            return false;
+        }
+
+        for (expected, actual) in expected_type_args.iter().zip(actual_type_args.iter()) {
+            let actual = self.resolve_type(actual);
+            self.match_type_param(expected, &actual, type_params, map, conflicts);
+        }
+        true
     }
 
     fn match_struct_shape(
