@@ -1,4 +1,5 @@
 use super::*;
+use std::path::Path;
 
 #[test]
 fn all_zen_files_have_expected_output() {
@@ -26,12 +27,12 @@ fn all_zen_files_have_expected_output() {
 fn all_expected_outputs_are_exercised_by_runtime_tests() {
     let dir = test_dir();
     let expected_dir = dir.join("expected");
-    let single_file_tests = std::fs::read_to_string("tests/integration/single_file_fixtures.rs")
-        .expect("read single-file runtime tests");
-    let runtime_tests = std::fs::read_to_string("tests/integration/runtime_fixtures.rs")
-        .expect("read runtime tests");
-    let multi_file_tests = std::fs::read_to_string("tests/integration/multi_file_fixtures.rs")
-        .expect("read multi-file runtime tests");
+    let single_file_tests = runtime_test_sources([
+        "tests/integration/single_file_fixtures.rs",
+        "tests/integration/single_file_fixtures",
+    ]);
+    let runtime_tests = runtime_test_sources(["tests/integration/runtime_fixtures.rs"]);
+    let multi_file_tests = runtime_test_sources(["tests/integration/multi_file_fixtures.rs"]);
 
     let mut uncovered = Vec::new();
     for entry in std::fs::read_dir(&expected_dir).expect("read tests/zen/expected") {
@@ -57,4 +58,39 @@ fn all_expected_outputs_are_exercised_by_runtime_tests() {
         uncovered.is_empty(),
         "expected fixtures without runtime coverage: {uncovered:?}"
     );
+}
+
+fn runtime_test_sources<const N: usize>(paths: [&str; N]) -> String {
+    let mut sources = String::new();
+    for path in paths {
+        append_runtime_test_sources(Path::new(path), &mut sources);
+    }
+    sources
+}
+
+fn append_runtime_test_sources(path: &Path, sources: &mut String) {
+    if !path.exists() {
+        return;
+    }
+
+    if path.is_file() {
+        sources.push_str(
+            &std::fs::read_to_string(path)
+                .unwrap_or_else(|err| panic!("read runtime test source {path:?}: {err}")),
+        );
+        sources.push('\n');
+        return;
+    }
+
+    let mut entries = std::fs::read_dir(path)
+        .unwrap_or_else(|err| panic!("read runtime test source dir {path:?}: {err}"))
+        .map(|entry| entry.expect("read runtime test source dir entry").path())
+        .collect::<Vec<_>>();
+    entries.sort();
+
+    for entry in entries {
+        if entry.is_dir() || entry.extension().and_then(|ext| ext.to_str()) == Some("rs") {
+            append_runtime_test_sources(&entry, sources);
+        }
+    }
 }

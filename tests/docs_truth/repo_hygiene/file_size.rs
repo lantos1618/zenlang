@@ -6,6 +6,7 @@ mod declaration_validation_splits;
 mod focused_tests;
 mod function_method_template_splits;
 mod generic_behavior_splits;
+mod integration_fixture_splits;
 mod lexer_and_monomorphize;
 mod module_system_splits;
 mod parser_enum_splits;
