@@ -12,8 +12,8 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     ));
     assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
     assert!(c_source.contains("unwrap_result_i32_StaticString(err, 9LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_result_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_i32_StaticString");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T unwrap_option"));
@@ -28,7 +28,7 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
     assert!(c_source.contains("Option_unwrap_or_i32(some, 0LL)"));
     assert!(c_source.contains("Option_unwrap_or_i32(none, 89LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Option_unwrap_or_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Option_unwrap_or"));
     assert!(!c_source.contains("Option_unwrap_or(some"));
@@ -42,7 +42,7 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     ));
     assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok, 0LL)"));
     assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err, 144LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "Result_unwrap_or_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_i32_StaticString");
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("T Result_unwrap_or"));
     assert!(!c_source.contains("Result_unwrap_or(err"));
@@ -76,8 +76,8 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     assert!(c_source.contains("int32_t unwrap_i32(Option_i32 value, int32_t fallback)"));
     assert!(c_source.contains("wrap_i32(107LL)"));
     assert!(c_source.contains("unwrap_i32(value, 0LL)"));
-    assert_c_call_resolves_to_definition(&c_source, "wrap_i32");
-    assert_c_call_resolves_to_definition(&c_source, "unwrap_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "wrap_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_i32");
     assert!(!c_source.contains("T wrap"));
     assert!(!c_source.contains("T unwrap"));
 }
