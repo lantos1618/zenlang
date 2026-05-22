@@ -67,6 +67,9 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_definition(&c_source, "Box_wrap_result_i32");
     assert_c_call_resolves_to_definition(&c_source, "unwrap_result_Option_i32_StaticString");
     assert_c_call_resolves_to_definition(&c_source, "unwrap_option_i32");
+    assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1);
+    assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1);
+    assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1);
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T Box_wrap_result"));
