@@ -118,3 +118,41 @@ main = () i32 {
         .check_program(&program)
         .expect("generic child behavior impl should satisfy inherited parent bound");
 }
+
+#[test]
+fn generic_target_behavior_impl_rejects_parent_child_overlap() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Pretty<T>: behavior {
+    pretty: (Self) T
+}
+
+Pretty.extends(Json<T>)
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Box<T>) T { self.value }
+}
+
+Box<T>.implements(Pretty<T>) {
+    encode = (self: Box<T>) T { self.value }
+    pretty = (self: Box<T>) T { self.value }
+}
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("generic target parent/child behavior overlap should fail");
+    assert!(
+        errors.iter().any(|d| d.message.contains(
+            "overlapping implementations of behaviors `Json_T` and `Pretty_T` for generic type `Box<T>`"
+        )),
+        "expected generic target behavior overlap diagnostic, got {errors:?}"
+    );
+}

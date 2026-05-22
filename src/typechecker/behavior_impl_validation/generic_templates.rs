@@ -1,6 +1,9 @@
+mod coherence;
+mod method_lookup;
 mod type_matching;
 
 use super::*;
+use method_lookup::{generic_behavior_actual_method, GenericBehaviorActualMethod};
 use type_matching::{generic_impl_ast_types_compatible, generic_impl_type_display};
 
 #[derive(Clone, Copy)]
@@ -10,12 +13,6 @@ struct GenericBehaviorImplTemplateContext<'a> {
     behavior: &'a str,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],
-    span: Span,
-}
-
-struct GenericBehaviorActualMethod<'a> {
-    params: &'a [Param],
-    return_type: &'a Option<AstType>,
     span: Span,
 }
 
@@ -69,6 +66,15 @@ impl TypeChecker {
         else {
             return;
         };
+        if self.reject_generic_behavior_impl_coherence_conflict(
+            type_name,
+            type_args,
+            behavior,
+            behavior_type_args,
+            span,
+        ) {
+            return;
+        }
         let required_methods =
             self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new());
 
@@ -82,6 +88,7 @@ impl TypeChecker {
         };
         self.check_generic_behavior_extra_methods(&context, &required_methods);
         self.check_generic_behavior_required_methods(context, &required_methods);
+        self.record_generic_behavior_impl_ref(behavior, behavior_type_args);
         self.generic_behavior_impls
             .push(GenericBehaviorImplTemplate {
                 type_name: type_name.to_string(),
@@ -216,24 +223,4 @@ impl TypeChecker {
             ));
         }
     }
-}
-
-fn generic_behavior_actual_method<'a>(
-    methods: &'a [Declaration],
-    required_name: &str,
-) -> Option<GenericBehaviorActualMethod<'a>> {
-    methods.iter().find_map(|method| match method {
-        Declaration::Function {
-            name,
-            params,
-            return_type,
-            span,
-            ..
-        } if name == required_name => Some(GenericBehaviorActualMethod {
-            params: params.as_slice(),
-            return_type,
-            span: *span,
-        }),
-        _ => None,
-    })
 }
