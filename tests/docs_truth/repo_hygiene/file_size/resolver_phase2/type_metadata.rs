@@ -103,3 +103,59 @@ fn resolver_phase2_enum_metadata_tests_live_in_focused_modules() {
         "variant_shape.rs should cover enum variant naming diagnostics"
     );
 }
+
+#[test]
+fn resolver_phase2_generic_behavior_method_signature_tests_stay_split_by_surface() {
+    let root = read("tests/resolver_phase2/generic_behavior_metadata/method_signatures.rs");
+    let concrete =
+        read("tests/resolver_phase2/generic_behavior_metadata/method_signatures/concrete.rs");
+    let defaults =
+        read("tests/resolver_phase2/generic_behavior_metadata/method_signatures/defaults.rs");
+    let diagnostics =
+        read("tests/resolver_phase2/generic_behavior_metadata/method_signatures/diagnostics.rs");
+    let function_types =
+        read("tests/resolver_phase2/generic_behavior_metadata/method_signatures/function_types.rs");
+    let generic =
+        read("tests/resolver_phase2/generic_behavior_metadata/method_signatures/generic.rs");
+
+    assert!(
+        root.lines().count() < 70,
+        "generic behavior method_signatures.rs should only route focused method signature modules"
+    );
+    for module in [
+        r#"#[path = "method_signatures/concrete.rs"]"#,
+        r#"#[path = "method_signatures/defaults.rs"]"#,
+        r#"#[path = "method_signatures/diagnostics.rs"]"#,
+        r#"#[path = "method_signatures/function_types.rs"]"#,
+        r#"#[path = "method_signatures/generic.rs"]"#,
+    ] {
+        assert!(
+            root.contains(module),
+            "method_signatures.rs should include focused module path `{module}`"
+        );
+    }
+    assert!(
+        !root.contains("fn resolver_records_behavior_method_signatures"),
+        "method_signatures.rs should not own concrete method signature test bodies"
+    );
+    assert!(
+        concrete.contains("fn resolver_records_behavior_method_signatures"),
+        "concrete.rs should cover non-generic behavior method signatures"
+    );
+    assert!(
+        defaults.contains("fn resolver_records_behavior_default_method_body_locals"),
+        "defaults.rs should cover behavior default body local metadata"
+    );
+    assert!(
+        diagnostics.contains("fn resolver_rejects_duplicate_behavior_method_names"),
+        "diagnostics.rs should cover behavior method signature diagnostics"
+    );
+    assert!(
+        function_types.contains("fn resolver_records_behavior_function_type_method_signatures"),
+        "function_types.rs should cover function-typed behavior method signatures"
+    );
+    assert!(
+        generic.contains("fn resolver_records_generic_behavior_method_signatures"),
+        "generic.rs should cover generic behavior method signatures"
+    );
+}
