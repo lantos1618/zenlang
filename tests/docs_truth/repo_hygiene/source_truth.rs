@@ -107,6 +107,42 @@ fn live_compiler_and_stdlib_sources_do_not_claim_llvm_intrinsics() {
 }
 
 #[test]
+fn compiler_intrinsic_definitions_live_in_focused_helper() {
+    let root = read("src/intrinsics.rs");
+    let definitions = read("src/intrinsics/definitions.rs");
+
+    for root_detail in [
+        "macro_rules! intrinsic",
+        "fn build_intrinsics",
+        r#"intrinsic!(m, "raw_allocate""#,
+        r#"intrinsic!(m, "atomic_load""#,
+        r#"intrinsic!(m, "syscall6""#,
+    ] {
+        assert!(
+            !root.contains(root_detail),
+            "compiler intrinsic root should not own intrinsic definition-table detail: {root_detail}"
+        );
+        assert!(
+            definitions.contains(root_detail),
+            "compiler intrinsic definition table should live in focused helper: {root_detail}"
+        );
+    }
+
+    assert!(
+        root.contains("mod definitions;"),
+        "compiler intrinsic root should include the focused definitions helper"
+    );
+    assert!(
+        root.contains("definitions::build_intrinsics"),
+        "compiler intrinsic root should initialize the registry through the focused helper"
+    );
+    assert!(
+        root.lines().count() < 130,
+        "compiler intrinsic root should stay focused on module recognition and public registry API"
+    );
+}
+
+#[test]
 fn stdlib_async_operation_state_lives_in_one_helper_module() {
     assert!(
         !repo_root()
