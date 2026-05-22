@@ -46,6 +46,15 @@ fn emit_json_hir_generic_method_method_worklist_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_multi_file_type_method_worklist_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_type_method_worklist/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_type_method_worklist.golden.json",
+        "multi-file type method worklist input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_recursive_method_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_recursive_method.zen",
