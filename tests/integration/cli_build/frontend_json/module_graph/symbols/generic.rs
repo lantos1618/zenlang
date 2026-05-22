@@ -32,6 +32,37 @@ fn emit_json_symbols_reports_multi_file_generic_enum_method_surface() {
 }
 
 #[test]
+fn emit_json_symbols_reports_multi_file_generic_result_method_surface() {
+    let modules = symbols_modules_for_fixture(
+        "tests/zen/multi_file_generic_result_enum_method/main.zen",
+        "multi-file generic Result enum method symbols",
+    );
+
+    assert_eq!(
+        modules.len(),
+        2,
+        "fixture should report main and result modules: {modules:?}"
+    );
+
+    let main = module_by_file(&modules, "main.zen");
+    assert_symbol(main, "Import", "Result", |symbol| {
+        symbol["import_source"] == "result"
+    });
+
+    let result = module_by_file(&modules, "result.zen");
+    assert_symbol(result, "Type", "Result", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["type_parameter_names"], &["T", "E"])
+            && string_array_eq(&symbol["variant_names"], &["Ok", "Err"])
+    });
+    assert_symbol(result, "Value", "Result.unwrap_or", |symbol| {
+        symbol["is_public"] == true
+            && string_array_eq(&symbol["parameter_type_names"], &["Self", "T"])
+            && symbol["return_type_name"] == "T"
+    });
+}
+
+#[test]
 fn emit_json_symbols_reports_multi_file_generic_method_nested_result_surface() {
     let modules = symbols_modules_for_fixture(
         "tests/zen/multi_file_type_method_nested_result_dependency/main.zen",
