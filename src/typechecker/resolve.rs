@@ -68,16 +68,30 @@ impl TypeChecker {
     }
 
     fn resolve_generic_type(&self, name: &str, type_args: &[AstType]) -> Type {
-        let mangled = self.mangle_generic_type_name(name, type_args);
+        let requested = self.mangle_generic_type_name(name, type_args);
         if let Some(info) = self.structs.get(name) {
+            let mangled = self
+                .reserved_generic_type_name(
+                    "struct",
+                    info.specialization_scope.as_deref(),
+                    &requested,
+                )
+                .unwrap_or_else(|| requested.clone());
             let substitutions = self.generic_type_substitutions(&info.type_params, type_args);
             return self.resolve_struct_type(&mangled, &info.fields, Some(&substitutions));
         }
         if let Some(info) = self.enums.get(name) {
+            let mangled = self
+                .reserved_generic_type_name(
+                    "enum",
+                    info.specialization_scope.as_deref(),
+                    &requested,
+                )
+                .unwrap_or_else(|| requested.clone());
             let substitutions = self.generic_type_substitutions(&info.type_params, type_args);
             return self.resolve_enum_type(&mangled, &info.variants, Some(&substitutions));
         }
-        Type::Named(mangled)
+        Type::Named(requested)
     }
 
     fn generic_type_substitutions(

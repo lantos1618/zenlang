@@ -80,4 +80,24 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
     assert_c_call_resolves_to_single_definition(&c_source, "unwrap_i32");
     assert!(!c_source.contains("T wrap"));
     assert!(!c_source.contains("T unwrap"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_imported_type_same_name_collision/main.zen"),
+    );
+    assert!(c_source.contains("left_i32(1LL)"));
+    assert!(c_source.contains("right_i32(2LL)"));
+    assert!(c_source.contains("typedef struct Box_i32 Box_i32;"));
+    assert!(c_source.contains("typedef struct right_Box_i32 right_Box_i32;"));
+    assert!(c_source.contains("typedef struct Choice_i32 Choice_i32;"));
+    assert!(c_source.contains("typedef struct right_Choice_i32 right_Choice_i32;"));
+    assert!(c_source.contains("const Box_i32 box = (Box_i32){ .value = value };"));
+    assert!(c_source
+        .contains("const right_Box_i32 box = (right_Box_i32){ .value = value, .extra = 29LL };"));
+    assert!(c_source.contains("__tmp2 = 11LL;"));
+    assert!(c_source.contains("int32_t found = choice.data.extra;"));
+    assert!(c_source.contains("__tmp3 = found;"));
+    assert_c_call_resolves_to_single_definition(&c_source, "left_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "right_i32");
+    assert!(!c_source.contains("Box_T"));
+    assert!(!c_source.contains("Choice_T"));
 }

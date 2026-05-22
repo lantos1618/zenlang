@@ -52,10 +52,20 @@ impl TypeChecker {
         for decl in &source_module.program.declarations {
             match decl {
                 Declaration::Struct { name, .. } => {
-                    Self::insert_source_type_dependency(name, decl, &mut dependencies);
+                    Self::insert_source_type_dependency(
+                        name,
+                        decl,
+                        &mut dependencies,
+                        Some(&source_scope),
+                    );
                 }
                 Declaration::Enum { name, .. } => {
-                    Self::insert_source_type_dependency(name, decl, &mut dependencies);
+                    Self::insert_source_type_dependency(
+                        name,
+                        decl,
+                        &mut dependencies,
+                        Some(&source_scope),
+                    );
                 }
                 Declaration::Function { name, .. } => {
                     Self::insert_source_function_dependency(
@@ -121,7 +131,12 @@ impl TypeChecker {
     ) {
         match decl {
             Declaration::Struct { .. } | Declaration::Enum { .. } => {
-                Self::insert_source_type_dependency(local_name, decl, dependencies);
+                Self::insert_source_type_dependency(
+                    local_name,
+                    decl,
+                    dependencies,
+                    specialization_scope,
+                );
             }
             Declaration::Function { .. } => {
                 Self::insert_source_function_dependency(
@@ -135,35 +150,4 @@ impl TypeChecker {
             _ => {}
         }
     }
-
-    fn insert_source_type_dependency(
-        local_name: &str,
-        decl: &Declaration,
-        dependencies: &mut SourceModuleDependencies,
-    ) {
-        match decl {
-            Declaration::Struct {
-                type_params,
-                fields,
-                ..
-            } => {
-                dependencies.structs.insert(
-                    local_name.to_string(),
-                    struct_info_from_ast_fields(local_name.to_string(), type_params, fields),
-                );
-            }
-            Declaration::Enum {
-                type_params,
-                variants,
-                ..
-            } => {
-                dependencies.enums.insert(
-                    local_name.to_string(),
-                    enum_info_from_ast_variants(local_name.to_string(), type_params, variants),
-                );
-            }
-            _ => {}
-        }
-    }
-
 }

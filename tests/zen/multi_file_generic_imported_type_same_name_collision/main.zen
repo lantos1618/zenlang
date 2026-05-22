@@ -1,0 +1,9 @@
+{ io } = std
+{ left } = left
+{ right } = right
+
+main = () i32 {
+    io.println("${left<i32>(1)}")
+    io.println("${right<i32>(2)}")
+    0
+}

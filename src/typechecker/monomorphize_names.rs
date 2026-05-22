@@ -39,6 +39,60 @@ impl TypeChecker {
         }
     }
 
+    pub(crate) fn generic_type_specialization_key(
+        &self,
+        kind: &str,
+        scope: Option<&str>,
+        mangled: &str,
+    ) -> String {
+        let scope = scope.unwrap_or("local");
+        format!("{kind}:{scope}:{mangled}")
+    }
+
+    pub(crate) fn reserve_generic_type_name(
+        &mut self,
+        specialization_key: &str,
+        requested: &str,
+        scope: Option<&str>,
+    ) -> String {
+        if let Some(existing) = self.specialized_types_seen.get(specialization_key) {
+            return existing.clone();
+        }
+
+        let mut mangled = requested.to_string();
+        if let Some(owner) = self.specialized_type_name_owners.get(requested) {
+            if owner != specialization_key {
+                mangled =
+                    self.scoped_generic_specialization_name(requested, scope, specialization_key);
+                let base = mangled.clone();
+                let mut suffix = 2;
+                while let Some(owner) = self.specialized_type_name_owners.get(&mangled) {
+                    if owner == specialization_key {
+                        break;
+                    }
+                    mangled = format!("{base}_{suffix}");
+                    suffix += 1;
+                }
+            }
+        }
+
+        self.specialized_types_seen
+            .insert(specialization_key.to_string(), mangled.clone());
+        self.specialized_type_name_owners
+            .insert(mangled.clone(), specialization_key.to_string());
+        mangled
+    }
+
+    pub(crate) fn reserved_generic_type_name(
+        &self,
+        kind: &str,
+        scope: Option<&str>,
+        requested: &str,
+    ) -> Option<String> {
+        let key = self.generic_type_specialization_key(kind, scope, requested);
+        self.specialized_types_seen.get(&key).cloned()
+    }
+
     pub(crate) fn generic_specialization_key(
         &self,
         kind: &str,

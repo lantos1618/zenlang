@@ -112,6 +112,7 @@ fn struct_info_from_ast_fields(
     fields: &[StructField],
 ) -> StructInfo {
     StructInfo {
+        specialization_scope: None,
         name,
         fields: fields
             .iter()
@@ -137,6 +138,7 @@ fn enum_info_from_ast_variants(
     variants: &[EnumVariant],
 ) -> EnumInfo {
     EnumInfo {
+        specialization_scope: None,
         name,
         variants: variants
             .iter()
@@ -179,6 +181,7 @@ fn struct_info_from_resolver_fields(
     field_defaults: HashMap<String, Expression>,
 ) -> StructInfo {
     StructInfo {
+        specialization_scope: None,
         name,
         fields,
         field_defaults,
@@ -193,6 +196,7 @@ fn enum_info_from_resolver_variants(
     variants: Vec<(String, Option<AstType>)>,
 ) -> EnumInfo {
     EnumInfo {
+        specialization_scope: None,
         name,
         variants,
         type_params: resolver_type_param_names(symbol),

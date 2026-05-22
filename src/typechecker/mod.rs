@@ -33,6 +33,7 @@ mod monomorphize_dependencies;
 mod monomorphize_inference;
 mod monomorphize_names;
 mod monomorphize_specialized_type_names;
+mod monomorphize_specialized_type_refs;
 mod monomorphize_specialized_types;
 mod monomorphize_substitution;
 mod monomorphize_types;

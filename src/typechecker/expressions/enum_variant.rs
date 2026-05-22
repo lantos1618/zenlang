@@ -69,7 +69,22 @@ impl TypeChecker {
                 .unwrap_or_default();
             (enum_name.to_string(), ty, variant_defs)
         } else {
-            let type_name = self.mangle_generic_type_name(enum_name, type_args);
+            let variant_defs = if type_args_valid {
+                self.specialize_generic_enum(enum_name, type_args, span)
+            } else {
+                std::collections::HashMap::new()
+            };
+            let requested = self.mangle_generic_type_name(enum_name, type_args);
+            let type_name = enum_info
+                .as_ref()
+                .and_then(|info| {
+                    self.reserved_generic_type_name(
+                        "enum",
+                        info.specialization_scope.as_deref(),
+                        &requested,
+                    )
+                })
+                .unwrap_or(requested);
             let ty = if type_args_valid {
                 self.resolve_type(&AstType::Generic {
                     name: enum_name.to_string(),
@@ -77,11 +92,6 @@ impl TypeChecker {
                 })
             } else {
                 Type::Unknown
-            };
-            let variant_defs = if type_args_valid {
-                self.specialize_generic_enum(enum_name, type_args, span)
-            } else {
-                std::collections::HashMap::new()
             };
             (type_name, ty, variant_defs)
         };

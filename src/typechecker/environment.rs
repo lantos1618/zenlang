@@ -8,6 +8,7 @@ use crate::error::Span;
 /// Information about a struct type.
 #[derive(Debug, Clone)]
 pub struct StructInfo {
+    pub specialization_scope: Option<String>,
     pub name: String,
     pub fields: Vec<(String, AstType)>,
     pub field_defaults: HashMap<String, Expression>,
@@ -18,6 +19,7 @@ pub struct StructInfo {
 /// Information about an enum type.
 #[derive(Debug, Clone)]
 pub struct EnumInfo {
+    pub specialization_scope: Option<String>,
     pub name: String,
     pub variants: Vec<(String, Option<AstType>)>,
     pub type_params: Vec<String>,
@@ -46,6 +48,20 @@ pub struct BehaviorInfo {
     pub type_params: Vec<String>,
     pub type_param_bounds: HashMap<String, BehaviorBound>,
     pub methods: Vec<ast::BehaviorMethod>,
+}
+
+impl StructInfo {
+    pub(crate) fn with_specialization_scope(mut self, scope: String) -> Self {
+        self.specialization_scope = Some(scope);
+        self
+    }
+}
+
+impl EnumInfo {
+    pub(crate) fn with_specialization_scope(mut self, scope: String) -> Self {
+        self.specialization_scope = Some(scope);
+        self
+    }
 }
 
 #[derive(Debug, Clone)]

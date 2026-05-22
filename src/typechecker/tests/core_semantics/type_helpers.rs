@@ -205,6 +205,7 @@ fn substitute_type_preserves_function_type_arguments_in_nested_generics() {
     tc.structs.insert(
         "Box".to_string(),
         StructInfo {
+            specialization_scope: None,
             name: "Box".to_string(),
             fields: vec![("value".to_string(), AstType::Named("T".to_string()))],
             field_defaults: HashMap::new(),
