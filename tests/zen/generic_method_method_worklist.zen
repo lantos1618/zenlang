@@ -1,0 +1,19 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box.inner<T> = (self: Box<T>) T {
+    self.value
+}
+
+Box.get_inner<T> = (self: Box<T>) T {
+    self.inner<T>()
+}
+
+main = () i32 {
+    box = Box<i32> { value: 47 }
+    io.println("${box.get_inner<i32>()}")
+    0
+}

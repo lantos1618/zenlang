@@ -1,0 +1,123 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "box",
+              "type": "Box_i32",
+              "mutable": false,
+              "value": {
+                "kind": "struct",
+                "type": "Box_i32",
+                "name": "Box_i32",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 47
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Box.inner_i32",
+      "params": [
+        {
+          "name": "self",
+          "type": "Box_i32"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "field",
+              "type": "i32",
+              "target": {
+                "kind": "local",
+                "type": "Box_i32",
+                "name": "self"
+              },
+              "field": "value"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Box.get_inner_i32",
+      "params": [
+        {
+          "name": "self",
+          "type": "Box_i32"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "call",
+              "type": "i32",
+              "function": "Box.inner_i32",
+              "args": [
+                {
+                  "kind": "local",
+                  "type": "Box_i32",
+                  "name": "self"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
