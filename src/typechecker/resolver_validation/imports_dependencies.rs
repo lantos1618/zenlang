@@ -111,6 +111,9 @@ impl TypeChecker {
         let Some(template) = self.generic_functions.get_mut(local_name) else {
             return;
         };
+        if let Some(scope) = dependencies.specialization_scope.clone() {
+            template.set_specialization_scope(scope);
+        }
         Self::attach_template_dependencies(template, dependencies);
     }
 

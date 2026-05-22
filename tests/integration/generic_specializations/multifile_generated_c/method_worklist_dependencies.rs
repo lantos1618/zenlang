@@ -32,6 +32,25 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(!c_source.contains("T middle"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_imported_diamond_same_name/main.zen"),
+    );
+    assert!(c_source.contains("int32_t left_i32(int32_t value)"));
+    assert!(c_source.contains("int32_t right_i32(int32_t value)"));
+    assert!(c_source.contains("return 11LL;"));
+    assert!(c_source.contains("return 29LL;"));
+    assert!(c_source.contains("left_i32(1LL)"));
+    assert!(c_source.contains("right_i32(2LL)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "left_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "right_i32");
+    let left_inner = returned_call_name(&c_source, "left_i32");
+    let right_inner = returned_call_name(&c_source, "right_i32");
+    assert_eq!(left_inner, "inner_i32");
+    assert_ne!(right_inner, "inner_i32");
+    assert!(right_inner.ends_with("_inner_i32"));
+    assert_c_call_resolves_to_single_definition(&c_source, &right_inner);
+    assert!(!c_source.contains("T inner"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_recursive_function/main.zen"),
     );
     assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
@@ -162,4 +181,30 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("Result_Option_T"));
     assert!(!c_source.contains("T Box_wrap_result"));
+}
+
+fn returned_call_name(c_source: &str, function_name: &str) -> String {
+    let signature = format!(" {function_name}(");
+    let mut in_function = false;
+    for line in c_source.lines() {
+        let trimmed = line.trim();
+        if trimmed.ends_with('{') && trimmed.contains(&signature) {
+            in_function = true;
+            continue;
+        }
+        if !in_function {
+            continue;
+        }
+        if trimmed == "}" {
+            break;
+        }
+        if let Some(rest) = trimmed.strip_prefix("return ") {
+            return rest
+                .split('(')
+                .next()
+                .expect("return call should include function name")
+                .to_string();
+        }
+    }
+    panic!("expected return call in generated C function `{function_name}`:\n{c_source}");
 }

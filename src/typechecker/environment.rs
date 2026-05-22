@@ -50,6 +50,7 @@ pub struct BehaviorInfo {
 
 #[derive(Debug, Clone)]
 pub(crate) struct GenericFunctionTemplate {
+    pub specialization_scope: Option<String>,
     pub type_params: Vec<String>,
     pub params: Vec<Param>,
     pub return_type: Option<AstType>,
@@ -72,6 +73,7 @@ impl GenericFunctionTemplate {
         span: Span,
     ) -> Self {
         Self {
+            specialization_scope: None,
             type_params,
             params,
             return_type,
@@ -84,6 +86,15 @@ impl GenericFunctionTemplate {
             dependency_methods: HashMap::new(),
             dependency_generic_methods: HashMap::new(),
         }
+    }
+
+    pub(crate) fn with_specialization_scope(mut self, scope: String) -> Self {
+        self.specialization_scope = Some(scope);
+        self
+    }
+
+    pub(crate) fn set_specialization_scope(&mut self, scope: String) {
+        self.specialization_scope = Some(scope);
     }
 
     pub(crate) fn with_dependencies(
@@ -150,6 +161,7 @@ pub(crate) struct TemplateDependencyState {
 
 #[derive(Clone, Default)]
 pub(crate) struct SourceModuleDependencies {
+    pub(crate) specialization_scope: Option<String>,
     pub(crate) structs: HashMap<String, StructInfo>,
     pub(crate) enums: HashMap<String, EnumInfo>,
     pub(crate) functions: HashMap<String, FuncInfo>,

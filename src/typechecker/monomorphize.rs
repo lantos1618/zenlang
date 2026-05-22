@@ -30,11 +30,16 @@ impl TypeChecker {
 
         let mangled =
             self.generic_function_mangled_name(name, &template.type_params, substitutions);
-        if self.specializations_seen.contains(&mangled) {
-            return Some(mangled);
+        let specialization_key = self.generic_specialization_key("function", &template, &mangled);
+        if let Some(existing) = self.specializations_seen.get(&specialization_key) {
+            return Some(existing.clone());
         }
 
-        self.specializations_seen.insert(mangled.clone());
+        let mangled = self.reserve_generic_specialization_name(
+            &specialization_key,
+            &mangled,
+            template.specialization_scope.as_deref(),
+        );
         self.specialize_generic_template_body(&mangled, &template, substitutions, None);
 
         Some(mangled)
@@ -59,11 +64,16 @@ impl TypeChecker {
 
         let mangled =
             self.generic_function_mangled_name(name, &template.type_params, substitutions);
-        if self.specializations_seen.contains(&mangled) {
-            return Some(mangled);
+        let specialization_key = self.generic_specialization_key("method", &template, &mangled);
+        if let Some(existing) = self.specializations_seen.get(&specialization_key) {
+            return Some(existing.clone());
         }
 
-        self.specializations_seen.insert(mangled.clone());
+        let mangled = self.reserve_generic_specialization_name(
+            &specialization_key,
+            &mangled,
+            template.specialization_scope.as_deref(),
+        );
         let self_type = self.generic_method_self_type(name, substitutions);
         self.specialize_generic_template_body(&mangled, &template, substitutions, self_type);
 

@@ -62,6 +62,11 @@ impl TypeChecker {
         self.methods
             .insert(key.clone(), signature.func_info(key.clone()));
         if let Some(template) = signature.generic_template() {
+            let template = if let Some(scope) = &dependencies.specialization_scope {
+                template.with_specialization_scope(scope.clone())
+            } else {
+                template
+            };
             self.generic_methods
                 .insert(key, dependencies.apply_to_template(template));
         }
