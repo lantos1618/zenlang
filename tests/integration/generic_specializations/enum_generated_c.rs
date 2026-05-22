@@ -111,4 +111,23 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
     assert!(!c_source.contains("Result_T"));
     assert!(!c_source.contains("Option_T"));
     assert!(!c_source.contains("T unwrap_result"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("generic_enum_method_nested_result.zen"),
+    );
+    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
+    assert!(c_source
+        .contains("typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;"));
+    assert!(
+        c_source.contains("Result_Option_i32_StaticString Option_wrap_result_i32(Option_i32 self)")
+    );
+    assert!(c_source.contains("Option_wrap_result_i32(some)"));
+    assert!(c_source.contains("Option_wrap_result_i32(none)"));
+    assert!(c_source.contains("unwrap_result_Option_i32_StaticString(wrapped_some,"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Option_wrap_result_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString");
+    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32");
+    assert!(!c_source.contains("Result_T"));
+    assert!(!c_source.contains("Option_T"));
+    assert!(!c_source.contains("T Option_wrap_result"));
 }
