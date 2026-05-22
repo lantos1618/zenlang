@@ -146,6 +146,39 @@ fn resolver_function_value_tests_live_in_focused_helper() {
 }
 
 #[test]
+fn resolver_required_stale_diagnostic_tests_live_in_focused_helper() {
+    let root =
+        read("src/typechecker/tests/resolver_collection/behavior_impls/required_diagnostics.rs");
+    let stale_requires = read(
+        "src/typechecker/tests/resolver_collection/behavior_impls/required_diagnostics/stale_requires.rs",
+    );
+
+    for test_name in [
+        "collect_declarations_with_symbols_does_not_fallback_to_stale_ast_behavior_required_metadata",
+        "collect_declarations_with_symbols_does_not_validate_stale_requires_after_target_restore",
+        "collect_declarations_with_symbols_uses_resolver_behavior_required_name_metadata",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "required_diagnostics.rs should not own stale requires diagnostic test: {test_name}"
+        );
+        assert!(
+            stale_requires.contains(&format!("fn {test_name}")),
+            "stale requires diagnostic tests should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "required_diagnostics.rs should stay focused on resolver-restored requires diagnostics"
+    );
+    assert!(
+        root.contains("mod stale_requires;"),
+        "required_diagnostics.rs should include the focused stale_requires module"
+    );
+}
+
+#[test]
 fn declaration_validation_precollection_tasks_live_in_focused_helper() {
     let tasks = read("src/typechecker/tests/declaration_validation/tasks.rs");
     let precollection = read("src/typechecker/tests/declaration_validation/precollection_tasks.rs");
