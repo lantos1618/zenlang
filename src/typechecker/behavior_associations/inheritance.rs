@@ -38,7 +38,7 @@ impl TypeChecker {
         let has_cycle = self.behavior_extends.get(behavior).is_some_and(|parents| {
             parents
                 .iter()
-                .any(|parent| self.behavior_extends_has_cycle(&parent.key, visiting, visited))
+                .any(|parent| self.behavior_extends_has_cycle(&parent.behavior, visiting, visited))
         });
         visiting.remove(behavior);
         has_cycle
