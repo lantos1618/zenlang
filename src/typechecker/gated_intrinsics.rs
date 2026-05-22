@@ -1,143 +1,12 @@
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum GatedIntrinsic {
-    AtomicAdd,
-    AtomicCas,
-    AtomicLoad,
-    AtomicStore,
-    AtomicSub,
-    AtomicXchg,
-    AsyncEnqueue,
-    AsyncYield,
-    Fence,
-    Gep,
-    GepStruct,
-    IntToPtr,
-    Load,
-    Memcmp,
-    Memcpy,
-    Memmove,
-    Memset,
-    PtrToInt,
-    RawAllocate,
-    RawDeallocate,
-    RawPtrCast,
-    RawReallocate,
-    Store,
-    Syscall0,
-    Syscall1,
-    Syscall2,
-    Syscall3,
-    Syscall4,
-    Syscall5,
-    Syscall6,
-    TypeMatch,
-}
+mod spelling;
+
+pub(super) use spelling::GatedIntrinsic;
 
 impl GatedIntrinsic {
     pub(super) const INTRINSIC_MODULE: &'static str = "@builtin";
-    pub(super) const ATOMIC_ADD: &'static str = "atomic_add";
-    pub(super) const ATOMIC_CAS: &'static str = "atomic_cas";
-    pub(super) const ATOMIC_LOAD: &'static str = "atomic_load";
-    pub(super) const ATOMIC_STORE: &'static str = "atomic_store";
-    pub(super) const ATOMIC_SUB: &'static str = "atomic_sub";
-    pub(super) const ATOMIC_XCHG: &'static str = "atomic_xchg";
-    pub(super) const ASYNC_ENQUEUE: &'static str = "async_enqueue";
-    pub(super) const ASYNC_YIELD: &'static str = "async_yield";
-    pub(super) const FENCE: &'static str = "fence";
-    pub(super) const GEP: &'static str = "gep";
-    pub(super) const GEP_STRUCT: &'static str = "gep_struct";
-    pub(super) const INT_TO_PTR: &'static str = "int_to_ptr";
-    pub(super) const LOAD: &'static str = "load";
-    pub(super) const MEMCMP: &'static str = "memcmp";
-    pub(super) const MEMCPY: &'static str = "memcpy";
-    pub(super) const MEMMOVE: &'static str = "memmove";
-    pub(super) const MEMSET: &'static str = "memset";
-    pub(super) const PTR_TO_INT: &'static str = "ptr_to_int";
-    pub(super) const RAW_ALLOCATE: &'static str = "raw_allocate";
-    pub(super) const RAW_DEALLOCATE: &'static str = "raw_deallocate";
-    pub(super) const RAW_PTR_CAST: &'static str = "raw_ptr_cast";
-    pub(super) const RAW_REALLOCATE: &'static str = "raw_reallocate";
-    pub(super) const STORE: &'static str = "store";
-    pub(super) const SYSCALL0: &'static str = "syscall0";
-    pub(super) const SYSCALL1: &'static str = "syscall1";
-    pub(super) const SYSCALL2: &'static str = "syscall2";
-    pub(super) const SYSCALL3: &'static str = "syscall3";
-    pub(super) const SYSCALL4: &'static str = "syscall4";
-    pub(super) const SYSCALL5: &'static str = "syscall5";
-    pub(super) const SYSCALL6: &'static str = "syscall6";
-    pub(super) const TYPE_MATCH: &'static str = "type_match";
-    const ALL: &[GatedIntrinsic] = &[
-        Self::AtomicAdd,
-        Self::AtomicCas,
-        Self::AtomicLoad,
-        Self::AtomicStore,
-        Self::AtomicSub,
-        Self::AtomicXchg,
-        Self::AsyncEnqueue,
-        Self::AsyncYield,
-        Self::Fence,
-        Self::Gep,
-        Self::GepStruct,
-        Self::IntToPtr,
-        Self::Load,
-        Self::Memcmp,
-        Self::Memcpy,
-        Self::Memmove,
-        Self::Memset,
-        Self::PtrToInt,
-        Self::RawAllocate,
-        Self::RawDeallocate,
-        Self::RawPtrCast,
-        Self::RawReallocate,
-        Self::Store,
-        Self::Syscall0,
-        Self::Syscall1,
-        Self::Syscall2,
-        Self::Syscall3,
-        Self::Syscall4,
-        Self::Syscall5,
-        Self::Syscall6,
-        Self::TypeMatch,
-    ];
-
-    pub(super) const fn as_str(self) -> &'static str {
-        match self {
-            Self::AtomicAdd => Self::ATOMIC_ADD,
-            Self::AtomicCas => Self::ATOMIC_CAS,
-            Self::AtomicLoad => Self::ATOMIC_LOAD,
-            Self::AtomicStore => Self::ATOMIC_STORE,
-            Self::AtomicSub => Self::ATOMIC_SUB,
-            Self::AtomicXchg => Self::ATOMIC_XCHG,
-            Self::AsyncEnqueue => Self::ASYNC_ENQUEUE,
-            Self::AsyncYield => Self::ASYNC_YIELD,
-            Self::Fence => Self::FENCE,
-            Self::Gep => Self::GEP,
-            Self::GepStruct => Self::GEP_STRUCT,
-            Self::IntToPtr => Self::INT_TO_PTR,
-            Self::Load => Self::LOAD,
-            Self::Memcmp => Self::MEMCMP,
-            Self::Memcpy => Self::MEMCPY,
-            Self::Memmove => Self::MEMMOVE,
-            Self::Memset => Self::MEMSET,
-            Self::PtrToInt => Self::PTR_TO_INT,
-            Self::RawAllocate => Self::RAW_ALLOCATE,
-            Self::RawDeallocate => Self::RAW_DEALLOCATE,
-            Self::RawPtrCast => Self::RAW_PTR_CAST,
-            Self::RawReallocate => Self::RAW_REALLOCATE,
-            Self::Store => Self::STORE,
-            Self::Syscall0 => Self::SYSCALL0,
-            Self::Syscall1 => Self::SYSCALL1,
-            Self::Syscall2 => Self::SYSCALL2,
-            Self::Syscall3 => Self::SYSCALL3,
-            Self::Syscall4 => Self::SYSCALL4,
-            Self::Syscall5 => Self::SYSCALL5,
-            Self::Syscall6 => Self::SYSCALL6,
-            Self::TypeMatch => Self::TYPE_MATCH,
-        }
-    }
 
     pub(super) const fn gate_message(self) -> &'static str {
         match self {
@@ -248,10 +117,31 @@ impl FromStr for GatedIntrinsic {
     type Err = ();
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        GatedIntrinsic::ALL
+        spelling::SPELLINGS
             .iter()
-            .copied()
-            .find(|intrinsic| intrinsic.as_str() == name)
+            .find(|(_, spelling)| *spelling == name)
+            .map(|(intrinsic, _)| *intrinsic)
             .ok_or(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn gated_intrinsic_spellings_round_trip_through_single_table() {
+        let mut seen = HashSet::new();
+
+        for (intrinsic, spelling) in spelling::SPELLINGS {
+            assert!(
+                seen.insert(*spelling),
+                "duplicate gated intrinsic spelling: {spelling}"
+            );
+            assert_eq!(intrinsic.as_str(), *spelling);
+            assert_eq!(intrinsic.to_string(), *spelling);
+            assert_eq!(spelling.parse::<GatedIntrinsic>(), Ok(*intrinsic));
+        }
     }
 }
