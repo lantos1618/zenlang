@@ -10,6 +10,7 @@ pub use declarations::{BehaviorMethod, Declaration, EnumVariant, StructField, Ty
 pub use expressions::{BinaryOp, Expression, MatchArm, StringPart, UnaryOp};
 pub use patterns::Pattern;
 pub use statements::Statement;
+pub(crate) use types::{behavior_type_args_match_target_params, named_type_arg_names};
 pub use types::{
     gated_builtin_type_name, is_builtin_type_name, AstType, BuiltinGenericTypeName,
     BuiltinTypeName, Param,

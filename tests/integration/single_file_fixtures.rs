@@ -94,6 +94,16 @@ fn test_behavior_json_generic_association() {
 }
 
 #[test]
+fn test_behavior_generic_target_association() {
+    run_test("behavior_generic_target_association");
+}
+
+#[test]
+fn test_behavior_generic_target_default_method() {
+    run_test("behavior_generic_target_default_method");
+}
+
+#[test]
 fn test_behavior_distinct_generic_specialization_dispatch() {
     run_test("behavior_distinct_generic_specialization_dispatch");
 }

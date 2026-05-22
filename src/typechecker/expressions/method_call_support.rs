@@ -69,7 +69,9 @@ impl TypeChecker {
         }
 
         if let Some(generic_base) = self.generic_base_type_name(&type_name) {
-            let generic_method_key = Self::method_key(&generic_base, method);
+            let generic_method_key = self
+                .behavior_specialized_method_key(&generic_base, method)
+                .unwrap_or_else(|| Self::method_key(&generic_base, method));
             if let Some(info) = self.methods.get(&generic_method_key).cloned() {
                 if !info.type_params.is_empty() {
                     let (mangled, ret_type) = self.resolve_generic_method_call(

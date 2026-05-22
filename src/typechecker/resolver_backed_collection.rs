@@ -1,3 +1,4 @@
+use super::behavior_impl_signature_collection::ResolverBehaviorImplMethodSignatureCollection;
 use super::*;
 
 impl TypeChecker {
@@ -24,12 +25,15 @@ impl TypeChecker {
         self.with_resolver_backed_collection(|checker| {
             for task in &impl_tasks {
                 checker.collect_resolver_behavior_impl_method_signatures(
-                    symbols,
-                    task.ast_type_name,
-                    &task.restored_type_name,
-                    task.behavior,
-                    task.behavior_type_args,
-                    task.methods,
+                    ResolverBehaviorImplMethodSignatureCollection {
+                        symbols,
+                        ast_type_name: task.ast_type_name,
+                        type_name: &task.restored_type_name,
+                        target_type_args: task.type_args,
+                        behavior: task.behavior,
+                        behavior_type_args: task.behavior_type_args,
+                        methods: task.methods,
+                    },
                 );
             }
 
@@ -38,6 +42,7 @@ impl TypeChecker {
             for task in &impl_tasks {
                 checker.collect_behavior_default_method_signatures(
                     &task.restored_type_name,
+                    task.type_args,
                     task.behavior,
                     task.behavior_type_args,
                     task.methods,
@@ -97,6 +102,7 @@ impl TypeChecker {
             impl_tasks.push(ResolverBehaviorImplBlockTask {
                 ast_type_name: raw_task.ast_type_name,
                 restored_type_name,
+                type_args: raw_task.type_args,
                 behavior: raw_task.behavior,
                 behavior_type_args: raw_task.behavior_type_args,
                 methods: raw_task.methods,

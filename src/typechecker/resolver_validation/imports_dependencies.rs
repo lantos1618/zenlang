@@ -160,7 +160,15 @@ impl TypeChecker {
                 continue;
             }
             for method in methods {
-                self.seed_imported_impl_method(type_name, None, &[], method, true, &dependencies);
+                self.seed_imported_impl_method(ImportedImplMethodSeed {
+                    local_type_name: type_name,
+                    behavior: None,
+                    behavior_type_args: &[],
+                    target_type_args: &[],
+                    method,
+                    public_only: true,
+                    dependencies: &dependencies,
+                });
             }
         }
     }

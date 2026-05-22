@@ -101,6 +101,7 @@ impl TypeChecker {
     ) -> bool {
         if let Declaration::ImplBlock {
             type_name,
+            type_args,
             behavior: Some(behavior),
             behavior_type_args,
             methods,
@@ -110,6 +111,7 @@ impl TypeChecker {
         {
             tasks.push(ResolverBehaviorImplBlockDeclarationTask {
                 ast_type_name: type_name,
+                type_args,
                 behavior,
                 behavior_type_args,
                 methods,

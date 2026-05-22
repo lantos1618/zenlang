@@ -91,6 +91,7 @@ impl TypeChecker {
                 }
                 Declaration::ImplBlock {
                     type_name,
+                    type_args,
                     behavior,
                     behavior_type_args,
                     methods,
@@ -99,11 +100,12 @@ impl TypeChecker {
                     for method in methods {
                         if let Declaration::Function { name, .. } = method {
                             Self::insert_source_method_dependency(
-                                &Self::behavior_impl_method_key(
+                                &Self::behavior_impl_method_key_with_target_args(
                                     type_name,
                                     name,
                                     behavior.as_deref(),
                                     behavior_type_args,
+                                    type_args,
                                 ),
                                 method,
                                 &mut dependencies.methods,

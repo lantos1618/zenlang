@@ -1,0 +1,24 @@
+{ io } = std
+
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Box<T>: {
+    value: T
+}
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Box<T>) T {
+        self.value
+    }
+}
+
+main = () i32 {
+    int_box = Box<i32> { value: 41 }
+    bool_box = Box<bool> { value: true }
+
+    io.println("${int_box.encode()}")
+    io.println("${bool_box.encode()}")
+    0
+}

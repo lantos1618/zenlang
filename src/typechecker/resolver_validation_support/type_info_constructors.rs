@@ -216,20 +216,3 @@ fn behavior_info_from_resolver_methods(
         methods,
     }
 }
-
-fn func_info_from_behavior_method(
-    name: String,
-    params: &[Param],
-    return_type: &Option<AstType>,
-) -> FuncInfo {
-    FuncInfo {
-        name,
-        params: params
-            .iter()
-            .map(|param| (param.name.clone(), param.ty.clone()))
-            .collect(),
-        return_type: return_type.clone().unwrap_or(AstType::Void),
-        type_params: Vec::new(),
-        type_param_bounds: HashMap::new(),
-    }
-}

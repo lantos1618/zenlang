@@ -1,0 +1,12 @@
+pub Describe<T>: behavior {
+    describe: (self: Self) StaticString {
+        "box"
+    }
+}
+
+pub Box<T>: {
+    value: T
+}
+
+Box<T>.implements(Describe<T>) {
+}

@@ -132,6 +132,39 @@ impl TypeChecker {
         behavior_impl_method_signature_key(type_name, method_name, behavior, behavior_type_args)
     }
 
+    pub(super) fn behavior_impl_method_key_with_target_args(
+        type_name: &str,
+        method_name: &str,
+        behavior: Option<&str>,
+        behavior_type_args: &[AstType],
+        target_type_args: &[AstType],
+    ) -> String {
+        if target_type_args.is_empty() {
+            return Self::behavior_impl_method_key(
+                type_name,
+                method_name,
+                behavior,
+                behavior_type_args,
+            );
+        }
+
+        let key = Self::method_key(type_name, method_name);
+        let Some(behavior) = behavior else {
+            return key;
+        };
+
+        if behavior_type_args_match_target_params(behavior_type_args, target_type_args) {
+            format!("{key}__{behavior}")
+        } else {
+            Self::behavior_impl_method_key(
+                type_name,
+                method_name,
+                Some(behavior),
+                behavior_type_args,
+            )
+        }
+    }
+
     pub(super) fn behavior_impl_required_method_name(method_name: &str) -> &str {
         method_name
             .split_once("__")

@@ -78,6 +78,13 @@ impl Parser {
                                     name_span,
                                 );
                             }
+                            if matches!(keyword, TypeDeclarationKeyword::Implements) {
+                                return self.parse_behavior_impl_block_with_type_params(
+                                    name,
+                                    type_params,
+                                    name_span,
+                                );
+                            }
                             return self
                                 .reject_gated_generic_association_target(keyword, name_span);
                         }

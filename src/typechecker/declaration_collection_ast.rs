@@ -52,6 +52,7 @@ impl TypeChecker {
     ) {
         if let Declaration::ImplBlock {
             type_name,
+            type_args,
             behavior,
             behavior_type_args,
             methods,
@@ -60,6 +61,7 @@ impl TypeChecker {
         {
             tasks.push(ImplBlockDeclarationTask {
                 type_name,
+                type_args,
                 behavior: behavior.as_deref(),
                 behavior_type_args,
                 methods,
@@ -77,6 +79,7 @@ impl TypeChecker {
             } else {
                 self.collect_ast_impl_block_declaration(
                     task.type_name,
+                    task.type_args,
                     task.behavior,
                     task.behavior_type_args,
                     task.methods,
@@ -88,16 +91,24 @@ impl TypeChecker {
     fn collect_ast_impl_block_declaration(
         &mut self,
         type_name: &str,
+        type_args: &[AstType],
         behavior: Option<&str>,
         behavior_type_args: &[AstType],
         methods: &[Declaration],
     ) {
         for method in methods {
-            self.collect_impl_method_signature(type_name, method);
+            self.collect_impl_method_signature(
+                type_name,
+                type_args,
+                behavior,
+                behavior_type_args,
+                method,
+            );
         }
         if let Some(behavior) = behavior {
             self.collect_behavior_default_method_signatures(
                 type_name,
+                type_args,
                 behavior,
                 behavior_type_args,
                 methods,

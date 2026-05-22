@@ -105,6 +105,7 @@ include!("resolver_validation_support.rs");
 
 struct DefaultBehaviorMethod {
     name: String,
+    type_params: Vec<TypeParam>,
     params: Vec<Param>,
     return_type: Option<AstType>,
     body: Expression,

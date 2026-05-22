@@ -97,6 +97,7 @@ impl Resolver {
             }
             Declaration::ImplBlock {
                 type_name,
+                type_args,
                 behavior,
                 behavior_type_args,
                 methods,
@@ -107,6 +108,7 @@ impl Resolver {
                     table,
                     impl_blocks::ImplBlockValidationInput {
                         type_name,
+                        type_args,
                         behavior: behavior.as_deref(),
                         behavior_type_args,
                         methods,

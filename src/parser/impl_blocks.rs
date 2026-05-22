@@ -65,7 +65,7 @@ impl Parser {
         })
     }
 
-    fn prepend_impl_type_params(decl: &mut Declaration, impl_type_params: &[TypeParam]) {
+    pub(super) fn prepend_impl_type_params(decl: &mut Declaration, impl_type_params: &[TypeParam]) {
         let Declaration::Function { type_params, .. } = decl else {
             return;
         };

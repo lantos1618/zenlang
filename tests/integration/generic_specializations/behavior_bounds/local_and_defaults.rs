@@ -33,6 +33,31 @@ fn local_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols() {
     assert_c_call_resolves_to_single_definition(&c_source, "encode_i32_Point");
     assert!(!c_source.contains("Json_T"));
     assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("behavior_generic_target_association.zen"),
+    );
+    assert!(c_source.contains("int32_t Box_encode__Json_i32(Box_i32 self)"));
+    assert!(c_source.contains("bool Box_encode__Json_bool(Box_bool self)"));
+    assert!(c_source.contains("Box_encode__Json_i32(int_box)"));
+    assert!(c_source.contains("Box_encode__Json_bool(bool_box)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_encode__Json_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_encode__Json_bool");
+    assert!(!c_source.contains("Box_encode__Json_T"));
+    assert!(!c_source.contains("Json_T"));
+    assert!(!c_source.contains("T_encode"));
+
+    let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("behavior_generic_target_default_method.zen"),
+    );
+    assert!(c_source.contains("zen_str Box_describe_i32(Box_i32 self)"));
+    assert!(c_source.contains("zen_str Box_describe_bool(Box_bool self)"));
+    assert!(c_source.contains("Box_describe_i32(int_box)"));
+    assert!(c_source.contains("Box_describe_bool(bool_box)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_describe_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "Box_describe_bool");
+    assert!(!c_source.contains("Box_describe_T"));
+    assert!(!c_source.contains("Describe_T"));
 }
 
 #[test]

@@ -1,0 +1,19 @@
+{ io } = std
+{ Box, Describe } = traits
+
+show_i32<T: Describe<i32>> = (value: T) StaticString {
+    value.describe()
+}
+
+show_bool<T: Describe<bool>> = (value: T) StaticString {
+    value.describe()
+}
+
+main = () i32 {
+    int_box = Box<i32> { value: 41 }
+    bool_box = Box<bool> { value: true }
+
+    io.println(show_i32(int_box))
+    io.println(show_bool(bool_box))
+    0
+}

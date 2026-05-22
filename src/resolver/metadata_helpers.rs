@@ -1,4 +1,7 @@
-use crate::ast::{AstType, BehaviorMethod, EnumVariant, Param, StructField, TypeParam};
+use crate::ast::{
+    behavior_type_args_match_target_params, AstType, BehaviorMethod, EnumVariant, Param,
+    StructField, TypeParam,
+};
 
 use super::symbol_table::{
     BehaviorMethodTypeMetadata, MethodSignatureMetadata, TypeParameterBoundMetadata,
@@ -131,6 +134,33 @@ pub(super) fn resolver_behavior_impl_method_key(
     )
 }
 
+pub(super) fn resolver_behavior_impl_method_key_with_target_args(
+    type_name: &str,
+    method_name: &str,
+    behavior: &str,
+    behavior_type_args: &[AstType],
+    target_type_args: &[AstType],
+) -> String {
+    if target_type_args.is_empty() {
+        return resolver_behavior_impl_method_key(
+            type_name,
+            method_name,
+            behavior,
+            behavior_type_args,
+        );
+    }
+
+    if behavior_type_args_match_target_params(behavior_type_args, target_type_args) {
+        format!(
+            "{}__{}",
+            resolver_method_key(type_name, method_name),
+            behavior
+        )
+    } else {
+        resolver_behavior_impl_method_key(type_name, method_name, behavior, behavior_type_args)
+    }
+}
+
 pub(super) fn behavior_ref_symbol_suffix(behavior: &str, type_args: &[AstType]) -> String {
     let mut parts = vec![sanitize_symbol_part(behavior)];
     parts.extend(
@@ -204,28 +234,4 @@ pub(super) fn resolver_behavior_method_types(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn resolver_method_key_formats_type_qualified_method_name() {
-        assert_eq!(resolver_method_key("Point", "get"), "Point.get");
-    }
-
-    #[test]
-    fn resolver_behavior_impl_method_key_includes_generic_behavior_specialization() {
-        assert_eq!(
-            resolver_behavior_impl_method_key("Point", "encode", "Json", &[AstType::Str]),
-            "Point.encode__Json_StaticString"
-        );
-        assert_eq!(
-            resolver_behavior_impl_method_key(
-                "Point",
-                "encode",
-                "Json",
-                &[AstType::Named("Point".to_string())]
-            ),
-            "Point.encode__Json_Point"
-        );
-    }
-}
+mod tests;

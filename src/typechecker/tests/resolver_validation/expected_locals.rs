@@ -14,7 +14,10 @@ Point.impl = {
 "#,
     );
     let Declaration::ImplBlock {
-        type_name, methods, ..
+        type_name,
+        type_args,
+        methods,
+        ..
     } = &program.declarations[1]
     else {
         panic!("expected impl block");
@@ -24,6 +27,7 @@ Point.impl = {
 
     collect_expected_resolver_impl_method_symbols(
         type_name,
+        type_args,
         None,
         &[],
         methods,

@@ -17,6 +17,7 @@ impl<'a> BehaviorAssociationValidationTaskSource<'a> for BehaviorAssociationVali
 
 struct ResolverBehaviorImplBlockDeclarationTask<'a> {
     ast_type_name: &'a str,
+    type_args: &'a [AstType],
     behavior: &'a str,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],
@@ -26,6 +27,7 @@ struct ResolverBehaviorImplBlockDeclarationTask<'a> {
 struct ResolverBehaviorImplBlockTask<'a> {
     ast_type_name: &'a str,
     restored_type_name: String,
+    type_args: &'a [AstType],
     behavior: &'a str,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],
@@ -33,6 +35,7 @@ struct ResolverBehaviorImplBlockTask<'a> {
 
 struct ImplBlockDeclarationTask<'a> {
     type_name: &'a str,
+    type_args: &'a [AstType],
     behavior: Option<&'a str>,
     behavior_type_args: &'a [AstType],
     methods: &'a [Declaration],

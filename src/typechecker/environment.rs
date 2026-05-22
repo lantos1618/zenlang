@@ -50,6 +50,14 @@ pub struct BehaviorInfo {
     pub methods: Vec<ast::BehaviorMethod>,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct GenericBehaviorImplTemplate {
+    pub type_name: String,
+    pub type_params: Vec<String>,
+    pub behavior: String,
+    pub behavior_type_args: Vec<AstType>,
+}
+
 impl StructInfo {
     pub(crate) fn with_specialization_scope(mut self, scope: String) -> Self {
         self.specialization_scope = Some(scope);
