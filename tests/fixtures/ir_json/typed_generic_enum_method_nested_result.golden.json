@@ -1,0 +1,2015 @@
+{
+  "format": "zen.typed.v0",
+  "semantic_status": "checked",
+  "program": {
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "I32",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "some",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "Some",
+                        "payload": {
+                          "kind": {
+                            "IntLiteral": 21
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 514,
+                            "end": 516
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 497,
+                      "end": 517
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 490,
+                "end": 517
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "none",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "None",
+                        "payload": null
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 529,
+                      "end": 545
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 522,
+                "end": 545
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "wrapped_some",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_Option_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          {
+                            "Enum": {
+                              "name": "Option_i32",
+                              "variants": [
+                                [
+                                  "None",
+                                  null
+                                ],
+                                [
+                                  "Some",
+                                  "I32"
+                                ]
+                              ]
+                            }
+                          }
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "Option.wrap_result_i32",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "some"
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 565,
+                              "end": 569
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_Option_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            }
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 565,
+                      "end": 583
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 550,
+                "end": 583
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "wrapped_none",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_Option_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          {
+                            "Enum": {
+                              "name": "Option_i32",
+                              "variants": [
+                                [
+                                  "None",
+                                  null
+                                ],
+                                [
+                                  "Some",
+                                  "I32"
+                                ]
+                              ]
+                            }
+                          }
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "Option.wrap_result_i32",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "none"
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 603,
+                              "end": 607
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_Option_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            }
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 603,
+                      "end": 621
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 588,
+                "end": 621
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "fallback",
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_Option_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          {
+                            "Enum": {
+                              "name": "Option_i32",
+                              "variants": [
+                                [
+                                  "None",
+                                  null
+                                ],
+                                [
+                                  "Some",
+                                  "I32"
+                                ]
+                              ]
+                            }
+                          }
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "EnumVariant": {
+                        "type_name": "Result_Option_i32_StaticString",
+                        "variant": "Err",
+                        "payload": {
+                          "kind": {
+                            "StringLiteral": "bad"
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 675,
+                            "end": 680
+                          }
+                        }
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Result_Option_i32_StaticString",
+                        "variants": [
+                          [
+                            "Ok",
+                            {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            }
+                          ],
+                          [
+                            "Err",
+                            "Str"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 637,
+                      "end": 681
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 626,
+                "end": 681
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "ok_some",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "unwrap_result_Option_i32_StaticString",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "wrapped_some"
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Result_Option_i32_StaticString",
+                                "variants": [
+                                  [
+                                    "Ok",
+                                    {
+                                      "Enum": {
+                                        "name": "Option_i32",
+                                        "variants": [
+                                          [
+                                            "None",
+                                            null
+                                          ],
+                                          [
+                                            "Some",
+                                            "I32"
+                                          ]
+                                        ]
+                                      }
+                                    }
+                                  ],
+                                  [
+                                    "Err",
+                                    "Str"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 710,
+                              "end": 722
+                            }
+                          },
+                          {
+                            "kind": {
+                              "EnumVariant": {
+                                "type_name": "Option_i32",
+                                "variant": "None",
+                                "payload": null
+                              }
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 724,
+                              "end": 740
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 696,
+                      "end": 741
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 686,
+                "end": 741
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "ok_none",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "unwrap_result_Option_i32_StaticString",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "wrapped_none"
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Result_Option_i32_StaticString",
+                                "variants": [
+                                  [
+                                    "Ok",
+                                    {
+                                      "Enum": {
+                                        "name": "Option_i32",
+                                        "variants": [
+                                          [
+                                            "None",
+                                            null
+                                          ],
+                                          [
+                                            "Some",
+                                            "I32"
+                                          ]
+                                        ]
+                                      }
+                                    }
+                                  ],
+                                  [
+                                    "Err",
+                                    "Str"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 770,
+                              "end": 782
+                            }
+                          },
+                          {
+                            "kind": {
+                              "EnumVariant": {
+                                "type_name": "Option_i32",
+                                "variant": "Some",
+                                "payload": {
+                                  "kind": {
+                                    "IntLiteral": 33
+                                  },
+                                  "ty": "I32",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 801,
+                                    "end": 803
+                                  }
+                                }
+                              }
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 784,
+                              "end": 804
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 756,
+                      "end": 805
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 746,
+                "end": 805
+              }
+            },
+            {
+              "kind": {
+                "VarDecl": {
+                  "name": "failed",
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "value": {
+                    "kind": {
+                      "FunctionCall": {
+                        "function": "unwrap_result_Option_i32_StaticString",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "fallback"
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Result_Option_i32_StaticString",
+                                "variants": [
+                                  [
+                                    "Ok",
+                                    {
+                                      "Enum": {
+                                        "name": "Option_i32",
+                                        "variants": [
+                                          [
+                                            "None",
+                                            null
+                                          ],
+                                          [
+                                            "Some",
+                                            "I32"
+                                          ]
+                                        ]
+                                      }
+                                    }
+                                  ],
+                                  [
+                                    "Err",
+                                    "Str"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 833,
+                              "end": 841
+                            }
+                          },
+                          {
+                            "kind": {
+                              "EnumVariant": {
+                                "type_name": "Option_i32",
+                                "variant": "Some",
+                                "payload": {
+                                  "kind": {
+                                    "IntLiteral": 44
+                                  },
+                                  "ty": "I32",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 860,
+                                    "end": 862
+                                  }
+                                }
+                              }
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 843,
+                              "end": 863
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 819,
+                      "end": 864
+                    }
+                  },
+                  "mutable": false
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 810,
+                "end": 864
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "unwrap_option_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "ok_some"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_i32",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 897,
+                                              "end": 904
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 906,
+                                              "end": 907
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 883,
+                                      "end": 908
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 881,
+                            "end": 909
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 869,
+                    "end": 911
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 869,
+                "end": 911
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "unwrap_option_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "ok_none"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_i32",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 944,
+                                              "end": 951
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 953,
+                                              "end": 954
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 930,
+                                      "end": 955
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 928,
+                            "end": 956
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 916,
+                    "end": 958
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 916,
+                "end": 958
+              }
+            },
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "FunctionCall": {
+                      "function": "io_println",
+                      "args": [
+                        {
+                          "kind": {
+                            "StringInterpolation": {
+                              "parts": [
+                                {
+                                  "Expr": {
+                                    "kind": {
+                                      "FunctionCall": {
+                                        "function": "unwrap_option_i32",
+                                        "args": [
+                                          {
+                                            "kind": {
+                                              "Variable": "failed"
+                                            },
+                                            "ty": {
+                                              "Enum": {
+                                                "name": "Option_i32",
+                                                "variants": [
+                                                  [
+                                                    "None",
+                                                    null
+                                                  ],
+                                                  [
+                                                    "Some",
+                                                    "I32"
+                                                  ]
+                                                ]
+                                              }
+                                            },
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 991,
+                                              "end": 997
+                                            }
+                                          },
+                                          {
+                                            "kind": {
+                                              "IntLiteral": 0
+                                            },
+                                            "ty": "I32",
+                                            "span": {
+                                              "file_id": 0,
+                                              "start": 999,
+                                              "end": 1000
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "ty": "I32",
+                                    "span": {
+                                      "file_id": 0,
+                                      "start": 977,
+                                      "end": 1001
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Str",
+                          "span": {
+                            "file_id": 0,
+                            "start": 975,
+                            "end": 1002
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "Void",
+                  "span": {
+                    "file_id": 0,
+                    "start": 963,
+                    "end": 1004
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 963,
+                "end": 1004
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "IntLiteral": 0
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 1009,
+              "end": 1010
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 484,
+            "end": 1012
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 470,
+          "end": 1012
+        }
+      },
+      {
+        "name": "Option.wrap_result_i32",
+        "params": [
+          {
+            "name": "self",
+            "ty": {
+              "Enum": {
+                "name": "Option_i32",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 110,
+              "end": 120
+            }
+          }
+        ],
+        "return_type": {
+          "Enum": {
+            "name": "Result_Option_i32_StaticString",
+            "variants": [
+              [
+                "Ok",
+                {
+                  "Enum": {
+                    "name": "Option_i32",
+                    "variants": [
+                      [
+                        "None",
+                        null
+                      ],
+                      [
+                        "Some",
+                        "I32"
+                      ]
+                    ]
+                  }
+                }
+              ],
+              [
+                "Err",
+                "Str"
+              ]
+            ]
+          }
+        },
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "EnumVariant": {
+                "type_name": "Result_Option_i32_StaticString",
+                "variant": "Ok",
+                "payload": {
+                  "kind": {
+                    "Variable": "self"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 195,
+                    "end": 199
+                  }
+                }
+              }
+            },
+            "ty": {
+              "Enum": {
+                "name": "Result_Option_i32_StaticString",
+                "variants": [
+                  [
+                    "Ok",
+                    {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    }
+                  ],
+                  [
+                    "Err",
+                    "Str"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 160,
+              "end": 200
+            }
+          },
+          "ty": {
+            "Enum": {
+              "name": "Result_Option_i32_StaticString",
+              "variants": [
+                [
+                  "Ok",
+                  {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                [
+                  "Err",
+                  "Str"
+                ]
+              ]
+            }
+          },
+          "span": {
+            "file_id": 0,
+            "start": 154,
+            "end": 202
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 85,
+          "end": 202
+        }
+      },
+      {
+        "name": "unwrap_result_Option_i32_StaticString",
+        "params": [
+          {
+            "name": "value",
+            "ty": {
+              "Enum": {
+                "name": "Result_Option_i32_StaticString",
+                "variants": [
+                  [
+                    "Ok",
+                    {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    }
+                  ],
+                  [
+                    "Err",
+                    "Str"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 357,
+              "end": 376
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": {
+              "Enum": {
+                "name": "Option_i32",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 378,
+              "end": 389
+            }
+          }
+        ],
+        "return_type": {
+          "Enum": {
+            "name": "Option_i32",
+            "variants": [
+              [
+                "None",
+                null
+              ],
+              [
+                "Some",
+                "I32"
+              ]
+            ]
+          }
+        },
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "value"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Result_Option_i32_StaticString",
+                      "variants": [
+                        [
+                          "Ok",
+                          {
+                            "Enum": {
+                              "name": "Option_i32",
+                              "variants": [
+                                [
+                                  "None",
+                                  null
+                                ],
+                                [
+                                  "Some",
+                                  "I32"
+                                ]
+                              ]
+                            }
+                          }
+                        ],
+                        [
+                          "Err",
+                          "Str"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 399,
+                    "end": 404
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_Option_i32_StaticString",
+                        "variant": "Ok",
+                        "bindings": [
+                          [
+                            "inner",
+                            {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            }
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "inner"
+                              },
+                              "ty": {
+                                "Enum": {
+                                  "name": "Option_i32",
+                                  "variants": [
+                                    [
+                                      "None",
+                                      null
+                                    ],
+                                    [
+                                      "Some",
+                                      "I32"
+                                    ]
+                                  ]
+                                }
+                              },
+                              "span": {
+                                "file_id": 0,
+                                "start": 429,
+                                "end": 434
+                              }
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 427,
+                              "end": 436
+                            }
+                          }
+                        },
+                        "ty": {
+                          "Enum": {
+                            "name": "Option_i32",
+                            "variants": [
+                              [
+                                "None",
+                                null
+                              ],
+                              [
+                                "Some",
+                                "I32"
+                              ]
+                            ]
+                          }
+                        },
+                        "span": {
+                          "file_id": 0,
+                          "start": 427,
+                          "end": 436
+                        }
+                      },
+                      "ty": {
+                        "Enum": {
+                          "name": "Option_i32",
+                          "variants": [
+                            [
+                              "None",
+                              null
+                            ],
+                            [
+                              "Some",
+                              "I32"
+                            ]
+                          ]
+                        }
+                      },
+                      "span": {
+                        "file_id": 0,
+                        "start": 427,
+                        "end": 436
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 417,
+                      "end": 436
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Result_Option_i32_StaticString",
+                        "variant": "Err",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": {
+                                "Enum": {
+                                  "name": "Option_i32",
+                                  "variants": [
+                                    [
+                                      "None",
+                                      null
+                                    ],
+                                    [
+                                      "Some",
+                                      "I32"
+                                    ]
+                                  ]
+                                }
+                              },
+                              "span": {
+                                "file_id": 0,
+                                "start": 456,
+                                "end": 464
+                              }
+                            },
+                            "ty": {
+                              "Enum": {
+                                "name": "Option_i32",
+                                "variants": [
+                                  [
+                                    "None",
+                                    null
+                                  ],
+                                  [
+                                    "Some",
+                                    "I32"
+                                  ]
+                                ]
+                              }
+                            },
+                            "span": {
+                              "file_id": 0,
+                              "start": 454,
+                              "end": 466
+                            }
+                          }
+                        },
+                        "ty": {
+                          "Enum": {
+                            "name": "Option_i32",
+                            "variants": [
+                              [
+                                "None",
+                                null
+                              ],
+                              [
+                                "Some",
+                                "I32"
+                              ]
+                            ]
+                          }
+                        },
+                        "span": {
+                          "file_id": 0,
+                          "start": 454,
+                          "end": 466
+                        }
+                      },
+                      "ty": {
+                        "Enum": {
+                          "name": "Option_i32",
+                          "variants": [
+                            [
+                              "None",
+                              null
+                            ],
+                            [
+                              "Some",
+                              "I32"
+                            ]
+                          ]
+                        }
+                      },
+                      "span": {
+                        "file_id": 0,
+                        "start": 454,
+                        "end": 466
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 447,
+                      "end": 466
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": {
+              "Enum": {
+                "name": "Option_i32",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 399,
+              "end": 466
+            }
+          },
+          "ty": {
+            "Enum": {
+              "name": "Option_i32",
+              "variants": [
+                [
+                  "None",
+                  null
+                ],
+                [
+                  "Some",
+                  "I32"
+                ]
+              ]
+            }
+          },
+          "span": {
+            "file_id": 0,
+            "start": 393,
+            "end": 468
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 334,
+          "end": 468
+        }
+      },
+      {
+        "name": "unwrap_option_i32",
+        "params": [
+          {
+            "name": "value",
+            "ty": {
+              "Enum": {
+                "name": "Option_i32",
+                "variants": [
+                  [
+                    "None",
+                    null
+                  ],
+                  [
+                    "Some",
+                    "I32"
+                  ]
+                ]
+              }
+            },
+            "span": {
+              "file_id": 0,
+              "start": 224,
+              "end": 240
+            }
+          },
+          {
+            "name": "fallback",
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 242,
+              "end": 253
+            }
+          }
+        ],
+        "return_type": "I32",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Match": {
+                "scrutinee": {
+                  "kind": {
+                    "Variable": "value"
+                  },
+                  "ty": {
+                    "Enum": {
+                      "name": "Option_i32",
+                      "variants": [
+                        [
+                          "None",
+                          null
+                        ],
+                        [
+                          "Some",
+                          "I32"
+                        ]
+                      ]
+                    }
+                  },
+                  "span": {
+                    "file_id": 0,
+                    "start": 263,
+                    "end": 268
+                  }
+                },
+                "arms": [
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "Some",
+                        "bindings": [
+                          [
+                            "inner",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "inner"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 295,
+                                "end": 300
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 293,
+                              "end": 302
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 293,
+                          "end": 302
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 293,
+                        "end": 302
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 281,
+                      "end": 302
+                    }
+                  },
+                  {
+                    "pattern": {
+                      "EnumVariant": {
+                        "type_name": "Option_i32",
+                        "variant": "None",
+                        "bindings": []
+                      }
+                    },
+                    "body": {
+                      "statements": [],
+                      "expr": {
+                        "kind": {
+                          "Block": {
+                            "statements": [],
+                            "expr": {
+                              "kind": {
+                                "Variable": "fallback"
+                              },
+                              "ty": "I32",
+                              "span": {
+                                "file_id": 0,
+                                "start": 320,
+                                "end": 328
+                              }
+                            },
+                            "ty": "I32",
+                            "span": {
+                              "file_id": 0,
+                              "start": 318,
+                              "end": 330
+                            }
+                          }
+                        },
+                        "ty": "I32",
+                        "span": {
+                          "file_id": 0,
+                          "start": 318,
+                          "end": 330
+                        }
+                      },
+                      "ty": "I32",
+                      "span": {
+                        "file_id": 0,
+                        "start": 318,
+                        "end": 330
+                      }
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 313,
+                      "end": 330
+                    }
+                  }
+                ],
+                "kind": "EnumMatch"
+              }
+            },
+            "ty": "I32",
+            "span": {
+              "file_id": 0,
+              "start": 263,
+              "end": 330
+            }
+          },
+          "ty": "I32",
+          "span": {
+            "file_id": 0,
+            "start": 257,
+            "end": 332
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 204,
+          "end": 332
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "Option_i32",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "None",
+                "tag": 0,
+                "payload": null
+              },
+              {
+                "name": "Some",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "I32"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 497,
+          "end": 517
+        }
+      },
+      {
+        "name": "Result_Option_i32_StaticString",
+        "kind": {
+          "Enum": {
+            "variants": [
+              {
+                "name": "Ok",
+                "tag": 0,
+                "payload": [
+                  [
+                    "payload",
+                    {
+                      "Enum": {
+                        "name": "Option_i32",
+                        "variants": [
+                          [
+                            "None",
+                            null
+                          ],
+                          [
+                            "Some",
+                            "I32"
+                          ]
+                        ]
+                      }
+                    }
+                  ]
+                ]
+              },
+              {
+                "name": "Err",
+                "tag": 1,
+                "payload": [
+                  [
+                    "payload",
+                    "Str"
+                  ]
+                ]
+              }
+            ]
+          }
+        },
+        "methods": [],
+        "span": {
+          "file_id": 0,
+          "start": 160,
+          "end": 200
+        }
+      }
+    ],
+    "globals": [],
+    "entry_point": "main"
+  }
+}
