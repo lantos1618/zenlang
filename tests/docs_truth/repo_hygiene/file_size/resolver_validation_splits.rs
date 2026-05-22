@@ -98,3 +98,34 @@ fn expected_behavior_edge_helpers_live_in_focused_support_module() {
         "resolver_validation_support.rs should include focused expected behavior edge helpers"
     );
 }
+
+#[test]
+fn scalar_absence_descriptors_live_in_focused_support_module() {
+    let root = read("src/typechecker/resolver_validation_support/absence_symbol_descriptors.rs");
+    let scalars = read("src/typechecker/resolver_validation_support/absence_scalar_descriptors.rs");
+    let includes = read("src/typechecker/resolver_validation_support.rs");
+
+    for helper in [
+        "struct MutabilityAbsenceValidation",
+        "struct SourceAbsenceValidation",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "absence_symbol_descriptors.rs should not own scalar absence descriptor `{helper}`"
+        );
+        assert!(
+            scalars.contains(helper),
+            "scalar absence descriptor should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "absence_symbol_descriptors.rs should stay focused on behavior absence descriptors"
+    );
+    assert!(
+        includes
+            .contains("include!(\"resolver_validation_support/absence_scalar_descriptors.rs\");"),
+        "resolver_validation_support.rs should include focused scalar absence descriptors"
+    );
+}
