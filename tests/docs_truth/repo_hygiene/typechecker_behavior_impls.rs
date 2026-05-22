@@ -29,6 +29,42 @@ fn behavior_default_method_synthesis_lives_in_focused_helper() {
 }
 
 #[test]
+fn resolver_behavior_ref_queue_helpers_live_in_focused_helper() {
+    let support = read("src/typechecker/behavior_impl_support.rs");
+    let resolver_refs = read("src/typechecker/behavior_impl_support/resolver_refs.rs");
+
+    for helper in [
+        "resolver_impl_ref_for",
+        "resolver_behavior_ref_for",
+        "behavior_ref_parts",
+        "pop_resolver_behavior_ref",
+        "peek_resolver_behavior_ref",
+        "resolver_behavior_ref_queue_index",
+        "named_queue_index",
+        "named_queue_index_preserving_future_front",
+        "resolver_behavior_impl_ref_parts",
+    ] {
+        assert!(
+            !support.contains(&format!("fn {helper}")),
+            "behavior_impl_support.rs should not own resolver behavior-ref queue helper: {helper}"
+        );
+        assert!(
+            resolver_refs.contains(&format!("fn {helper}")),
+            "resolver behavior-ref queue helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        support.lines().count() < 130,
+        "behavior_impl_support.rs should stay focused on overlap and generic-target diagnostics"
+    );
+    assert!(
+        support.contains("mod resolver_refs;"),
+        "behavior impl support should load the focused resolver behavior-ref helper"
+    );
+}
+
+#[test]
 fn behavior_association_declaration_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/declaration_tasks.rs");
     let focused = read("src/typechecker/declaration_tasks_behavior_associations.rs");
