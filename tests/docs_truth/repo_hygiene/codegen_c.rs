@@ -173,4 +173,8 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         !local_worklist.contains("assert_c_call_resolves_to_definition(&c_source"),
         "local method/worklist generated-C tests should use the single-definition helper for generated call checks"
     );
+    assert!(
+        !multi_file_worklist.contains("assert_c_call_resolves_to_definition(&c_source"),
+        "multi-file method/worklist generated-C tests should use the single-definition helper for generated call checks"
+    );
 }
