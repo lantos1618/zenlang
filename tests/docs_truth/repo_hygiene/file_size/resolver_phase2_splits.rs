@@ -60,3 +60,34 @@ fn resolver_phase2_non_behavior_impl_tests_live_in_focused_helper() {
         "impls.rs should include the focused non-behavior impl module by path"
     );
 }
+
+#[test]
+fn resolver_phase2_struct_literal_tests_live_in_focused_helper() {
+    let root = read("tests/resolver_phase2/struct_metadata.rs");
+    let literals = read("tests/resolver_phase2/struct_metadata/literals.rs");
+
+    for test_name in [
+        "resolver_rejects_duplicate_struct_literal_fields",
+        "resolver_rejects_unknown_struct_literal_fields",
+        "resolver_rejects_missing_struct_literal_fields",
+        "resolver_rejects_unknown_struct_literal_types",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "struct_metadata.rs should not own struct-literal resolver test: {test_name}"
+        );
+        assert!(
+            literals.contains(&format!("fn {test_name}")),
+            "struct literal resolver tests should live in focused helper: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 170,
+        "struct_metadata.rs should stay focused on struct declaration metadata"
+    );
+    assert!(
+        root.contains("#[path = \"struct_metadata/literals.rs\"]"),
+        "struct_metadata.rs should include the focused struct literal module by path"
+    );
+}
