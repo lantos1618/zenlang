@@ -1,0 +1,113 @@
+use super::{parse_program, BuildGraph};
+
+#[test]
+fn build_program_lowering_accepts_declared_file_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+        | .Err { "default" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+    let json = graph.canonical_json().expect("build graph json");
+
+    assert!(
+        json.contains(r#""kind":"read_file","value":"build.targets""#),
+        "expected read-file host effect in graph json, json={json}"
+    );
+}
+
+#[test]
+fn build_program_lowering_accepts_wildcard_fallback_declared_file_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+        | _ { "default" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+    let json = graph.canonical_json().expect("build graph json");
+
+    assert!(
+        json.contains(r#""kind":"read_file","value":"build.targets""#),
+        "expected wildcard fallback to declare read-file host effect, json={json}"
+    );
+}
+
+#[test]
+fn build_program_lowering_accepts_identifier_fallback_declared_file_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+        | err { "default" }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
+    let json = graph.canonical_json().expect("build graph json");
+
+    assert!(
+        json.contains(r#""kind":"read_file","value":"build.targets""#),
+        "expected identifier fallback to declare read-file host effect, json={json}"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_undeclared_file_reads() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets")
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("undeclared build.zen file read should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "undeclared host effect: read file `build.targets`"
+    );
+}
+
+#[test]
+fn build_program_lowering_rejects_file_read_without_fallback() {
+    let program = parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) { contents }
+    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
+    .Ok(b.config())
+}
+"#,
+    );
+
+    let err = BuildGraph::from_build_program(&program)
+        .expect_err("build.zen file read without fallback should fail");
+
+    assert_eq!(
+        err.to_string(),
+        "undeclared host effect: read file `build.targets`"
+    );
+}

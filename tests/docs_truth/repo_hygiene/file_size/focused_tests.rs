@@ -1,5 +1,6 @@
 use super::super::*;
 
+mod build_graph;
 mod codegen_c;
 mod typechecker;
 
@@ -11,7 +12,7 @@ fn focused_tests_root_stays_as_router() {
         root.lines().count() < 40,
         "focused_tests.rs should only route focused file-size guard modules"
     );
-    for module in ["mod codegen_c;", "mod typechecker;"] {
+    for module in ["mod build_graph;", "mod codegen_c;", "mod typechecker;"] {
         assert!(
             root.contains(module),
             "focused_tests.rs should include focused module `{module}`"
