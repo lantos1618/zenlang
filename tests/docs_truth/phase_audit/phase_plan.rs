@@ -141,3 +141,21 @@ fn local_nested_generic_method_generated_c_pins_definition_counts() {
         );
     }
 }
+
+#[test]
+fn imported_transitive_worklist_generated_c_pins_definition_counts() {
+    let method_worklist =
+        read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
+
+    for required in [
+        "multi_file_generic_imported_transitive_dependency/main.zen",
+        r#"assert_c_function_definition_count(&c_source, "inner_i32", 1)"#,
+        r#"assert_c_function_definition_count(&c_source, "middle_i32", 1)"#,
+        r#"assert_c_function_definition_count(&c_source, "outer_i32", 1)"#,
+    ] {
+        assert!(
+            method_worklist.contains(required),
+            "imported transitive generic worklist tests should pin exact definition counts: {required}"
+        );
+    }
+}
