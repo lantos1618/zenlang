@@ -88,6 +88,7 @@ fn build_target_field_extraction_lives_in_focused_helper() {
 fn build_graph_host_effect_detection_lives_in_focused_helper() {
     let lowering = read("src/build_graph/lowering.rs");
     let host_effects = read("src/build_graph/lowering/host_effects.rs");
+    let traversal = read("src/build_graph/lowering/traversal.rs");
 
     assert!(
         lowering.lines().count() < 240,
@@ -113,7 +114,43 @@ fn build_graph_host_effect_detection_lives_in_focused_helper() {
         "build graph lowering should include the focused host-effect helper"
     );
     assert!(
-        lowering.contains("use host_effects::{declared_host_effect, host_effect};"),
-        "build graph lowering should import host-effect detection from the focused helper"
+        traversal.contains("use super::host_effects::{declared_host_effect, host_effect};"),
+        "build graph traversal should import host-effect detection from the focused helper"
+    );
+}
+
+#[test]
+fn build_graph_ast_traversal_lives_in_focused_helper() {
+    let lowering = read("src/build_graph/lowering.rs");
+    let traversal = read("src/build_graph/lowering/traversal.rs");
+
+    assert!(
+        lowering.lines().count() < 140,
+        "build graph lowering root should stay focused on locating build() and delegating traversal"
+    );
+    for helper in [
+        "struct BuildProgramLowering",
+        "enum BuildTargetAddContext",
+        "fn into_input",
+        "fn collect_expr",
+        "fn collect_statement",
+        "fn is_builder_add_call",
+    ] {
+        assert!(
+            !lowering.contains(helper),
+            "build graph AST traversal should live in traversal.rs: {helper}"
+        );
+        assert!(
+            traversal.contains(helper),
+            "traversal.rs should own build graph AST traversal: {helper}"
+        );
+    }
+    assert!(
+        lowering.contains("mod traversal;"),
+        "build graph lowering root should include the focused traversal module"
+    );
+    assert!(
+        lowering.contains("use traversal::BuildProgramLowering;"),
+        "build graph lowering root should delegate AST traversal through BuildProgramLowering"
     );
 }
