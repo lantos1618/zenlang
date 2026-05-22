@@ -123,3 +123,21 @@ fn multi_file_nested_generic_method_generated_c_pins_definition_counts() {
         );
     }
 }
+
+#[test]
+fn local_nested_generic_method_generated_c_pins_definition_counts() {
+    let method_worklist =
+        read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
+
+    for required in [
+        "generic_method_nested_result.zen",
+        r#"assert_c_function_definition_count(&c_source, "Box_wrap_result_i32", 1)"#,
+        r#"assert_c_function_definition_count(&c_source, "unwrap_result_Option_i32_StaticString", 1)"#,
+        r#"assert_c_function_definition_count(&c_source, "unwrap_option_i32", 1)"#,
+    ] {
+        assert!(
+            method_worklist.contains(required),
+            "local nested generic method generated-C tests should pin exact definition counts: {required}"
+        );
+    }
+}
