@@ -63,6 +63,36 @@ fn imported_declaration_graph_seeding_lives_in_focused_module() {
 }
 
 #[test]
+fn imported_behavior_extends_helpers_live_in_focused_module() {
+    let root = read("src/typechecker/resolver_validation/imports_behavior_dependencies.rs");
+    let extends = read("src/typechecker/resolver_validation/imports_behavior_extends.rs");
+    let includes = read("src/typechecker/resolver_validation.rs");
+
+    for helper in [
+        "fn seed_behavior_extends_for_imported_behavior(",
+        "fn seed_behavior_extends_for_imported_behavior_inner(",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "imports_behavior_dependencies.rs should not own behavior-extends helper `{helper}`"
+        );
+        assert!(
+            extends.contains(helper),
+            "imported behavior-extends helper should live in focused module: {helper}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 190,
+        "imports_behavior_dependencies.rs should stay focused on impl dependency seeding"
+    );
+    assert!(
+        includes.contains("include!(\"resolver_validation/imports_behavior_extends.rs\");"),
+        "resolver_validation.rs should include focused imported behavior-extends helpers"
+    );
+}
+
+#[test]
 fn replay_behavior_association_tasks_live_in_focused_module() {
     let root = read("src/typechecker/resolver_validation/replay_tasks.rs");
     let associations = read("src/typechecker/resolver_validation/replay_task_association_lists.rs");
