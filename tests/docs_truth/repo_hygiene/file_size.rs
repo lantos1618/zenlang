@@ -1,5 +1,6 @@
 mod core_semantics;
 mod focused_tests;
+mod integration;
 mod intrinsics;
 mod ir_json;
 mod lexer_and_monomorphize;
