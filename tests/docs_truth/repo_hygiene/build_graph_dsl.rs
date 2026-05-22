@@ -3,6 +3,11 @@ use super::*;
 #[test]
 fn build_graph_dsl_parsing_uses_enum_static_tables() {
     let dsl = read("src/build_graph/lowering/dsl.rs");
+    let fields = read("src/build_graph/lowering/dsl/fields.rs");
+    let idents = read("src/build_graph/lowering/dsl/idents.rs");
+    let kinds = read("src/build_graph/lowering/dsl/kinds.rs");
+    let host_effects = read("src/build_graph/lowering/dsl/host_effects.rs");
+    let combined = format!("{dsl}\n{fields}\n{idents}\n{kinds}\n{host_effects}");
 
     for forbidden in [
         r#"match value {
@@ -28,10 +33,51 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
         ".find(|variant| variant.as_str() == value)",
     ] {
         assert!(
-            dsl.contains(required),
+            combined.contains(required),
             "build graph DSL spelling should parse through enum static tables: {required}"
         );
     }
+}
+
+#[test]
+fn build_graph_dsl_spelling_impls_live_in_focused_helpers() {
+    let dsl = read("src/build_graph/lowering/dsl.rs");
+    let fields = read("src/build_graph/lowering/dsl/fields.rs");
+    let idents = read("src/build_graph/lowering/dsl/idents.rs");
+    let kinds = read("src/build_graph/lowering/dsl/kinds.rs");
+    let host_effects = read("src/build_graph/lowering/dsl/host_effects.rs");
+
+    for module in ["fields", "idents", "kinds", "host_effects"] {
+        assert!(
+            dsl.contains(&format!("mod {module};")),
+            "build graph DSL root should include focused spelling module: {module}"
+        );
+    }
+
+    for (source, enum_name) in [
+        (fields.as_str(), "BuildTargetField"),
+        (idents.as_str(), "BuildTargetDslIdent"),
+        (kinds.as_str(), "BuildTargetDslKind"),
+        (host_effects.as_str(), "HostEffectResultVariant"),
+    ] {
+        assert!(
+            !dsl.contains(&format!("impl FromStr for {enum_name}")),
+            "build graph DSL root should not own parsing impl for {enum_name}"
+        );
+        assert!(
+            source.contains(&format!("impl FromStr for {enum_name}")),
+            "focused DSL spelling helper should own parsing impl for {enum_name}"
+        );
+        assert!(
+            source.contains(&format!("impl fmt::Display for {enum_name}")),
+            "focused DSL spelling helper should own display impl for {enum_name}"
+        );
+    }
+
+    assert!(
+        dsl.lines().count() < 120,
+        "build graph DSL root should stay focused on enum definitions"
+    );
 }
 
 #[test]
