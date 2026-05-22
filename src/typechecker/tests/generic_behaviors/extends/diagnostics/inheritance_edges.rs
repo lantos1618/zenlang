@@ -29,6 +29,34 @@ PrettyJson.extends(Json)
 }
 
 #[test]
+fn generic_behavior_extends_cycle_is_error() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Pretty<T>: behavior {
+    pretty: (Self) T
+}
+
+Json.extends(Pretty<T>)
+Pretty.extends(Json<T>)
+"#,
+    );
+
+    let errors = TypeChecker::new()
+        .check_program(&program)
+        .expect_err("cyclic generic behavior inheritance should fail");
+    assert!(
+        errors
+            .iter()
+            .any(|d| d.message.contains("behavior inheritance cycle")),
+        "expected generic behavior inheritance cycle diagnostic, got {errors:?}"
+    );
+}
+
+#[test]
 fn behavior_extends_duplicate_parent_is_error() {
     let program = parse_program(
         r#"
