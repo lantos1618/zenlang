@@ -194,8 +194,10 @@ impl TypeChecker {
         actual: &AstType,
         self_type_name: &str,
     ) -> bool {
-        match expected {
-            AstType::SelfType => matches!(actual, AstType::Named(name) if name == self_type_name),
+        match (expected, actual) {
+            (AstType::SelfType, AstType::SelfType) => true,
+            (AstType::SelfType, AstType::Named(name))
+            | (AstType::Named(name), AstType::SelfType) => name == self_type_name,
             _ => expected == actual,
         }
     }

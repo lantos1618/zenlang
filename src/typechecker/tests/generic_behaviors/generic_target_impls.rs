@@ -28,6 +28,27 @@ Box<T>.implements(Json<T>) {
 }
 
 #[test]
+fn generic_target_behavior_impl_accepts_self_parameter() {
+    let program = parse_program(
+        r#"
+Json<T>: behavior {
+    encode: (Self) T
+}
+
+Box<T>: { value: T }
+
+Box<T>.implements(Json<T>) {
+    encode = (self: Self) T { self.value }
+}
+"#,
+    );
+
+    TypeChecker::new()
+        .check_program(&program)
+        .expect("generic target behavior impl method may use Self for the impl target");
+}
+
+#[test]
 fn generic_target_behavior_impl_checks_return_shape() {
     let program = parse_program(
         r#"

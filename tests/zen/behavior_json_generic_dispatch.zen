@@ -9,7 +9,7 @@ Point: {
 }
 
 Point.implements(Json) {
-    to_json = (self: Point) StaticString {
+    to_json = (self: Self) StaticString {
         "point"
     }
 }

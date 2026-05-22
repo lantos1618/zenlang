@@ -6,10 +6,11 @@ pub(super) fn generic_impl_ast_types_compatible(
     type_name: &str,
     target_type_args: &[AstType],
 ) -> bool {
+    let self_type = generic_impl_self_type(type_name, target_type_args);
     match (expected, actual) {
-        (AstType::SelfType, actual) => {
-            actual == &generic_impl_self_type(type_name, target_type_args)
-        }
+        (AstType::SelfType, AstType::SelfType) => true,
+        (AstType::SelfType, actual) => actual == &self_type,
+        (expected, AstType::SelfType) => expected == &self_type,
         (
             AstType::Generic {
                 name,
