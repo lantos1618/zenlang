@@ -146,6 +146,16 @@ fn test_generic_worklist_dedup() {
 }
 
 #[test]
+fn test_generic_recursive_function() {
+    run_test("generic_recursive_function");
+}
+
+#[test]
+fn test_generic_recursive_method() {
+    run_test("generic_recursive_method");
+}
+
+#[test]
 fn test_generic_ufc_function() {
     run_test("generic_ufc_function");
 }

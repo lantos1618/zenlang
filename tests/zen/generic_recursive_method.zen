@@ -1,0 +1,17 @@
+{ io } = std
+
+Box<T>: {
+    value: T
+}
+
+Box.repeat<T> = (self: Box<T>, remaining: i32) T {
+    remaining > 0 ?
+        | true { self.repeat(remaining - 1) }
+        | false { self.value }
+}
+
+main = () i32 {
+    box = Box<i32> { value: 43 }
+    io.println("${box.repeat(3)}")
+    0
+}
