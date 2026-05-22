@@ -56,6 +56,7 @@ fn stdlib_import_gates_live_in_focused_helper() {
         "AllocatorFramework",
         "AsyncRuntime",
         "SyncRuntime",
+        "IoUringRuntime",
         "pub(super) fn from_sub_path",
         "pub(super) fn gate_message",
     ] {
