@@ -9,7 +9,7 @@ Box<T>: {
 }
 
 Box<T>.implements(Json<T>) {
-    encode = (self: Box<T>) T {
+    encode = (self: Self) T {
         self.value
     }
 }

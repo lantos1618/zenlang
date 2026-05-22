@@ -84,6 +84,28 @@ Point.requires(Json<StaticString>)
 }
 
 #[test]
+fn behavior_impl_generic_behavior_accepts_nested_self_after_substitution() {
+    let program = parse_program(
+        r#"
+Point: { x: i32 }
+Holder<T>: { value: T }
+
+Json<T>: behavior {
+    inspect: (Holder<T>) StaticString
+}
+
+Point.implements(Json<Point>) {
+    inspect = (value: Holder<Self>) StaticString { "point" }
+}
+"#,
+    );
+
+    TypeChecker::new()
+        .check_program(&program)
+        .expect("substituted generic behavior method signature may use nested Self");
+}
+
+#[test]
 fn behavior_impl_generic_behavior_type_arg_bound_failure_is_error() {
     let program = parse_program(
         r#"
