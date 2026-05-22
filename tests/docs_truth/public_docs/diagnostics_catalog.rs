@@ -74,7 +74,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "nested generic fixtures",
         "struct/enum constructor fixtures",
         "behavior requires/impl/extends fixtures",
-        "nongeneric annotation, constructor, function, builtin, module function, method, and behavior fixtures",
+        "nongeneric annotation, constructor, function, builtin, module function, method, and `tests/fixtures/ir_json/diagnostics_nongeneric_requires_type_args.golden.json`",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",

@@ -70,3 +70,25 @@ main = () i32 {
         "generic behavior requires arity",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_nongeneric_requires_type_args_schema_matches_golden() {
+    assert_behavior_association_diagnostics_golden(
+        r#"
+Point: { x: i32 }
+
+Json: behavior {
+    encode: (Self) StaticString
+}
+
+Point.requires(Json<i32>)
+
+main = () i32 {
+    0
+}
+"#,
+        "nongeneric_requires_type_args.zen",
+        "tests/fixtures/ir_json/diagnostics_nongeneric_requires_type_args.golden.json",
+        "non-generic behavior requires type arguments",
+    );
+}

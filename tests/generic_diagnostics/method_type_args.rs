@@ -24,11 +24,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("non-generic method `Box.get` does not accept type arguments")),
-        "expected non-generic method type-argument diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E5002",
+        "non-generic method `Box.get` does not accept type arguments",
+        "non-generic method type-argument",
     );
 }
 
@@ -91,11 +91,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic method `Box.get` expects 1 type arguments, found 2")),
-        "expected generic method arity diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E5001",
+        "generic method `Box.get` expects 1 type arguments, found 2",
+        "generic method arity",
     );
 }
 

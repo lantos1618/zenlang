@@ -26,6 +26,21 @@ fn frontend_errors(source: &str) -> Vec<Diagnostic> {
     }
 }
 
+fn assert_diagnostic_code_and_message(
+    errors: &[Diagnostic],
+    code: &str,
+    message_fragment: &str,
+    context: &str,
+) {
+    assert!(
+        errors
+            .iter()
+            .any(|diagnostic| diagnostic.code == code
+                && diagnostic.message.contains(message_fragment)),
+        "expected {code} {context} diagnostic containing `{message_fragment}`, got {errors:?}"
+    );
+}
+
 #[path = "generic_diagnostics/annotations.rs"]
 mod annotations;
 #[path = "generic_diagnostics/behavior_impls.rs"]

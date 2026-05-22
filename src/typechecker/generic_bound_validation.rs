@@ -75,7 +75,7 @@ impl TypeChecker {
         }
         if expected != found {
             self.diagnostics.push(Diagnostic::error(
-                "E6012",
+                "E5001",
                 format!(
                     "generic behavior `{}` expects {} type arguments, found {}",
                     behavior, expected, found

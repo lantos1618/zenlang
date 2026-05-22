@@ -127,10 +127,9 @@ main = () i32 {
         .check_program(&program)
         .expect_err("generic behavior bound without type arguments should fail");
     assert!(
-        errors.iter().any(|d| {
-            d.message
-                .contains("generic behavior `Json` expects 1 type arguments, found 0")
-        }),
+        errors.iter().any(|d| d.code == "E5001"
+            && d.message
+                .contains("generic behavior `Json` expects 1 type arguments, found 0")),
         "expected generic behavior bound arity diagnostic, got {errors:?}"
     );
 }
