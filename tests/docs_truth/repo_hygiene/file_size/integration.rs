@@ -1,5 +1,7 @@
 use super::super::*;
 
+mod single_file_fixtures;
+
 #[test]
 fn import_visibility_dependency_tests_stay_split_by_dependency_shape() {
     let root = read("tests/integration/import_visibility_dependencies.rs");
