@@ -28,6 +28,15 @@ fn emit_json_typed_generic_worklist_dedup_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_generic_recursive_function_schema_matches_golden() {
+    assert_typed_golden(
+        "generic_recursive_function.zen",
+        "tests/fixtures/ir_json/typed_generic_recursive_function.golden.json",
+        "generic recursive function",
+    );
+}
+
+#[test]
 fn emit_json_typed_generic_vec_schema_matches_golden() {
     assert_typed_golden(
         "generic_vec.zen",

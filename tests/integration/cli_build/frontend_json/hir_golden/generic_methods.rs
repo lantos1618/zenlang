@@ -46,6 +46,15 @@ fn emit_json_hir_generic_method_method_worklist_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_hir_generic_recursive_method_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/generic_recursive_method.zen",
+        "tests/fixtures/ir_json/hir_generic_recursive_method.golden.json",
+        "generic recursive method input",
+    );
+}
+
+#[test]
 fn emit_json_hir_generic_method_nested_result_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_method_nested_result.zen",
