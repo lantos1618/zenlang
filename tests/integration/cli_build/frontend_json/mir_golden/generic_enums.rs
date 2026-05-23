@@ -53,3 +53,12 @@ fn emit_json_mir_multi_file_generic_result_multi_schema_matches_golden() {
         "multi-file generic Result multi-specialization",
     );
 }
+
+#[test]
+fn emit_json_mir_multi_file_generic_enum_method_schema_matches_golden() {
+    assert_mir_golden(
+        "tests/zen/multi_file_generic_enum_method/main.zen",
+        "tests/fixtures/ir_json/mir_multi_file_generic_enum_method.golden.json",
+        "multi-file generic enum method input",
+    );
+}
