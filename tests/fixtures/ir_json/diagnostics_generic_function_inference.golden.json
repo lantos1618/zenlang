@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_function_inference.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5000",
+      "message": "conflicting inferred type argument `T` for generic function `choose`: inferred `i32` and `StaticString`",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_function_inference.zen",
+        "start": 77,
+        "end": 93,
+        "line": 7,
+        "column": 13
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
