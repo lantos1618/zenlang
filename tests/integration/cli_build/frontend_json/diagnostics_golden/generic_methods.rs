@@ -94,6 +94,36 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_generic_enum_constructor_bound_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_enum_constructor_bound.zen",
+        r#"
+Json: behavior {
+    encode: (Self) StaticString
+}
+
+Point: {
+    x: i32
+}
+
+Option<T: Json>:
+    None,
+    Some(T)
+
+main = () i32 {
+    point = Point { x: 1 }
+    value = Option<Point>.Some(point)
+    0
+}
+"#,
+        "tests/fixtures/ir_json/diagnostics_generic_enum_constructor_bound.golden.json",
+        "generic enum constructor bound",
+        1,
+        "generic enum constructor bound diagnostics should not emit constructor followups",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_result_method_inference_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_result_method_inference.zen",
