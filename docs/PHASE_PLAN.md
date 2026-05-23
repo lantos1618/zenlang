@@ -55,6 +55,25 @@ Phase 5 is in evidence-hardening and cleanup. The generic specialization
 surfaces are implemented; continue closing proof gaps, keeping generated C
 consistent, and preventing large-file/slop regressions.
 
+## Anti-Slop Scrub Queue
+Use semantic-overlap and slop-cannon reports as triage input, not automatic
+edits. Record credible classes here; keep generated reports, embeddings, and
+model caches ignored.
+
+- fixed/guarded: duplicate public examples, stale scripts and `.claude`,
+  stdlib raw `@builtin` leakage, static spelling tables, lexer/token helpers,
+  parser type spelling helpers, JSON emit shells, root `tests/*.zen` fixtures,
+  resolver type-reference restore/scope validation, and experimental
+  testing/std facade promotion.
+- next code cleanup: generic callable specialization, build-target lowering
+  helpers, and behavior/generic validation key restoration.
+- next test cleanup: generated-C substring ladders, metadata absence matrices,
+  intrinsic gate helper repetition, exact temporary-name assertions, and
+  private-layout hygiene checks that behave like `1 == 1`.
+- next docs/stdlib cleanup: public `build.zen` facade story, async/allocator
+  sketch quarantine, and compact status docs that avoid repeating the phase
+  plan.
+
 ## Phase 5 Acceptance Evidence
 - generic enum specialization: `Option<T>`, `Result<T, E>`, nested results, duplicate variants, multi-file dependencies, executable fixtures, typed/HIR/MIR golden tests, and generated-C tests.
 - generic method specialization: generic, `Self`, type impl, enum, imported dependency, nested result cases, JSON golden tests, and method worklist generated-C checks.
