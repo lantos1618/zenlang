@@ -15,10 +15,13 @@ main = () i32 {
 "#,
     );
 
-    assert_diagnostic_code_and_message(
+    assert_inference_conflict(
         &errors,
-        "E5000",
-        "conflicting inferred type argument `T` for generic function `choose`: inferred `i32` and `StaticString`",
+        "function",
+        "choose",
+        "T",
+        "i32",
+        "StaticString",
         "generic function inference conflict",
     );
     assert!(

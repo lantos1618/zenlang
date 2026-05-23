@@ -5,6 +5,16 @@ fn phase5_generic_diagnostics_pin_codes_in_unit_tests() {
     let generic_diagnostics = read("tests/generic_diagnostics.rs");
     let function_inference =
         read("tests/generic_diagnostics/inference_conflicts/functions/basic.rs");
+    let function_compound_inference =
+        read("tests/generic_diagnostics/inference_conflicts/functions/compound_params.rs");
+    let function_generic_param_inference =
+        read("tests/generic_diagnostics/inference_conflicts/functions/generic_params.rs");
+    let method_receiver_inference =
+        read("tests/generic_diagnostics/inference_conflicts/methods/receiver.rs");
+    let method_compound_inference =
+        read("tests/generic_diagnostics/inference_conflicts/methods/compound_params.rs");
+    let method_generic_param_inference =
+        read("tests/generic_diagnostics/inference_conflicts/methods/generic_params.rs");
     let method_type_args = read("tests/generic_diagnostics/method_type_args.rs");
     let type_bounds = read("tests/generic_diagnostics/bounds.rs");
     let function_bounds = read("tests/generic_diagnostics/call_site_bounds.rs");
@@ -15,8 +25,18 @@ fn phase5_generic_diagnostics_pin_codes_in_unit_tests() {
         generic_diagnostics.contains("fn assert_diagnostic_code_and_message("),
         "generic diagnostics tests should have a focused helper for checking code plus message"
     );
+    assert!(
+        generic_diagnostics.contains("fn assert_inference_conflict("),
+        "generic diagnostics tests should have a focused helper for checking inference conflict code plus message"
+    );
 
-    assert_source_pins_code(&function_inference, "E5000");
+    assert_inference_helper_pins_code(&generic_diagnostics);
+    assert_inference_source_uses_helper(&function_inference);
+    assert_inference_source_uses_helper(&function_compound_inference);
+    assert_inference_source_uses_helper(&function_generic_param_inference);
+    assert_inference_source_uses_helper(&method_receiver_inference);
+    assert_inference_source_uses_helper(&method_compound_inference);
+    assert_inference_source_uses_helper(&method_generic_param_inference);
     assert_source_pins_code(&method_type_args, "E5001");
     assert_source_pins_code(&method_type_args, "E5002");
     assert_source_pins_code(&type_bounds, "E6004");
@@ -26,6 +46,21 @@ fn phase5_generic_diagnostics_pin_codes_in_unit_tests() {
     assert!(
         !generic_bound_validation.contains("E6012"),
         "generic behavior-bound arity should use public arity code E5001, not stale internal code E6012"
+    );
+}
+
+fn assert_inference_source_uses_helper(source: &str) {
+    assert!(
+        source.contains("assert_inference_conflict("),
+        "Phase 5 inference conflict diagnostics should use the E5000 helper"
+    );
+}
+
+fn assert_inference_helper_pins_code(source: &str) {
+    let normalized = source.split_whitespace().collect::<String>();
+    assert!(
+        normalized.contains(r#"assert_diagnostic_code_and_message(errors,"E5000""#),
+        "Phase 5 inference conflict helper should pin diagnostic code E5000"
     );
 }
 

@@ -41,6 +41,25 @@ fn assert_diagnostic_code_and_message(
     );
 }
 
+fn assert_inference_conflict(
+    errors: &[Diagnostic],
+    kind: &str,
+    callee: &str,
+    param: &str,
+    inferred: &str,
+    actual: &str,
+    context: &str,
+) {
+    assert_diagnostic_code_and_message(
+        errors,
+        "E5000",
+        &format!(
+            "conflicting inferred type argument `{param}` for generic {kind} `{callee}`: inferred `{inferred}` and `{actual}`"
+        ),
+        context,
+    );
+}
+
 #[path = "generic_diagnostics/annotations.rs"]
 mod annotations;
 #[path = "generic_diagnostics/behavior_impls.rs"]
