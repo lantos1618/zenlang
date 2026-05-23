@@ -196,6 +196,18 @@ fn generated_c_tests_use_facade_assertion_helpers() {
         !multi_file_enums.contains("assert!(!c_source.contains"),
         "multi-file enum generated-C tests should group forbidden snippets through the specialization facade"
     );
+    assert!(
+        imported_function_behavior_bounds.contains("compile_to_c_with_specialization_check("),
+        "imported function behavior-bound generated-C evidence should compile through the grouped specialization facade"
+    );
+    assert!(
+        !imported_function_behavior_bounds.contains("assert!(c_source.contains"),
+        "imported function behavior-bound generated-C tests should group required snippets through the specialization facade"
+    );
+    assert!(
+        !imported_function_behavior_bounds.contains("assert!(!c_source.contains"),
+        "imported function behavior-bound generated-C tests should group forbidden snippets through the specialization facade"
+    );
 
     for source in [&enum_generated_c, &behavior_bounds, &multi_file_enums] {
         assert!(
