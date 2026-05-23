@@ -64,12 +64,21 @@ fn lexer_number_scanning_lives_in_focused_helper() {
 fn lexer_operator_spelling_tables_have_one_owner() {
     let tokens = read("src/lexer/tokens.rs");
 
-    for required in ["MULTI_CHAR_OPERATORS", "fn from_single_char"] {
+    for required in [
+        "MULTI_CHAR_OPERATORS",
+        "SINGLE_CHAR_TOKENS",
+        "fn from_single_char",
+    ] {
         assert!(
             tokens.contains(required),
             "lexer token spellings should be owned by Token: {required}"
         );
     }
+    assert!(
+        tokens.contains("Self::SINGLE_CHAR_TOKENS")
+            && tokens.contains(".find(|(spelling, _)| *spelling == ch)"),
+        "single-character token lookup should use Token::SINGLE_CHAR_TOKENS instead of a second hand-written match"
+    );
 
     for path in ["src/lexer/scan.rs", "src/lexer/string_interpolation.rs"] {
         let source = read(path);

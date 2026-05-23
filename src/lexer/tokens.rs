@@ -96,37 +96,55 @@ impl Token {
         (">>", Self::ShiftRight),
     ];
 
+    pub(in crate::lexer) const SINGLE_CHAR_TOKENS: &'static [(char, Self)] = &[
+        ('+', Self::Plus),
+        ('-', Self::Minus),
+        ('*', Self::Star),
+        ('/', Self::Slash),
+        ('%', Self::Percent),
+        ('<', Self::Lt),
+        ('>', Self::Gt),
+        ('!', Self::Not),
+        ('&', Self::BitAnd),
+        ('|', Self::Pipe),
+        ('^', Self::BitXor),
+        ('~', Self::Tilde),
+        ('=', Self::Assign),
+        ('.', Self::Dot),
+        ('?', Self::Question),
+        ('(', Self::LParen),
+        (')', Self::RParen),
+        ('{', Self::LBrace),
+        ('}', Self::RBrace),
+        ('[', Self::LBracket),
+        (']', Self::RBracket),
+        (',', Self::Comma),
+        (':', Self::Colon),
+        (';', Self::Semicolon),
+    ];
+
     pub fn is_eof(&self) -> bool {
         matches!(self, Token::EOF)
     }
 
     pub(in crate::lexer) fn from_single_char(ch: char) -> Option<Self> {
-        match ch {
-            '+' => Some(Self::Plus),
-            '-' => Some(Self::Minus),
-            '*' => Some(Self::Star),
-            '/' => Some(Self::Slash),
-            '%' => Some(Self::Percent),
-            '<' => Some(Self::Lt),
-            '>' => Some(Self::Gt),
-            '!' => Some(Self::Not),
-            '&' => Some(Self::BitAnd),
-            '|' => Some(Self::Pipe),
-            '^' => Some(Self::BitXor),
-            '~' => Some(Self::Tilde),
-            '=' => Some(Self::Assign),
-            '.' => Some(Self::Dot),
-            '?' => Some(Self::Question),
-            '(' => Some(Self::LParen),
-            ')' => Some(Self::RParen),
-            '{' => Some(Self::LBrace),
-            '}' => Some(Self::RBrace),
-            '[' => Some(Self::LBracket),
-            ']' => Some(Self::RBracket),
-            ',' => Some(Self::Comma),
-            ':' => Some(Self::Colon),
-            ';' => Some(Self::Semicolon),
-            _ => None,
+        Self::SINGLE_CHAR_TOKENS
+            .iter()
+            .find(|(spelling, _)| *spelling == ch)
+            .map(|(_, token)| token.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Token;
+
+    #[test]
+    fn single_char_tokens_round_trip_through_owned_table() {
+        for (spelling, token) in Token::SINGLE_CHAR_TOKENS {
+            assert_eq!(Token::from_single_char(*spelling), Some(token.clone()));
         }
+        assert_eq!(Token::from_single_char('@'), None);
+        assert_eq!(Token::from_single_char('\n'), None);
     }
 }
