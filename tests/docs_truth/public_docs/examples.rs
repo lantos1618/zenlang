@@ -84,3 +84,25 @@ fn stale_generated_tooling_directories_are_removed() {
         );
     }
 }
+
+#[test]
+fn public_examples_do_not_explain_implementation_stand_ins() {
+    for path in [
+        "examples/01_hello_world.zen",
+        "examples/02_variables_and_types.zen",
+        "examples/03_pattern_matching.zen",
+        "examples/04_structs_and_methods.zen",
+        "examples/05_loops.zen",
+        "examples/06_error_handling.zen",
+        "examples/project/main.zen",
+        "examples/project/math_utils.zen",
+        "examples/project/test.zen",
+        "examples/project/build.zen",
+    ] {
+        let source = read(path);
+        assert!(
+            !source.contains("stand-in"),
+            "{path} should teach the language surface without implementation stand-in wording"
+        );
+    }
+}

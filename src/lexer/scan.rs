@@ -41,98 +41,38 @@ impl Lexer {
             return Ok(self.lex_identifier());
         }
 
-        // Multi-char operators (longest match first)
-        if self.matches("::=") {
-            self.advance_n(3);
-            return Ok((Token::DeclareAssign, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches(":=") {
-            self.advance_n(2);
-            return Ok((Token::ConstAssign, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("..=") {
-            self.advance_n(3);
-            return Ok((Token::DotDotEq, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("..") {
-            self.advance_n(2);
-            return Ok((Token::DotDot, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("=>") {
-            self.advance_n(2);
-            return Ok((Token::FatArrow, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("->") {
-            self.advance_n(2);
-            return Ok((Token::Arrow, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("==") {
-            self.advance_n(2);
-            return Ok((Token::Eq, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("!=") {
-            self.advance_n(2);
-            return Ok((Token::NotEq, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("<=") {
-            self.advance_n(2);
-            return Ok((Token::LtEq, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches(">=") {
-            self.advance_n(2);
-            return Ok((Token::GtEq, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("&&") {
-            self.advance_n(2);
-            return Ok((Token::And, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("||") {
-            self.advance_n(2);
-            return Ok((Token::Or, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches("<<") {
-            self.advance_n(2);
-            return Ok((Token::ShiftLeft, self.make_span(start, self.byte_pos())));
-        }
-        if self.matches(">>") {
-            self.advance_n(2);
-            return Ok((Token::ShiftRight, self.make_span(start, self.byte_pos())));
+        if let Some(tok) = self.lex_multi_char_operator(start) {
+            return Ok(tok);
         }
 
-        // Single-char tokens
+        self.lex_single_char_token(start, ch)
+    }
+
+    pub(in crate::lexer) fn lex_multi_char_operator(
+        &mut self,
+        start: u32,
+    ) -> Option<(Token, Span)> {
+        for (spelling, token) in Token::MULTI_CHAR_OPERATORS {
+            if self.matches(spelling) {
+                self.advance_n(spelling.len());
+                return Some((token.clone(), self.make_span(start, self.byte_pos())));
+            }
+        }
+        None
+    }
+
+    pub(in crate::lexer) fn lex_single_char_token(
+        &mut self,
+        start: u32,
+        ch: char,
+    ) -> Result<(Token, Span), CompileError> {
         self.advance();
         let end = self.byte_pos();
-        let tok = match ch {
-            '+' => Token::Plus,
-            '-' => Token::Minus,
-            '*' => Token::Star,
-            '/' => Token::Slash,
-            '%' => Token::Percent,
-            '<' => Token::Lt,
-            '>' => Token::Gt,
-            '!' => Token::Not,
-            '&' => Token::BitAnd,
-            '|' => Token::Pipe,
-            '^' => Token::BitXor,
-            '~' => Token::Tilde,
-            '=' => Token::Assign,
-            '.' => Token::Dot,
-            '?' => Token::Question,
-            '(' => Token::LParen,
-            ')' => Token::RParen,
-            '{' => Token::LBrace,
-            '}' => Token::RBrace,
-            '[' => Token::LBracket,
-            ']' => Token::RBracket,
-            ',' => Token::Comma,
-            ':' => Token::Colon,
-            ';' => Token::Semicolon,
-            _ => {
-                return Err(CompileError::Syntax(
-                    format!("unexpected character '{ch}'"),
-                    Some(self.make_span(start, end)),
-                ));
-            }
+        let Some(tok) = Token::from_single_char(ch) else {
+            return Err(CompileError::Syntax(
+                format!("unexpected character '{ch}'"),
+                Some(self.make_span(start, end)),
+            ));
         };
         Ok((tok, self.make_span(start, end)))
     }

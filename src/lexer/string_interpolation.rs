@@ -79,67 +79,10 @@ impl Lexer {
             return self.lex_at_token();
         }
 
-        if let Some(tok) = self.lex_no_skip_multi_char_operator(start) {
+        if let Some(tok) = self.lex_multi_char_operator(start) {
             return Ok(tok);
         }
 
-        self.advance();
-        let end = self.byte_pos();
-        let tok = match ch {
-            '+' => Token::Plus,
-            '-' => Token::Minus,
-            '*' => Token::Star,
-            '/' => Token::Slash,
-            '%' => Token::Percent,
-            '<' => Token::Lt,
-            '>' => Token::Gt,
-            '!' => Token::Not,
-            '&' => Token::BitAnd,
-            '|' => Token::Pipe,
-            '^' => Token::BitXor,
-            '~' => Token::Tilde,
-            '=' => Token::Assign,
-            '.' => Token::Dot,
-            '?' => Token::Question,
-            '(' => Token::LParen,
-            ')' => Token::RParen,
-            '[' => Token::LBracket,
-            ']' => Token::RBracket,
-            ',' => Token::Comma,
-            ':' => Token::Colon,
-            ';' => Token::Semicolon,
-            _ => {
-                return Err(CompileError::Syntax(
-                    format!("unexpected character '{ch}'"),
-                    Some(self.make_span(start, end)),
-                ));
-            }
-        };
-        Ok((tok, self.make_span(start, end)))
-    }
-
-    fn lex_no_skip_multi_char_operator(&mut self, start: u32) -> Option<(Token, Span)> {
-        for (spelling, token, width) in [
-            ("::=", Token::DeclareAssign, 3),
-            (":=", Token::ConstAssign, 2),
-            ("..=", Token::DotDotEq, 3),
-            ("..", Token::DotDot, 2),
-            ("=>", Token::FatArrow, 2),
-            ("->", Token::Arrow, 2),
-            ("==", Token::Eq, 2),
-            ("!=", Token::NotEq, 2),
-            ("<=", Token::LtEq, 2),
-            (">=", Token::GtEq, 2),
-            ("&&", Token::And, 2),
-            ("||", Token::Or, 2),
-            ("<<", Token::ShiftLeft, 2),
-            (">>", Token::ShiftRight, 2),
-        ] {
-            if self.matches(spelling) {
-                self.advance_n(width);
-                return Some((token, self.make_span(start, self.byte_pos())));
-            }
-        }
-        None
+        self.lex_single_char_token(start, ch)
     }
 }

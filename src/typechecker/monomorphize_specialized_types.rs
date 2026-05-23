@@ -8,6 +8,11 @@ use crate::error::Span;
 
 use super::TypeChecker;
 
+struct ReservedSpecializedType {
+    mangled: String,
+    already_emitted: bool,
+}
+
 impl TypeChecker {
     pub(crate) fn specialize_generic_struct(
         &mut self,
@@ -38,25 +43,15 @@ impl TypeChecker {
             self.ensure_specialized_type_refs_for_type(field_type, span);
         }
         let field_map = fields.iter().cloned().collect();
-        let requested = self.mangle_generic_type_name(name, type_args);
-        let specialization_key = self.generic_type_specialization_key(
+        let reserved = self.reserve_specialized_type_definition(
             "struct",
-            info.specialization_scope.as_deref(),
-            &requested,
-        );
-        let already_emitted = self
-            .specialized_types_seen
-            .contains_key(&specialization_key);
-        let mangled = self.reserve_generic_type_name(
-            &specialization_key,
-            &requested,
+            name,
+            type_args,
             info.specialization_scope.as_deref(),
         );
-        let concrete_type_args = self.concrete_specialized_type_args(type_args);
-        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
-        if !already_emitted {
+        if !reserved.already_emitted {
             self.specialized_types.push(TypedTypeDef {
-                name: mangled,
+                name: reserved.mangled,
                 kind: TypeDefKind::Struct { fields },
                 methods: Vec::new(),
                 span,
@@ -100,23 +95,13 @@ impl TypeChecker {
             }
         }
         let variant_map = variants.iter().cloned().collect();
-        let requested = self.mangle_generic_type_name(name, type_args);
-        let specialization_key = self.generic_type_specialization_key(
+        let reserved = self.reserve_specialized_type_definition(
             "enum",
-            info.specialization_scope.as_deref(),
-            &requested,
-        );
-        let already_emitted = self
-            .specialized_types_seen
-            .contains_key(&specialization_key);
-        let mangled = self.reserve_generic_type_name(
-            &specialization_key,
-            &requested,
+            name,
+            type_args,
             info.specialization_scope.as_deref(),
         );
-        let concrete_type_args = self.concrete_specialized_type_args(type_args);
-        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
-        if !already_emitted {
+        if !reserved.already_emitted {
             let typed_variants = variants
                 .into_iter()
                 .enumerate()
@@ -129,7 +114,7 @@ impl TypeChecker {
                 )
                 .collect();
             self.specialized_types.push(TypedTypeDef {
-                name: mangled,
+                name: reserved.mangled,
                 kind: TypeDefKind::Enum {
                     variants: typed_variants,
                 },
@@ -138,6 +123,30 @@ impl TypeChecker {
             });
         }
         variant_map
+    }
+
+    fn reserve_specialized_type_definition(
+        &mut self,
+        kind: &str,
+        name: &str,
+        type_args: &[AstType],
+        specialization_scope: Option<&str>,
+    ) -> ReservedSpecializedType {
+        let requested = self.mangle_generic_type_name(name, type_args);
+        let specialization_key =
+            self.generic_type_specialization_key(kind, specialization_scope, &requested);
+        let already_emitted = self
+            .specialized_types_seen
+            .contains_key(&specialization_key);
+        let mangled =
+            self.reserve_generic_type_name(&specialization_key, &requested, specialization_scope);
+        let concrete_type_args = self.concrete_specialized_type_args(type_args);
+        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
+
+        ReservedSpecializedType {
+            mangled,
+            already_emitted,
+        }
     }
 
     fn concrete_specialized_type_args(&self, type_args: &[AstType]) -> Vec<AstType> {

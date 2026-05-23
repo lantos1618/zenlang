@@ -97,3 +97,26 @@ fn parser_pratt_infix_lives_in_focused_helper() {
         "parser expression root should stay focused on Pratt dispatch"
     );
 }
+
+#[test]
+fn parser_type_argument_lists_have_one_parser() {
+    let types = read("src/parser/types.rs");
+    let block_helpers = read("src/parser/block_helpers.rs");
+
+    assert!(
+        block_helpers.contains("fn parse_type_arg_list"),
+        "shared parser helper should own type argument list parsing"
+    );
+    assert!(
+        types.contains("self.parse_type_arg_list()?"),
+        "type-name parsing should reuse the shared type argument list parser"
+    );
+    assert!(
+        !types.contains("fn parse_generic_type_args"),
+        "types.rs should not duplicate type argument list parsing"
+    );
+    assert!(
+        !types.contains("expected `,` or `>` in type argument list"),
+        "type argument diagnostics should be emitted from the shared list parser"
+    );
+}

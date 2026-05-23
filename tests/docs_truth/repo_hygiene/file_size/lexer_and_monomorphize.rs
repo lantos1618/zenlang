@@ -61,6 +61,37 @@ fn lexer_number_scanning_lives_in_focused_helper() {
 }
 
 #[test]
+fn lexer_operator_spelling_tables_have_one_owner() {
+    let tokens = read("src/lexer/tokens.rs");
+
+    for required in ["MULTI_CHAR_OPERATORS", "fn from_single_char"] {
+        assert!(
+            tokens.contains(required),
+            "lexer token spellings should be owned by Token: {required}"
+        );
+    }
+
+    for path in ["src/lexer/scan.rs", "src/lexer/string_interpolation.rs"] {
+        let source = read(path);
+        for forbidden in [
+            r#"("::=", Token::DeclareAssign"#,
+            r#"("=>", Token::FatArrow"#,
+            "'+' => Token::Plus",
+            "'{' => Token::LBrace",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} should use Token spelling helpers instead of owning token spelling tables: {forbidden}"
+            );
+        }
+        assert!(
+            source.contains("lex_multi_char_operator") || source.contains("lex_single_char_token"),
+            "{path} should use shared lexer token spelling helpers"
+        );
+    }
+}
+
+#[test]
 fn monomorphize_type_substitution_lives_in_focused_helper() {
     let monomorphize = read("src/typechecker/monomorphize.rs");
     let names = read("src/typechecker/monomorphize_names.rs");
@@ -118,6 +149,17 @@ fn monomorphize_specialized_type_name_recovery_lives_in_focused_helper() {
     assert!(
         specialized_type_names.contains("pub(crate) fn type_to_ast_ref"),
         "monomorphize_specialized_type_names.rs should own Type-to-AstType recovery for monomorphization"
+    );
+    assert!(
+        specialized_types.contains("fn reserve_specialized_type_definition"),
+        "monomorphize_specialized_types.rs should share struct/enum specialization reservation bookkeeping"
+    );
+    assert_eq!(
+        specialized_types
+            .matches("remember_specialized_type_source")
+            .count(),
+        1,
+        "specialized type source tracking should be owned by one shared reservation helper"
     );
     assert!(
         module.contains("mod monomorphize_specialized_type_names;"),
