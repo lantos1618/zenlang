@@ -66,6 +66,11 @@ fn test_generic_method_method_worklist() {
 }
 
 #[test]
+fn test_generic_method_worklist_dedup() {
+    run_test("generic_method_worklist_dedup");
+}
+
+#[test]
 fn test_generic_method_nested_result() {
     run_test("generic_method_nested_result");
 }
