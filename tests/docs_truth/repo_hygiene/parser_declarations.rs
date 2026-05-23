@@ -29,3 +29,18 @@ fn parser_generic_declarations_live_in_focused_helper() {
         "parser declaration dispatch should stay small after generic declarations move out"
     );
 }
+
+#[test]
+fn parser_declaration_tests_share_single_declaration_helper() {
+    let declaration_tests = read("src/parser/tests/declarations.rs");
+    let parser_tests = read("src/parser/tests.rs");
+
+    assert!(
+        parser_tests.contains("fn parse_single_decl("),
+        "parser tests should expose a helper for single-declaration fixtures"
+    );
+    assert!(
+        !declaration_tests.contains("assert_eq!(prog.declarations.len(), 1)"),
+        "parser declaration tests should not repeat trivial one-declaration assertions"
+    );
+}
