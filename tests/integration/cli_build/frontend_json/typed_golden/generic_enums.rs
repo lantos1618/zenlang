@@ -73,6 +73,15 @@ fn emit_json_typed_generic_result_method_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_multi_file_generic_result_method_schema_matches_golden() {
+    assert_typed_golden(
+        "multi_file_generic_result_enum_method/main.zen",
+        "tests/fixtures/ir_json/typed_multi_file_generic_result_method.golden.json",
+        "multi-file generic Result method",
+    );
+}
+
+#[test]
 fn emit_json_typed_nested_generic_result_schema_matches_golden() {
     assert_typed_golden(
         "generic_nested_result_enum.zen",
