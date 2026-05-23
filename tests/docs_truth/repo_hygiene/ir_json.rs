@@ -120,6 +120,10 @@ fn layout_json_builtin_layouts_live_in_focused_helper() {
         builtins.contains("pub(super) fn builtin_layout_name"),
         "builtin layout helper should own builtin Type-to-layout-name mapping"
     );
+    assert!(
+        builtins.contains("builtin_source_name()"),
+        "builtin layout names should reuse Type builtin source spelling instead of repeating primitive/string names"
+    );
     for required in ["enum BuiltinLayout", "const ALL: &[Self]", "fn from_type"] {
         assert!(
             builtins.contains(required),

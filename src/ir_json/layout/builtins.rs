@@ -83,22 +83,28 @@ impl BuiltinLayout {
     }
 
     fn name(self) -> &'static str {
+        self.source_type()
+            .builtin_source_name()
+            .expect("builtin layout source types have source names")
+    }
+
+    fn source_type(self) -> Type {
         match self {
-            Self::Bool => "bool",
-            Self::I8 => "i8",
-            Self::U8 => "u8",
-            Self::I16 => "i16",
-            Self::U16 => "u16",
-            Self::I32 => "i32",
-            Self::U32 => "u32",
-            Self::F32 => "f32",
-            Self::I64 => "i64",
-            Self::U64 => "u64",
-            Self::Usize => "usize",
-            Self::F64 => "f64",
-            Self::Void => "void",
-            Self::StaticString => "StaticString",
-            Self::DynamicString => "String",
+            Self::Bool => Type::Bool,
+            Self::I8 => Type::I8,
+            Self::U8 => Type::U8,
+            Self::I16 => Type::I16,
+            Self::U16 => Type::U16,
+            Self::I32 => Type::I32,
+            Self::U32 => Type::U32,
+            Self::F32 => Type::F32,
+            Self::I64 => Type::I64,
+            Self::U64 => Type::U64,
+            Self::Usize => Type::Usize,
+            Self::F64 => Type::F64,
+            Self::Void => Type::Void,
+            Self::StaticString => Type::Str,
+            Self::DynamicString => Type::String,
         }
     }
 
