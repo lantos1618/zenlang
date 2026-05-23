@@ -76,6 +76,9 @@ impl GatedIntrinsic {
             Self::RawReallocate => {
                 "raw reallocation is gated until allocator ownership and effect semantics are implemented"
             }
+            Self::SetPayload => {
+                "enum payload mutation is gated until payload layout size is available from typed layout metadata"
+            }
             Self::Store => {
                 "raw pointer store is gated until ownership and memory access semantics are implemented"
             }

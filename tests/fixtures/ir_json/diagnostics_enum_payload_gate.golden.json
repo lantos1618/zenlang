@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/enum_payload_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E0203",
+      "message": "enum payload mutation is gated until payload layout size is available from typed layout metadata",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/enum_payload_gate.zen",
+        "start": 22,
+        "end": 48,
+        "line": 3,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}

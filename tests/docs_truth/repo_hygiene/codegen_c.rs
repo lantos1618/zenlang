@@ -87,6 +87,26 @@ fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
 }
 
 #[test]
+fn codegen_c_does_not_lower_gated_enum_payload_mutation() {
+    let lowering = read("src/codegen/c/intrinsics.rs");
+    let spelling = read("src/codegen/c/intrinsics/names/spelling.rs");
+    let gated = read("src/typechecker/gated_intrinsics/spelling.rs");
+
+    assert!(
+        !lowering.contains("memcpy((uint8_t*)({}) + sizeof(int32_t), {}, 0)"),
+        "C codegen should not keep a zero-byte set_payload lowering placeholder"
+    );
+    assert!(
+        !spelling.contains(r#"SetPayload => "set_payload""#),
+        "set_payload should not be listed as an available C backend intrinsic until layout sizes exist"
+    );
+    assert!(
+        gated.contains(r#"SetPayload => "set_payload""#),
+        "set_payload should stay visible as a gated typechecker intrinsic"
+    );
+}
+
+#[test]
 fn generated_c_tests_use_facade_assertion_helpers() {
     let support = read("tests/integration/support.rs");
     let generated_c = read("tests/integration/support/generated_c.rs");
