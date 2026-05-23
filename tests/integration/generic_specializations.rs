@@ -89,6 +89,21 @@ fn generic_specialization_fixture_paths() -> Vec<PathBuf> {
     fixtures
 }
 
+fn assert_fixture_specialization(
+    fixture: &str,
+    required_snippets: &[&str],
+    single_definition_calls: &[&str],
+    forbidden_snippets: &[&str],
+) {
+    let c_source = compile_to_c_with_generated_call_check(&test_dir().join(fixture));
+    assert_generated_c_specialization(
+        &c_source,
+        required_snippets,
+        single_definition_calls,
+        forbidden_snippets,
+    );
+}
+
 fn relative_fixture_path(root: &std::path::Path, path: PathBuf) -> PathBuf {
     path.strip_prefix(root)
         .expect("fixture path should be under tests/zen")
