@@ -80,9 +80,10 @@ fn scoped_imported_generic_ufc_generated_c_pins_recovery_evidence() {
         r#"int32_t take_box_i32(right_Box_i32 box)"#,
         r#"int32_t Box_extra_i32(right_Box_i32 self)"#,
         r#"int32_t Holder_extra_right_Box_i32(Holder_right_Box_i32 self)"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "take_box_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_extra_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "Holder_extra_right_Box_i32")"#,
+        "compile_to_c_with_specialization_check(",
+        r#""take_box_i32""#,
+        r#""Box_extra_i32""#,
+        r#""Holder_extra_right_Box_i32""#,
     ] {
         assert!(
             scoped_type_inference.contains(required),
