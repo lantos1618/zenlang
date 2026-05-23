@@ -2,15 +2,10 @@ use crate::ast::Expression;
 
 use super::dsl::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField};
 use super::target_fields::{
-    optional_string_array_field, optional_string_field, required_one_of_string_fields,
-    required_string_array_field, required_string_field,
+    common_target_fields, optional_string_field, required_one_of_string_fields,
+    required_string_array_field, required_string_field, TargetCommonFields,
 };
 use super::{BuildGraphError, BuildTargetInput, BuildTargetKind};
-
-struct TargetCommonFields {
-    dependencies: Vec<String>,
-    features: Vec<String>,
-}
 
 pub(super) fn build_target_from_builder_add(
     expr: &Expression,
@@ -131,16 +126,15 @@ fn executable_target_from_fields(
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
     let common = common_target_fields(kind, fields)?;
 
-    Ok(BuildTargetInput {
-        name: target_name,
-        kind: BuildTargetKind::Executable {
+    Ok(single_source_target(
+        target_name,
+        BuildTargetKind::Executable {
             root_source_file: root_source_file.clone(),
             out_dir,
         },
-        sources: vec![root_source_file],
-        dependencies: common.dependencies,
-        features: common.features,
-    })
+        root_source_file,
+        common,
+    ))
 }
 
 fn test_target_from_fields(
@@ -156,15 +150,14 @@ fn test_target_from_fields(
         .unwrap_or_else(|| target_name_from_root(&root_source_file));
     let common = common_target_fields(kind, fields)?;
 
-    Ok(BuildTargetInput {
-        name: target_name,
-        kind: BuildTargetKind::Test {
+    Ok(single_source_target(
+        target_name,
+        BuildTargetKind::Test {
             root_source_file: root_source_file.clone(),
         },
-        sources: vec![root_source_file],
-        dependencies: common.dependencies,
-        features: common.features,
-    })
+        root_source_file,
+        common,
+    ))
 }
 
 fn library_target_from_fields(
@@ -192,16 +185,19 @@ fn library_target_from_fields(
     })
 }
 
-fn common_target_fields(
-    kind: BuildTargetDslKind,
-    fields: &[(String, Expression)],
-) -> Result<TargetCommonFields, BuildGraphError> {
-    Ok(TargetCommonFields {
-        dependencies: optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default(),
-        features: optional_string_array_field(kind, fields, BuildTargetField::Features)?
-            .unwrap_or_default(),
-    })
+fn single_source_target(
+    name: String,
+    kind: BuildTargetKind,
+    root_source_file: String,
+    common: TargetCommonFields,
+) -> BuildTargetInput {
+    BuildTargetInput {
+        name,
+        kind,
+        sources: vec![root_source_file],
+        dependencies: common.dependencies,
+        features: common.features,
+    }
 }
 
 fn target_name_from_root(root: &str) -> String {

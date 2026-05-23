@@ -6,7 +6,6 @@ Use this page as the quick language tour. Stable examples can be copied today.
 Preview sections are design notes, not stable copy-paste programs. They cover
 gated surfaces: allocator-backed strings, sync/async effects, raw memory,
 actors, and comptime type matching.
-
 ## The Shape
 Declarations are prefix-first; names come first:
 
@@ -27,7 +26,6 @@ Declarations are prefix-first; names come first:
 | Implementation | `Type.implements(Behavior) { ... }` |
 | Requirement | `Type.requires(Behavior)` |
 | Inheritance | `ChildBehavior.extends(ParentBehavior)` |
-
 ## Values, Text, And Calls
 Local bindings are immutable by default. Use `::=` for mutable inferred locals;
 plain `=` then assigns a new value. Zen does not use a `return` keyword.
@@ -117,12 +115,14 @@ loop((l) {
 ```
 There is no `while`, `for`, `break`, `continue`, suffix loop, or hidden result
 channel. State lives in mutable bindings outside the loop.
-
 ## Defer
-`defer` runs cleanup expressions before leaving the current scope.
+`@this.defer(cleanup())` schedules cleanup before scope exit. Multiple defers
+run last-in, first-out.
 
 ## Imports And Modules
-Imports destructure from module paths; dotted paths resolve through subdirectories.
+Imports destructure public names from a module path: `{ io } = std` and
+`{ clamp, factorial } = math_utils`. Dotted paths resolve through
+subdirectories, and exported names use `pub`.
 
 ## Memory And Ownership Preview
 Stable Zen does not hide heap allocation behind literals, interpolation, calls, or containers. Heap APIs show the owner and allocator path.
@@ -187,4 +187,4 @@ main = () i32 {
 ```
 That example shows prefix declarations, typed data, attached methods, behavior
 implementations, bounded generics, generic behavior dispatch, and static text.
-More to read: `README.md`, `examples/README.md`, `examples/07_behaviors_and_generics.zen`, and `docs/V1_SPEC.md`.
+Read: `README.md`, `examples/README.md`, `examples/07_behaviors_and_generics.zen`, and `docs/V1_SPEC.md`.

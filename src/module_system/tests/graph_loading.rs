@@ -114,21 +114,7 @@ fn module_graph_rejects_resolver_errors_in_loaded_modules() {
 
 #[test]
 fn module_graph_reuses_export_visibility_errors() {
-    let tmp = setup_temp_dir();
-
-    write_private_add_module(&tmp);
-    let main_path = write_main_importing_add(&tmp);
-
-    let mut files = FileTable::new();
-    let mut ms = ModuleSystem::new();
-
-    let result = ms.load_module_graph(&main_path, &mut files);
-    assert!(result.is_err(), "private graph import should be rejected");
-    assert_error_contains(
-        result,
-        "not exported",
-        "error should mention export visibility",
-    );
+    assert_private_import_rejected(ModuleLoadPath::Graph);
 }
 
 #[test]

@@ -10,23 +10,31 @@ use super::{
 
 impl Diagnostic {
     pub(super) fn with_removed_return_fix(self) -> Self {
-        if self.message != REMOVED_RETURN_KEYWORD_MESSAGE {
-            return self;
-        }
-
-        let Some(span) = self.span else {
-            return self;
-        };
-
-        self.with_suggested_fix(SuggestedFix::new(
+        self.with_fix_for_exact_message(
+            REMOVED_RETURN_KEYWORD_MESSAGE,
             REMOVED_RETURN_FIX_KIND,
             REMOVED_RETURN_FIX_TITLE,
-            vec![TextEdit::new(span, "")],
-        ))
+            "",
+        )
     }
 
     pub(super) fn with_removed_infix_as_cast_fix(self) -> Self {
-        if self.message != REMOVED_INFIX_AS_CAST_MESSAGE {
+        self.with_fix_for_exact_message(
+            REMOVED_INFIX_AS_CAST_MESSAGE,
+            REMOVED_INFIX_AS_CAST_FIX_KIND,
+            REMOVED_INFIX_AS_CAST_FIX_TITLE,
+            REMOVED_INFIX_AS_CAST_REPLACEMENT,
+        )
+    }
+
+    fn with_fix_for_exact_message(
+        self,
+        message: &'static str,
+        fix_kind: &'static str,
+        fix_title: &'static str,
+        replacement: &'static str,
+    ) -> Self {
+        if self.message != message {
             return self;
         }
 
@@ -35,9 +43,9 @@ impl Diagnostic {
         };
 
         self.with_suggested_fix(SuggestedFix::new(
-            REMOVED_INFIX_AS_CAST_FIX_KIND,
-            REMOVED_INFIX_AS_CAST_FIX_TITLE,
-            vec![TextEdit::new(span, REMOVED_INFIX_AS_CAST_REPLACEMENT)],
+            fix_kind,
+            fix_title,
+            vec![TextEdit::new(span, replacement)],
         ))
     }
 

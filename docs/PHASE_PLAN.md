@@ -60,8 +60,9 @@ Use semantic-overlap and slop-cannon reports as triage input, not automatic edit
   raw `@builtin` leakage, spelling/parser/JSON/test-helper repetition,
   generated VS Code output, experimental std facade promotion, behavior examples,
   resolver/generic-callable wrappers, char facade exports, and C atomic emission.
-- current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-current-head-aeb00906`, `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`, and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-post-behavior-example-scrub-hash`; keep generated JSON/HTML/embedding artifacts outside git and treat zero-match Qwen clusters as triage.
+- slop-cannon reports: keep generated artifacts outside git; use Qwen/L40S semantic reports and cheap HEAD hash reports as triage, not automatic edit lists.
 - fixed/guarded in the current scrub: byte-identical JSON golden fixtures, stale semantic-overlap scan roots, parser declaration-mode repetition, and duplicated lexer non-string token dispatch.
+- fixed/guarded in this follow-up scrub: duplicated module-system visibility test setup, C field-access test expression construction, executable/test build-target single-source construction, resolver value type-reference validation replay, diagnostic suggested-fix enrichment, binary-op operand diagnostics, C loop emission, and public loop/defer docs.
 - next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
   operator tables, builtin type/layout metadata, lexer keyword/root-token
   spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion,

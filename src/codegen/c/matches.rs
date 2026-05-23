@@ -13,27 +13,10 @@ impl CEmitter {
                 self.emit_conditional(scrutinee, arms, result_var);
             }
             MatchKind::WhileLoop => {
-                let cond = self.emit_expr_inline(scrutinee);
-                self.line(&format!("while ({}) {{", cond));
-                self.indent();
-                if let Some(arm) = arms.first() {
-                    self.emit_block_body(&arm.body);
-                }
-                self.dedent();
-                self.line("}");
+                self.emit_loop_match(scrutinee, arms, None);
             }
             MatchKind::ControlledLoop { label } => {
-                let cond = self.emit_expr_inline(scrutinee);
-                self.line(&format!("while ({}) {{", cond));
-                self.indent();
-                if let Some(arm) = arms.first() {
-                    self.emit_block_body(&arm.body);
-                }
-                self.line(&format!("{label}_next:"));
-                self.line("continue;");
-                self.dedent();
-                self.line("}");
-                self.line(&format!("{label}_done:;"));
+                self.emit_loop_match(scrutinee, arms, Some(label));
             }
             MatchKind::EnumMatch => {
                 self.emit_enum_match(scrutinee, arms, result_var);
@@ -41,6 +24,29 @@ impl CEmitter {
             MatchKind::ValueMatch => {
                 self.emit_value_match(scrutinee, arms, result_var);
             }
+        }
+    }
+
+    fn emit_loop_match(
+        &mut self,
+        scrutinee: &TypedExpression,
+        arms: &[TypedMatchArm],
+        control_label: Option<&str>,
+    ) {
+        let cond = self.emit_expr_inline(scrutinee);
+        self.line(&format!("while ({}) {{", cond));
+        self.indent();
+        if let Some(arm) = arms.first() {
+            self.emit_block_body(&arm.body);
+        }
+        if let Some(label) = control_label {
+            self.line(&format!("{label}_next:"));
+            self.line("continue;");
+        }
+        self.dedent();
+        self.line("}");
+        if let Some(label) = control_label {
+            self.line(&format!("{label}_done:;"));
         }
     }
 

@@ -40,26 +40,15 @@ impl TypeChecker {
         span: &Span,
     ) -> Result<Type, Diagnostic> {
         if *left == Type::Unknown || *right == Type::Unknown {
-            let known = if *left != Type::Unknown {
-                left
-            } else {
-                right
-            };
-            return Ok(known.clone());
+            return Ok(known_binary_operand(left, right).clone());
         }
-        if !left.is_numeric() {
-            return Err(Diagnostic::error(
+        for ty in [left, right] {
+            reject_binary_operand_if(
+                !ty.is_numeric(),
                 "E3010",
-                format!("arithmetic on non-numeric type `{}`", left.display_name()),
-                *span,
-            ));
-        }
-        if !right.is_numeric() {
-            return Err(Diagnostic::error(
-                "E3010",
-                format!("arithmetic on non-numeric type `{}`", right.display_name()),
-                *span,
-            ));
+                || format!("arithmetic on non-numeric type `{}`", ty.display_name()),
+                span,
+            )?;
         }
         if left != right {
             return Err(Diagnostic::error(
@@ -111,33 +100,41 @@ impl TypeChecker {
         span: &Span,
     ) -> Result<Type, Diagnostic> {
         if *left == Type::Unknown || *right == Type::Unknown {
-            let known = if *left != Type::Unknown {
-                left
-            } else {
-                right
-            };
-            return Ok(known.clone());
+            return Ok(known_binary_operand(left, right).clone());
         }
-        if !left.is_integer() {
-            return Err(Diagnostic::error(
+        for ty in [left, right] {
+            reject_binary_operand_if(
+                !ty.is_integer(),
                 "E3012",
-                format!(
-                    "bitwise operator requires integer type, found `{}`",
-                    left.display_name()
-                ),
-                *span,
-            ));
-        }
-        if !right.is_integer() {
-            return Err(Diagnostic::error(
-                "E3012",
-                format!(
-                    "bitwise operator requires integer type, found `{}`",
-                    right.display_name()
-                ),
-                *span,
-            ));
+                || {
+                    format!(
+                        "bitwise operator requires integer type, found `{}`",
+                        ty.display_name()
+                    )
+                },
+                span,
+            )?;
         }
         Ok(left.clone())
     }
+}
+
+fn known_binary_operand<'a>(left: &'a Type, right: &'a Type) -> &'a Type {
+    if *left != Type::Unknown {
+        left
+    } else {
+        right
+    }
+}
+
+fn reject_binary_operand_if(
+    reject: bool,
+    code: &'static str,
+    message: impl FnOnce() -> String,
+    span: &Span,
+) -> Result<(), Diagnostic> {
+    if reject {
+        return Err(Diagnostic::error(code, message(), *span));
+    }
+    Ok(())
 }

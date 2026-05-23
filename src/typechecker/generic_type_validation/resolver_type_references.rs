@@ -111,9 +111,7 @@ impl TypeChecker {
         span: Span,
     ) {
         let restored_key = Self::validation_method_key(symbols, ast_key, type_name, span);
-        if let Some(scoped) = self.collected_value_type_param_scope(&restored_key) {
-            self.validate_resolver_value_type_references(&restored_key, &scoped, body, span);
-        }
+        self.validate_restored_value_type_references(&restored_key, body, span);
     }
 
     fn validate_resolver_function_type_references(
@@ -123,16 +121,19 @@ impl TypeChecker {
         body: &Expression,
         span: Span,
     ) {
-        let Some((restored_key, scoped)) = self.resolver_scoped_symbol(
-            symbols,
-            Namespace::Value,
-            name,
-            span,
-            Self::collected_value_type_param_scope,
-        ) else {
-            return;
-        };
-        self.validate_resolver_value_type_references(&restored_key, &scoped, body, span);
+        let restored_key = Self::validation_symbol_name(symbols, Namespace::Value, name, span);
+        self.validate_restored_value_type_references(&restored_key, body, span);
+    }
+
+    fn validate_restored_value_type_references(
+        &mut self,
+        restored_key: &str,
+        body: &Expression,
+        span: Span,
+    ) {
+        if let Some(scoped) = self.collected_value_type_param_scope(restored_key) {
+            self.validate_resolver_value_type_references(restored_key, &scoped, body, span);
+        }
     }
 
     fn validate_resolver_behavior_type_references(

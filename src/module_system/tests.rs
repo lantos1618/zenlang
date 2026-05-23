@@ -52,6 +52,36 @@ fn assert_error_contains<T>(result: Result<T, Vec<CompileError>>, expected: &str
     );
 }
 
+#[derive(Clone, Copy)]
+enum ModuleLoadPath {
+    Imports,
+    Graph,
+}
+
+fn assert_private_import_rejected(load_path: ModuleLoadPath) {
+    let tmp = setup_temp_dir();
+
+    write_private_add_module(&tmp);
+    let main_path = write_main_importing_add(&tmp);
+
+    let mut files = FileTable::new();
+    let mut ms = ModuleSystem::new();
+    let result = match load_path {
+        ModuleLoadPath::Imports => ms.load_with_imports(&main_path, &mut files).map(|_| ()),
+        ModuleLoadPath::Graph => ms.load_module_graph(&main_path, &mut files).map(|_| ()),
+    };
+
+    assert!(
+        result.is_err(),
+        "private import should be rejected before module loading succeeds"
+    );
+    assert_error_contains(
+        result,
+        "not exported",
+        "error should mention export visibility",
+    );
+}
+
 fn module_function_names(program: &Program) -> Vec<&str> {
     program
         .declarations

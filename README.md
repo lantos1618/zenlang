@@ -44,7 +44,8 @@ main = () i32 {
 - Behaviors describe required capabilities directly, so generic code can state
   the operations it needs.
 - `StaticString` names text baked into the program with compile-time length,
-  while allocator-backed String is the planned owned, dynamic text type.
+  while allocator-backed String names owned, dynamic text with explicit
+  allocator ownership.
 - The language is designed for predictable native programs: explicit types,
   explicit imports, and no hidden object model.
 
