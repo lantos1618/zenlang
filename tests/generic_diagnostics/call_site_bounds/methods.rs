@@ -29,11 +29,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic method bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic method bound",
     );
     assert!(
         errors
@@ -72,11 +72,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `U`")),
-        "expected generic receiver method bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `U`",
+        "generic receiver method bound",
     );
 }
 
@@ -148,11 +148,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic UFC function bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic UFC function bound",
     );
     assert!(
         errors
