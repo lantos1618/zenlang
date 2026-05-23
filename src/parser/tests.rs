@@ -15,6 +15,16 @@ fn parse_ok(src: &str) -> Program {
     })
 }
 
+fn parse_single_decl(src: &str) -> Declaration {
+    let mut declarations = parse_ok(src).declarations;
+    assert_eq!(
+        declarations.len(),
+        1,
+        "expected parser fixture to produce exactly one declaration"
+    );
+    declarations.remove(0)
+}
+
 fn parse_err(src: &str) -> Vec<CompileError> {
     parse_str(src).expect_err("expected parse to fail")
 }
