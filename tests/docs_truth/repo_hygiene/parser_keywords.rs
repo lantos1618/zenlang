@@ -1,9 +1,27 @@
 use super::*;
 
+mod spelling_splits;
+
+fn parser_keyword_sources() -> String {
+    [
+        "src/parser/keywords.rs",
+        "src/parser/keywords/behavior.rs",
+        "src/parser/keywords/module_roots.rs",
+        "src/parser/keywords/mutability.rs",
+        "src/parser/keywords/pattern.rs",
+        "src/parser/keywords/prefix.rs",
+        "src/parser/keywords/this_methods.rs",
+    ]
+    .into_iter()
+    .map(read)
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 #[test]
 fn parser_prefix_keywords_use_owned_keyword_enum() {
     let atoms = read("src/parser/atoms.rs");
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
 
     for forbidden in [
         "match name.as_str()",
@@ -38,7 +56,7 @@ fn parser_prefix_keywords_use_owned_keyword_enum() {
 #[test]
 fn parser_pattern_keywords_use_owned_keyword_enum() {
     let patterns = read("src/parser/patterns.rs");
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
 
     for forbidden in [r#"name == "true""#, r#"name == "false""#, r#"name == "_""#] {
         assert!(
@@ -64,7 +82,7 @@ fn parser_pattern_keywords_use_owned_keyword_enum() {
 #[test]
 fn parser_this_methods_use_owned_method_enum() {
     let atoms = read("src/parser/atoms.rs");
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
 
     for forbidden in [r#"method == "defer""#] {
         assert!(
@@ -127,7 +145,7 @@ fn parser_module_roots_use_owned_root_enum() {
         );
     }
 
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
     for required in [
         "enum ParserModuleRoot",
         "const ALL: &[ParserModuleRoot]",
@@ -161,7 +179,7 @@ fn parser_mutability_keywords_use_owned_keyword_enum() {
         }
     }
 
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
     for required in [
         "enum ParserMutabilityKeyword",
         "const ALL: &[ParserMutabilityKeyword]",
@@ -196,7 +214,7 @@ fn parser_behavior_declaration_keyword_uses_owned_keyword_enum() {
         }
     }
 
-    let keywords = read("src/parser/keywords.rs");
+    let keywords = parser_keyword_sources();
     for required in [
         "enum ParserBehaviorKeyword",
         "const ALL: &[ParserBehaviorKeyword]",
