@@ -24,10 +24,10 @@ main = () i32 {
 "#,
     );
 
-    assert_diagnostic_code_and_message(
+    assert_nongeneric_type_args_diagnostic(
         &errors,
-        "E5002",
-        "non-generic method `Box.get` does not accept type arguments",
+        "method",
+        "Box.get",
         "non-generic method type-argument",
     );
 }
@@ -45,11 +45,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("non-generic function `io.println` does not accept type arguments")),
-        "expected module function type-argument diagnostic, got {errors:?}"
+    assert_nongeneric_type_args_diagnostic(
+        &errors,
+        "function",
+        "io.println",
+        "module function type-argument",
     );
 }
 
@@ -64,11 +64,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("non-generic function `@builtin.panic` does not accept type arguments")),
-        "expected builtin function type-argument diagnostic, got {errors:?}"
+    assert_nongeneric_type_args_diagnostic(
+        &errors,
+        "function",
+        "@builtin.panic",
+        "builtin function type-argument",
     );
 }
 
@@ -91,12 +91,7 @@ main = () i32 {
 "#,
     );
 
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E5001",
-        "generic method `Box.get` expects 1 type arguments, found 2",
-        "generic method arity",
-    );
+    assert_generic_arity_diagnostic(&errors, "method", "Box.get", 1, 2, "generic method arity");
 }
 
 #[test]

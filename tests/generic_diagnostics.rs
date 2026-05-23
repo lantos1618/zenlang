@@ -60,6 +60,36 @@ fn assert_inference_conflict(
     );
 }
 
+fn assert_generic_arity_diagnostic(
+    errors: &[Diagnostic],
+    kind: &str,
+    name: &str,
+    expected: usize,
+    found: usize,
+    context: &str,
+) {
+    assert_diagnostic_code_and_message(
+        errors,
+        "E5001",
+        &format!("generic {kind} `{name}` expects {expected} type arguments, found {found}"),
+        context,
+    );
+}
+
+fn assert_nongeneric_type_args_diagnostic(
+    errors: &[Diagnostic],
+    kind: &str,
+    name: &str,
+    context: &str,
+) {
+    assert_diagnostic_code_and_message(
+        errors,
+        "E5002",
+        &format!("non-generic {kind} `{name}` does not accept type arguments"),
+        context,
+    );
+}
+
 #[path = "generic_diagnostics/annotations.rs"]
 mod annotations;
 #[path = "generic_diagnostics/behavior_impls.rs"]
