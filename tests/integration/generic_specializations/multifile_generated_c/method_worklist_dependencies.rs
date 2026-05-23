@@ -32,6 +32,27 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(!c_source.contains("T middle"));
 
     let c_source = compile_to_c_with_generated_call_check(
+        &test_dir().join("multi_file_generic_imported_worklist_multi_specialization/main.zen"),
+    );
+    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
+    assert!(c_source.contains("bool inner_bool(bool value)"));
+    assert!(c_source.contains("int32_t middle_i32(int32_t value)"));
+    assert!(c_source.contains("bool middle_bool(bool value)"));
+    assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
+    assert!(c_source.contains("bool outer_bool(bool value)"));
+    assert!(c_source.contains("outer_i32(83LL)"));
+    assert!(c_source.contains("outer_bool(true)"));
+    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "inner_bool");
+    assert_c_call_resolves_to_single_definition(&c_source, "middle_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "middle_bool");
+    assert_c_call_resolves_to_single_definition(&c_source, "outer_i32");
+    assert_c_call_resolves_to_single_definition(&c_source, "outer_bool");
+    assert!(!c_source.contains("T inner"));
+    assert!(!c_source.contains("T middle"));
+    assert!(!c_source.contains("T outer"));
+
+    let c_source = compile_to_c_with_generated_call_check(
         &test_dir().join("multi_file_generic_imported_diamond_same_name/main.zen"),
     );
     assert!(c_source.contains("int32_t left_i32(int32_t value)"));
