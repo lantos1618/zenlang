@@ -56,23 +56,24 @@ Phase 5 is in evidence-hardening and cleanup. The generic specialization surface
 ## Anti-Slop Scrub Queue
 Use semantic-overlap and slop-cannon reports as triage input, not automatic edits. Record credible classes here; keep generated reports, embeddings, and model caches ignored.
 
-- fixed/guarded: duplicate public examples, stale scripts and `.claude`,
-  stdlib raw `@builtin` leakage, static spelling tables, lexer/token helpers,
-  parser type spelling helpers, JSON emit shells, root `tests/*.zen` fixtures,
-  resolver type-reference restore/scope validation, resolver declaration/behavior
-  replay test setup, module-system stdlib gate matrices, checked-in generated
-  VS Code output, stale editor setup wrappers, and experimental testing/std
-  facade promotion.
+- fixed/guarded: duplicate public examples, stale scripts and `.claude`, stdlib
+  raw `@builtin` leakage, static spelling tables, lexer/token/parser helpers,
+  JSON emit shells, root `tests/*.zen` fixtures, resolver replay setup,
+  module-system stdlib gate matrices, generated VS Code output, experimental
+  std facade promotion, public behavior/generic example coverage, and duplicated
+  parser unary prefix construction.
 - current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`
-  and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-live-hash`.
+  and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-post-behavior-example-scrub-hash`.
   Keep those generated JSON/HTML/embedding artifacts outside git.
 - next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
-  lossy `Type` to `AstType` conversion, generic callable specialization,
-  behavior-ref/key normalization, resolver task routing, call-resolution
-  normalization, and build-target lowering specs.
+  operator tables, builtin type/layout metadata, lexer keyword/root-token
+  spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion,
+  generic callable specialization, behavior-ref/key normalization, resolver task
+  routing, call-resolution normalization, and build-target lowering specs.
 - next test cleanup: generated-C substring ladders, metadata absence matrices,
-  docs-truth prose pinning, exact temporary-name assertions, and private-layout
-  hygiene checks that behave like `1 == 1`.
+  docs-truth prose pinning, exact temporary-name assertions, byte-identical IR
+  golden outputs, repetitive host-effect matrices, and private-layout hygiene
+  checks that behave like `1 == 1`.
 - next docs/stdlib cleanup: public std/build facade story, async/actor/allocator
   sketch quarantine, duplicate allocator/async API shapes, and compact status
   docs that avoid repeating the phase plan.

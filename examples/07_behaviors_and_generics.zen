@@ -1,0 +1,33 @@
+// Behaviors and Generics in Zen
+// Generic bounds name the behavior a value must implement.
+
+{ io } = std
+
+Display: behavior {
+    display: (Self) StaticString
+}
+
+Point: {
+    x: i32,
+    y: i32,
+}
+
+Point.sum = (self: Point) i32 {
+    self.x + self.y
+}
+
+Point.implements(Display) {
+    display = (self: Point) StaticString {
+        "Point"
+    }
+}
+
+show<T: Display> = (value: T) StaticString {
+    value.display()
+}
+
+main = () i32 {
+    point = Point { x: 20, y: 22 }
+    io.println("${show(point)} total: ${point.sum()}")
+    0
+}

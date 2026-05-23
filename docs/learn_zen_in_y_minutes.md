@@ -3,8 +3,9 @@ Zen is a systems language for explicit programs: prefix-first declarations,
 final-expression blocks, pattern matching, explicit loop handles, and visible
 ownership/effects.
 Use this page as the quick language tour. Stable examples can be copied today.
-Preview examples cover gated surfaces: allocator-backed strings, sync/async
-effects, raw memory, actors, and comptime type matching.
+Preview sections are design notes, not stable copy-paste programs. They cover
+gated surfaces: allocator-backed strings, sync/async effects, raw memory,
+actors, and comptime type matching.
 
 ## The Shape
 Declarations are prefix-first; names come first:
@@ -123,7 +124,7 @@ channel. State lives in mutable bindings outside the loop.
 ## Imports And Modules
 Imports destructure from module paths; dotted paths resolve through subdirectories.
 
-## Memory And Ownership
+## Memory And Ownership Preview
 Stable Zen does not hide heap allocation behind literals, interpolation, calls, or containers. Heap APIs show the owner and allocator path.
 ```zen
 OwnedBytes<T, A>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
@@ -181,9 +182,9 @@ show<T: Display> = (value: T) StaticString { value.display() }
 main = () i32 {
     point = Point { x: 20, y: 22 }
     io.println("${show(point)}: ${point.sum()}")
-    point.sum()
+    0
 }
 ```
 That example shows prefix declarations, typed data, attached methods, behavior
 implementations, bounded generics, generic behavior dispatch, and static text.
-More to read: `README.md`, `examples/README.md`, and `docs/V1_SPEC.md`.
+More to read: `README.md`, `examples/README.md`, `examples/07_behaviors_and_generics.zen`, and `docs/V1_SPEC.md`.

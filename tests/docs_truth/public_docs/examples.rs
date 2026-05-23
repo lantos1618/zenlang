@@ -12,6 +12,7 @@ fn examples_index_uses_canonical_tutorial_and_project_paths() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
         "examples/project/test.zen",
     ] {
@@ -61,6 +62,7 @@ fn examples_directory_contains_only_canonical_public_examples() {
             "04_structs_and_methods.zen",
             "05_loops.zen",
             "06_error_handling.zen",
+            "07_behaviors_and_generics.zen",
             "README.md",
             "project",
         ],
@@ -94,6 +96,7 @@ fn public_examples_do_not_explain_implementation_stand_ins() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
         "examples/project/math_utils.zen",
         "examples/project/test.zen",
