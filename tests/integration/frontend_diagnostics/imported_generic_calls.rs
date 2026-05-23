@@ -1,4 +1,7 @@
-use super::support::{compile_to_c_panic_message, write_tmp_module};
+use super::support::{
+    assert_diagnostic_code_and_message, assert_no_diagnostic_message, frontend_diagnostics,
+    write_tmp_module,
+};
 
 #[test]
 fn imported_generic_function_inference_conflict_is_error() {
@@ -24,15 +27,18 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("conflicting inferred type argument `T` for generic function `choose`"),
-        "expected imported generic function inference conflict, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5000",
+        "conflicting inferred type argument `T` for generic function `choose`",
+        "imported generic function inference conflict",
     );
-    assert!(
-        !message.contains("argument 2"),
-        "inference conflict should not also report argument mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "argument 2",
+        "imported generic function inference conflict",
     );
 }
 
@@ -65,15 +71,18 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("conflicting inferred type argument `T` for generic method `Box.choose`"),
-        "expected imported generic method inference conflict, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5000",
+        "conflicting inferred type argument `T` for generic method `Box.choose`",
+        "imported generic method inference conflict",
     );
-    assert!(
-        !message.contains("argument 2"),
-        "inference conflict should not also report argument mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "argument 2",
+        "imported generic method inference conflict",
     );
 }
 
@@ -101,15 +110,18 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("generic function `take_second` expects 2 type arguments, found 1"),
-        "expected imported generic UFC arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic function `take_second` expects 2 type arguments, found 1",
+        "imported generic UFC arity",
     );
-    assert!(
-        !message.contains("argument 2"),
-        "imported generic UFC arity failure should not also report argument mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "argument 2",
+        "imported generic UFC arity failure",
     );
 }
 
@@ -137,11 +149,13 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("non-generic function `id_i32` does not accept type arguments"),
-        "expected imported non-generic UFC type-argument diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5002",
+        "non-generic function `id_i32` does not accept type arguments",
+        "imported non-generic UFC type-argument",
     );
 }
 
@@ -185,14 +199,17 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("type `Point` does not implement behavior `Json` required by `T`"),
-        "expected imported generic UFC behavior-bound diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "imported generic UFC behavior bound",
     );
-    assert!(
-        !message.contains("has no method `encode`"),
-        "bound failure should not also specialize into an unknown-method diagnostic, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "has no method `encode`",
+        "imported generic UFC behavior-bound failure",
     );
 }

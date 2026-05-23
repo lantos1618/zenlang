@@ -1,4 +1,7 @@
-use super::support::{compile_to_c_panic_message, write_tmp_module};
+use super::support::{
+    assert_diagnostic_code_and_message, assert_no_diagnostic_message, frontend_diagnostics,
+    write_tmp_module,
+};
 
 #[test]
 fn imported_generic_enum_method_explicit_type_arg_arity_is_error() {
@@ -30,19 +33,23 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("generic method `Result.unwrap_or` expects 2 type arguments, found 1"),
-        "expected imported generic method arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic method `Result.unwrap_or` expects 2 type arguments, found 1",
+        "imported generic method arity",
     );
-    assert!(
-        !message.contains("cannot infer type argument"),
-        "imported generic method arity failure should not also report inference, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "cannot infer type argument",
+        "imported generic method arity failure",
     );
-    assert!(
-        !message.contains("argument 2"),
-        "imported generic method arity failure should not also report argument mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "argument 2",
+        "imported generic method arity failure",
     );
 }
 
@@ -69,19 +76,23 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("generic function `take_second` expects 2 type arguments, found 1"),
-        "expected imported generic function arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic function `take_second` expects 2 type arguments, found 1",
+        "imported generic function arity",
     );
-    assert!(
-        !message.contains("cannot infer type argument"),
-        "imported generic function arity failure should not also report inference, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "cannot infer type argument",
+        "imported generic function arity failure",
     );
-    assert!(
-        !message.contains("argument 1"),
-        "imported generic function arity failure should not also report argument mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "argument 1",
+        "imported generic function arity failure",
     );
 }
 
@@ -114,22 +125,28 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("generic struct `Box` expects 1 type arguments, found 2"),
-        "expected imported generic struct constructor arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic struct `Box` expects 1 type arguments, found 2",
+        "imported generic struct constructor arity",
     );
-    assert!(
-        message.contains("generic enum `Option` expects 1 type arguments, found 2"),
-        "expected imported generic enum constructor arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic enum `Option` expects 1 type arguments, found 2",
+        "imported generic enum constructor arity",
     );
-    assert!(
-        !message.contains("field `value` for struct `Box`"),
-        "imported generic struct constructor arity failure should not also report field mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "field `value` for struct `Box`",
+        "imported generic struct constructor arity failure",
     );
-    assert!(
-        !message.contains("payload for enum variant"),
-        "imported generic enum constructor arity failure should not also report payload mismatch, panic={message}"
+    assert_no_diagnostic_message(
+        &diagnostics,
+        "payload for enum variant",
+        "imported generic enum constructor arity failure",
     );
 }

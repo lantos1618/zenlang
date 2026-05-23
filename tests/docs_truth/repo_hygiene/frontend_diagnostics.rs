@@ -56,8 +56,13 @@ fn imported_generic_call_diagnostics_pin_function_method_and_ufc_cases() {
         "conflicting inferred type argument `T` for generic method `Box.choose`",
         "non-generic function `id_i32` does not accept type arguments",
         "type `Point` does not implement behavior `Json` required by `T`",
-        "!message.contains(\"argument 2\")",
-        "!message.contains(\"has no method `encode`\")",
+        r#""E5000""#,
+        r#""E5001""#,
+        r#""E5002""#,
+        r#""E6004""#,
+        "assert_no_diagnostic_message(",
+        r#""argument 2""#,
+        r#""has no method `encode`""#,
     ] {
         assert!(
             calls.contains(required),
