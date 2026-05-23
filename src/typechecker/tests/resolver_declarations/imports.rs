@@ -14,9 +14,7 @@ main = () i32 { 0 }
 main = () i32 { 0 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&symbols_program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&symbols_program);
     let mut tc = TypeChecker::new();
 
     let err = tc
@@ -46,9 +44,7 @@ main = () i32 { 0 }
 main = () i32 { 0 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&symbols_program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&symbols_program);
     let mut tc = TypeChecker::new();
 
     let err = tc
@@ -74,9 +70,7 @@ main = () i32 {
 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&program);
     program
         .declarations
         .retain(|decl| !matches!(decl, Declaration::Import { .. }));
@@ -96,9 +90,7 @@ fn check_program_with_symbols_validates_stripped_resolver_import_sources() {
 main = () i32 { 0 }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.set_import_source_for_test(Namespace::Import, "io", None);
     program
         .declarations
@@ -125,9 +117,7 @@ fn check_program_with_symbols_validates_stripped_resolver_import_visibility() {
 main = () i32 { 0 }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.set_public_for_test(Namespace::Import, "io", true);
     program
         .declarations
@@ -154,9 +144,7 @@ fn check_program_with_symbols_requires_stripped_resolver_import_modules() {
 main = () i32 { 0 }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.remove_for_test(Namespace::Module, "std");
     program
         .declarations

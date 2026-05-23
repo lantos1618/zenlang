@@ -35,9 +35,7 @@ main = () i32 { 0 }
 extra = () i32 { 1 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&symbols_program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&symbols_program);
     let mut tc = TypeChecker::new();
 
     let err = tc

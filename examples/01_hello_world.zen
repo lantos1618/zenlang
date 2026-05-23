@@ -3,6 +3,6 @@
 { io } = std
 
 main = () i32 {
-    io.println("Hello, World!")
+    io.println("Hello from Zen!")
     0
 }

@@ -13,9 +13,7 @@ Point.implements(Mapper) {
 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&program);
     if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
         methods[0].params[1].ty = AstType::I32;
         methods[0].return_type = Some(AstType::I32);
@@ -54,9 +52,7 @@ Point.implements(Json) {
 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&program);
     if let Declaration::Behavior { methods, .. } = &mut program.declarations[1] {
         methods[0].name = "missing".to_string();
     }
@@ -95,9 +91,7 @@ Point.implements(Json) {
 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&program);
     if let Declaration::ImplBlock { methods, .. } = &mut program.declarations[2] {
         if let Declaration::Function { name, .. } = &mut methods[0] {
             *name = "missing".to_string();

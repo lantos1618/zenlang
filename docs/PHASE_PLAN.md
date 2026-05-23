@@ -63,20 +63,20 @@ model caches ignored.
 - fixed/guarded: duplicate public examples, stale scripts and `.claude`,
   stdlib raw `@builtin` leakage, static spelling tables, lexer/token helpers,
   parser type spelling helpers, JSON emit shells, root `tests/*.zen` fixtures,
-  resolver type-reference restore/scope validation, and experimental
-  testing/std facade promotion.
+  resolver type-reference restore/scope validation, resolver declaration/behavior
+  replay test setup, and experimental testing/std facade promotion.
 - current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`
   and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-live-hash`.
   Keep those generated JSON/HTML/embedding artifacts outside git.
-- next code cleanup: lossy `Type` to `AstType` conversion, generic callable
-  specialization, behavior-ref/key normalization, resolver declaration task
-  routing, and build-target lowering helpers.
+- next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
+  lossy `Type` to `AstType` conversion, generic callable specialization,
+  behavior-ref/key normalization, and resolver task routing.
 - next test cleanup: generated-C substring ladders, metadata absence matrices,
-  intrinsic gate helper repetition, exact temporary-name assertions, and
+  docs-truth prose pinning, exact temporary-name assertions, and
   private-layout hygiene checks that behave like `1 == 1`.
-- next docs/stdlib cleanup: public `build.zen` facade story, async/allocator
-  sketch quarantine, and compact status docs that avoid repeating the phase
-  plan.
+- next docs/stdlib cleanup: public std/build facade story, async/actor/allocator
+  sketch quarantine, duplicate allocator/async API shapes, and compact status
+  docs that avoid repeating the phase plan.
 
 ## Phase 5 Acceptance Evidence
 - generic enum specialization: `Option<T>`, `Result<T, E>`, nested results, duplicate variants, multi-file dependencies, executable fixtures, typed/HIR/MIR golden tests, and generated-C tests.

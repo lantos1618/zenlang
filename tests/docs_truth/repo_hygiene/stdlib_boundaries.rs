@@ -88,11 +88,15 @@ fn public_stdlib_text_uses_static_string_name() {
 }
 
 #[test]
-fn std_facade_does_not_reexport_experimental_testing_sketch() {
+fn std_facade_does_not_reexport_unpromoted_sketches() {
     let source = read("stdlib/std.zen");
     assert!(
         !source.contains("@std.testing"),
         "stdlib/std.zen should not promote the experimental testing sketch"
+    );
+    assert!(
+        !source.contains("= @std."),
+        "stdlib/std.zen should not re-export unpromoted stdlib sketches"
     );
 }
 

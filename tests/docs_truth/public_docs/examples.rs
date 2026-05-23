@@ -106,3 +106,23 @@ fn public_examples_do_not_explain_implementation_stand_ins() {
         );
     }
 }
+
+#[test]
+fn public_hello_example_is_not_a_test_fixture_clone() {
+    let public_example = normalized_zen_source(&read("examples/01_hello_world.zen"));
+    let test_fixture = normalized_zen_source(&read("tests/zen/hello.zen"));
+
+    assert_ne!(
+        public_example, test_fixture,
+        "public hello example should not be a duplicate of the internal hello fixture"
+    );
+}
+
+fn normalized_zen_source(source: &str) -> String {
+    source
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
