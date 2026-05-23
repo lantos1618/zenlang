@@ -125,3 +125,33 @@ fn intrinsic_gate_tests_live_in_focused_helpers() {
         "intrinsic_gates.rs should stay as a small router for gated intrinsic tests"
     );
 }
+
+#[test]
+fn core_type_substitution_tests_live_in_focused_helper() {
+    let root = read("src/typechecker/tests/core_semantics/type_helpers.rs");
+    let substitution = read("src/typechecker/tests/core_semantics/type_helpers/substitution.rs");
+
+    for test_name in [
+        "substitute_type_basic",
+        "substitute_type_covers_all_composite_type_shapes",
+        "substitute_type_preserves_function_type_arguments_in_nested_generics",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "type_helpers.rs should not own type-substitution test: {test_name}"
+        );
+        assert!(
+            substitution.contains(&format!("fn {test_name}")),
+            "type-substitution tests should live in focused helper: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 150,
+        "type_helpers.rs should stay focused on compatibility, resolution, coercion, and inference"
+    );
+    assert!(
+        root.contains("mod substitution;"),
+        "type_helpers.rs should include the focused substitution module"
+    );
+}
