@@ -112,8 +112,7 @@ impl TypeChecker {
     ) {
         let restored_key = Self::validation_method_key(symbols, ast_key, type_name, span);
         if let Some(scoped) = self.collected_value_type_param_scope(&restored_key) {
-            self.validate_collected_value_type_references(&restored_key, &scoped, span);
-            self.validate_generic_expr_type_references(body, &scoped);
+            self.validate_resolver_value_type_references(&restored_key, &scoped, body, span);
         }
     }
 
@@ -133,8 +132,7 @@ impl TypeChecker {
         ) else {
             return;
         };
-        self.validate_collected_value_type_references(&restored_key, &scoped, span);
-        self.validate_generic_expr_type_references(body, &scoped);
+        self.validate_resolver_value_type_references(&restored_key, &scoped, body, span);
     }
 
     fn validate_resolver_behavior_type_references(

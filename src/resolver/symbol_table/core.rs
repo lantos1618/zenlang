@@ -18,6 +18,15 @@ pub struct BehaviorRefMetadata {
     pub type_args: Vec<AstType>,
 }
 
+impl BehaviorRefMetadata {
+    pub(crate) fn new(name: impl Into<String>, type_args: &[AstType]) -> Self {
+        Self {
+            name: name.into(),
+            type_args: type_args.to_vec(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeParameterBoundRefMetadata {
     pub type_parameter: String,

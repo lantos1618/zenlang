@@ -113,19 +113,7 @@ fn behavior_bound_display(bound: &BehaviorBound, substitutions: &HashMap<String,
 }
 
 fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
-    if type_args.is_empty() {
-        behavior.to_string()
-    } else {
-        format!(
-            "{}<{}>",
-            behavior,
-            type_args
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
+    crate::ast::behavior_ref_display(behavior, type_args)
 }
 
 fn behavior_method_signatures_match(

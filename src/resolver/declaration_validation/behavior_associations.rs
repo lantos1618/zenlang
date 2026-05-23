@@ -31,10 +31,7 @@ impl Resolver {
             let behavior_display = behavior_ref_display(behavior, behavior_type_args);
             if !table.record_behavior_required(
                 type_name,
-                BehaviorRefMetadata {
-                    name: behavior.to_string(),
-                    type_args: behavior_type_args.to_vec(),
-                },
+                BehaviorRefMetadata::new(behavior, behavior_type_args),
             ) {
                 diagnostics.push(Diagnostic::error(
                     "E0216",
@@ -120,10 +117,7 @@ impl Resolver {
             let parent_display = behavior_ref_display(parent, parent_type_args);
             if !table.record_behavior_parent(
                 behavior,
-                BehaviorRefMetadata {
-                    name: parent.to_string(),
-                    type_args: parent_type_args.to_vec(),
-                },
+                BehaviorRefMetadata::new(parent, parent_type_args),
             ) {
                 diagnostics.push(Diagnostic::error(
                     "E0215",

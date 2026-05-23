@@ -128,6 +128,22 @@ pub(crate) fn behavior_type_args_match_target_params(
     behavior_type_args == target_type_args && behavior_type_args.iter().all(is_named_type_arg)
 }
 
+pub(crate) fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
+    if type_args.is_empty() {
+        behavior.to_string()
+    } else {
+        format!(
+            "{}<{}>",
+            behavior,
+            type_args
+                .iter()
+                .map(AstType::display_name)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 pub(crate) fn named_type_arg_names(type_args: &[AstType]) -> Vec<String> {
     type_args
         .iter()

@@ -97,4 +97,15 @@ impl TypeChecker {
         }
         self.validate_generic_type_ref_bounds(&info.return_type, scoped, span);
     }
+
+    pub(super) fn validate_resolver_value_type_references(
+        &mut self,
+        restored_key: &str,
+        scoped: &HashSet<String>,
+        body: &Expression,
+        span: Span,
+    ) {
+        self.validate_collected_value_type_references(restored_key, scoped, span);
+        self.validate_generic_expr_type_references(body, scoped);
+    }
 }

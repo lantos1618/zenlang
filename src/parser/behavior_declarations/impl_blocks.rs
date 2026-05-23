@@ -8,18 +8,7 @@ impl Parser {
     ) -> Result<Declaration, CompileError> {
         let (behavior, _, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
         self.skip_newlines();
-        self.expect(&Token::LBrace)?;
-
-        let mut methods = Vec::new();
-        loop {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::RBrace) {
-                break;
-            }
-            methods.push(self.parse_declaration()?);
-        }
-
-        let end = self.expect(&Token::RBrace)?;
+        let (methods, end) = self.parse_impl_block_methods(&[])?;
         Ok(Declaration::ImplBlock {
             type_name,
             behavior: Some(behavior),
@@ -38,24 +27,12 @@ impl Parser {
     ) -> Result<Declaration, CompileError> {
         let (behavior, _, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
         self.skip_newlines();
-        self.expect(&Token::LBrace)?;
 
         let type_args = type_params
             .iter()
             .map(|param| AstType::Named(param.name.clone()))
             .collect();
-        let mut methods = Vec::new();
-        loop {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::RBrace) {
-                break;
-            }
-            let mut method = self.parse_declaration()?;
-            Self::prepend_impl_type_params(&mut method, &type_params);
-            methods.push(method);
-        }
-
-        let end = self.expect(&Token::RBrace)?;
+        let (methods, end) = self.parse_impl_block_methods(&type_params)?;
         Ok(Declaration::ImplBlock {
             type_name,
             behavior: Some(behavior),

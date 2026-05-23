@@ -8,7 +8,7 @@ mod mir;
 use crate::ast::typed::TypedProgram;
 use crate::ast::Program;
 use crate::error::{Diagnostic, FileTable, Span};
-use crate::module_system::{ImportBinding, ResolvedModuleGraph};
+use crate::module_system::{ImportBinding, ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::Symbol;
 
 #[derive(Serialize)]
@@ -89,15 +89,12 @@ struct SymbolJson<'a> {
 }
 
 pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<String> {
-    let mut modules: Vec<_> = graph.modules().values().collect();
-    modules.sort_by_key(|module| module.info.id.0);
-
     let graph = AstJsonGraph {
         format: "zen.ast.v0",
         schema_version: 0,
         semantic_status: "unchecked",
         entry_module: graph.entry.0,
-        modules: modules
+        modules: sorted_graph_modules(graph)
             .into_iter()
             .map(|module| AstJsonModule {
                 id: module.info.id.0,
@@ -113,14 +110,11 @@ pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<Stri
 }
 
 pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<String> {
-    let mut modules: Vec<_> = graph.modules().values().collect();
-    modules.sort_by_key(|module| module.info.id.0);
-
     let graph = SymbolsJsonGraph {
         format: "zen.symbols.v0",
         semantic_status: "resolved",
         entry_module: graph.entry.0,
-        modules: modules
+        modules: sorted_graph_modules(graph)
             .into_iter()
             .map(|module| SymbolsJsonModule {
                 id: module.info.id.0,
@@ -132,6 +126,12 @@ pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<
     };
 
     serde_json::to_string_pretty(&graph)
+}
+
+fn sorted_graph_modules(graph: &ResolvedModuleGraph) -> Vec<&ResolvedModule> {
+    let mut modules: Vec<_> = graph.modules().values().collect();
+    modules.sort_by_key(|module| module.info.id.0);
+    modules
 }
 
 pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
