@@ -27,6 +27,7 @@ int32_t inner_i32(int32_t value) {
 
 int32_t outer_i32(int32_t value) {
     printf("%d", value);
+    unwrap_result_Option_i32_StaticString(value);
     missing_stmt_i32(value);
     return missing_i32(value) + inner_i32(value) + id(12LL);
 }
@@ -35,6 +36,7 @@ int32_t outer_i32(int32_t value) {
     assert_eq!(
         undefined_generated_c_calls(c_source),
         vec![
+            "unwrap_result_Option_i32_StaticString".to_string(),
             "missing_stmt_i32".to_string(),
             "missing_i32".to_string(),
             "id".to_string()

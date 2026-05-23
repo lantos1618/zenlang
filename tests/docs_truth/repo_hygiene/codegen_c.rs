@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "codegen_c/generated_c_support.rs"]
+mod generated_c_support;
+
 #[test]
 fn codegen_c_function_emission_lives_in_focused_helper() {
     let types = read("src/codegen/c/types.rs");
