@@ -2,97 +2,18 @@ fn substitute_behavior_ast_type(
     ast_type: &AstType,
     substitutions: &HashMap<String, AstType>,
 ) -> AstType {
-    match ast_type {
-        AstType::Named(name) => substitutions
-            .get(name)
-            .cloned()
-            .unwrap_or_else(|| ast_type.clone()),
-        AstType::Ptr(inner) => {
-            AstType::Ptr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
-        }
-        AstType::MutPtr(inner) => {
-            AstType::MutPtr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
-        }
-        AstType::RawPtr(inner) => {
-            AstType::RawPtr(Box::new(substitute_behavior_ast_type(inner, substitutions)))
-        }
-        AstType::Slice(inner) => {
-            AstType::Slice(Box::new(substitute_behavior_ast_type(inner, substitutions)))
-        }
-        AstType::Array { elem, size } => AstType::Array {
-            elem: Box::new(substitute_behavior_ast_type(elem, substitutions)),
-            size: *size,
-        },
-        AstType::Function { params, ret } => AstType::Function {
-            params: params
-                .iter()
-                .map(|param| substitute_behavior_ast_type(param, substitutions))
-                .collect(),
-            ret: Box::new(substitute_behavior_ast_type(ret, substitutions)),
-        },
-        AstType::Generic { name, type_args } => AstType::Generic {
-            name: name.clone(),
-            type_args: type_args
-                .iter()
-                .map(|arg| substitute_behavior_ast_type(arg, substitutions))
-                .collect(),
-        },
-        _ => ast_type.clone(),
-    }
-}
-
-fn substitute_behavior_bound_ast_type(
-    ast_type: &AstType,
-    substitutions: &HashMap<String, Type>,
-) -> AstType {
-    match ast_type {
-        AstType::Named(name) => substitutions
-            .get(name)
-            .map(monomorphize::type_to_ast)
-            .unwrap_or_else(|| ast_type.clone()),
-        AstType::Ptr(inner) => AstType::Ptr(Box::new(substitute_behavior_bound_ast_type(
-            inner,
-            substitutions,
-        ))),
-        AstType::MutPtr(inner) => AstType::MutPtr(Box::new(substitute_behavior_bound_ast_type(
-            inner,
-            substitutions,
-        ))),
-        AstType::RawPtr(inner) => AstType::RawPtr(Box::new(substitute_behavior_bound_ast_type(
-            inner,
-            substitutions,
-        ))),
-        AstType::Slice(inner) => AstType::Slice(Box::new(substitute_behavior_bound_ast_type(
-            inner,
-            substitutions,
-        ))),
-        AstType::Array { elem, size } => AstType::Array {
-            elem: Box::new(substitute_behavior_bound_ast_type(elem, substitutions)),
-            size: *size,
-        },
-        AstType::Function { params, ret } => AstType::Function {
-            params: params
-                .iter()
-                .map(|param| substitute_behavior_bound_ast_type(param, substitutions))
-                .collect(),
-            ret: Box::new(substitute_behavior_bound_ast_type(ret, substitutions)),
-        },
-        AstType::Generic { name, type_args } => AstType::Generic {
-            name: name.clone(),
-            type_args: substitute_behavior_bound_type_args(type_args, substitutions),
-        },
-        _ => ast_type.clone(),
-    }
+    ast_type_substitution::substitute_ast_type_names(ast_type, &|name| {
+        substitutions.get(name).cloned()
+    })
 }
 
 fn substitute_behavior_bound_type_args(
     type_args: &[AstType],
     substitutions: &HashMap<String, Type>,
 ) -> Vec<AstType> {
-    type_args
-        .iter()
-        .map(|arg| substitute_behavior_bound_ast_type(arg, substitutions))
-        .collect()
+    ast_type_substitution::substitute_ast_type_args_names(type_args, &|name| {
+        substitutions.get(name).map(monomorphize::type_to_ast)
+    })
 }
 
 fn behavior_bound_display(bound: &BehaviorBound, substitutions: &HashMap<String, Type>) -> String {

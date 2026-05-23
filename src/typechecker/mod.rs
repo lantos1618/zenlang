@@ -8,6 +8,7 @@
 //! The typechecker NEVER defaults unknown types to I32. If a type can't be
 //! resolved, it's an error.
 
+pub(in crate::typechecker) mod ast_type_substitution;
 mod behavior_associations;
 mod behavior_impl_methods;
 mod behavior_impl_signature_collection;

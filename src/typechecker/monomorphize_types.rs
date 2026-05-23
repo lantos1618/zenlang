@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use super::ast_type_substitution::substitute_ast_type_names;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
@@ -75,44 +76,7 @@ pub(super) fn substitute_ast_type(
     ast_type: &AstType,
     substitutions: &HashMap<String, Type>,
 ) -> AstType {
-    match ast_type {
-        AstType::Named(name) => {
-            if let Some(concrete) = substitutions.get(name) {
-                type_to_ast(concrete)
-            } else {
-                ast_type.clone()
-            }
-        }
-        AstType::Ptr(inner) => AstType::Ptr(Box::new(substitute_ast_type(inner, substitutions))),
-        AstType::MutPtr(inner) => {
-            AstType::MutPtr(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::RawPtr(inner) => {
-            AstType::RawPtr(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::Slice(inner) => {
-            AstType::Slice(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::Array { elem, size } => AstType::Array {
-            elem: Box::new(substitute_ast_type(elem, substitutions)),
-            size: *size,
-        },
-        AstType::Function { params, ret } => AstType::Function {
-            params: params
-                .iter()
-                .map(|param| substitute_ast_type(param, substitutions))
-                .collect(),
-            ret: Box::new(substitute_ast_type(ret, substitutions)),
-        },
-        AstType::Generic { name, type_args } => AstType::Generic {
-            name: name.clone(),
-            type_args: type_args
-                .iter()
-                .map(|a| substitute_ast_type(a, substitutions))
-                .collect(),
-        },
-        _ => ast_type.clone(),
-    }
+    substitute_ast_type_names(ast_type, &|name| substitutions.get(name).map(type_to_ast))
 }
 
 /// Convert a resolved Type back to an AstType (best-effort, for substitution).
