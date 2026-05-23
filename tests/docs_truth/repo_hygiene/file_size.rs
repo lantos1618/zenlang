@@ -10,6 +10,7 @@ mod generic_behavior_splits;
 mod integration_fixture_splits;
 mod integration_import_visibility_splits;
 mod lexer_and_monomorphize;
+mod lexer_token_spelling;
 mod module_system_splits;
 mod parser_enum_splits;
 mod parser_expression_splits;

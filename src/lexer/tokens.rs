@@ -123,6 +123,15 @@ impl Token {
         (';', Self::Semicolon),
     ];
 
+    pub(in crate::lexer) const KEYWORDS: &'static [(&'static str, Self)] = &[("pub", Self::Pub)];
+
+    pub(in crate::lexer) const AT_TOKENS: &'static [(&'static str, Self)] = &[
+        (crate::root_spelling::STD_ROOT, Self::AtStd),
+        (crate::root_spelling::BUILTIN_ROOT_NAME, Self::AtBuiltin),
+        ("this", Self::AtThis),
+        ("export", Self::AtExport),
+    ];
+
     pub fn is_eof(&self) -> bool {
         matches!(self, Token::EOF)
     }
@@ -131,6 +140,20 @@ impl Token {
         Self::SINGLE_CHAR_TOKENS
             .iter()
             .find(|(spelling, _)| *spelling == ch)
+            .map(|(_, token)| token.clone())
+    }
+
+    pub(in crate::lexer) fn from_keyword(word: &str) -> Option<Self> {
+        Self::KEYWORDS
+            .iter()
+            .find(|(spelling, _)| *spelling == word)
+            .map(|(_, token)| token.clone())
+    }
+
+    pub(in crate::lexer) fn from_at_name(word: &str) -> Option<Self> {
+        Self::AT_TOKENS
+            .iter()
+            .find(|(spelling, _)| *spelling == word)
             .map(|(_, token)| token.clone())
     }
 }
@@ -146,5 +169,17 @@ mod tests {
         }
         assert_eq!(Token::from_single_char('@'), None);
         assert_eq!(Token::from_single_char('\n'), None);
+    }
+
+    #[test]
+    fn keyword_and_at_tokens_round_trip_through_owned_tables() {
+        for (spelling, token) in Token::KEYWORDS {
+            assert_eq!(Token::from_keyword(spelling), Some(token.clone()));
+        }
+        for (spelling, token) in Token::AT_TOKENS {
+            assert_eq!(Token::from_at_name(spelling), Some(token.clone()));
+        }
+        assert_eq!(Token::from_keyword("main"), None);
+        assert_eq!(Token::from_at_name("custom"), None);
     }
 }

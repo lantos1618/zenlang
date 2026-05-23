@@ -94,10 +94,7 @@ impl Lexer {
         }
         let word: String = self.source[char_start..self.pos].iter().collect();
         let span = self.make_span(start, self.byte_pos());
-        let tok = match word.as_str() {
-            "pub" => Token::Pub,
-            _ => Token::Identifier(word),
-        };
+        let tok = Token::from_keyword(&word).unwrap_or(Token::Identifier(word));
         (tok, span)
     }
 
@@ -116,13 +113,8 @@ impl Lexer {
         }
         let word: String = self.source[id_start..self.pos].iter().collect();
         let span = self.make_span(start, self.byte_pos());
-        let tok = match word.as_str() {
-            crate::root_spelling::STD_ROOT => Token::AtStd,
-            crate::root_spelling::BUILTIN_ROOT_NAME => Token::AtBuiltin,
-            "this" => Token::AtThis,
-            "export" => Token::AtExport,
-            _ => Token::Identifier(format!("@{word}")),
-        };
+        let tok =
+            Token::from_at_name(&word).unwrap_or_else(|| Token::Identifier(format!("@{word}")));
         Ok((tok, span))
     }
 }

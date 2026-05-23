@@ -61,48 +61,6 @@ fn lexer_number_scanning_lives_in_focused_helper() {
 }
 
 #[test]
-fn lexer_operator_spelling_tables_have_one_owner() {
-    let tokens = read("src/lexer/tokens.rs");
-
-    for required in [
-        "MULTI_CHAR_OPERATORS",
-        "SINGLE_CHAR_TOKENS",
-        "fn from_single_char",
-    ] {
-        assert!(
-            tokens.contains(required),
-            "lexer token spellings should be owned by Token: {required}"
-        );
-    }
-    assert!(
-        tokens.contains("Self::SINGLE_CHAR_TOKENS")
-            && tokens.contains(".find(|(spelling, _)| *spelling == ch)"),
-        "single-character token lookup should use Token::SINGLE_CHAR_TOKENS instead of a second hand-written match"
-    );
-
-    for path in ["src/lexer/scan.rs", "src/lexer/string_interpolation.rs"] {
-        let source = read(path);
-        for forbidden in [
-            r#"("::=", Token::DeclareAssign"#,
-            r#"("=>", Token::FatArrow"#,
-            "'+' => Token::Plus",
-            "'{' => Token::LBrace",
-        ] {
-            assert!(
-                !source.contains(forbidden),
-                "{path} should use Token spelling helpers instead of owning token spelling tables: {forbidden}"
-            );
-        }
-        assert!(
-            source.contains("lex_non_string_token")
-                || source.contains("lex_multi_char_operator")
-                || source.contains("lex_single_char_token"),
-            "{path} should use shared lexer token spelling helpers"
-        );
-    }
-}
-
-#[test]
 fn monomorphize_type_substitution_lives_in_focused_helper() {
     let monomorphize = read("src/typechecker/monomorphize.rs");
     let names = read("src/typechecker/monomorphize_names.rs");
