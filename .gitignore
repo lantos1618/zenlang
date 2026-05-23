@@ -111,6 +111,6 @@ secrets.yml
 *Bearer*
 *Authorization*
 .opencode/
-vscode-extension/out/extension.js
+/vscode-extension/out/
 examples/build_demo/target/
 examples/demo_project/target/

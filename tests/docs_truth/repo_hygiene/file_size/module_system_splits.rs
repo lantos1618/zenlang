@@ -3,23 +3,25 @@ use super::super::*;
 #[test]
 fn module_graph_stdlib_gate_tests_live_in_focused_helper() {
     let root = read("src/module_system/tests/graph_loading.rs");
+    let shared = read("src/module_system/tests.rs");
     let stdlib_gates = read("src/module_system/tests/graph_loading/stdlib_gates.rs");
 
-    for test_name in [
-        "module_graph_gates_stdlib_actor_framework_import_before_loading_sketch",
-        "module_graph_gates_stdlib_allocator_import_before_loading_sketch",
-        "module_graph_gates_stdlib_async_runtime_import_before_loading_sketch",
-        "module_graph_gates_stdlib_sync_runtime_import_before_loading_sketch",
-    ] {
-        assert!(
-            !root.contains(&format!("fn {test_name}")),
-            "graph_loading.rs should not own graph stdlib gate test: {test_name}"
-        );
-        assert!(
-            stdlib_gates.contains(&format!("fn {test_name}")),
-            "module graph stdlib gate tests should live in focused module: {test_name}"
-        );
-    }
+    assert!(
+        !root.contains("stdlib_import_is_gated_before_loading_sketch"),
+        "graph_loading.rs should not own individual stdlib gate tests"
+    );
+    assert!(
+        shared.contains("const STDLIB_GATE_CASES: &[StdlibGateCase]"),
+        "module-system stdlib gate cases should live in one shared matrix"
+    );
+    assert!(
+        stdlib_gates.contains("fn module_graph_gates_stdlib_imports_before_loading_sketches"),
+        "module graph stdlib gate tests should consume the shared case matrix"
+    );
+    assert!(
+        stdlib_gates.contains("StdlibGateLoadPath::Graph"),
+        "module graph stdlib gate tests should explicitly cover the graph load path"
+    );
 
     assert!(
         root.lines().count() < 210,

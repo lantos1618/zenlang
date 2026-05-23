@@ -66,57 +66,85 @@ enum StdlibGateLoadPath {
     Graph,
 }
 
-fn assert_stdlib_import_is_gated_before_loading_sketch(
-    sketch_dir: &str,
-    sketch_file: &str,
-    import_source: &str,
-    expected_gate: &str,
-    gate_name: &str,
-) {
-    assert_stdlib_import_is_gated_before_loading_sketch_on_path(
-        StdlibGateLoadPath::Imports,
-        sketch_dir,
-        sketch_file,
-        import_source,
-        expected_gate,
-        gate_name,
-    );
+struct StdlibGateCase {
+    sketch_dir: &'static str,
+    sketch_file: &'static str,
+    import_source: &'static str,
+    expected_gate: &'static str,
+    gate_name: &'static str,
 }
 
-fn assert_graph_stdlib_import_is_gated_before_loading_sketch(
-    sketch_dir: &str,
-    sketch_file: &str,
-    import_source: &str,
-    expected_gate: &str,
-    gate_name: &str,
-) {
-    assert_stdlib_import_is_gated_before_loading_sketch_on_path(
-        StdlibGateLoadPath::Graph,
-        sketch_dir,
-        sketch_file,
-        import_source,
-        expected_gate,
-        gate_name,
-    );
+const STDLIB_GATE_CASES: &[StdlibGateCase] = &[
+    StdlibGateCase {
+        sketch_dir: "concurrency/actor",
+        sketch_file: "actor.zen",
+        import_source: "{ Actor } = @std.concurrency.actor.actor",
+        expected_gate: "std actor framework modules are gated",
+        gate_name: "actor",
+    },
+    StdlibGateCase {
+        sketch_dir: "memory",
+        sketch_file: "allocator.zen",
+        import_source: "{ Allocator } = @std.memory.allocator",
+        expected_gate: "std allocator modules are gated",
+        gate_name: "allocator",
+    },
+    StdlibGateCase {
+        sketch_dir: "",
+        sketch_file: "compiler.zen",
+        import_source: "{ raw_allocate } = @std.compiler",
+        expected_gate: "std compiler facade is gated",
+        gate_name: "compiler facade",
+    },
+    StdlibGateCase {
+        sketch_dir: "",
+        sketch_file: "compiler.zen",
+        import_source: "{ compiler } = @std",
+        expected_gate: "std compiler facade is gated",
+        gate_name: "compiler facade root",
+    },
+    StdlibGateCase {
+        sketch_dir: "concurrency/async",
+        sketch_file: "scheduler.zen",
+        import_source: "{ Scheduler } = @std.concurrency.async.scheduler",
+        expected_gate: "std async runtime modules are gated",
+        gate_name: "async",
+    },
+    StdlibGateCase {
+        sketch_dir: "concurrency/sync",
+        sketch_file: "channel.zen",
+        import_source: "{ Channel } = @std.concurrency.sync.channel",
+        expected_gate: "std sync runtime modules are gated",
+        gate_name: "sync",
+    },
+    StdlibGateCase {
+        sketch_dir: "io/mux",
+        sketch_file: "uring.zen",
+        import_source: "{ IoUring } = @std.io.mux.uring",
+        expected_gate: "std io_uring modules are gated",
+        gate_name: "io_uring",
+    },
+];
+
+fn assert_stdlib_gate_cases_are_gated_before_loading_sketch(load_path: StdlibGateLoadPath) {
+    for case in STDLIB_GATE_CASES {
+        assert_stdlib_import_is_gated_before_loading_sketch_on_path(load_path, case);
+    }
 }
 
 fn assert_stdlib_import_is_gated_before_loading_sketch_on_path(
     load_path: StdlibGateLoadPath,
-    sketch_dir: &str,
-    sketch_file: &str,
-    import_source: &str,
-    expected_gate: &str,
-    gate_name: &str,
+    case: &StdlibGateCase,
 ) {
     let tmp = setup_temp_dir();
-    let sketch_dir = tmp.path().join("stdlib").join(sketch_dir);
+    let sketch_dir = tmp.path().join("stdlib").join(case.sketch_dir);
     fs::create_dir_all(&sketch_dir).unwrap();
-    fs::write(sketch_dir.join(sketch_file), "this is not valid zen\n").unwrap();
+    fs::write(sketch_dir.join(case.sketch_file), "this is not valid zen\n").unwrap();
 
     let main_path = tmp.path().join("main.zen");
     fs::write(
         &main_path,
-        format!("{import_source}\n\nmain = () i32 {{ 0 }}\n"),
+        format!("{}\n\nmain = () i32 {{ 0 }}\n", case.import_source),
     )
     .unwrap();
 
@@ -135,11 +163,13 @@ fn assert_stdlib_import_is_gated_before_loading_sketch_on_path(
         .join("\n");
 
     assert!(
-        messages.contains(expected_gate),
-        "expected {gate_name} stdlib gate diagnostic, got {messages}"
+        messages.contains(case.expected_gate),
+        "expected {} stdlib gate diagnostic, got {messages}",
+        case.gate_name
     );
     assert!(
         !messages.contains("expected") && !messages.contains("unexpected token"),
-        "{gate_name} stdlib gate should not leak parser diagnostics from sketches, got {messages}"
+        "{} stdlib gate should not leak parser diagnostics from sketches, got {messages}",
+        case.gate_name
     );
 }
