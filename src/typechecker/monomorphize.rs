@@ -157,17 +157,13 @@ impl TypeChecker {
         span: Span,
     ) -> HashMap<String, Type> {
         if type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic {} `{}` expects {} type arguments, found {}",
-                    kind,
-                    name,
-                    type_params.len(),
-                    type_args.len()
-                ),
+            self.report_generic_type_arg_arity(
+                kind,
+                name,
+                type_params.len(),
+                type_args.len(),
                 span,
-            ));
+            );
         }
 
         type_params

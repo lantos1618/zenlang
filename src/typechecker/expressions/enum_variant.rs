@@ -16,35 +16,12 @@ impl TypeChecker {
         let enum_info = self.enums.get(enum_name).cloned();
         let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
-        if !type_args.is_empty() && type_arg_count == Some(0) {
-            self.reject_nongeneric_type_args("enum", enum_name, type_args, span);
-        } else if let Some(expected) = type_arg_count.filter(|expected| {
-            !type_args.is_empty() && *expected > 0 && *expected != type_args.len()
-        }) {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic enum `{}` expects {} type arguments, found {}",
-                    enum_name,
-                    expected,
-                    type_args.len()
-                ),
-                span,
-            ));
+        if let Some(expected) = type_arg_count {
+            self.validate_type_arg_arity("enum", enum_name, expected, type_args, span);
         }
 
         let (type_name, ty, variant_defs) = if type_args.is_empty() {
             let ty = self.resolve_type(&AstType::Named(enum_name.to_string()));
-            if let Some(expected) = type_arg_count.filter(|expected| *expected > 0) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E5001",
-                    format!(
-                        "generic enum `{}` expects {} type arguments, found 0",
-                        enum_name, expected
-                    ),
-                    span,
-                ));
-            }
             let variant_defs = enum_info
                 .as_ref()
                 .filter(|_| type_args_valid)

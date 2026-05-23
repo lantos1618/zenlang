@@ -65,8 +65,12 @@ model caches ignored.
   parser type spelling helpers, JSON emit shells, root `tests/*.zen` fixtures,
   resolver type-reference restore/scope validation, and experimental
   testing/std facade promotion.
-- next code cleanup: generic callable specialization, build-target lowering
-  helpers, and behavior/generic validation key restoration.
+- current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`
+  and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-live-hash`.
+  Keep those generated JSON/HTML/embedding artifacts outside git.
+- next code cleanup: lossy `Type` to `AstType` conversion, generic callable
+  specialization, behavior-ref/key normalization, resolver declaration task
+  routing, and build-target lowering helpers.
 - next test cleanup: generated-C substring ladders, metadata absence matrices,
   intrinsic gate helper repetition, exact temporary-name assertions, and
   private-layout hygiene checks that behave like `1 == 1`.

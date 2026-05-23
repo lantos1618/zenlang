@@ -62,21 +62,7 @@ impl TypeChecker {
             return;
         };
 
-        let found = type_args.len();
-        if expected == 0 && found > 0 {
-            self.reject_nongeneric_type_args("behavior", behavior, type_args, span);
-            return;
-        }
-        if expected != found {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic behavior `{}` expects {} type arguments, found {}",
-                    behavior, expected, found
-                ),
-                span,
-            ));
-        }
+        self.validate_type_arg_arity("behavior", behavior, expected, type_args, span);
     }
 
     fn generic_behavior_type_param_count(

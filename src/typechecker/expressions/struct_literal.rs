@@ -15,33 +15,12 @@ impl TypeChecker {
             .iter()
             .all(|type_arg| self.generic_type_annotation_arities_valid(type_arg));
         let constructor_type_args_valid = type_args_valid && type_arg_annotations_valid;
-        if !type_args.is_empty() && type_arg_count == Some(0) {
-            self.reject_nongeneric_type_args("struct", name, type_args, span);
-        } else if let Some(expected) = type_arg_count.filter(|expected| {
-            !type_args.is_empty() && *expected > 0 && *expected != type_args.len()
-        }) {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic struct `{}` expects {} type arguments, found {}",
-                    name,
-                    expected,
-                    type_args.len()
-                ),
-                span,
-            ));
+        if let Some(expected) = type_arg_count {
+            self.validate_type_arg_arity("struct", name, expected, type_args, span);
         }
 
         let (type_name, ty, field_defs) = if type_args.is_empty() {
-            let ty = if let Some(expected) = type_arg_count.filter(|expected| *expected > 0) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E5001",
-                    format!(
-                        "generic struct `{}` expects {} type arguments, found 0",
-                        name, expected
-                    ),
-                    span,
-                ));
+            let ty = if type_arg_count.is_some_and(|expected| expected > 0) {
                 Type::Unknown
             } else {
                 self.resolve_type(&AstType::Named(name.to_string()))

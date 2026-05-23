@@ -46,17 +46,13 @@ impl TypeChecker {
         else {
             return;
         };
-        if expected_type_arg_count != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic type `{}` expects {} type arguments, found {}",
-                    type_name,
-                    expected_type_arg_count,
-                    type_args.len()
-                ),
-                span,
-            ));
+        if !self.validate_type_arg_arity(
+            "type",
+            type_name,
+            expected_type_arg_count,
+            type_args,
+            span,
+        ) {
             return;
         }
 

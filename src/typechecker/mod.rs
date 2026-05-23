@@ -25,6 +25,7 @@ mod environment;
 mod expressions;
 mod gated_intrinsics;
 mod generic_bound_validation;
+mod generic_type_arg_diagnostics;
 mod generic_type_reference_walker;
 mod generic_type_validation;
 mod import_roots;
@@ -83,28 +84,6 @@ include!("declaration_tasks.rs");
 include!("state.rs");
 
 impl TypeChecker {
-    fn reject_nongeneric_type_args(
-        &mut self,
-        kind: &str,
-        name: &str,
-        type_args: &[AstType],
-        span: Span,
-    ) -> bool {
-        if type_args.is_empty() {
-            return false;
-        }
-
-        self.diagnostics.push(Diagnostic::error(
-            "E5002",
-            format!(
-                "non-generic {} `{}` does not accept type arguments",
-                kind, name
-            ),
-            span,
-        ));
-        true
-    }
-
     fn behavior_type_arg_substitutions(
         &mut self,
         behavior: &str,
@@ -121,22 +100,13 @@ impl TypeChecker {
             return None;
         };
 
-        if info.type_params.is_empty() && !type_args.is_empty() {
-            self.reject_nongeneric_type_args("behavior", behavior, type_args, span);
-            return None;
-        }
-
-        if info.type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic behavior `{}` expects {} type arguments, found {}",
-                    behavior,
-                    info.type_params.len(),
-                    type_args.len()
-                ),
-                span,
-            ));
+        if !self.validate_type_arg_arity(
+            "behavior",
+            behavior,
+            info.type_params.len(),
+            type_args,
+            span,
+        ) {
             return None;
         }
 
