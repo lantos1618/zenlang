@@ -13,6 +13,7 @@ mod lexer_and_monomorphize;
 mod module_system_splits;
 mod parser_enum_splits;
 mod parser_expression_splits;
+mod phase_audit_splits;
 mod resolver_metadata_impl_method_splits;
 mod resolver_metadata_requirement_splits;
 mod resolver_metadata_restoration_splits;
