@@ -62,6 +62,34 @@ fn typechecker_resolver_callable_replay_lives_in_focused_helper() {
 }
 
 #[test]
+fn typechecker_resolver_type_replay_lives_in_focused_helper() {
+    let replay_kinds =
+        read("src/typechecker/declaration_collection_resolver_tasks/replay_kinds.rs");
+    let type_replay = read("src/typechecker/declaration_collection_resolver_tasks/types.rs");
+
+    for helper in [
+        "collect_resolver_type_declaration_metadata_tasks",
+        "push_resolver_type_replay_tasks",
+        "push_resolver_type_metadata_task",
+    ] {
+        assert!(
+            !replay_kinds.contains(&format!("fn {helper}")),
+            "resolver replay kinds should not own type replay helper: {helper}"
+        );
+        assert!(
+            type_replay.contains(&format!("fn {helper}")),
+            "resolver type replay should live in focused helper: {helper}"
+        );
+    }
+
+    let root = read("src/typechecker/declaration_collection_resolver_tasks.rs");
+    assert!(
+        root.contains("mod types;"),
+        "resolver declaration collection should load focused type replay module"
+    );
+}
+
+#[test]
 fn declaration_callable_tasks_live_in_focused_helper() {
     let root = read("src/typechecker/declaration_tasks.rs");
     let callables = read("src/typechecker/declaration_tasks_callables.rs");
