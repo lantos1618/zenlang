@@ -15,7 +15,7 @@ fn public_language_docs_and_examples_do_not_teach_return_keyword() {
         "examples/project/math_utils.zen",
         "examples/project/test.zen",
         "examples/project/build.zen",
-        "tests/nested_struct_field_access.zen",
+        "tests/zen/nested_structs.zen",
     ] {
         let contents = read(path);
         assert!(

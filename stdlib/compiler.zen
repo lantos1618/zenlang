@@ -176,7 +176,7 @@ ctpop = (value: u64) u64 {
 
 // Panic with message - prints to stderr and aborts
 // This is a compiler intrinsic that never returns
-panic = (message: StringLiteral) void {
+panic = (message: StaticString) void {
     @builtin.panic(message)
 }
 
@@ -207,7 +207,7 @@ allocate_zeroed = (size: usize) RawPtr<u8> {
 // =============================================================================
 
 // Cast a value to a different numeric type
-// This is the explicit form of the `as` keyword: value as Type
+// This is the explicit prefix cast facade: cast(value, Type)
 cast = (value: i64, target_type: i64) i64 {
     @builtin.cast(value, target_type)
 }
@@ -254,14 +254,14 @@ atomic_fence = () void {
 // Load a dynamic library by path
 // Returns a handle (opaque pointer) or null on failure
 // Example: lib = load_library("libm.so")
-load_library = (path: StringLiteral) RawPtr<u8> {
+load_library = (path: StaticString) RawPtr<u8> {
     @builtin.load_library(path)
 }
 
 // Get a symbol (function/variable) from a loaded library
 // Returns a pointer to the symbol or null if not found
 // Example: sin_fn = get_symbol(lib, "sin")
-get_symbol = (lib_handle: RawPtr<u8>, symbol_name: StringLiteral) RawPtr<u8> {
+get_symbol = (lib_handle: RawPtr<u8>, symbol_name: StaticString) RawPtr<u8> {
     @builtin.get_symbol(lib_handle, symbol_name)
 }
 
@@ -284,11 +284,11 @@ dlerror = () RawPtr<u8> {
 // STATIC STRING OPERATIONS
 // =============================================================================
 
-strlen = (value: StringLiteral) usize {
+strlen = (value: StaticString) usize {
     @builtin.strlen(value)
 }
 
-static_string_ptr = (value: StringLiteral) RawPtr<u8> {
+static_string_ptr = (value: StaticString) RawPtr<u8> {
     @builtin.static_string_ptr(value)
 }
 

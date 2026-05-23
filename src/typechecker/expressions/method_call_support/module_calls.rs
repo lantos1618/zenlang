@@ -37,7 +37,7 @@ impl TypeChecker {
 
         let mangled = format!("{}_{}", recv_name, method);
         let ret_type = if let Some(info) = self.functions.get(&mangled).cloned() {
-            self.reject_module_call_type_args(
+            self.reject_nongeneric_type_args(
                 "function",
                 &format!("{}.{}", recv_name, method),
                 type_args,
@@ -69,13 +69,13 @@ impl TypeChecker {
     ) -> Type {
         let method_key = Self::method_key(recv_name, method);
         if let Some(info) = self.methods.get(&method_key).cloned() {
-            self.reject_module_call_type_args("method", &method_key, type_args, span);
+            self.reject_nongeneric_type_args("method", &method_key, type_args, span);
             self.check_call_signature("method", &method_key, &info.params, typed_args, &span);
             return self.resolve_type(&info.return_type);
         }
 
         if self.is_root_std_runtime_call(recv_name, method) {
-            self.reject_module_call_type_args(
+            self.reject_nongeneric_type_args(
                 "function",
                 &format!("{}.{}", recv_name, method),
                 type_args,
@@ -90,26 +90,5 @@ impl TypeChecker {
             span,
         ));
         Type::Unknown
-    }
-
-    fn reject_module_call_type_args(
-        &mut self,
-        kind: &str,
-        name: &str,
-        type_args: &[AstType],
-        span: Span,
-    ) {
-        if type_args.is_empty() {
-            return;
-        }
-
-        self.diagnostics.push(Diagnostic::error(
-            "E5002",
-            format!(
-                "non-generic {} `{}` does not accept type arguments",
-                kind, name
-            ),
-            span,
-        ));
     }
 }

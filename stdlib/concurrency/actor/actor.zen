@@ -1,5 +1,5 @@
-// Zen Standard Library: Actor Framework (Syscall-based)
-// No FFI - uses compiler.syscall* intrinsics
+// Zen Standard Library: Actor Framework
+// Uses stdlib compiler/sys syscall facades; no FFI required.
 // Hollywood-style actors: "Don't call us, we'll call you"
 //
 // Design Principles:

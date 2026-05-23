@@ -141,21 +141,3 @@ fn compiler_intrinsic_definitions_live_in_focused_helper() {
         "compiler intrinsic root should stay focused on module recognition and public registry API"
     );
 }
-
-#[test]
-fn stdlib_async_operation_state_lives_in_one_helper_module() {
-    assert!(
-        !repo_root()
-            .join("stdlib/memory/async_allocator.zen")
-            .exists(),
-        "async operation state helpers should not masquerade as an allocator module"
-    );
-
-    let helpers = read("stdlib/memory/async_helpers.zen");
-    for required in ["AsyncOp:", "Promise:", "async_op_new", "Promise.new"] {
-        assert!(
-            helpers.contains(required),
-            "stdlib/memory/async_helpers.zen should own async operation state helper: {required}"
-        );
-    }
-}

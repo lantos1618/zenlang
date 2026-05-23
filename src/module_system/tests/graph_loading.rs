@@ -6,15 +6,8 @@ mod stdlib_gates;
 fn module_graph_records_imports_without_merging_declarations() {
     let tmp = setup_temp_dir();
 
-    let math_path = tmp.path().join("math.zen");
-    fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
-
-    let main_path = tmp.path().join("main.zen");
-    fs::write(
-        &main_path,
-        "{ add } = math\n\nmain = () i32 {\n    add(1, 2)\n}\n",
-    )
-    .unwrap();
+    let math_path = write_public_add_module(&tmp);
+    let main_path = write_main_importing_add(&tmp);
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
@@ -55,19 +48,15 @@ fn module_graph_records_imports_without_merging_declarations() {
 fn module_graph_records_resolver_symbols_per_module() {
     let tmp = setup_temp_dir();
 
-    let math_path = tmp.path().join("math.zen");
-    fs::write(
-        &math_path,
+    let math_path = write_module(
+        &tmp,
+        "math",
         "pub Point: { x: i32 }\npub add = (a: i32, b: i32) i32 { a + b }\n",
-    )
-    .unwrap();
-
-    let main_path = tmp.path().join("main.zen");
-    fs::write(
-        &main_path,
+    );
+    let main_path = write_main(
+        &tmp,
         "{ add, Point } = math\n\nmain = () i32 { add(1, 2) }\n",
-    )
-    .unwrap();
+    );
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
@@ -105,11 +94,8 @@ fn module_graph_records_resolver_symbols_per_module() {
 fn module_graph_rejects_resolver_errors_in_loaded_modules() {
     let tmp = setup_temp_dir();
 
-    let math_path = tmp.path().join("math.zen");
-    fs::write(&math_path, "pub add = () Missing { 0 }\n").unwrap();
-
-    let main_path = tmp.path().join("main.zen");
-    fs::write(&main_path, "{ add } = math\n\nmain = () i32 { add() }\n").unwrap();
+    write_module(&tmp, "math", "pub add = () Missing { 0 }\n");
+    let main_path = write_main(&tmp, "{ add } = math\n\nmain = () i32 { add() }\n");
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
@@ -119,10 +105,10 @@ fn module_graph_rejects_resolver_errors_in_loaded_modules() {
         result.is_err(),
         "module graph should reject resolver diagnostics from dependency modules"
     );
-    let msg = format!("{}", result.unwrap_err()[0]);
-    assert!(
-        msg.contains("unknown type symbol 'Missing'"),
-        "error should surface resolver diagnostic, got: {msg}"
+    assert_error_contains(
+        result,
+        "unknown type symbol 'Missing'",
+        "error should surface resolver diagnostic",
     );
 }
 
@@ -130,25 +116,18 @@ fn module_graph_rejects_resolver_errors_in_loaded_modules() {
 fn module_graph_reuses_export_visibility_errors() {
     let tmp = setup_temp_dir();
 
-    let math_path = tmp.path().join("math.zen");
-    fs::write(&math_path, "add = (a: i32, b: i32) i32 { a + b }\n").unwrap();
-
-    let main_path = tmp.path().join("main.zen");
-    fs::write(
-        &main_path,
-        "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
-    )
-    .unwrap();
+    write_private_add_module(&tmp);
+    let main_path = write_main_importing_add(&tmp);
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
 
     let result = ms.load_module_graph(&main_path, &mut files);
     assert!(result.is_err(), "private graph import should be rejected");
-    let msg = format!("{}", result.unwrap_err()[0]);
-    assert!(
-        msg.contains("not exported"),
-        "error should mention export visibility, got: {msg}"
+    assert_error_contains(
+        result,
+        "not exported",
+        "error should mention export visibility",
     );
 }
 
@@ -156,20 +135,17 @@ fn module_graph_reuses_export_visibility_errors() {
 fn module_graph_detects_circular_imports() {
     let tmp = setup_temp_dir();
 
-    let a_path = tmp.path().join("a.zen");
-    fs::write(&a_path, "{ bar } = b\n\npub foo = () i32 { 1 }\n").unwrap();
-
-    let b_path = tmp.path().join("b.zen");
-    fs::write(&b_path, "{ foo } = a\n\npub bar = () i32 { 2 }\n").unwrap();
+    let a_path = write_module(&tmp, "a", "{ bar } = b\n\npub foo = () i32 { 1 }\n");
+    write_module(&tmp, "b", "{ foo } = a\n\npub bar = () i32 { 2 }\n");
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
 
     let result = ms.load_module_graph(&a_path, &mut files);
     assert!(result.is_err(), "circular graph import should be rejected");
-    let msg = format!("{}", result.unwrap_err()[0]);
-    assert!(
-        msg.contains("circular import"),
-        "error should mention circular import, got: {msg}"
+    assert_error_contains(
+        result,
+        "circular import",
+        "error should mention circular import",
     );
 }

@@ -11,7 +11,7 @@
 //   }
 //
 //   process(Heap.sync())    // Blocking I/O
-//   process(Arena.async())  // Async I/O via io_uring
+//   process(Arena.async())  // Experimental async-shaped allocator facade
 //
 // ============================================================================
 

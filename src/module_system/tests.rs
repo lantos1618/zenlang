@@ -1,5 +1,6 @@
 use super::*;
 use std::fs;
+use std::path::PathBuf;
 
 mod cache_and_ids;
 mod graph_loading;
@@ -9,6 +10,46 @@ mod visibility;
 
 fn setup_temp_dir() -> tempfile::TempDir {
     tempfile::tempdir().unwrap()
+}
+
+fn write_zen_file(path: PathBuf, source: &str) -> PathBuf {
+    fs::write(&path, source).unwrap();
+    path
+}
+
+fn write_module(tmp: &tempfile::TempDir, name: &str, source: &str) -> PathBuf {
+    write_zen_file(tmp.path().join(format!("{name}.zen")), source)
+}
+
+fn write_main(tmp: &tempfile::TempDir, source: &str) -> PathBuf {
+    write_zen_file(tmp.path().join("main.zen"), source)
+}
+
+fn write_public_add_module(tmp: &tempfile::TempDir) -> PathBuf {
+    write_module(tmp, "math", "pub add = (a: i32, b: i32) i32 { a + b }\n")
+}
+
+fn write_private_add_module(tmp: &tempfile::TempDir) -> PathBuf {
+    write_module(tmp, "math", "add = (a: i32, b: i32) i32 { a + b }\n")
+}
+
+fn write_main_importing_add(tmp: &tempfile::TempDir) -> PathBuf {
+    write_main(tmp, "{ add } = math\n\nmain = () i32 { add(1, 2) }\n")
+}
+
+fn first_error_message<T>(result: Result<T, Vec<CompileError>>) -> String {
+    match result {
+        Ok(_) => panic!("expected module-system error"),
+        Err(errors) => format!("{}", errors[0]),
+    }
+}
+
+fn assert_error_contains<T>(result: Result<T, Vec<CompileError>>, expected: &str, context: &str) {
+    let msg = first_error_message(result);
+    assert!(
+        msg.contains(expected),
+        "{context}; expected `{expected}`, got: {msg}"
+    );
 }
 
 fn module_function_names(program: &Program) -> Vec<&str> {

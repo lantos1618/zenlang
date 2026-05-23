@@ -1,6 +1,5 @@
 // Zen Standard Library: AsyncPool
-// Async I/O completion pool stub
-// Will be implemented with io_uring or epoll backend
+// Experimental async I/O completion pool facade.
 
 { compiler } = @std
 
@@ -13,13 +12,13 @@ AsyncPool.new = () AsyncPool {
 }
 
 AsyncPool.poll = (self: MutPtr<AsyncPool>) void {
-    // Stub: poll for I/O completions
+    compiler.trap()
 }
 
 AsyncPool.schedule_read = (self: MutPtr<AsyncPool>, fd: i32, buf_addr: i64, len: usize, offset: i64, callback: (u64, i64) void, user_data: u64) void {
-    // Stub: schedule async read operation
+    compiler.trap()
 }
 
 AsyncPool.wait = (self: MutPtr<AsyncPool>) void {
-    // Stub: wait for I/O completions
+    compiler.trap()
 }

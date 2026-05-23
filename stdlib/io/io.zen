@@ -1,38 +1,39 @@
 // Zen Standard Library: IO Module
 // Input/Output operations using compiler intrinsics
 
-{ Result } = @std.core.result
 { compiler } = @std
+{ SYS_WRITE } = @std.sys.syscall
 
 // =============================================================================
 // PRINT FUNCTIONS (stdout)
 // =============================================================================
 
-// Print a String to stdout (no newline)
-print = (message: String) void {
-    compiler.libc_write(1, message.data, message.len)
+// Print a StaticString to stdout (no newline)
+print = (message: StaticString) void {
+    compiler.libc_write(1, compiler.static_string_ptr(message), compiler.strlen(message))
 }
 
-// Print a String to stdout with newline
-println = (message: String) void {
-    compiler.libc_write(1, message.data, message.len)
-    // Write newline using syscall
-    compiler.syscall3(1, 1, compiler.ptr_to_int("\n"), 1)
+// Print a StaticString to stdout with newline
+println = (message: StaticString) void {
+    compiler.libc_write(1, compiler.static_string_ptr(message), compiler.strlen(message))
+    newline = compiler.ptr_to_int(compiler.static_string_ptr("\n"))
+    compiler.syscall3(SYS_WRITE, 1, newline, 1)
 }
 
 // =============================================================================
 // ERROR PRINT FUNCTIONS (stderr)
 // =============================================================================
 
-// Print a String to stderr (no newline)
-eprint = (message: String) void {
-    compiler.libc_write(2, message.data, message.len)
+// Print a StaticString to stderr (no newline)
+eprint = (message: StaticString) void {
+    compiler.libc_write(2, compiler.static_string_ptr(message), compiler.strlen(message))
 }
 
-// Print a String to stderr with newline
-eprintln = (message: String) void {
-    compiler.libc_write(2, message.data, message.len)
-    compiler.syscall3(1, 2, compiler.ptr_to_int("\n"), 1)
+// Print a StaticString to stderr with newline
+eprintln = (message: StaticString) void {
+    compiler.libc_write(2, compiler.static_string_ptr(message), compiler.strlen(message))
+    newline = compiler.ptr_to_int(compiler.static_string_ptr("\n"))
+    compiler.syscall3(SYS_WRITE, 2, newline, 1)
 }
 
 // =============================================================================
@@ -42,32 +43,18 @@ eprintln = (message: String) void {
 // Write using raw syscall (Linux x86-64 only, no libc)
 // Use this when you need to avoid libc entirely
 sys_write = (msg: StaticString, len: i64) i64 {
-    msg_ptr = compiler.ptr_to_int(msg)
-    compiler.syscall3(1, 1, msg_ptr, len)
+    msg_ptr = compiler.ptr_to_int(compiler.static_string_ptr(msg))
+    compiler.syscall3(SYS_WRITE, 1, msg_ptr, len)
 }
 
 // Write to stderr using raw syscall
 sys_ewrite = (msg: StaticString, len: i64) i64 {
-    msg_ptr = compiler.ptr_to_int(msg)
-    compiler.syscall3(1, 2, msg_ptr, len)
+    msg_ptr = compiler.ptr_to_int(compiler.static_string_ptr(msg))
+    compiler.syscall3(SYS_WRITE, 2, msg_ptr, len)
 }
 
 // Raw syscall write to any file descriptor
 sys_write_raw = (fd: i64, buf: RawPtr<u8>, count: i64) i64 {
     buf_addr = compiler.ptr_to_int(buf)
-    compiler.syscall3(1, fd, buf_addr, count)
-}
-
-// =============================================================================
-// INPUT FUNCTIONS (not yet implemented)
-// =============================================================================
-
-// Read line from stdin (not yet implemented)
-read_line = () Result<String, String> {
-    Result.Err("Not implemented")
-}
-
-// Read with prompt (not yet implemented)
-read_input = (prompt: String) Result<String, String> {
-    Result.Err("Not implemented")
+    compiler.syscall3(SYS_WRITE, fd, buf_addr, count)
 }

@@ -102,14 +102,7 @@ impl TypeChecker {
         };
 
         if type_params.is_empty() && !type_args.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic {} `{}` does not accept type arguments",
-                    kind, name
-                ),
-                span,
-            ));
+            self.reject_nongeneric_type_args(kind, name, type_args, span);
             return;
         }
 

@@ -117,11 +117,11 @@ fn promoted_stdlib_modules_do_not_use_removed_or_gated_syntax() {
 }
 
 #[test]
-fn root_smoke_fixtures_do_not_use_removed_or_gated_syntax() {
-    let mut paths = std::fs::read_dir(repo_root().join("tests"))
-        .expect("read tests directory")
+fn canonical_runtime_fixtures_do_not_use_removed_or_gated_syntax() {
+    let mut paths = std::fs::read_dir(repo_root().join("tests/zen"))
+        .expect("read tests/zen directory")
         .map(|entry| {
-            let entry = entry.expect("tests directory entry should be readable");
+            let entry = entry.expect("tests/zen directory entry should be readable");
             entry
                 .path()
                 .strip_prefix(repo_root())
@@ -129,10 +129,10 @@ fn root_smoke_fixtures_do_not_use_removed_or_gated_syntax() {
                 .to_string_lossy()
                 .into_owned()
         })
-        .filter(|path| path.starts_with("tests/test_") && path.ends_with(".zen"))
+        .filter(|path| path.starts_with("tests/zen/") && path.ends_with(".zen"))
         .collect::<Vec<_>>();
     paths.sort();
-    assert!(!paths.is_empty(), "expected root smoke fixtures");
+    assert!(!paths.is_empty(), "expected canonical runtime fixtures");
 
     for path in paths {
         let source = read(&path);

@@ -17,14 +17,7 @@ impl TypeChecker {
         let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
         if !type_args.is_empty() && type_arg_count == Some(0) {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic enum `{}` does not accept type arguments",
-                    enum_name
-                ),
-                span,
-            ));
+            self.reject_nongeneric_type_args("enum", enum_name, type_args, span);
         } else if let Some(expected) = type_arg_count.filter(|expected| {
             !type_args.is_empty() && *expected > 0 && *expected != type_args.len()
         }) {

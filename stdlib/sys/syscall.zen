@@ -1,7 +1,7 @@
 // Zen Standard Library: Linux x86-64 Syscall Numbers
 // Single source of truth for all syscall constants
 //
-// Import like: { SYS_READ, SYS_WRITE, SYS_CLOSE } = @std.sys.syscall
+// Import like: { SYS_READ, SYS_WRITE, SYS_CLOSE } = std.sys.syscall
 
 // ============================================================================
 // File Operations

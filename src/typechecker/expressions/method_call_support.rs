@@ -45,16 +45,7 @@ impl TypeChecker {
             let (resolved_method, ret_type) = if !info.type_params.is_empty() {
                 self.resolve_generic_method_call(&method_key, &info, type_args, &typed_args, span)
             } else {
-                if !type_args.is_empty() {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E5002",
-                        format!(
-                            "non-generic method `{}` does not accept type arguments",
-                            method_key
-                        ),
-                        span,
-                    ));
-                }
+                self.reject_nongeneric_type_args("method", &method_key, type_args, span);
                 self.check_call_signature("method", &method_key, &info.params, &typed_args, &span);
                 (method_key.clone(), self.resolve_type(&info.return_type))
             };
@@ -90,16 +81,12 @@ impl TypeChecker {
                         span,
                     });
                 } else {
-                    if !type_args.is_empty() {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E5002",
-                            format!(
-                                "non-generic method `{}` does not accept type arguments",
-                                generic_method_key
-                            ),
-                            span,
-                        ));
-                    }
+                    self.reject_nongeneric_type_args(
+                        "method",
+                        &generic_method_key,
+                        type_args,
+                        span,
+                    );
                     self.check_call_signature(
                         "method",
                         &generic_method_key,
@@ -124,16 +111,7 @@ impl TypeChecker {
             let (resolved_function, ret_type) = if !info.type_params.is_empty() {
                 self.resolve_generic_function_call(method, &info, type_args, &typed_args, span)
             } else {
-                if !type_args.is_empty() {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E5002",
-                        format!(
-                            "non-generic function `{}` does not accept type arguments",
-                            method
-                        ),
-                        span,
-                    ));
-                }
+                self.reject_nongeneric_type_args("function", method, type_args, span);
                 self.check_call_signature("function", method, &info.params, &typed_args, &span);
                 (method.to_string(), self.resolve_type(&info.return_type))
             };

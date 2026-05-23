@@ -91,7 +91,7 @@ fn learn_zen_guide_covers_core_tour_and_gated_previews() {
         "keyword exit value",
         "growable owned text",
         "## One Page Example",
-        "behavior\nimplementations, bounded generics, expression-oriented control flow, static text,\nand explicit loop control",
+        "behavior\nimplementations, bounded generics, generic behavior dispatch, and static text",
         "docs/V1_SPEC.md",
     ] {
         assert!(

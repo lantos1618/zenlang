@@ -23,6 +23,7 @@ mod resolver_symbol_table;
 mod resolver_validation;
 mod semantic_overlap;
 mod source_truth;
+mod stdlib_boundaries;
 mod typechecker_aggregate_constructors;
 mod typechecker_behavior_impls;
 mod typechecker_call_validation;

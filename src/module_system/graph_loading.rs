@@ -8,6 +8,7 @@ use crate::resolver::Resolver;
 #[path = "graph_loading/exported_symbols.rs"]
 mod exported_symbols;
 
+use super::import_errors::{missing_export_error, private_export_error};
 use super::root_prefix::parse_module_root_prefix;
 use super::{ImportBinding, ModuleId, ModuleSystem, ResolvedModule, ResolvedModuleGraph};
 use exported_symbols::{exported_module_symbol, ExportedModuleSymbol};
@@ -189,19 +190,10 @@ impl ModuleSystem {
                     });
                 }
                 ExportedModuleSymbol::Private => {
-                    return Err(vec![CompileError::Resolution(
-                        format!(
-                            "symbol '{}' in module '{}' is not exported",
-                            name, module_name
-                        ),
-                        Some(import_span),
-                    )]);
+                    return Err(private_export_error(name, module_name, import_span));
                 }
                 ExportedModuleSymbol::Missing => {
-                    return Err(vec![CompileError::Resolution(
-                        format!("module '{}' does not export '{}'", module_name, name),
-                        Some(import_span),
-                    )]);
+                    return Err(missing_export_error(name, module_name, import_span));
                 }
             }
         }

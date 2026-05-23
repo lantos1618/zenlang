@@ -1,6 +1,0 @@
-{ io } = @std
-
-main = () i32 {
-    io.println("Hello")
-    0
-}

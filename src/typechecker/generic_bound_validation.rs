@@ -64,14 +64,7 @@ impl TypeChecker {
 
         let found = type_args.len();
         if expected == 0 && found > 0 {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic behavior `{}` does not accept type arguments",
-                    behavior
-                ),
-                span,
-            ));
+            self.reject_nongeneric_type_args("behavior", behavior, type_args, span);
             return;
         }
         if expected != found {

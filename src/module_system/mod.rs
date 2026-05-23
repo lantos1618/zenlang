@@ -8,6 +8,7 @@ use crate::parser;
 use crate::resolver::SymbolTable;
 
 mod graph_loading;
+mod import_errors;
 mod import_resolution;
 mod root_prefix;
 
