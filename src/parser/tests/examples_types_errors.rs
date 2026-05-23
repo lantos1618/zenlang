@@ -29,27 +29,21 @@ fn parse_project_build_zen_example() {
 #[test]
 fn parse_nested_generics() {
     // Single-level generic
-    let prog = parse_ok("foo = (x: Vec<i32>) void { }");
-    assert_eq!(prog.declarations.len(), 1);
+    parse_single_decl("foo = (x: Vec<i32>) void { }");
 
     // Nested: Vec<Ptr<i32>> — the >> must not be parsed as ShiftRight
-    let prog = parse_ok("bar = (x: Vec<Ptr<i32>>) void { }");
-    assert_eq!(prog.declarations.len(), 1);
+    parse_single_decl("bar = (x: Vec<Ptr<i32>>) void { }");
 
     // Triple-nested: Map<StaticString, Vec<Ptr<f64>>>
-    let prog = parse_ok("baz = (x: Map<StaticString, Vec<Ptr<f64>>>) void { }");
-    assert_eq!(prog.declarations.len(), 1);
+    parse_single_decl("baz = (x: Map<StaticString, Vec<Ptr<f64>>>) void { }");
 
     // Deeply nested: A<B<C<D<i32>>>>
-    let prog = parse_ok("deep = (x: A<B<C<D<i32>>>>) void { }");
-    assert_eq!(prog.declarations.len(), 1);
+    parse_single_decl("deep = (x: A<B<C<D<i32>>>>) void { }");
 }
 
 #[test]
 fn parse_slice_type() {
-    let prog = parse_ok("foo = (s: Slice<i32>) void { }");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("foo = (s: Slice<i32>) void { }") {
         Declaration::Function { params, .. } => {
             assert!(
                 matches!(&params[0].ty, AstType::Slice(inner) if **inner == AstType::I32),
@@ -64,8 +58,7 @@ fn parse_slice_type() {
 #[test]
 fn parse_string_type_is_named() {
     // String should parse as AstType::Named("String"), NOT AstType::Str
-    let prog = parse_ok("foo = (s: String) void { }");
-    match &prog.declarations[0] {
+    match parse_single_decl("foo = (s: String) void { }") {
         Declaration::Function { params, .. } => match &params[0].ty {
             AstType::Named(n) => assert_eq!(n, "String"),
             AstType::Str => panic!("String should not parse as Str"),
@@ -78,8 +71,7 @@ fn parse_string_type_is_named() {
 #[test]
 fn parse_static_string_is_str() {
     // StaticString should still parse as AstType::Str
-    let prog = parse_ok("foo = (s: StaticString) void { }");
-    match &prog.declarations[0] {
+    match parse_single_decl("foo = (s: StaticString) void { }") {
         Declaration::Function { params, .. } => {
             assert!(
                 matches!(&params[0].ty, AstType::Str),
