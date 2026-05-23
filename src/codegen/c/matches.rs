@@ -62,26 +62,16 @@ impl CEmitter {
         for arm in arms {
             match &arm.pattern {
                 TypedPattern::Bool(true) => {
-                    if first {
-                        self.line(&format!("if ({}) {{", cond));
-                        first = false;
-                    } else {
-                        self.line(&format!("else if ({}) {{", cond));
-                    }
+                    self.emit_match_if_branch_open(&mut first, &cond);
                 }
                 TypedPattern::Bool(false) => {
                     self.line("else {");
                 }
                 TypedPattern::Wildcard => {
-                    if first {
-                        self.line("{");
-                        first = false;
-                    } else {
-                        self.line("else {");
-                    }
+                    self.emit_match_fallback_branch_open(&mut first);
                 }
                 _ => {
-                    self.line(&format!("if ({}) {{", cond));
+                    self.line(&format!("if ({cond}) {{"));
                     first = false;
                 }
             }
@@ -118,18 +108,12 @@ impl CEmitter {
                             c_ident(variant).to_lowercase()
                         ));
                     }
-                    self.emit_block_body_with_result(&arm.body, result_var);
-                    self.line("break;");
-                    self.dedent();
-                    self.line("}");
+                    self.emit_switch_match_arm_body(&arm.body, result_var);
                 }
                 TypedPattern::Wildcard => {
                     self.line("default: {");
                     self.indent();
-                    self.emit_block_body_with_result(&arm.body, result_var);
-                    self.line("break;");
-                    self.dedent();
-                    self.line("}");
+                    self.emit_switch_match_arm_body(&arm.body, result_var);
                 }
                 _ => {}
             }
@@ -150,27 +134,42 @@ impl CEmitter {
             match &arm.pattern {
                 TypedPattern::Value(val) => {
                     let v = self.emit_expr_inline(val);
-                    if first {
-                        self.line(&format!("if ({} == {}) {{", scrut, v));
-                        first = false;
-                    } else {
-                        self.line(&format!("else if ({} == {}) {{", scrut, v));
-                    }
+                    self.emit_match_if_branch_open(&mut first, &format!("{scrut} == {v}"));
                 }
                 TypedPattern::Wildcard => {
                     self.line("else {");
                 }
                 _ => {
-                    if first {
-                        self.line("{");
-                        first = false;
-                    } else {
-                        self.line("else {");
-                    }
+                    self.emit_match_fallback_branch_open(&mut first);
                 }
             }
             self.emit_match_result_branch_body(&arm.body, result_var);
         }
+    }
+
+    fn emit_match_if_branch_open(&mut self, first: &mut bool, condition: &str) {
+        if *first {
+            self.line(&format!("if ({condition}) {{"));
+            *first = false;
+        } else {
+            self.line(&format!("else if ({condition}) {{"));
+        }
+    }
+
+    fn emit_match_fallback_branch_open(&mut self, first: &mut bool) {
+        if *first {
+            self.line("{");
+            *first = false;
+        } else {
+            self.line("else {");
+        }
+    }
+
+    fn emit_switch_match_arm_body(&mut self, block: &TypedBlock, result_var: Option<&str>) {
+        self.emit_block_body_with_result(block, result_var);
+        self.line("break;");
+        self.dedent();
+        self.line("}");
     }
 
     fn emit_match_result_branch_body(&mut self, block: &TypedBlock, result_var: Option<&str>) {

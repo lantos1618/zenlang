@@ -26,9 +26,12 @@ impl TypeChecker {
                     body,
                     span,
                 } => {
-                    let ast_key = Self::method_key(type_name, method_name);
-                    self.validate_resolver_method_type_references(
-                        symbols, &ast_key, type_name, body, *span,
+                    self.validate_resolver_named_method_type_references(
+                        symbols,
+                        type_name,
+                        method_name,
+                        body,
+                        *span,
                     );
                 }
                 ResolverTypeReferenceValidationTask::Behavior {
@@ -169,11 +172,10 @@ impl TypeChecker {
     ) {
         for method in methods {
             if let Declaration::Function { name, body, .. } = method {
-                let ast_key = Self::method_key(type_name, name);
-                self.validate_resolver_method_type_references(
+                self.validate_resolver_named_method_type_references(
                     symbols,
-                    &ast_key,
                     type_name,
+                    name,
                     body,
                     method.span(),
                 );

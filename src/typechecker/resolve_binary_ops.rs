@@ -70,25 +70,18 @@ impl TypeChecker {
         right: &Type,
         span: &Span,
     ) -> Result<Type, Diagnostic> {
-        if *left != Type::Bool && *left != Type::Unknown {
-            return Err(Diagnostic::error(
+        for ty in [left, right] {
+            reject_binary_operand_if(
+                *ty != Type::Bool && *ty != Type::Unknown,
                 "E3011",
-                format!(
-                    "logical operator requires `bool`, found `{}`",
-                    left.display_name()
-                ),
-                *span,
-            ));
-        }
-        if *right != Type::Bool && *right != Type::Unknown {
-            return Err(Diagnostic::error(
-                "E3011",
-                format!(
-                    "logical operator requires `bool`, found `{}`",
-                    right.display_name()
-                ),
-                *span,
-            ));
+                || {
+                    format!(
+                        "logical operator requires `bool`, found `{}`",
+                        ty.display_name()
+                    )
+                },
+                span,
+            )?;
         }
         Ok(Type::Bool)
     }

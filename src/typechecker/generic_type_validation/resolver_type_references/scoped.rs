@@ -1,6 +1,18 @@
 use super::*;
 
 impl TypeChecker {
+    pub(super) fn validate_resolver_named_method_type_references(
+        &mut self,
+        symbols: Option<&SymbolTable>,
+        type_name: &str,
+        method_name: &str,
+        body: &Expression,
+        span: Span,
+    ) {
+        let ast_key = Self::method_key(type_name, method_name);
+        self.validate_resolver_method_type_references(symbols, &ast_key, type_name, body, span);
+    }
+
     pub(super) fn validate_resolver_scoped_declaration(
         &mut self,
         symbols: Option<&SymbolTable>,
