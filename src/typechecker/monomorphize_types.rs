@@ -53,11 +53,16 @@ pub(super) fn concrete_name_matches_generic(concrete_name: &str, generic_name: &
 
 #[cfg(test)]
 mod tests {
-    use super::{type_mangle_key, Type};
+    use super::{type_mangle_key, type_to_ast, AstType, Type};
 
     #[test]
     fn static_string_mangle_uses_public_type_name() {
         assert_eq!(type_mangle_key(&Type::Str), "StaticString");
+    }
+
+    #[test]
+    fn type_to_ast_preserves_dynamic_string_variant() {
+        assert_eq!(type_to_ast(&Type::String), AstType::String);
     }
 }
 
@@ -86,7 +91,7 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
         Type::Bool => AstType::Bool,
         Type::Void => AstType::Void,
         Type::Str => AstType::Str,
-        Type::String => AstType::Named("String".into()),
+        Type::String => AstType::String,
         Type::Named(n) => AstType::Named(n.clone()),
         Type::Struct { name, .. } => AstType::Named(name.clone()),
         Type::Enum { name, .. } => AstType::Named(name.clone()),
