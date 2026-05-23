@@ -64,6 +64,36 @@ main = () i32 {
 }
 
 #[test]
+fn emit_json_diagnostics_generic_function_bound_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_function_bound.zen",
+        r#"
+Json: behavior {
+    encode: (Self) StaticString
+}
+
+Point: {
+    x: i32
+}
+
+encode<T: Json> = (value: T) StaticString {
+    value.encode()
+}
+
+main = () i32 {
+    point = Point { x: 1 }
+    text = encode(point)
+    0
+}
+"#,
+        "tests/fixtures/ir_json/diagnostics_generic_function_bound.golden.json",
+        "generic function bound",
+        1,
+        "generic function bound diagnostics should not emit method-body followups",
+    );
+}
+
+#[test]
 fn emit_json_diagnostics_generic_result_method_inference_schema_matches_golden() {
     assert_diagnostics_golden(
         "generic_result_method_inference.zen",
@@ -87,5 +117,26 @@ main = () i32 {
         "generic method inference",
         1,
         "generic inference diagnostics should not emit argument or return followups",
+    );
+}
+
+#[test]
+fn emit_json_diagnostics_generic_function_inference_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_function_inference.zen",
+        r#"
+choose<T> = (left: T, right: T) T {
+    left
+}
+
+main = () i32 {
+    value = choose(1, "bad")
+    value
+}
+"#,
+        "tests/fixtures/ir_json/diagnostics_generic_function_inference.golden.json",
+        "generic function inference",
+        1,
+        "generic function inference diagnostics should not emit argument or return followups",
     );
 }

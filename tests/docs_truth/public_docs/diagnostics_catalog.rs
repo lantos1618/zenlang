@@ -43,6 +43,7 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "gated reserved type surfaces",
         "E5000",
         "generic inference conflict",
+        "conflicting inferred type arguments for generic functions and methods",
         "E5001",
         "generic type-argument arity",
         "behavior references",
@@ -76,8 +77,10 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "behavior requires/impl/extends fixtures",
         "nongeneric annotation, constructor, function, builtin, module function, method, and `tests/fixtures/ir_json/diagnostics_nongeneric_requires_type_args.golden.json`",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_bound.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_function_bound.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_function_inference.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_behavior_overlap.golden.json",
     ] {
         assert!(
