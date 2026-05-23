@@ -68,3 +68,60 @@ fn core_assignment_tests_live_in_focused_helper() {
         "enum_assignment_and_modules.rs should include the focused assignments module"
     );
 }
+
+#[test]
+fn intrinsic_gate_tests_live_in_focused_helpers() {
+    let root = read("src/typechecker/tests/core_semantics/intrinsic_gates.rs");
+    let module_dir = "src/typechecker/tests/core_semantics/intrinsic_gates";
+
+    for (module, test_name) in [
+        (
+            "async_scheduler",
+            "async_scheduler_intrinsics_are_rejected_as_gated_not_unknown",
+        ),
+        (
+            "raw_memory",
+            "raw_memory_intrinsics_are_rejected_as_allocator_gates",
+        ),
+        (
+            "byte_memory",
+            "byte_memory_intrinsics_are_rejected_as_allocator_gates",
+        ),
+        (
+            "raw_pointer",
+            "raw_pointer_intrinsics_are_rejected_as_ownership_gates",
+        ),
+        ("atomic", "atomic_intrinsics_are_rejected_as_effect_gates"),
+        (
+            "syscall",
+            "syscall_intrinsics_are_rejected_as_host_effect_gates",
+        ),
+        (
+            "type_match",
+            "primitive_and_enum_type_match_intrinsics_are_rejected_as_gated_not_unknown",
+        ),
+    ] {
+        let focused = read(format!("{module_dir}/{module}.rs"));
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "intrinsic_gates.rs should not own gated intrinsic family test: {test_name}"
+        );
+        assert!(
+            root.contains(&format!("mod {module};")),
+            "intrinsic_gates.rs should include focused module `{module}`"
+        );
+        assert!(
+            focused.contains(&format!("fn {test_name}")),
+            "gated intrinsic family test should live in focused module `{module}`: {test_name}"
+        );
+    }
+
+    assert!(
+        !root.contains("#[test]"),
+        "intrinsic_gates.rs should stay as a router and not define tests directly"
+    );
+    assert!(
+        root.lines().count() < 80,
+        "intrinsic_gates.rs should stay as a small router for gated intrinsic tests"
+    );
+}
