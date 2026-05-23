@@ -1,0 +1,29 @@
+{
+  "format": "zen.diagnostics.v0",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/generic_method_inference_failure.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E5000",
+      "message": "cannot infer type argument `T` for generic method `Box.make`",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/generic_method_inference_failure.zen",
+        "start": 121,
+        "end": 131,
+        "line": 12,
+        "column": 5
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": []
+    }
+  ]
+}
