@@ -1,6 +1,13 @@
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
+#[path = "support/file_read_graphs.rs"]
+mod file_read_graphs;
+
+pub(super) use file_read_graphs::{
+    write_multiple_executable_file_read_graph, write_single_executable_file_read_graph,
+};
+
 pub(super) fn write_single_executable_graph(tmp: &tempfile::TempDir) {
     write_file(
         tmp,
@@ -21,26 +28,6 @@ main = () i32 {
 }
 "#,
     );
-}
-
-pub(super) fn write_single_executable_file_read_graph(tmp: &tempfile::TempDir, fallback_arm: &str) {
-    write_file(
-        tmp,
-        "build.zen",
-        &format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    manifest = b.os.read_file("build.targets") ?
-        | .Ok(contents) {{ contents }}
-        {fallback_arm}
-    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    );
-    write_file(tmp, "build.targets", "myapp\n");
-    write_file(tmp, "main.zen", main_source("0").as_str());
 }
 
 pub(super) fn write_multiple_executable_graph(tmp: &tempfile::TempDir) {
