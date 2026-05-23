@@ -1,49 +1,29 @@
 use super::*;
 
+fn assert_project_example_parses(path: &str, label: &str) {
+    let src = std::fs::read_to_string(path).unwrap_or_else(|err| panic!("read {label}: {err}"));
+    let prog = parse_str(&src).unwrap_or_else(|errs| {
+        for err in &errs {
+            eprintln!("{err:?}");
+        }
+        panic!("{label} parse failed with {} errors", errs.len());
+    });
+
+    assert!(
+        !prog.declarations.is_empty(),
+        "{label} should have declarations, got {}",
+        prog.declarations.len()
+    );
+}
+
 #[test]
 fn parse_project_example() {
-    let src = std::fs::read_to_string("examples/project/main.zen");
-    if let Ok(src) = src {
-        let result = parse_str(&src);
-        match result {
-            Ok(prog) => {
-                assert!(
-                    !prog.declarations.is_empty(),
-                    "project example should have declarations, got {}",
-                    prog.declarations.len()
-                );
-            }
-            Err(errs) => {
-                for e in &errs {
-                    eprintln!("{:?}", e);
-                }
-                panic!("demo parse failed with {} errors", errs.len());
-            }
-        }
-    }
+    assert_project_example_parses("examples/project/main.zen", "project example");
 }
 
 #[test]
 fn parse_project_build_zen_example() {
-    let src = std::fs::read_to_string("examples/project/build.zen");
-    if let Ok(src) = src {
-        let result = parse_str(&src);
-        match result {
-            Ok(prog) => {
-                assert!(
-                    !prog.declarations.is_empty(),
-                    "project build.zen should have declarations, got {}",
-                    prog.declarations.len()
-                );
-            }
-            Err(errs) => {
-                for e in &errs {
-                    eprintln!("{:?}", e);
-                }
-                panic!("project build.zen parse failed with {} errors", errs.len());
-            }
-        }
-    }
+    assert_project_example_parses("examples/project/build.zen", "project build.zen");
 }
 
 #[test]
