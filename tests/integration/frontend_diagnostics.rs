@@ -11,7 +11,7 @@ mod imported_generic_calls;
 #[path = "frontend_diagnostics/support.rs"]
 mod support;
 
-use support::{compile_to_c_panic_message, write_tmp_module};
+use support::{assert_diagnostic_code_and_message, frontend_diagnostics, write_tmp_module};
 
 #[test]
 fn integration_frontend_helper_runs_resolver_diagnostics() {
@@ -25,11 +25,13 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&zen_path);
+    let diagnostics = frontend_diagnostics(&zen_path);
 
-    assert!(
-        message.contains("unknown value symbol 'missing_local'"),
-        "expected resolver diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E3500",
+        "unknown value symbol 'missing_local'",
+        "resolver",
     );
 }
 
@@ -60,10 +62,12 @@ main = () i32 {
 }
 "#,
     );
-    let message = compile_to_c_panic_message(&main_path);
+    let diagnostics = frontend_diagnostics(&main_path);
 
-    assert!(
-        message.contains("return type mismatch: expected `i32`, found `bool`"),
-        "expected imported module type diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E3030",
+        "return type mismatch: expected `i32`, found `bool`",
+        "imported module type",
     );
 }
