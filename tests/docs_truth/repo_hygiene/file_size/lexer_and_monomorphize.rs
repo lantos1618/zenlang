@@ -85,7 +85,9 @@ fn lexer_operator_spelling_tables_have_one_owner() {
             );
         }
         assert!(
-            source.contains("lex_multi_char_operator") || source.contains("lex_single_char_token"),
+            source.contains("lex_non_string_token")
+                || source.contains("lex_multi_char_operator")
+                || source.contains("lex_single_char_token"),
             "{path} should use shared lexer token spelling helpers"
         );
     }

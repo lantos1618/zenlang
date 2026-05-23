@@ -60,14 +60,12 @@ Use semantic-overlap and slop-cannon reports as triage input, not automatic edit
   raw `@builtin` leakage, spelling/parser/JSON/test-helper repetition,
   generated VS Code output, experimental std facade promotion, behavior examples,
   resolver/generic-callable wrappers, char facade exports, and C atomic emission.
-- current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`
-  and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-post-behavior-example-scrub-hash`.
-  Keep those generated JSON/HTML/embedding artifacts outside git.
+- current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-current-head-aeb00906`, `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`, and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-post-behavior-example-scrub-hash`; keep generated JSON/HTML/embedding artifacts outside git and treat zero-match Qwen clusters as triage.
+- fixed/guarded in the current scrub: byte-identical JSON golden fixtures, stale semantic-overlap scan roots, parser declaration-mode repetition, and duplicated lexer non-string token dispatch.
 - next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
   operator tables, builtin type/layout metadata, lexer keyword/root-token
   spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion,
-  generic callable specialization, behavior-ref/key normalization, resolver task
-  routing, call-resolution normalization, and build-target lowering specs.
+  generic callable specialization, behavior-ref/key normalization, resolver task routing, resolver-local traversal helpers, resolver metadata absence profiles, generic behavior-impl template insertion, call-resolution normalization, and build-target lowering specs.
 - next test cleanup: generated-C substring ladders, metadata absence matrices,
   docs-truth prose pinning, exact temporary-name assertions, byte-identical IR
   golden outputs, repetitive host-effect matrices, and private-layout hygiene

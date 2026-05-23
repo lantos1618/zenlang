@@ -69,20 +69,6 @@ impl Lexer {
             None => return Ok((Token::EOF, self.make_span(start, start))),
         };
 
-        if ch.is_ascii_alphabetic() || ch == '_' {
-            return Ok(self.lex_identifier());
-        }
-        if ch.is_ascii_digit() {
-            return self.lex_number();
-        }
-        if ch == '@' {
-            return self.lex_at_token();
-        }
-
-        if let Some(tok) = self.lex_multi_char_operator(start) {
-            return Ok(tok);
-        }
-
-        self.lex_single_char_token(start, ch)
+        self.lex_non_string_token(start, ch)
     }
 }

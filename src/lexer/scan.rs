@@ -26,19 +26,22 @@ impl Lexer {
             return self.lex_string();
         }
 
-        // Numbers
+        self.lex_non_string_token(start, ch)
+    }
+
+    pub(in crate::lexer) fn lex_non_string_token(
+        &mut self,
+        start: u32,
+        ch: char,
+    ) -> Result<(Token, Span), CompileError> {
+        if ch.is_ascii_alphabetic() || ch == '_' {
+            return Ok(self.lex_identifier());
+        }
         if ch.is_ascii_digit() {
             return self.lex_number();
         }
-
-        // @ tokens
         if ch == '@' {
             return self.lex_at_token();
-        }
-
-        // Identifiers / keywords
-        if ch.is_ascii_alphabetic() || ch == '_' {
-            return Ok(self.lex_identifier());
         }
 
         if let Some(tok) = self.lex_multi_char_operator(start) {

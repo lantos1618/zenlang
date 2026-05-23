@@ -1,5 +1,31 @@
 use super::*;
 
+#[derive(Clone, Copy)]
+struct UntypedVarDeclMode {
+    mutable: bool,
+    constant: bool,
+}
+
+impl UntypedVarDeclMode {
+    fn from_token(token: &Token) -> Option<Self> {
+        match token {
+            Token::ConstAssign => Some(Self {
+                mutable: false,
+                constant: true,
+            }),
+            Token::DeclareAssign => Some(Self {
+                mutable: true,
+                constant: false,
+            }),
+            Token::Assign => Some(Self {
+                mutable: false,
+                constant: false,
+            }),
+            _ => None,
+        }
+    }
+}
+
 impl Parser {
     // ── Statements ────────────────────────────────────────────
 
@@ -10,40 +36,23 @@ impl Parser {
         if let Token::Identifier(ref name) = self.peek().clone() {
             let name = name.clone();
 
-            // Check next significant token
-            match self.peek_ahead(1) {
-                Token::ConstAssign => {
-                    // name := expr (const)
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume :=
-                    return self.finish_var_decl(name, name_span, None, false, true);
-                }
-                Token::DeclareAssign => {
-                    // name ::= expr (mutable)
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume ::=
-                    return self.finish_var_decl(name, name_span, None, true, false);
-                }
-                Token::Colon if self.is_typed_var_decl() => {
-                    // Could be `name: Type = expr` (typed var decl)
-                    // or `name: Type` (type annotation — rare)
-                    // Peek further: name : Type = expr
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume :
-                    let ty = self.parse_type()?;
-                    self.skip_newlines();
-                    self.expect(&Token::Assign)?;
-                    return self.finish_var_decl(name, name_span, Some(ty), false, false);
-                }
-                Token::Assign => {
-                    // name = expr introduces an immutable binding when the left side is
-                    // just an identifier. Richer assignment targets are handled below
-                    // after expression parsing.
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume =
-                    return self.finish_var_decl(name, name_span, None, false, false);
-                }
-                _ => {}
+            let next = self.peek_ahead(1);
+            if let Some(mode) = UntypedVarDeclMode::from_token(next) {
+                let (_, name_span) = self.advance(); // consume name
+                self.advance(); // consume assignment token
+                return self.finish_var_decl(name, name_span, None, mode.mutable, mode.constant);
+            }
+
+            if matches!(next, Token::Colon) && self.is_typed_var_decl() {
+                // Could be `name: Type = expr` (typed var decl)
+                // or `name: Type` (type annotation — rare)
+                // Peek further: name : Type = expr
+                let (_, name_span) = self.advance(); // consume name
+                self.advance(); // consume :
+                let ty = self.parse_type()?;
+                self.skip_newlines();
+                self.expect(&Token::Assign)?;
+                return self.finish_var_decl(name, name_span, Some(ty), false, false);
             }
         }
 
