@@ -130,14 +130,19 @@ impl ModuleSystem {
 
             let first = &module_path[0];
             let root_prefix = parse_module_root_prefix(first);
-            if first == "@builtin"
-                || (root_prefix.is_some_and(|prefix| prefix.is_std()) && module_path.len() == 1)
-            {
+            if first == "@builtin" {
                 continue;
             }
 
+            if root_prefix.is_some_and(|prefix| prefix.is_std()) {
+                self.reject_gated_stdlib_import(&names, &module_path[1..], Some(span))?;
+
+                if module_path.len() == 1 {
+                    continue;
+                }
+            }
+
             let file_path = if root_prefix.is_some_and(|prefix| prefix.is_std()) {
-                self.reject_gated_stdlib_module(&module_path[1..], Some(span))?;
                 self.resolve_stdlib_file_path(&module_path[1..])?
                     .ok_or_else(|| {
                         vec![CompileError::Resolution(

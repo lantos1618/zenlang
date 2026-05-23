@@ -64,6 +64,25 @@ fn module_graph_gates_stdlib_allocator_import_before_loading_sketch() {
 }
 
 #[test]
+fn module_graph_gates_stdlib_compiler_facade_import_before_loading_sketch() {
+    assert_graph_stdlib_import_is_gated_before_loading_sketch(
+        "",
+        "compiler.zen",
+        "{ raw_allocate } = @std.compiler",
+        "std compiler facade is gated",
+        "compiler facade",
+    );
+
+    assert_graph_stdlib_import_is_gated_before_loading_sketch(
+        "",
+        "compiler.zen",
+        "{ compiler } = @std",
+        "std compiler facade is gated",
+        "compiler facade",
+    );
+}
+
+#[test]
 fn module_graph_gates_stdlib_async_runtime_import_before_loading_sketch() {
     assert_graph_stdlib_import_is_gated_before_loading_sketch(
         "concurrency/async",

@@ -54,11 +54,11 @@ impl ModuleSystem {
             let first = &module_path[0];
 
             if parse_module_root_prefix(first).is_some_and(|prefix| prefix.is_std()) {
+                self.reject_gated_stdlib_import(&names, &module_path[1..], Some(span))?;
+
                 if module_path.len() == 1 {
                     continue;
                 }
-
-                self.reject_gated_stdlib_module(&module_path[1..], Some(span))?;
 
                 let Some(file_path) = self.resolve_stdlib_file_path(&module_path[1..])? else {
                     return Err(vec![CompileError::Resolution(
@@ -210,6 +210,21 @@ impl ModuleSystem {
         span: Option<Span>,
     ) -> Result<(), Vec<CompileError>> {
         if let Some(gated) = GatedStdlibModule::from_sub_path(sub_path) {
+            return Err(vec![CompileError::Resolution(
+                gated.gate_message().into(),
+                span,
+            )]);
+        }
+        Ok(())
+    }
+
+    pub(super) fn reject_gated_stdlib_import(
+        &self,
+        names: &[String],
+        sub_path: &[String],
+        span: Option<Span>,
+    ) -> Result<(), Vec<CompileError>> {
+        if let Some(gated) = GatedStdlibModule::from_import(names, sub_path) {
             return Err(vec![CompileError::Resolution(
                 gated.gate_message().into(),
                 span,

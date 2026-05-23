@@ -322,7 +322,7 @@ TcpStream.write_all = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64) Result<(
 TcpStream.write_all_from = (self: MutPtr<TcpStream>, buf: Ptr<u8>, len: i64, written: i64) Result<(), SocketError> {
     written < len ?
         | true {
-            buf_offset = compiler.raw_ptr_offset(buf, written)
+            buf_offset = compiler.gep(buf, written)
             result = self.write(buf_offset, len - written)
             result ? {
                 | Ok(n) { self.write_all_from(buf, len, written + n) }

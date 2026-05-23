@@ -4,7 +4,7 @@
 //
 // Architecture:
 //   @builtin.*          - Raw compiler intrinsics (only used in this file)
-//   @std.compiler.*     - This module (safe wrappers for other stdlib)
+//   @std.compiler.*     - This module (facade wrappers for other stdlib)
 //   { compiler } = @std - User-facing import
 
 // =============================================================================
@@ -38,6 +38,11 @@ null_ptr = () RawPtr<u8> {
 // Pointer arithmetic - offset by bytes
 gep = (base: RawPtr<u8>, offset: i64) RawPtr<u8> {
     @builtin.gep(base, offset)
+}
+
+// Pointer arithmetic - explicit byte-offset facade
+raw_ptr_offset = (base: RawPtr<u8>, offset: i64) RawPtr<u8> {
+    @builtin.raw_ptr_offset(base, offset)
 }
 
 // Struct field access by index (uses 8-byte alignment approximation)
@@ -175,6 +180,11 @@ panic = (message: StringLiteral) void {
     @builtin.panic(message)
 }
 
+// Trigger a trap/abort
+trap = () void {
+    @builtin.trap()
+}
+
 // =============================================================================
 // HELPER FUNCTIONS (built on top of intrinsics)
 // =============================================================================
@@ -200,6 +210,38 @@ allocate_zeroed = (size: usize) RawPtr<u8> {
 // This is the explicit form of the `as` keyword: value as Type
 cast = (value: i64, target_type: i64) i64 {
     @builtin.cast(value, target_type)
+}
+
+// =============================================================================
+// ATOMIC OPERATIONS
+// =============================================================================
+
+atomic_load = (ptr: RawPtr<u8>) u64 {
+    @builtin.atomic_load(ptr)
+}
+
+atomic_store = (ptr: RawPtr<u8>, value: u64) void {
+    @builtin.atomic_store(ptr, value)
+}
+
+atomic_add = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_add(ptr, value)
+}
+
+atomic_sub = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_sub(ptr, value)
+}
+
+atomic_cas = (ptr: RawPtr<u8>, expected: u64, new_value: u64) bool {
+    @builtin.atomic_cas(ptr, expected, new_value)
+}
+
+atomic_xchg = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_xchg(ptr, value)
+}
+
+atomic_fence = () void {
+    @builtin.fence()
 }
 
 // =============================================================================
@@ -236,6 +278,18 @@ unload_library = (lib_handle: RawPtr<u8>) void {
 // Example: err_msg = dlerror()
 dlerror = () RawPtr<u8> {
     @builtin.dlerror()
+}
+
+// =============================================================================
+// STATIC STRING OPERATIONS
+// =============================================================================
+
+strlen = (value: StringLiteral) usize {
+    @builtin.strlen(value)
+}
+
+static_string_ptr = (value: StringLiteral) RawPtr<u8> {
+    @builtin.static_string_ptr(value)
 }
 
 // =============================================================================
