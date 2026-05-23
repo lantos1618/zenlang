@@ -7,6 +7,11 @@ use super::target_fields::{
 };
 use super::{BuildGraphError, BuildTargetInput, BuildTargetKind};
 
+struct TargetCommonFields {
+    dependencies: Vec<String>,
+    features: Vec<String>,
+}
+
 pub(super) fn build_target_from_builder_add(
     expr: &Expression,
 ) -> Result<Option<BuildTargetInput>, BuildGraphError> {
@@ -124,11 +129,7 @@ fn executable_target_from_fields(
         &[BuildTargetField::Main, BuildTargetField::RootSourceFile],
     )?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
+    let common = common_target_fields(kind, fields)?;
 
     Ok(BuildTargetInput {
         name: target_name,
@@ -137,8 +138,8 @@ fn executable_target_from_fields(
             out_dir,
         },
         sources: vec![root_source_file],
-        dependencies,
-        features,
+        dependencies: common.dependencies,
+        features: common.features,
     })
 }
 
@@ -153,11 +154,7 @@ fn test_target_from_fields(
     )?;
     let target_name = optional_string_field(kind, fields, BuildTargetField::Name)?
         .unwrap_or_else(|| target_name_from_root(&root_source_file));
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
+    let common = common_target_fields(kind, fields)?;
 
     Ok(BuildTargetInput {
         name: target_name,
@@ -165,8 +162,8 @@ fn test_target_from_fields(
             root_source_file: root_source_file.clone(),
         },
         sources: vec![root_source_file],
-        dependencies,
-        features,
+        dependencies: common.dependencies,
+        features: common.features,
     })
 }
 
@@ -176,11 +173,7 @@ fn library_target_from_fields(
 ) -> Result<BuildTargetInput, BuildGraphError> {
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let exports = required_string_array_field(kind, fields, BuildTargetField::Exports)?;
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
+    let common = common_target_fields(kind, fields)?;
     if exports.is_empty() {
         return Err(BuildGraphError::UnsupportedBuildScript(format!(
             "field `{}` in `{kind}` build target must contain at least one source",
@@ -194,8 +187,20 @@ fn library_target_from_fields(
             exports: exports.clone(),
         },
         sources: exports,
-        dependencies,
-        features,
+        dependencies: common.dependencies,
+        features: common.features,
+    })
+}
+
+fn common_target_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<TargetCommonFields, BuildGraphError> {
+    Ok(TargetCommonFields {
+        dependencies: optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
+            .unwrap_or_default(),
+        features: optional_string_array_field(kind, fields, BuildTargetField::Features)?
+            .unwrap_or_default(),
     })
 }
 
