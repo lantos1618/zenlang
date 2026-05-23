@@ -50,6 +50,16 @@ fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
         );
     }
     assert!(
+        operators.contains("op.symbol()"),
+        "C operator spelling should reuse AST operator symbols instead of repeating a C-only table"
+    );
+    for duplicated_table_entry in ["BinaryOp::Add =>", "UnaryOp::Neg =>"] {
+        assert!(
+            !operators.contains(duplicated_table_entry),
+            "C operator helper should not duplicate AST operator spelling: {duplicated_table_entry}"
+        );
+    }
+    assert!(
         c_mod.contains("mod operators;"),
         "C codegen should load focused operator spelling helper"
     );
