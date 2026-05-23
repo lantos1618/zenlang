@@ -17,6 +17,7 @@ fn generated_c_fixture_block<'a>(source: &'a str, fixture: &str) -> &'a str {
         "let c_source = compile_to_c_with_generated_call_check",
         "let c_source = compile_to_c_with_specialization_check",
         "compile_to_c_with_specialization_check",
+        "assert_fixture_specialization",
     ]
     .iter()
     .filter_map(|marker| source[..fixture_start].rfind(marker))
@@ -27,6 +28,7 @@ fn generated_c_fixture_block<'a>(source: &'a str, fixture: &str) -> &'a str {
         "let c_source = compile_to_c_with_generated_call_check",
         "let c_source = compile_to_c_with_specialization_check",
         "compile_to_c_with_specialization_check",
+        "assert_fixture_specialization",
     ]
     .iter()
     .filter_map(|marker| tail[fixture.len()..].find(marker))

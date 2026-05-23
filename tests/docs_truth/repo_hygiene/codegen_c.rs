@@ -172,6 +172,18 @@ fn generated_c_tests_use_facade_assertion_helpers() {
             "method/worklist generated-C tests should group forbidden snippets through the specialization facade"
         );
     }
+    assert!(
+        enum_generated_c.contains("assert_fixture_specialization("),
+        "enum generated-C evidence should compile through the grouped specialization facade"
+    );
+    assert!(
+        !enum_generated_c.contains("assert!(c_source.contains"),
+        "enum generated-C tests should group required snippets through the specialization facade"
+    );
+    assert!(
+        !enum_generated_c.contains("assert!(!c_source.contains"),
+        "enum generated-C tests should group forbidden snippets through the specialization facade"
+    );
 
     for source in [&enum_generated_c, &behavior_bounds, &multi_file_enums] {
         assert!(

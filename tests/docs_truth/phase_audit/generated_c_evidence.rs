@@ -3,17 +3,14 @@ use super::super::*;
 #[test]
 fn nested_generic_result_generated_c_pins_definition_counts() {
     let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
-    let normalized_enum_generated_c = enum_generated_c.split_whitespace().collect::<String>();
+    let nested_result_block =
+        generated_c_fixture_block(&enum_generated_c, "generic_nested_result_enum.zen");
 
-    for required in [
-        "assert_c_call_resolves_to_single_definition(&c_source,\"unwrap_result_Option_i32_StaticString\"",
-        "assert_c_call_resolves_to_single_definition(&c_source,\"unwrap_option_i32\"",
-    ] {
-        assert!(
-            normalized_enum_generated_c.contains(required),
-            "nested generic Result<Option<T>, E> generated-C tests should pin exact definition counts: {required}"
-        );
-    }
+    assert_specialization_call_names_pinned(
+        nested_result_block,
+        &["unwrap_result_Option_i32_StaticString", "unwrap_option_i32"],
+        "nested generic Result<Option<T>, E> generated-C tests",
+    );
 }
 
 #[test]
@@ -96,7 +93,8 @@ fn scoped_imported_generic_ufc_generated_c_pins_recovery_evidence() {
 
 fn assert_specialization_call_names_pinned(block: &str, call_names: &[&str], label: &str) {
     assert!(
-        block.contains("compile_to_c_with_specialization_check("),
+        block.contains("compile_to_c_with_specialization_check(")
+            || block.contains("assert_fixture_specialization("),
         "{label} should use the generated-C specialization facade"
     );
 
