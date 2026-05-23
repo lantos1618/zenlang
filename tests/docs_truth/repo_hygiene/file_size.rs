@@ -20,6 +20,7 @@ mod resolver_phase2_splits;
 mod resolver_struct_enum_metadata_splits;
 mod resolver_validation_splits;
 mod resolver_validation_test_splits;
+mod resolver_value_metadata_splits;
 mod thresholds;
 mod typechecker_semantic_splits;
 mod typechecker_test_splits;
