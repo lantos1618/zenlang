@@ -61,11 +61,7 @@ fn parser_pratt_infix_lives_in_focused_helper() {
     let expressions = read("src/parser/expressions.rs");
     let infix = read("src/parser/expressions/infix.rs");
 
-    for helper in [
-        "fn parse_infix_or_range_expr",
-        "enum InfixParse",
-        "fn binary_op_for_token",
-    ] {
+    for helper in ["fn parse_infix_or_range_expr", "enum InfixParse"] {
         assert!(
             !expressions.contains(helper),
             "parser expression root should not own Pratt infix helper: {helper}"
@@ -75,6 +71,14 @@ fn parser_pratt_infix_lives_in_focused_helper() {
             "Pratt infix helper should live in focused helper: {helper}"
         );
     }
+    assert!(
+        !infix.contains("fn binary_op_for_token"),
+        "Pratt infix helper should not keep a second token-to-binary-op table"
+    );
+    assert!(
+        infix.contains("infix_operator(self.peek())"),
+        "Pratt infix helper should use unified operator metadata"
+    );
 
     for forbidden in [
         "REMOVED_AS_CAST_L_BP",

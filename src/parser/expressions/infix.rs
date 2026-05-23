@@ -32,20 +32,16 @@ impl Parser {
             ));
         }
 
-        if let Some((l_bp, r_bp)) = infix_bp(self.peek()) {
-            if l_bp < min_bp {
+        if let Some(operator) = infix_operator(self.peek()) {
+            if operator.l_bp < min_bp {
                 return Ok(InfixParse::Stop(lhs));
             }
 
-            let Some(op) = binary_op_for_token(self.peek()) else {
-                return Ok(InfixParse::Continue(lhs));
-            };
-
             self.advance();
-            let rhs = self.parse_expr_bp(r_bp)?;
+            let rhs = self.parse_expr_bp(operator.r_bp)?;
             let span = lhs.span().merge(rhs.span());
             return Ok(InfixParse::Parsed(Expression::BinaryOp {
-                op,
+                op: operator.op,
                 left: Box::new(lhs),
                 right: Box::new(rhs),
                 span,
@@ -74,29 +70,5 @@ impl Parser {
             inclusive,
             span,
         }))
-    }
-}
-
-fn binary_op_for_token(token: &Token) -> Option<BinaryOp> {
-    match token {
-        Token::Plus => Some(BinaryOp::Add),
-        Token::Minus => Some(BinaryOp::Sub),
-        Token::Star => Some(BinaryOp::Mul),
-        Token::Slash => Some(BinaryOp::Div),
-        Token::Percent => Some(BinaryOp::Mod),
-        Token::Eq => Some(BinaryOp::Eq),
-        Token::NotEq => Some(BinaryOp::NotEq),
-        Token::Lt => Some(BinaryOp::Lt),
-        Token::Gt => Some(BinaryOp::Gt),
-        Token::LtEq => Some(BinaryOp::LtEq),
-        Token::GtEq => Some(BinaryOp::GtEq),
-        Token::And => Some(BinaryOp::And),
-        Token::Or => Some(BinaryOp::Or),
-        Token::BitAnd => Some(BinaryOp::BitAnd),
-        Token::Pipe => Some(BinaryOp::BitOr),
-        Token::BitXor => Some(BinaryOp::BitXor),
-        Token::ShiftLeft => Some(BinaryOp::ShiftLeft),
-        Token::ShiftRight => Some(BinaryOp::ShiftRight),
-        _ => None,
     }
 }
