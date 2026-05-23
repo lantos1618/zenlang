@@ -1,0 +1,99 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [
+      {
+        "name": "Result_i32_bool",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "bool"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Result_i32_i32",
+        "kind": "enum",
+        "fields": [],
+        "variants": [
+          {
+            "name": "Ok",
+            "tag": 0,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          },
+          {
+            "name": "Err",
+            "tag": 1,
+            "payload": [
+              {
+                "name": "payload",
+                "type": "i32"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "Result.unwrap_err_i32_bool",
+        "params": [
+          {
+            "name": "self",
+            "type": "Result_i32_bool"
+          },
+          {
+            "name": "fallback",
+            "type": "bool"
+          }
+        ],
+        "return_type": "bool"
+      },
+      {
+        "name": "Result.unwrap_err_i32_i32",
+        "params": [
+          {
+            "name": "self",
+            "type": "Result_i32_i32"
+          },
+          {
+            "name": "fallback",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      }
+    ],
+    "globals": []
+  }
+}

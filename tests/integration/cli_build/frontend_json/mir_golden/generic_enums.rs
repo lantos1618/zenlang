@@ -55,6 +55,15 @@ fn emit_json_mir_multi_file_generic_result_multi_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_mir_multi_file_generic_result_error_multi_schema_matches_golden() {
+    assert_mir_golden(
+        "tests/zen/multi_file_generic_result_error_multi_specialization/main.zen",
+        "tests/fixtures/ir_json/mir_multi_file_generic_result_error_multi_specialization.golden.json",
+        "multi-file generic Result error-type multi-specialization",
+    );
+}
+
+#[test]
 fn emit_json_mir_multi_file_generic_enum_method_schema_matches_golden() {
     assert_mir_golden(
         "tests/zen/multi_file_generic_enum_method/main.zen",

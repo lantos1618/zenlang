@@ -1,0 +1,356 @@
+{
+  "format": "zen.mir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "lowering_status": "minimal",
+  "functions": [
+    {
+      "name": "main",
+      "params": [],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "let",
+              "name": "err_bool",
+              "type": "Result_i32_bool",
+              "mutable": false,
+              "value": {
+                "kind": "enum_variant",
+                "type": "Result_i32_bool",
+                "name": "Result_i32_bool.Err",
+                "args": [
+                  {
+                    "kind": "bool",
+                    "type": "bool",
+                    "value": true
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "let",
+              "name": "ok_bool",
+              "type": "Result_i32_bool",
+              "mutable": false,
+              "value": {
+                "kind": "enum_variant",
+                "type": "Result_i32_bool",
+                "name": "Result_i32_bool.Ok",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 12
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "let",
+              "name": "err_i32",
+              "type": "Result_i32_i32",
+              "mutable": false,
+              "value": {
+                "kind": "enum_variant",
+                "type": "Result_i32_i32",
+                "name": "Result_i32_i32.Err",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 44
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "let",
+              "name": "ok_i32",
+              "type": "Result_i32_i32",
+              "mutable": false,
+              "value": {
+                "kind": "enum_variant",
+                "type": "Result_i32_i32",
+                "name": "Result_i32_i32.Ok",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 5
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "call",
+                "type": "void",
+                "function": "io_println",
+                "args": [
+                  {
+                    "kind": "string_interpolation",
+                    "type": "StaticString",
+                    "value": {
+                      "parts": 1
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "int",
+              "type": "i32",
+              "value": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Result.unwrap_err_i32_bool",
+      "params": [
+        {
+          "name": "self",
+          "type": "Result_i32_bool"
+        },
+        {
+          "name": "fallback",
+          "type": "bool"
+        }
+      ],
+      "return_type": "bool",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "match",
+              "type": "bool",
+              "target": {
+                "kind": "local",
+                "type": "Result_i32_bool",
+                "name": "self"
+              },
+              "match_kind": "enum",
+              "arms": [
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Result_i32_bool.Ok",
+                    "bindings": []
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "bool",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "fallback",
+                            "type": "bool"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Result_i32_bool.Err",
+                    "bindings": [
+                      {
+                        "name": "error",
+                        "type": "bool"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "bool",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "error",
+                            "type": "bool"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Result.unwrap_err_i32_i32",
+      "params": [
+        {
+          "name": "self",
+          "type": "Result_i32_i32"
+        },
+        {
+          "name": "fallback",
+          "type": "i32"
+        }
+      ],
+      "return_type": "i32",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "match",
+              "type": "i32",
+              "target": {
+                "kind": "local",
+                "type": "Result_i32_i32",
+                "name": "self"
+              },
+              "match_kind": "enum",
+              "arms": [
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Result_i32_i32.Ok",
+                    "bindings": []
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "fallback",
+                            "type": "i32"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "pattern": {
+                    "kind": "enum_variant",
+                    "name": "Result_i32_i32.Err",
+                    "bindings": [
+                      {
+                        "name": "error",
+                        "type": "i32"
+                      }
+                    ]
+                  },
+                  "body": {
+                    "label": "entry",
+                    "statements": [],
+                    "terminator": {
+                      "kind": "return",
+                      "value": {
+                        "kind": "block",
+                        "type": "i32",
+                        "value": {
+                          "has_result": true,
+                          "result": {
+                            "kind": "local",
+                            "name": "error",
+                            "type": "i32"
+                          },
+                          "statement_count": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
