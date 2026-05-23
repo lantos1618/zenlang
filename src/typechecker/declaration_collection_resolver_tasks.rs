@@ -2,6 +2,7 @@ use super::*;
 
 mod callables;
 mod replay_kinds;
+mod types;
 
 impl TypeChecker {
     pub(super) fn collect_declaration_collection_replay_tasks(
