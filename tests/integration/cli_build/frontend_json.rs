@@ -8,6 +8,8 @@ mod diagnostics_generic_arity_golden;
 mod diagnostics_golden;
 #[path = "frontend_json/diagnostics_json.rs"]
 mod diagnostics_json;
+#[path = "frontend_json/golden_support.rs"]
+mod golden_support;
 #[path = "frontend_json/hir_golden.rs"]
 mod hir_golden;
 #[path = "frontend_json/hir_json.rs"]
