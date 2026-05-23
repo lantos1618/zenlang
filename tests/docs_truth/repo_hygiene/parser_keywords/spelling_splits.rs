@@ -53,3 +53,34 @@ fn parser_keyword_spelling_impls_live_in_focused_helpers() {
         "parser keyword root should stay focused on keyword enum definitions"
     );
 }
+
+#[test]
+fn parser_expression_keyword_guards_live_in_focused_module() {
+    let root = read("tests/docs_truth/repo_hygiene/parser_keywords.rs");
+    let expression_keywords =
+        read("tests/docs_truth/repo_hygiene/parser_keywords/expression_keywords.rs");
+
+    for test_name in [
+        "parser_prefix_keywords_use_owned_keyword_enum",
+        "parser_pattern_keywords_use_owned_keyword_enum",
+        "parser_this_methods_use_owned_method_enum",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "parser_keywords.rs should not own expression keyword guard: {test_name}"
+        );
+        assert!(
+            expression_keywords.contains(&format!("fn {test_name}")),
+            "expression keyword guard should live in focused module: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 150,
+        "parser_keywords.rs should stay focused on module root, declaration keyword, and shared keyword source guards"
+    );
+    assert!(
+        root.contains("mod expression_keywords;"),
+        "parser_keywords.rs should include focused expression keyword guards"
+    );
+}
