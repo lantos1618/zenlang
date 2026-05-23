@@ -8,6 +8,7 @@ fn generated_c_support_scanners_stay_split_by_responsibility() {
     let calls = read("tests/integration/support/generated_c/calls.rs");
     let public_helpers = [
         "assert_c_call_resolves_to_single_definition",
+        "assert_generated_c_specialization",
         "assert_generated_c_calls_resolve_to_definitions",
         "assert_generated_c_function_definitions_are_unique",
         "has_c_call_outside_signature",

@@ -10,14 +10,29 @@ fn read(path: impl AsRef<Path>) -> String {
 }
 
 fn generated_c_fixture_block<'a>(source: &'a str, fixture: &str) -> &'a str {
-    let start = source
+    let fixture_start = source
         .find(fixture)
         .unwrap_or_else(|| panic!("missing generated-C fixture block: {fixture}"));
+    let start = [
+        "let c_source = compile_to_c_with_generated_call_check",
+        "let c_source = compile_to_c_with_specialization_check",
+        "compile_to_c_with_specialization_check",
+    ]
+    .iter()
+    .filter_map(|marker| source[..fixture_start].rfind(marker))
+    .max()
+    .unwrap_or(fixture_start);
     let tail = &source[start..];
-    let next_block = tail[fixture.len()..]
-        .find("let c_source = compile_to_c_with_generated_call_check")
-        .map(|offset| fixture.len() + offset)
-        .unwrap_or(tail.len());
+    let next_block = [
+        "let c_source = compile_to_c_with_generated_call_check",
+        "let c_source = compile_to_c_with_specialization_check",
+        "compile_to_c_with_specialization_check",
+    ]
+    .iter()
+    .filter_map(|marker| tail[fixture.len()..].find(marker))
+    .min()
+    .map(|offset| fixture.len() + offset)
+    .unwrap_or(tail.len());
 
     &tail[..next_block]
 }

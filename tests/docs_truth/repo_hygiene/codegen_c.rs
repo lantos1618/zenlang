@@ -87,21 +87,13 @@ fn codegen_c_expression_operator_spelling_lives_in_focused_helper() {
 }
 
 #[test]
-fn generated_c_tests_use_single_definition_assertion_helper() {
+fn generated_c_tests_use_facade_assertion_helpers() {
     let support = read("tests/integration/support.rs");
     let generated_c = read("tests/integration/support/generated_c.rs");
     let local_worklist =
         read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
     let multi_file_worklist =
         read("tests/integration/generic_specializations/multifile_generated_c/method_worklist_dependencies.rs");
-    let transitive_worklist_block = generated_c_fixture_block(
-        &multi_file_worklist,
-        "multi_file_generic_imported_transitive_dependency/main.zen",
-    );
-    let multi_file_nested_method_block = generated_c_fixture_block(
-        &multi_file_worklist,
-        "multi_file_type_method_nested_result_dependency/main.zen",
-    );
     let enum_generated_c = read("tests/integration/generic_specializations/enum_generated_c.rs");
     let behavior_bounds =
         read("tests/integration/generic_specializations/behavior_bounds/local_and_defaults.rs");
@@ -120,8 +112,16 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         "generated-C support should expose a helper for call resolution plus exactly-one definition"
     );
     assert!(
+        generated_c.contains("fn assert_generated_c_specialization("),
+        "generated-C support should expose a facade for grouped specialization assertions"
+    );
+    assert!(
         support.contains("assert_c_call_resolves_to_single_definition"),
         "integration support should re-export the generated-C single-definition helper"
+    );
+    assert!(
+        support.contains("assert_generated_c_specialization"),
+        "integration support should re-export the generated-C specialization facade"
     );
     assert!(
         !support.contains("assert_c_function_definition_count"),
@@ -136,35 +136,20 @@ fn generated_c_tests_use_single_definition_assertion_helper() {
         "generated-C support should keep the split definition-count helper private"
     );
 
-    for (fixture, helper_call) in [
-        (
-            local_worklist.as_str(),
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
-        ),
-        (
-            local_worklist.as_str(),
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
-        ),
-        (
-            multi_file_nested_method_block,
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
-        ),
-        (
-            multi_file_nested_method_block,
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32")"#,
-        ),
-        (
-            transitive_worklist_block,
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "inner_i32")"#,
-        ),
-        (
-            transitive_worklist_block,
-            r#"assert_c_call_resolves_to_single_definition(&c_source, "outer_i32")"#,
-        ),
-    ] {
+    for fixture in [local_worklist.as_str(), multi_file_worklist.as_str()] {
         assert!(
-            fixture.contains(helper_call),
-            "Phase 5 generated-C evidence should use the single-definition helper: {helper_call}"
+            fixture.contains("compile_to_c_with_specialization_check("),
+            "method/worklist generated-C evidence should compile through the grouped specialization facade"
+        );
+    }
+    for fixture in [local_worklist.as_str(), multi_file_worklist.as_str()] {
+        assert!(
+            !fixture.contains("assert!(c_source.contains"),
+            "method/worklist generated-C tests should group required snippets through the specialization facade"
+        );
+        assert!(
+            !fixture.contains("assert!(!c_source.contains"),
+            "method/worklist generated-C tests should group forbidden snippets through the specialization facade"
         );
     }
 
