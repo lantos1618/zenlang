@@ -75,14 +75,9 @@ impl TypeChecker {
             return *public;
         }
 
-        let Some(binding) = source_module
-            .imports
-            .iter()
-            .find(|binding| binding.local_name == behavior)
+        let Some((source_symbol, imported_module)) =
+            Self::imported_behavior_binding_target(behavior, source_module, graph)
         else {
-            return false;
-        };
-        let Some(imported_module) = graph.module(binding.source_module) else {
             return false;
         };
         matches!(
@@ -90,9 +85,22 @@ impl TypeChecker {
                 .program
                 .declarations
                 .iter()
-                .find(|decl| decl.name() == Some(binding.source_symbol.as_str())),
+                .find(|decl| decl.name() == Some(source_symbol)),
             Some(Declaration::Behavior { public: true, .. })
         )
+    }
+
+    fn imported_behavior_binding_target<'a>(
+        behavior: &str,
+        source_module: &'a ResolvedModule,
+        graph: &'a ResolvedModuleGraph,
+    ) -> Option<(&'a str, &'a ResolvedModule)> {
+        let binding = source_module
+            .imports
+            .iter()
+            .find(|binding| binding.local_name == behavior)?;
+        let imported_module = graph.module(binding.source_module)?;
+        Some((binding.source_symbol.as_str(), imported_module))
     }
 
     fn seed_behavior_decl_for_imported_impl(
@@ -124,20 +132,15 @@ impl TypeChecker {
         source_module: &ResolvedModule,
         graph: &ResolvedModuleGraph,
     ) {
-        let Some(binding) = source_module
-            .imports
-            .iter()
-            .find(|binding| binding.local_name == behavior)
+        let Some((source_symbol, imported_module)) =
+            Self::imported_behavior_binding_target(behavior, source_module, graph)
         else {
-            return;
-        };
-        let Some(imported_module) = graph.module(binding.source_module) else {
             return;
         };
 
         self.seed_behavior_decl_for_imported_impl(
             behavior,
-            binding.source_symbol.as_str(),
+            source_symbol,
             imported_module,
             graph,
         );

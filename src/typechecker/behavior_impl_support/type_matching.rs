@@ -7,8 +7,18 @@ impl TypeChecker {
         actual: &AstType,
         self_type_name: &str,
     ) -> bool {
-        let expected = concrete_self_ast_type_for_target(expected, self_type_name, &[]);
-        let actual = concrete_self_ast_type_for_target(actual, self_type_name, &[]);
+        Self::impl_ast_types_compatible_for_target(expected, actual, self_type_name, &[])
+    }
+
+    pub(in crate::typechecker) fn impl_ast_types_compatible_for_target(
+        expected: &AstType,
+        actual: &AstType,
+        self_type_name: &str,
+        target_type_args: &[AstType],
+    ) -> bool {
+        let expected =
+            concrete_self_ast_type_for_target(expected, self_type_name, target_type_args);
+        let actual = concrete_self_ast_type_for_target(actual, self_type_name, target_type_args);
         expected == actual
     }
 
@@ -17,6 +27,14 @@ impl TypeChecker {
         ty: &AstType,
         self_type_name: &str,
     ) -> String {
-        concrete_self_ast_type_for_target(ty, self_type_name, &[]).display_name()
+        Self::impl_type_display_for_target(ty, self_type_name, &[])
+    }
+
+    pub(in crate::typechecker) fn impl_type_display_for_target(
+        ty: &AstType,
+        self_type_name: &str,
+        target_type_args: &[AstType],
+    ) -> String {
+        concrete_self_ast_type_for_target(ty, self_type_name, target_type_args).display_name()
     }
 }

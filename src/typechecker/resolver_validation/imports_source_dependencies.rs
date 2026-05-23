@@ -51,15 +51,7 @@ impl TypeChecker {
 
         for decl in &source_module.program.declarations {
             match decl {
-                Declaration::Struct { name, .. } => {
-                    Self::insert_source_type_dependency(
-                        name,
-                        decl,
-                        &mut dependencies,
-                        Some(&source_scope),
-                    );
-                }
-                Declaration::Enum { name, .. } => {
+                Declaration::Struct { name, .. } | Declaration::Enum { name, .. } => {
                     Self::insert_source_type_dependency(
                         name,
                         decl,

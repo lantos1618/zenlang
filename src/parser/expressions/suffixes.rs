@@ -12,14 +12,7 @@ impl Parser {
         } = lhs
         {
             if first_char_is_upper(enum_name) && first_char_is_upper(&name) {
-                let payload = if matches!(self.peek(), Token::LParen) {
-                    self.advance();
-                    let expr = self.parse_expression()?;
-                    self.expect(&Token::RParen)?;
-                    Some(Box::new(expr))
-                } else {
-                    None
-                };
+                let payload = self.parse_optional_enum_variant_payload()?;
                 let span = id_span.merge(self.prev_span());
                 return Ok(Expression::EnumVariant {
                     enum_name: enum_name.clone(),
@@ -171,14 +164,7 @@ impl Parser {
     ) -> Result<Expression, CompileError> {
         self.expect(&Token::Dot)?;
         let (variant, _) = self.expect_identifier()?;
-        let payload = if matches!(self.peek(), Token::LParen) {
-            self.advance();
-            let expr = self.parse_expression()?;
-            self.expect(&Token::RParen)?;
-            Some(Box::new(expr))
-        } else {
-            None
-        };
+        let payload = self.parse_optional_enum_variant_payload()?;
         let span = start_span.merge(self.prev_span());
         Ok(Expression::EnumVariant {
             enum_name,
@@ -187,5 +173,18 @@ impl Parser {
             payload,
             span,
         })
+    }
+
+    fn parse_optional_enum_variant_payload(
+        &mut self,
+    ) -> Result<Option<Box<Expression>>, CompileError> {
+        if !matches!(self.peek(), Token::LParen) {
+            return Ok(None);
+        }
+
+        self.advance();
+        let expr = self.parse_expression()?;
+        self.expect(&Token::RParen)?;
+        Ok(Some(Box::new(expr)))
     }
 }
