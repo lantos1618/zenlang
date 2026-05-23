@@ -17,6 +17,7 @@ mod resolver_metadata_impl_method_splits;
 mod resolver_metadata_requirement_splits;
 mod resolver_metadata_restoration_splits;
 mod resolver_phase2_splits;
+mod resolver_struct_enum_metadata_splits;
 mod resolver_validation_splits;
 mod resolver_validation_test_splits;
 mod thresholds;
