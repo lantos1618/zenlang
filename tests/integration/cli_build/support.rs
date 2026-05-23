@@ -23,6 +23,26 @@ main = () i32 {
     );
 }
 
+pub(super) fn write_single_executable_file_read_graph(tmp: &tempfile::TempDir, fallback_arm: &str) {
+    write_file(
+        tmp,
+        "build.zen",
+        &format!(
+            r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {{
+    manifest = b.os.read_file("build.targets") ?
+        | .Ok(contents) {{ contents }}
+        {fallback_arm}
+    b.add(Executable {{ name: "myapp", main: "main.zen", out_dir: "build/" }})
+    .Ok(b.config())
+}}
+"#,
+        ),
+    );
+    write_file(tmp, "build.targets", "myapp\n");
+    write_file(tmp, "main.zen", main_source("0").as_str());
+}
+
 pub(super) fn write_multiple_executable_graph(tmp: &tempfile::TempDir) {
     write_file(
         tmp,
