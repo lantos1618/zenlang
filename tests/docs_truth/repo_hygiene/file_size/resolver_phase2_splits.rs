@@ -91,3 +91,51 @@ fn resolver_phase2_struct_literal_tests_live_in_focused_helper() {
         "struct_metadata.rs should include the focused struct literal module by path"
     );
 }
+
+#[test]
+fn resolver_phase2_enum_function_payload_tests_live_in_focused_helper() {
+    let root = read("tests/resolver_phase2/enum_metadata.rs");
+    let function_payloads = read("tests/resolver_phase2/enum_metadata/function_payloads.rs");
+    let variant_names = read("tests/resolver_phase2/enum_metadata/variant_names.rs");
+
+    for test_name in [
+        "resolver_records_enum_function_type_payloads",
+        "resolver_records_generic_enum_function_type_payloads",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "enum_metadata.rs should not own function-type enum payload resolver test: {test_name}"
+        );
+        assert!(
+            function_payloads.contains(&format!("fn {test_name}")),
+            "function-type enum payload resolver tests should live in focused helper: {test_name}"
+        );
+    }
+    for test_name in [
+        "resolver_records_enum_variant_names",
+        "resolver_allows_same_variant_names_in_different_enums",
+        "resolver_rejects_duplicate_variant_names_in_same_enum",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "enum_metadata.rs should not own variant-name resolver test: {test_name}"
+        );
+        assert!(
+            variant_names.contains(&format!("fn {test_name}")),
+            "variant-name resolver tests should live in focused helper: {test_name}"
+        );
+    }
+
+    assert!(
+        root.lines().count() < 150,
+        "enum_metadata.rs should stay focused on enum owners, payload counts, and nominal payloads"
+    );
+    assert!(
+        root.contains("#[path = \"enum_metadata/function_payloads.rs\"]"),
+        "enum_metadata.rs should include the focused function_payloads module by path"
+    );
+    assert!(
+        root.contains("#[path = \"enum_metadata/variant_names.rs\"]"),
+        "enum_metadata.rs should include the focused variant_names module by path"
+    );
+}
