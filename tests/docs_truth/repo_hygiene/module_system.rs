@@ -114,6 +114,35 @@ fn imported_declaration_selection_lives_in_focused_helper() {
 }
 
 #[test]
+fn local_import_resolution_helpers_live_in_focused_helper() {
+    let import_resolution = read("src/module_system/import_resolution.rs");
+    let local_imports = read("src/module_system/import_resolution/local_imports.rs");
+
+    for helper in [
+        "fn local_import_file_path",
+        "fn reject_duplicate_requested_imports",
+    ] {
+        assert!(
+            !import_resolution.contains(helper),
+            "import routing dispatcher should not own local import helper: {helper}"
+        );
+        assert!(
+            local_imports.contains(helper),
+            "local import helper should live in focused helper: {helper}"
+        );
+    }
+
+    assert!(
+        import_resolution.lines().count() < 210,
+        "import routing dispatcher should stay focused on routing imports"
+    );
+    assert!(
+        import_resolution.contains("mod local_imports;"),
+        "import routing should load focused local import helper"
+    );
+}
+
+#[test]
 fn graph_loading_export_lookup_lives_in_focused_helper() {
     let graph_loading = read("src/module_system/graph_loading.rs");
     let exported_symbols = read("src/module_system/graph_loading/exported_symbols.rs");
