@@ -20,8 +20,9 @@ fn typechecker_root_imports_use_static_root_enum() {
 
     for required in [
         "enum RootImportPath",
-        "const STD: &'static str = \"std\"",
-        "const AT_STD: &'static str = \"@std\"",
+        "use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};",
+        "Self::Std => STD_ROOT",
+        "Self::AtStd => AT_STD_ROOT",
         "const ALL: &[RootImportPath]",
         "impl fmt::Display for RootImportPath",
         ".find(|root| root.matches_path(path))",

@@ -1,3 +1,5 @@
+use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ModuleRootPrefix {
     Std,
@@ -5,14 +7,12 @@ pub(super) enum ModuleRootPrefix {
 }
 
 impl ModuleRootPrefix {
-    const STD: &'static str = "std";
-    const AT_STD: &'static str = "@std";
     const ALL: &[ModuleRootPrefix] = &[ModuleRootPrefix::Std, ModuleRootPrefix::AtStd];
 
     pub(super) const fn as_str(self) -> &'static str {
         match self {
-            Self::Std => Self::STD,
-            Self::AtStd => Self::AT_STD,
+            Self::Std => STD_ROOT,
+            Self::AtStd => AT_STD_ROOT,
         }
     }
 

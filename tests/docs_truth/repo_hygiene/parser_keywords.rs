@@ -63,6 +63,7 @@ fn parser_module_roots_use_owned_root_enum() {
     for required in [
         "enum ParserModuleRoot",
         "const ALL: &[ParserModuleRoot]",
+        "use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT};",
         "ParserModuleRoot::AtBuiltin.as_str().to_string()",
         "ParserModuleRoot::AtStd.join_module_parts(&module_parts)",
     ] {

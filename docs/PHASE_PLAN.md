@@ -63,6 +63,7 @@ Use semantic-overlap and slop-cannon reports as triage input, not automatic edit
 - slop-cannon reports: keep generated artifacts outside git; use Qwen/L40S semantic reports and cheap HEAD hash reports as triage, not automatic edit lists.
 - fixed/guarded in the current scrub: byte-identical JSON golden fixtures, stale semantic-overlap scan roots, parser declaration-mode repetition, and duplicated lexer non-string token dispatch.
 - fixed/guarded in this follow-up scrub: duplicated module-system visibility test setup, C field-access test expression construction, executable/test build-target single-source construction, resolver value type-reference validation replay, diagnostic suggested-fix enrichment, binary-op operand diagnostics, C loop emission, and public loop/defer docs.
+- fixed/guarded after follow-up report review: removed the orphan compiler intrinsic registry that was tracked but not compiled, pinned intrinsic spelling truth to the active `CIntrinsic` and `GatedIntrinsic` tables, and centralized module-root spellings shared by lexer, parser, module loading, and typechecking.
 - next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
   operator tables, builtin type/layout metadata, lexer keyword/root-token
   spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion,

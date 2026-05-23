@@ -96,7 +96,11 @@ fn live_compiler_and_stdlib_sources_do_not_claim_llvm_intrinsics() {
         .lines()
         .filter(|path| path.ends_with(".rs") || path.ends_with(".zen") || path.ends_with(".md"))
     {
-        let source = std::fs::read_to_string(repo_root().join(path)).expect("read tracked file");
+        let full_path = repo_root().join(path);
+        if !full_path.exists() {
+            continue;
+        }
+        let source = std::fs::read_to_string(full_path).expect("read tracked file");
         for stale in ["LLVM IR", "Raw Rust/LLVM", "LLVM atomics"] {
             assert!(
                 !source.contains(stale),
@@ -107,37 +111,36 @@ fn live_compiler_and_stdlib_sources_do_not_claim_llvm_intrinsics() {
 }
 
 #[test]
-fn compiler_intrinsic_definitions_live_in_focused_helper() {
-    let root = read("src/intrinsics.rs");
-    let definitions = read("src/intrinsics/definitions.rs");
-
-    for root_detail in [
-        "macro_rules! intrinsic",
-        "fn build_intrinsics",
-        r#"intrinsic!(m, "raw_allocate""#,
-        r#"intrinsic!(m, "atomic_load""#,
-        r#"intrinsic!(m, "syscall6""#,
-    ] {
+fn compiler_intrinsic_truth_does_not_live_in_orphan_registry() {
+    for path in ["src/intrinsics.rs", "src/intrinsics/definitions.rs"] {
         assert!(
-            !root.contains(root_detail),
-            "compiler intrinsic root should not own intrinsic definition-table detail: {root_detail}"
-        );
-        assert!(
-            definitions.contains(root_detail),
-            "compiler intrinsic definition table should live in focused helper: {root_detail}"
+            !repo_root().join(path).exists(),
+            "{path} is not included by the compiler crate; intrinsic spelling belongs to the active CIntrinsic and GatedIntrinsic enums"
         );
     }
 
-    assert!(
-        root.contains("mod definitions;"),
-        "compiler intrinsic root should include the focused definitions helper"
-    );
-    assert!(
-        root.contains("definitions::build_intrinsics"),
-        "compiler intrinsic root should initialize the registry through the focused helper"
-    );
-    assert!(
-        root.lines().count() < 130,
-        "compiler intrinsic root should stay focused on module recognition and public registry API"
-    );
+    let codegen_intrinsics = read("src/codegen/c/intrinsics/names/spelling.rs");
+    let gated_intrinsics = read("src/typechecker/gated_intrinsics/spelling.rs");
+
+    for required in [
+        r#"RawAllocate => "raw_allocate""#,
+        r#"AtomicLoad => "atomic_load""#,
+        r#"Syscall6 => "syscall6""#,
+    ] {
+        assert!(
+            codegen_intrinsics.contains(required),
+            "C backend intrinsic spelling should stay in the active CIntrinsic table: {required}"
+        );
+    }
+
+    for required in [
+        r#"RawAllocate => "raw_allocate""#,
+        r#"AtomicLoad => "atomic_load""#,
+        r#"Syscall6 => "syscall6""#,
+    ] {
+        assert!(
+            gated_intrinsics.contains(required),
+            "frontend intrinsic gate spelling should stay in the active GatedIntrinsic table: {required}"
+        );
+    }
 }

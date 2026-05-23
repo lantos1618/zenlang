@@ -117,8 +117,8 @@ impl Lexer {
         let word: String = self.source[id_start..self.pos].iter().collect();
         let span = self.make_span(start, self.byte_pos());
         let tok = match word.as_str() {
-            "std" => Token::AtStd,
-            "builtin" => Token::AtBuiltin,
+            crate::root_spelling::STD_ROOT => Token::AtStd,
+            crate::root_spelling::BUILTIN_ROOT_NAME => Token::AtBuiltin,
             "this" => Token::AtThis,
             "export" => Token::AtExport,
             _ => Token::Identifier(format!("@{word}")),

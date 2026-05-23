@@ -3,7 +3,7 @@ mod spelling;
 pub(super) use spelling::GatedIntrinsic;
 
 impl GatedIntrinsic {
-    pub(super) const INTRINSIC_MODULE: &'static str = "@builtin";
+    pub(super) const INTRINSIC_MODULE: &'static str = crate::root_spelling::AT_BUILTIN_ROOT;
 
     pub(super) const fn gate_message(self) -> &'static str {
         match self {

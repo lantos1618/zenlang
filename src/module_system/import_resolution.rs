@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
+use crate::root_spelling::AT_BUILTIN_ROOT;
 
 use super::root_prefix::parse_module_root_prefix;
 use super::ModuleSystem;
@@ -78,7 +79,7 @@ impl ModuleSystem {
                 continue;
             }
 
-            if first == "@builtin" {
+            if first == AT_BUILTIN_ROOT {
                 continue;
             }
 
@@ -119,7 +120,7 @@ impl ModuleSystem {
             return self.resolve_stdlib_import(&module_path[1..], files);
         }
 
-        if first == "@builtin" {
+        if first == AT_BUILTIN_ROOT {
             return Ok(Program {
                 declarations: Vec::new(),
                 file_id: 0,

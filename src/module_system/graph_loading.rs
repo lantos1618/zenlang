@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::ast::{Declaration, Program};
 use crate::error::{CompileError, FileTable, Span};
 use crate::resolver::Resolver;
+use crate::root_spelling::AT_BUILTIN_ROOT;
 
 #[path = "graph_loading/exported_symbols.rs"]
 mod exported_symbols;
@@ -131,7 +132,7 @@ impl ModuleSystem {
 
             let first = &module_path[0];
             let root_prefix = parse_module_root_prefix(first);
-            if first == "@builtin" {
+            if first == AT_BUILTIN_ROOT {
                 continue;
             }
 

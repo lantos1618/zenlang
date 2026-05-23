@@ -26,8 +26,9 @@ fn module_system_roots_use_owned_prefix_enum() {
 
     for required in [
         "enum ModuleRootPrefix",
-        "const STD: &'static str = \"std\"",
-        "const AT_STD: &'static str = \"@std\"",
+        "use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};",
+        "Self::Std => STD_ROOT",
+        "Self::AtStd => AT_STD_ROOT",
         "pub(super) fn parse_module_root_prefix",
     ] {
         assert!(
