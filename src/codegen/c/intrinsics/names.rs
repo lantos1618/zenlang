@@ -15,11 +15,7 @@ impl FromStr for CIntrinsic {
     type Err = ();
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
-        spelling::SPELLINGS
-            .iter()
-            .find(|(_, spelling)| *spelling == name)
-            .map(|(intrinsic, _)| *intrinsic)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling_table(spelling::SPELLINGS, name)
     }
 }
 

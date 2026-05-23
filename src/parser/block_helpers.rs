@@ -82,12 +82,7 @@ impl Parser {
         self.expect(&Token::RParen)?;
         self.skip_newlines();
 
-        let return_type = if !matches!(self.peek(), Token::LBrace) {
-            Some(self.parse_type()?)
-        } else {
-            None
-        };
-
+        let return_type = self.parse_optional_return_type_before_block()?;
         self.skip_newlines();
         let body = self.parse_block_expression()?;
         let span = start.merge(body.span());
@@ -98,6 +93,16 @@ impl Parser {
             body: Box::new(body),
             span,
         })
+    }
+
+    pub(in crate::parser) fn parse_optional_return_type_before_block(
+        &mut self,
+    ) -> Result<Option<AstType>, CompileError> {
+        if matches!(self.peek(), Token::LBrace) {
+            Ok(None)
+        } else {
+            self.parse_type().map(Some)
+        }
     }
 
     pub(super) fn parse_arg_list(&mut self) -> Result<Vec<Expression>, CompileError> {

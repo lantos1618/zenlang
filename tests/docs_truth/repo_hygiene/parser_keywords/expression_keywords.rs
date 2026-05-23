@@ -25,7 +25,7 @@ fn parser_prefix_keywords_use_owned_keyword_enum() {
         "enum ParserPrefixKeyword",
         "const ALL: &[ParserPrefixKeyword]",
         "impl FromStr for ParserPrefixKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "name.parse::<ParserPrefixKeyword>()",
     ] {
         assert!(
@@ -51,7 +51,7 @@ fn parser_pattern_keywords_use_owned_keyword_enum() {
         "enum ParserPatternKeyword",
         "const ALL: &[ParserPatternKeyword]",
         "impl FromStr for ParserPatternKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "name.parse::<ParserPatternKeyword>()",
     ] {
         assert!(
@@ -77,7 +77,7 @@ fn parser_this_methods_use_owned_method_enum() {
         "enum ParserThisMethod",
         "const ALL: &[ParserThisMethod]",
         "impl FromStr for ParserThisMethod",
-        ".find(|method| method.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "method.parse::<ParserThisMethod>()",
     ] {
         assert!(

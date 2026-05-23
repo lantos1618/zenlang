@@ -51,7 +51,7 @@ fn typechecker_boolean_literals_use_owned_keyword_enum() {
         "enum TypecheckerBoolLiteralKeyword",
         "const ALL: &[TypecheckerBoolLiteralKeyword]",
         "impl FromStr for TypecheckerBoolLiteralKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "name.parse::<TypecheckerBoolLiteralKeyword>()",
     ] {
         assert!(

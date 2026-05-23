@@ -27,10 +27,7 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
         "const ALL: &[BuildTargetDslIdent]",
         "const ALL: &[BuildTargetDslKind]",
         "const ALL: &[HostEffectResultVariant]",
-        ".find(|field| field.as_str() == value)",
-        ".find(|ident| ident.as_str() == value)",
-        ".find(|kind| kind.as_str() == value)",
-        ".find(|variant| variant.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
     ] {
         assert!(
             combined.contains(required),

@@ -76,11 +76,17 @@ agent/claude_output.jsonl
 /.venv/
 /.cache/huggingface/
 /.cache/torch/
+/.anti-slop-cache/
+/.anti-slop-out/
 /hf-cache/
 /model-cache/
 /models/
+/anti_slop_map.html
+/anti_slop_report.json
 /semantic-overlap-report.md
 /semantic-overlap-report.json
+/slop-reports/
+/zenlang-slop-reports/
 
 # Security and sensitive files
 .env

@@ -73,7 +73,7 @@ fn parser_type_names_use_owned_type_name_enums() {
         "impl FromStr for BuiltinGenericTypeName",
         "impl fmt::Display for BuiltinTypeName",
         "impl fmt::Display for BuiltinGenericTypeName",
-        ".find(|name| name.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "name.parse::<BuiltinTypeName>()",
         "base.parse::<BuiltinGenericTypeName>()",
     ] {

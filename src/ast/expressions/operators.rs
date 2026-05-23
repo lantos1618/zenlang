@@ -85,6 +85,7 @@ pub enum LoopControlAction {
 impl LoopControlAction {
     pub const DONE: &'static str = "done";
     pub const NEXT: &'static str = "next";
+    const ALL: &[LoopControlAction] = &[Self::Done, Self::Next];
 
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -104,13 +105,7 @@ impl FromStr for LoopControlAction {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if value == Self::Done.as_str() {
-            Ok(Self::Done)
-        } else if value == Self::Next.as_str() {
-            Ok(Self::Next)
-        } else {
-            Err(())
-        }
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }
 

@@ -30,7 +30,7 @@ fn module_system_roots_use_owned_prefix_enum() {
         "const AT_STD: &'static str = \"@std\"",
         "impl FromStr for ModuleRootPrefix",
         "impl fmt::Display for ModuleRootPrefix",
-        ".find(|prefix| prefix.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "pub(super) fn parse_module_root_prefix",
     ] {
         assert!(

@@ -64,7 +64,7 @@ fn parser_module_roots_use_owned_root_enum() {
         "enum ParserModuleRoot",
         "const ALL: &[ParserModuleRoot]",
         "impl FromStr for ParserModuleRoot",
-        ".find(|root| root.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "ParserModuleRoot::AtBuiltin.as_str().to_string()",
         "ParserModuleRoot::AtStd.join_module_parts(&module_parts)",
     ] {
@@ -98,7 +98,7 @@ fn parser_mutability_keywords_use_owned_keyword_enum() {
         "enum ParserMutabilityKeyword",
         "const ALL: &[ParserMutabilityKeyword]",
         "impl FromStr for ParserMutabilityKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "self.consume_mutability_keyword()",
     ] {
         assert!(
@@ -133,7 +133,7 @@ fn parser_behavior_declaration_keyword_uses_owned_keyword_enum() {
         "enum ParserBehaviorKeyword",
         "const ALL: &[ParserBehaviorKeyword]",
         "impl FromStr for ParserBehaviorKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
         "keyword.parse::<ParserBehaviorKeyword>()",
         "ParserBehaviorKeyword::Behavior.as_str()",
     ] {

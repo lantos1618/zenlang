@@ -19,7 +19,48 @@ fn module_function_names(program: &Program) -> Vec<&str> {
         .collect()
 }
 
+#[derive(Clone, Copy)]
+enum StdlibGateLoadPath {
+    Imports,
+    Graph,
+}
+
 fn assert_stdlib_import_is_gated_before_loading_sketch(
+    sketch_dir: &str,
+    sketch_file: &str,
+    import_source: &str,
+    expected_gate: &str,
+    gate_name: &str,
+) {
+    assert_stdlib_import_is_gated_before_loading_sketch_on_path(
+        StdlibGateLoadPath::Imports,
+        sketch_dir,
+        sketch_file,
+        import_source,
+        expected_gate,
+        gate_name,
+    );
+}
+
+fn assert_graph_stdlib_import_is_gated_before_loading_sketch(
+    sketch_dir: &str,
+    sketch_file: &str,
+    import_source: &str,
+    expected_gate: &str,
+    gate_name: &str,
+) {
+    assert_stdlib_import_is_gated_before_loading_sketch_on_path(
+        StdlibGateLoadPath::Graph,
+        sketch_dir,
+        sketch_file,
+        import_source,
+        expected_gate,
+        gate_name,
+    );
+}
+
+fn assert_stdlib_import_is_gated_before_loading_sketch_on_path(
+    load_path: StdlibGateLoadPath,
     sketch_dir: &str,
     sketch_file: &str,
     import_source: &str,
@@ -41,9 +82,11 @@ fn assert_stdlib_import_is_gated_before_loading_sketch(
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::with_stdlib_root(tmp.path().join("stdlib"));
 
-    let errors = ms
-        .load_with_imports(&main_path, &mut files)
-        .expect_err("stdlib import should be gated before parsing sketches");
+    let result = match load_path {
+        StdlibGateLoadPath::Imports => ms.load_with_imports(&main_path, &mut files).map(|_| ()),
+        StdlibGateLoadPath::Graph => ms.load_module_graph(&main_path, &mut files).map(|_| ()),
+    };
+    let errors = result.expect_err("stdlib import should be gated before parsing sketches");
     let messages = errors
         .iter()
         .map(ToString::to_string)

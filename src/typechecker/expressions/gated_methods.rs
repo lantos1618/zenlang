@@ -47,10 +47,6 @@ impl FromStr for GatedMethod {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        GatedMethod::ALL
-            .iter()
-            .copied()
-            .find(|method| method.as_str() == value)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }

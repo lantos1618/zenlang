@@ -38,7 +38,7 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
 
     for required in [
         "pub const ALL: &[TypeDeclarationKeyword]",
-        ".find(|keyword| keyword.as_str() == value)",
+        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
     ] {
         assert!(
             ast_declaration_support.contains(required),

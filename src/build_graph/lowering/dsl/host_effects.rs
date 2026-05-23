@@ -25,10 +25,6 @@ impl FromStr for HostEffectResultVariant {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, <Self as FromStr>::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|variant| variant.as_str() == value)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }

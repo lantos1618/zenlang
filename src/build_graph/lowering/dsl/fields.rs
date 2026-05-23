@@ -55,10 +55,6 @@ impl FromStr for BuildTargetField {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|field| field.as_str() == value)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }

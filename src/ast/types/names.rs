@@ -140,11 +140,7 @@ impl FromStr for BuiltinTypeName {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|name| name.as_str() == value)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }
 
@@ -193,10 +189,6 @@ impl FromStr for BuiltinGenericTypeName {
     type Err = ();
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|name| name.as_str() == value)
-            .ok_or(())
+        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
     }
 }
