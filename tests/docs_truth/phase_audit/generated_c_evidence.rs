@@ -25,34 +25,33 @@ fn multi_file_nested_generic_method_generated_c_pins_definition_counts() {
         "multi_file_type_method_nested_result_dependency/main.zen",
     );
 
-    for required in [
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32")"#,
-    ] {
-        assert!(
-            nested_method_block.contains(required),
-            "multi-file nested generic method generated-C tests should pin exact definition counts: {required}"
-        );
-    }
+    assert_specialization_call_names_pinned(
+        nested_method_block,
+        &[
+            "Box_wrap_result_i32",
+            "unwrap_result_Option_i32_StaticString",
+            "unwrap_option_i32",
+        ],
+        "multi-file nested generic method generated-C tests",
+    );
 }
 
 #[test]
 fn local_nested_generic_method_generated_c_pins_definition_counts() {
     let method_worklist =
         read("tests/integration/generic_specializations/method_worklist_generated_c.rs");
+    let nested_method_block =
+        generated_c_fixture_block(&method_worklist, "generic_method_nested_result.zen");
 
-    for required in [
-        "generic_method_nested_result.zen",
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32")"#,
-    ] {
-        assert!(
-            method_worklist.contains(required),
-            "local nested generic method generated-C tests should pin exact definition counts: {required}"
-        );
-    }
+    assert_specialization_call_names_pinned(
+        nested_method_block,
+        &[
+            "Box_wrap_result_i32",
+            "unwrap_result_Option_i32_StaticString",
+            "unwrap_option_i32",
+        ],
+        "local nested generic method generated-C tests",
+    );
 }
 
 #[test]
@@ -64,16 +63,11 @@ fn imported_transitive_worklist_generated_c_pins_definition_counts() {
         "multi_file_generic_imported_transitive_dependency/main.zen",
     );
 
-    for required in [
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "inner_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "middle_i32")"#,
-        r#"assert_c_call_resolves_to_single_definition(&c_source, "outer_i32")"#,
-    ] {
-        assert!(
-            transitive_block.contains(required),
-            "imported transitive generic worklist tests should pin exact definition counts: {required}"
-        );
-    }
+    assert_specialization_call_names_pinned(
+        transitive_block,
+        &["inner_i32", "middle_i32", "outer_i32"],
+        "imported transitive generic worklist tests",
+    );
 }
 
 #[test]
@@ -96,6 +90,20 @@ fn scoped_imported_generic_ufc_generated_c_pins_recovery_evidence() {
         assert!(
             scoped_type_inference.contains(required),
             "scoped imported generic UFC generated-C proof should pin recovery evidence: {required}"
+        );
+    }
+}
+
+fn assert_specialization_call_names_pinned(block: &str, call_names: &[&str], label: &str) {
+    assert!(
+        block.contains("compile_to_c_with_specialization_check("),
+        "{label} should use the generated-C specialization facade"
+    );
+
+    for call_name in call_names {
+        assert!(
+            block.contains(&format!(r#""{call_name}""#)),
+            "{label} should pin exact definition counts through specialization call list: {call_name}"
         );
     }
 }

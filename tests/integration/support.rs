@@ -12,8 +12,8 @@ mod generated_c;
 
 pub use generated_c::{
     assert_c_call_resolves_to_single_definition, assert_generated_c_calls_resolve_to_definitions,
-    assert_generated_c_function_definitions_are_unique, has_c_call_outside_signature,
-    undefined_generated_c_calls,
+    assert_generated_c_function_definitions_are_unique, assert_generated_c_specialization,
+    has_c_call_outside_signature, undefined_generated_c_calls,
 };
 
 /// Root of the test fixtures.
@@ -62,6 +62,22 @@ pub fn compile_to_c(zen_path: &Path) -> String {
 pub fn compile_to_c_with_generated_call_check(zen_path: &Path) -> String {
     let c_source = compile_to_c(zen_path);
     assert_generated_c_calls_resolve_to_definitions(&c_source);
+    c_source
+}
+
+pub fn compile_to_c_with_specialization_check(
+    zen_path: &Path,
+    required_snippets: &[&str],
+    single_definition_calls: &[&str],
+    forbidden_snippets: &[&str],
+) -> String {
+    let c_source = compile_to_c_with_generated_call_check(zen_path);
+    assert_generated_c_specialization(
+        &c_source,
+        required_snippets,
+        single_definition_calls,
+        forbidden_snippets,
+    );
     c_source
 }
 

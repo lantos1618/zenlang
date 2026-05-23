@@ -2,24 +2,26 @@ use super::*;
 
 #[test]
 fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
-    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_method.zen"));
-    assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_get_i32(box)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_get_i32");
-    assert!(!c_source.contains("Box_T"));
-    assert!(!c_source.contains("T Box_get"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_method.zen"),
+        &["int32_t Box_get_i32(Box_i32 self)", "Box_get_i32(box)"],
+        &["Box_get_i32"],
+        &["Box_T", "T Box_get"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_self.zen"));
-    assert!(c_source.contains("Box_i32 Box_copy_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_copy_i32(box)"));
-    assert!(c_source.contains("Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self)"));
-    assert!(c_source.contains("Box_copy_Option_i32(nested)"));
-    assert!(c_source.contains("Option_i32 Option_copy_i32(Option_i32 self)"));
-    assert!(c_source.contains("Option_copy_i32(option)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_copy_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_copy_Option_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_copy_i32");
+    let c_source = compile_to_c_with_specialization_check(
+        &test_dir().join("generic_method_self.zen"),
+        &[
+            "Box_i32 Box_copy_i32(Box_i32 self)",
+            "Box_copy_i32(box)",
+            "Box_Option_i32 Box_copy_Option_i32(Box_Option_i32 self)",
+            "Box_copy_Option_i32(nested)",
+            "Option_i32 Option_copy_i32(Option_i32 self)",
+            "Option_copy_i32(option)",
+        ],
+        &["Box_copy_i32", "Box_copy_Option_i32", "Option_copy_i32"],
+        &["Box_copy(box", "Unknown"],
+    );
     assert!(
         c_source
             .find("struct Option_i32")
@@ -28,165 +30,179 @@ fn method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
                 .find("struct Box_Option_i32")
                 .expect("Box_Option_i32 struct")
     );
-    assert!(!c_source.contains("Box_copy(box"));
-    assert!(!c_source.contains("Unknown"));
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_self_phantom.zen"));
-    assert!(c_source.contains("Marker_i32 Marker_copy_i32(Marker_i32 self)"));
-    assert!(c_source.contains("Token_i32 Token_copy_i32(Token_i32 self)"));
-    assert!(c_source.contains("Marker_copy_i32(value)"));
-    assert!(c_source.contains("Token_copy_i32(token)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Marker_copy_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Token_copy_i32");
-    assert!(!c_source.contains("Marker_T"));
-    assert!(!c_source.contains("Token_T"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_method_self_phantom.zen"),
+        &[
+            "Marker_i32 Marker_copy_i32(Marker_i32 self)",
+            "Token_i32 Token_copy_i32(Token_i32 self)",
+            "Marker_copy_i32(value)",
+            "Token_copy_i32(token)",
+        ],
+        &["Marker_copy_i32", "Token_copy_i32"],
+        &["Marker_T", "Token_T"],
+    );
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("generic_method_self_param_order.zen"),
+        &[
+            "int32_t Box_tag_StaticString_i32(Box_i32 self, zen_str label)",
+            "Box_tag_StaticString_i32(box,",
+        ],
+        &["Box_tag_StaticString_i32"],
+        &["Box_tag_i32_StaticString"],
     );
-    assert!(c_source.contains("int32_t Box_tag_StaticString_i32(Box_i32 self, zen_str label)"));
-    assert!(c_source.contains("Box_tag_StaticString_i32(box,"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_tag_StaticString_i32");
-    assert!(!c_source.contains("Box_tag_i32_StaticString"));
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_method_worklist.zen"));
-    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
-    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("inner_i32(self.value)"));
-    assert!(c_source.contains("Box_get_inner_i32(box)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_get_inner_i32");
-    assert!(!c_source.contains("T inner"));
-    assert!(!c_source.contains("inner_T"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_method_worklist.zen"),
+        &[
+            "int32_t inner_i32(int32_t value)",
+            "int32_t Box_get_inner_i32(Box_i32 self)",
+            "inner_i32(self.value)",
+            "Box_get_inner_i32(box)",
+        ],
+        &["inner_i32", "Box_get_inner_i32"],
+        &["T inner", "inner_T"],
+    );
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("generic_method_method_worklist.zen"),
+        &[
+            "int32_t Box_inner_i32(Box_i32 self)",
+            "int32_t Box_get_inner_i32(Box_i32 self)",
+            "Box_inner_i32(self)",
+            "Box_get_inner_i32(box)",
+        ],
+        &["Box_inner_i32", "Box_get_inner_i32"],
+        &["T Box_inner"],
     );
-    assert!(c_source.contains("int32_t Box_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("int32_t Box_get_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_inner_i32(self)"));
-    assert!(c_source.contains("Box_get_inner_i32(box)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_get_inner_i32");
-    assert!(!c_source.contains("T Box_inner"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("generic_method_worklist_dedup.zen"),
+        &[
+            "int32_t Box_inner_i32(Box_i32 self)",
+            "int32_t Box_left_inner_i32(Box_i32 self)",
+            "int32_t Box_right_inner_i32(Box_i32 self)",
+            "Box_inner_i32(self)",
+            "Box_left_inner_i32(box)",
+            "Box_right_inner_i32(box)",
+        ],
+        &["Box_inner_i32", "Box_left_inner_i32", "Box_right_inner_i32"],
+        &["T Box_inner"],
     );
-    assert!(c_source.contains("int32_t Box_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("int32_t Box_left_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("int32_t Box_right_inner_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_inner_i32(self)"));
-    assert!(c_source.contains("Box_left_inner_i32(box)"));
-    assert!(c_source.contains("Box_right_inner_i32(box)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_left_inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_right_inner_i32");
-    assert!(!c_source.contains("T Box_inner"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("generic_method_nested_result.zen"),
+        &[
+            "typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;",
+            "Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)",
+            "Box_wrap_result_i32(box)",
+            "unwrap_result_Option_i32_StaticString(wrapped,",
+            "unwrap_option_i32(some, 0LL)",
+        ],
+        &[
+            "Box_wrap_result_i32",
+            "unwrap_result_Option_i32_StaticString",
+            "unwrap_option_i32",
+        ],
+        &["Result_T", "Option_T", "T Box_wrap_result"],
     );
-    assert!(c_source
-        .contains("typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;"));
-    assert!(c_source.contains("Result_Option_i32_StaticString Box_wrap_result_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_wrap_result_i32(box)"));
-    assert!(c_source.contains("unwrap_result_Option_i32_StaticString(wrapped,"));
-    assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_wrap_result_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_Option_i32_StaticString");
-    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32");
-    assert!(!c_source.contains("Result_T"));
-    assert!(!c_source.contains("Option_T"));
-    assert!(!c_source.contains("T Box_wrap_result"));
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("type_impl_methods.zen"));
-    assert!(c_source.contains("int32_t Point_get(Point self)"));
-    assert!(c_source.contains("int32_t Point_keep_i32(Point self, int32_t value)"));
-    assert!(c_source.contains("Point_get(point)"));
-    assert!(c_source.contains("Point_keep_i32(point, 7LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Point_get");
-    assert_c_call_resolves_to_single_definition(&c_source, "Point_keep_i32");
-    assert!(!c_source.contains("T Point_keep"));
-    assert!(!c_source.contains("Point_keep(point"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("type_impl_methods.zen"),
+        &[
+            "int32_t Point_get(Point self)",
+            "int32_t Point_keep_i32(Point self, int32_t value)",
+            "Point_get(point)",
+            "Point_keep_i32(point, 7LL)",
+        ],
+        &["Point_get", "Point_keep_i32"],
+        &["T Point_keep", "Point_keep(point"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_type_impl_methods.zen"));
-    assert!(c_source.contains("int32_t Box_get_i32(Box_i32 self)"));
-    assert!(c_source.contains("Box_i32 Box_replace_i32(Box_i32 self, int32_t value)"));
-    assert!(c_source.contains("Box_get_i32(next)"));
-    assert!(c_source.contains("Box_replace_i32(box, 42LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_get_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_replace_i32");
-    assert!(!c_source.contains("Box_T"));
-    assert!(!c_source.contains("T Box_get"));
-    assert!(!c_source.contains("T Box_replace"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_type_impl_methods.zen"),
+        &[
+            "int32_t Box_get_i32(Box_i32 self)",
+            "Box_i32 Box_replace_i32(Box_i32 self, int32_t value)",
+            "Box_get_i32(next)",
+            "Box_replace_i32(box, 42LL)",
+        ],
+        &["Box_get_i32", "Box_replace_i32"],
+        &["Box_T", "T Box_get", "T Box_replace"],
+    );
 
-    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_vec.zen"));
-    assert!(c_source.contains("int32_t Vec_len_i32(Vec_i32 self)"));
-    assert!(c_source.contains("int32_t Vec_len_StaticString(Vec_StaticString self)"));
-    assert!(c_source.contains("Vec_len_i32(ints)"));
-    assert!(c_source.contains("Vec_len_StaticString(words)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Vec_len_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Vec_len_StaticString");
-    assert!(!c_source.contains("Vec_T"));
-    assert!(!c_source.contains("T Vec_len"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_vec.zen"),
+        &[
+            "int32_t Vec_len_i32(Vec_i32 self)",
+            "int32_t Vec_len_StaticString(Vec_StaticString self)",
+            "Vec_len_i32(ints)",
+            "Vec_len_StaticString(words)",
+        ],
+        &["Vec_len_i32", "Vec_len_StaticString"],
+        &["Vec_T", "T Vec_len"],
+    );
 
-    let c_source = compile_to_c_with_generated_call_check(&test_dir().join("generic_worklist.zen"));
-    assert!(c_source.contains("int32_t inner_i32(int32_t value)"));
-    assert!(c_source.contains("int32_t outer_i32(int32_t value)"));
-    assert!(c_source.contains("inner_i32(value)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "outer_i32");
-    assert!(!c_source.contains("T inner"));
-    assert!(!c_source.contains("inner_T"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_worklist.zen"),
+        &[
+            "int32_t inner_i32(int32_t value)",
+            "int32_t outer_i32(int32_t value)",
+            "inner_i32(value)",
+        ],
+        &["inner_i32", "outer_i32"],
+        &["T inner", "inner_T"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_worklist_dedup.zen"));
-    assert!(c_source.contains("int32_t left_i32(int32_t value)"));
-    assert!(c_source.contains("int32_t right_i32(int32_t value)"));
-    assert!(c_source.contains("inner_i32(value)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "inner_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "left_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "right_i32");
-    assert!(!c_source.contains("T inner"));
-    assert!(!c_source.contains("inner_T"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_worklist_dedup.zen"),
+        &[
+            "int32_t left_i32(int32_t value)",
+            "int32_t right_i32(int32_t value)",
+            "inner_i32(value)",
+        ],
+        &["inner_i32", "left_i32", "right_i32"],
+        &["T inner", "inner_T"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_recursive_function.zen"));
-    assert!(c_source.contains("int32_t repeat_i32(int32_t value, int32_t remaining)"));
-    assert!(c_source.contains("repeat_i32(value, (remaining - 1LL))"));
-    assert!(c_source.contains("repeat_i32(41LL, 3LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "repeat_i32");
-    assert!(!c_source.contains("T repeat"));
-    assert!(!c_source.contains("repeat_T"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_recursive_function.zen"),
+        &[
+            "int32_t repeat_i32(int32_t value, int32_t remaining)",
+            "repeat_i32(value, (remaining - 1LL))",
+            "repeat_i32(41LL, 3LL)",
+        ],
+        &["repeat_i32"],
+        &["T repeat", "repeat_T"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_recursive_method.zen"));
-    assert!(c_source.contains("int32_t Box_repeat_i32(Box_i32 self, int32_t remaining)"));
-    assert!(c_source.contains("Box_repeat_i32(self, (remaining - 1LL))"));
-    assert!(c_source.contains("Box_repeat_i32(box, 3LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Box_repeat_i32");
-    assert!(!c_source.contains("T Box_repeat"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_recursive_method.zen"),
+        &[
+            "int32_t Box_repeat_i32(Box_i32 self, int32_t remaining)",
+            "Box_repeat_i32(self, (remaining - 1LL))",
+            "Box_repeat_i32(box, 3LL)",
+        ],
+        &["Box_repeat_i32"],
+        &["T Box_repeat"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_function.zen"));
-    assert!(c_source.contains("int32_t id_i32(int32_t value)"));
-    assert!(c_source.contains("id_i32(12LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "id_i32");
-    assert!(!c_source.contains("id(12LL)"));
-    assert!(!c_source.contains("T id"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_ufc_function.zen"),
+        &["int32_t id_i32(int32_t value)", "id_i32(12LL)"],
+        &["id_i32"],
+        &["id(12LL)", "T id"],
+    );
 
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("generic_ufc_dedup.zen"));
-    assert!(c_source.contains("int32_t id_i32(int32_t value)"));
-    assert!(c_source.contains("id_i32(12LL)"));
-    assert!(c_source.contains("id_i32(30LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "id_i32");
-    assert!(!c_source.contains("id(12LL)"));
-    assert!(!c_source.contains("id(30LL)"));
-    assert!(!c_source.contains("T id"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("generic_ufc_dedup.zen"),
+        &[
+            "int32_t id_i32(int32_t value)",
+            "id_i32(12LL)",
+            "id_i32(30LL)",
+        ],
+        &["id_i32"],
+        &["id(12LL)", "id(30LL)", "T id"],
+    );
 }

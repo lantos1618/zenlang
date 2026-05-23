@@ -43,6 +43,37 @@ pub fn assert_c_call_resolves_to_single_definition(c_source: &str, name: &str) {
     assert_c_function_definition_count(c_source, name, 1);
 }
 
+pub fn assert_generated_c_specialization(
+    c_source: &str,
+    required_snippets: &[&str],
+    single_definition_calls: &[&str],
+    forbidden_snippets: &[&str],
+) {
+    assert_c_source_contains_all(c_source, required_snippets);
+    for name in single_definition_calls {
+        assert_c_call_resolves_to_single_definition(c_source, name);
+    }
+    assert_c_source_lacks_all(c_source, forbidden_snippets);
+}
+
+fn assert_c_source_contains_all(c_source: &str, snippets: &[&str]) {
+    for snippet in snippets {
+        assert!(
+            c_source.contains(snippet),
+            "expected generated C to contain `{snippet}`:\n{c_source}"
+        );
+    }
+}
+
+fn assert_c_source_lacks_all(c_source: &str, snippets: &[&str]) {
+    for snippet in snippets {
+        assert!(
+            !c_source.contains(snippet),
+            "expected generated C to omit `{snippet}`:\n{c_source}"
+        );
+    }
+}
+
 pub fn assert_generated_c_calls_resolve_to_definitions(c_source: &str) {
     let undefined = undefined_generated_c_calls(c_source);
     assert!(
