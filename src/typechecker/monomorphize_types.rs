@@ -5,22 +5,11 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 pub(super) fn type_mangle_key(ty: &Type) -> String {
+    if let Some(name) = ty.builtin_source_name() {
+        return name.into();
+    }
+
     match ty {
-        Type::I8 => "i8".into(),
-        Type::I16 => "i16".into(),
-        Type::I32 => "i32".into(),
-        Type::I64 => "i64".into(),
-        Type::U8 => "u8".into(),
-        Type::U16 => "u16".into(),
-        Type::U32 => "u32".into(),
-        Type::U64 => "u64".into(),
-        Type::Usize => "usize".into(),
-        Type::F32 => "f32".into(),
-        Type::F64 => "f64".into(),
-        Type::Bool => "bool".into(),
-        Type::Void => "void".into(),
-        Type::Str => "StaticString".into(),
-        Type::String => "String".into(),
         Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
             symbol_mangle_key(name)
         }
@@ -42,6 +31,7 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
         }
         Type::Never => "never".into(),
         Type::Unknown => "unknown".into(),
+        _ => unreachable!("handled by builtin_source_name"),
     }
 }
 
