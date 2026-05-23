@@ -1,6 +1,7 @@
 use super::*;
 
 mod collected;
+mod scoped;
 
 impl TypeChecker {
     pub(in crate::typechecker) fn validate_resolver_type_reference_task_list(
@@ -53,16 +54,16 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) {
-        let Some((restored_name, scoped)) = self.resolver_scoped_symbol(
+        self.validate_resolver_scoped_declaration(
             symbols,
             Namespace::Type,
             name,
             span,
             Self::collected_type_type_param_scope,
-        ) else {
-            return;
-        };
-        self.validate_collected_enum_type_references(&restored_name, &scoped, span);
+            |checker, restored_name, scoped| {
+                checker.validate_collected_enum_type_references(restored_name, scoped, span);
+            },
+        );
     }
 
     fn validate_resolver_struct_type_references(
@@ -72,21 +73,21 @@ impl TypeChecker {
         fields: &[StructField],
         span: Span,
     ) {
-        let Some((restored_name, scoped)) = self.resolver_scoped_symbol(
+        self.validate_resolver_scoped_declaration(
             symbols,
             Namespace::Type,
             name,
             span,
             Self::collected_type_type_param_scope,
-        ) else {
-            return;
-        };
-        self.validate_collected_struct_type_references(&restored_name, &scoped, span);
-        for field in fields {
-            if let Some(default) = &field.default {
-                self.validate_generic_expr_type_references(default, &scoped);
-            }
-        }
+            |checker, restored_name, scoped| {
+                checker.validate_collected_struct_type_references(restored_name, scoped, span);
+                for field in fields {
+                    if let Some(default) = &field.default {
+                        checker.validate_generic_expr_type_references(default, scoped);
+                    }
+                }
+            },
+        );
     }
 
     fn resolver_scoped_symbol(
@@ -143,21 +144,21 @@ impl TypeChecker {
         methods: &[BehaviorMethod],
         span: Span,
     ) {
-        let Some((restored_name, scoped)) = self.resolver_scoped_symbol(
+        self.validate_resolver_scoped_declaration(
             symbols,
             Namespace::Behavior,
             name,
             span,
             Self::collected_behavior_type_param_scope,
-        ) else {
-            return;
-        };
-        self.validate_collected_behavior_type_references(&restored_name, &scoped, span);
-        for method in methods {
-            if let Some(default_body) = &method.default_body {
-                self.validate_generic_expr_type_references(default_body, &scoped);
-            }
-        }
+            |checker, restored_name, scoped| {
+                checker.validate_collected_behavior_type_references(restored_name, scoped, span);
+                for method in methods {
+                    if let Some(default_body) = &method.default_body {
+                        checker.validate_generic_expr_type_references(default_body, scoped);
+                    }
+                }
+            },
+        );
     }
 
     fn validate_resolver_impl_method_type_references(

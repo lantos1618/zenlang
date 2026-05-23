@@ -56,25 +56,16 @@ Phase 5 is in evidence-hardening and cleanup. The generic specialization surface
 ## Anti-Slop Scrub Queue
 Use semantic-overlap and slop-cannon reports as triage input, not automatic edits. Record credible classes here; keep generated reports, embeddings, and model caches ignored.
 
-- fixed/guarded: duplicate public examples, stale scripts/`.claude`, stdlib
-  raw `@builtin` leakage, spelling/parser/JSON/test-helper repetition,
-  generated VS Code output, experimental std facade promotion, behavior examples,
-  resolver/generic-callable wrappers, char facade exports, and C atomic emission.
+- fixed/guarded: duplicate public examples, stale scripts/`.claude`, stdlib raw `@builtin` leakage, spelling/parser/JSON/test-helper repetition, generated VS Code output, experimental std facade promotion, behavior examples, resolver/generic-callable wrappers, char facade exports, and C atomic emission.
 - slop-cannon reports: keep generated artifacts outside git; use Qwen/L40S semantic reports and cheap HEAD hash reports as triage, not automatic edit lists.
 - fixed/guarded in the current scrub: byte-identical JSON golden fixtures, stale semantic-overlap scan roots, parser declaration-mode repetition, and duplicated lexer non-string token dispatch.
 - fixed/guarded in this follow-up scrub: duplicated module-system visibility test setup, C field-access test expression construction, executable/test build-target single-source construction, resolver value type-reference validation replay, diagnostic suggested-fix enrichment, binary-op operand diagnostics, C loop emission, and public loop/defer docs.
 - fixed/guarded after follow-up report review: removed the orphan compiler intrinsic registry that was tracked but not compiled, pinned intrinsic spelling truth to the active `CIntrinsic` and `GatedIntrinsic` tables, centralized module-root spellings, and factored small semantic-overlap helpers for imported behavior/source dependencies, resolver behavior refs, enum payload parsing, generic type-name fallback, and impl `Self` matching.
-- next code cleanup: runtime/std facade stand-ins, split intrinsic registry,
-  operator tables, builtin type/layout metadata, lexer keyword/root-token
-  spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion,
-  generic callable specialization, behavior-ref/key normalization, resolver task routing, resolver-local traversal helpers, resolver metadata absence profiles, generic behavior-impl template insertion, call-resolution normalization, and build-target lowering specs.
-- next test cleanup: generated-C substring ladders, metadata absence matrices,
-  docs-truth prose pinning, exact temporary-name assertions, byte-identical IR
-  golden outputs, repetitive host-effect matrices, and private-layout hygiene
-  checks that behave like `1 == 1`.
-- next docs/stdlib cleanup: public std/build facade story, async/actor/allocator
-  sketch quarantine, duplicate allocator/async API shapes, and compact status
-  docs that avoid repeating the phase plan.
+- fixed/guarded in semantic-helper scrub: generic inference shape item matching, resolver scoped type-reference validation, executable/test target single-source lowering, and C match branch body emission now share focused helpers without weakening file-focus hygiene tests.
+- next code cleanup: runtime/std facade stand-ins, split intrinsic registry, operator tables, builtin type/layout metadata, lexer keyword/root-token spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion, generic callable specialization, behavior-ref/key normalization, resolver task routing, resolver-local traversal helpers, resolver metadata absence profiles, generic behavior-impl template insertion, call-resolution normalization, and build-target lowering specs.
+- next test cleanup: generated-C substring ladders, metadata absence matrices, docs-truth prose pinning, exact temporary-name assertions, byte-identical IR golden outputs, repetitive host-effect matrices, and private-layout hygiene checks that behave like `1 == 1`.
+- next docs/stdlib cleanup: public std/build facade story, async/actor/allocator sketch quarantine, duplicate allocator/async API shapes, and compact status docs that avoid repeating the phase plan.
+- manual audit queue: normalize schema-heavy JSON golden coverage, route behavior-bound generated-C checks through shared helpers, gate or size `set_payload` C emission, quarantine blocking async allocator sketches, centralize stdlib syscall/layout constants, and make README/Learn snippets point at executable examples where repetition is not buying clarity.
 
 ## Phase 5 Acceptance Evidence
 - generic enum specialization: `Option<T>`, `Result<T, E>`, nested results, duplicate variants, multi-file dependencies, executable fixtures, typed/HIR/MIR golden tests, and generated-C tests.

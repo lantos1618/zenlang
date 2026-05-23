@@ -85,10 +85,7 @@ impl CEmitter {
                     first = false;
                 }
             }
-            self.indent();
-            self.emit_block_body_with_result(&arm.body, result_var);
-            self.dedent();
-            self.line("}");
+            self.emit_match_result_branch_body(&arm.body, result_var);
         }
     }
 
@@ -172,11 +169,15 @@ impl CEmitter {
                     }
                 }
             }
-            self.indent();
-            self.emit_block_body_with_result(&arm.body, result_var);
-            self.dedent();
-            self.line("}");
+            self.emit_match_result_branch_body(&arm.body, result_var);
         }
+    }
+
+    fn emit_match_result_branch_body(&mut self, block: &TypedBlock, result_var: Option<&str>) {
+        self.indent();
+        self.emit_block_body_with_result(block, result_var);
+        self.dedent();
+        self.line("}");
     }
 
     fn emit_block_body_with_result(&mut self, block: &TypedBlock, result_var: Option<&str>) {

@@ -117,14 +117,13 @@ fn executable_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
-    let root_source_file = required_one_of_string_fields(
+    let (root_source_file, common) = single_source_fields(
         kind,
         fields,
         &[BuildTargetField::Main, BuildTargetField::RootSourceFile],
     )?;
+    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
-    let common = common_target_fields(kind, fields)?;
 
     Ok(single_source_target(
         target_name,
@@ -141,14 +140,13 @@ fn test_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let root_source_file = required_one_of_string_fields(
+    let (root_source_file, common) = single_source_fields(
         kind,
         fields,
         &[BuildTargetField::Root, BuildTargetField::RootSourceFile],
     )?;
     let target_name = optional_string_field(kind, fields, BuildTargetField::Name)?
         .unwrap_or_else(|| target_name_from_root(&root_source_file));
-    let common = common_target_fields(kind, fields)?;
 
     Ok(single_source_target(
         target_name,
@@ -157,6 +155,17 @@ fn test_target_from_fields(
         },
         root_source_file,
         common,
+    ))
+}
+
+fn single_source_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    root_fields: &[BuildTargetField],
+) -> Result<(String, TargetCommonFields), BuildGraphError> {
+    Ok((
+        required_one_of_string_fields(kind, fields, root_fields)?,
+        common_target_fields(kind, fields)?,
     ))
 }
 
