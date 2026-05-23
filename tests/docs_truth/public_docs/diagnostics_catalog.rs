@@ -42,8 +42,8 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "resolver validation failure",
         "gated reserved type surfaces",
         "E5000",
-        "generic inference conflict",
-        "conflicting inferred type arguments for generic functions and methods",
+        "generic inference failure or conflict",
+        "missing and conflicting inferred type arguments for generic functions and methods",
         "E5001",
         "generic type-argument arity",
         "behavior references",
@@ -81,6 +81,8 @@ fn diagnostics_catalog_documents_json_stable_codes() {
         "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_result_method_inference.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_function_inference.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_function_inference_failure.golden.json",
+        "tests/fixtures/ir_json/diagnostics_generic_method_inference_failure.golden.json",
         "tests/fixtures/ir_json/diagnostics_generic_behavior_overlap.golden.json",
     ] {
         assert!(

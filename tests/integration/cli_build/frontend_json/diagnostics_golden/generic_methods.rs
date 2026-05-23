@@ -140,3 +140,48 @@ main = () i32 {
         "generic function inference diagnostics should not emit argument or return followups",
     );
 }
+
+#[test]
+fn emit_json_diagnostics_generic_function_inference_failure_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_function_inference_failure.zen",
+        r#"
+make_default<T> = () T {
+    0
+}
+
+main = () i32 {
+    make_default()
+}
+"#,
+        "tests/fixtures/ir_json/diagnostics_generic_function_inference_failure.golden.json",
+        "generic function inference failure",
+        1,
+        "generic function inference failure diagnostics should not emit return followups",
+    );
+}
+
+#[test]
+fn emit_json_diagnostics_generic_method_inference_failure_schema_matches_golden() {
+    assert_diagnostics_golden(
+        "generic_method_inference_failure.zen",
+        r#"
+Box: {
+    value: i32
+}
+
+Box.make<T> = (self: Box) T {
+    self.value
+}
+
+main = () i32 {
+    box = Box { value: 1 }
+    box.make()
+}
+"#,
+        "tests/fixtures/ir_json/diagnostics_generic_method_inference_failure.golden.json",
+        "generic method inference failure",
+        1,
+        "generic method inference failure diagnostics should not emit return followups",
+    );
+}

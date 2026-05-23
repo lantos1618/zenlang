@@ -197,11 +197,12 @@ impl TypeChecker {
         );
 
         let result = if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
-            let ret_type = self.substitute_type(&info.return_type, &subs);
-            let mangled = self
-                .specialize_generic_method(method_key, &subs, span)
-                .unwrap_or(fallback_mangled);
-            (mangled, ret_type)
+            if let Some(mangled) = self.specialize_generic_method(method_key, &subs, span) {
+                let ret_type = self.substitute_type(&info.return_type, &subs);
+                (mangled, ret_type)
+            } else {
+                (fallback_mangled, Type::Unknown)
+            }
         } else {
             (fallback_mangled, Type::Unknown)
         };
