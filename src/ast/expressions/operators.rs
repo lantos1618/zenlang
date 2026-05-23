@@ -1,6 +1,4 @@
 use serde::Serialize;
-use std::fmt;
-use std::str::FromStr;
 
 /// Binary operators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -95,19 +93,15 @@ impl LoopControlAction {
     }
 }
 
-impl fmt::Display for LoopControlAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for LoopControlAction {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    LoopControlAction,
+    as_str = LoopControlAction::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(
+    LoopControlAction,
+    variants = LoopControlAction::ALL,
+    as_str = LoopControlAction::as_str
+);
 
 #[cfg(test)]
 mod tests {

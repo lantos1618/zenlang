@@ -1,5 +1,4 @@
 use super::ParserModuleRoot;
-use std::str::FromStr;
 
 impl ParserModuleRoot {
     const ALL: &[ParserModuleRoot] = &[ParserModuleRoot::AtBuiltin, ParserModuleRoot::AtStd];
@@ -23,10 +22,8 @@ impl ParserModuleRoot {
     }
 }
 
-impl FromStr for ParserModuleRoot {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    ParserModuleRoot,
+    variants = ParserModuleRoot::ALL,
+    as_str = ParserModuleRoot::as_str
+);

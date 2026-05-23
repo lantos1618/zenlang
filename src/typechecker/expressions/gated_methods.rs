@@ -1,6 +1,4 @@
 use super::*;
-use std::fmt;
-use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum GatedMethod {
@@ -37,16 +35,9 @@ impl GatedMethod {
     }
 }
 
-impl fmt::Display for GatedMethod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for GatedMethod {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(GatedMethod, as_str = GatedMethod::as_str);
+crate::static_spelling::impl_static_spelling_from_str!(
+    GatedMethod,
+    variants = GatedMethod::ALL,
+    as_str = GatedMethod::as_str
+);

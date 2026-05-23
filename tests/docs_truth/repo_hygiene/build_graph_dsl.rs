@@ -27,13 +27,16 @@ fn build_graph_dsl_parsing_uses_enum_static_tables() {
         "const ALL: &[BuildTargetDslIdent]",
         "const ALL: &[BuildTargetDslKind]",
         "const ALL: &[HostEffectResultVariant]",
-        "crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)",
     ] {
         assert!(
             combined.contains(required),
             "build graph DSL spelling should parse through enum static tables: {required}"
         );
     }
+    assert!(
+        uses_static_spelling_parser(&combined),
+        "build graph DSL spelling should parse through shared static spelling glue"
+    );
 }
 
 #[test]
@@ -62,11 +65,11 @@ fn build_graph_dsl_spelling_impls_live_in_focused_helpers() {
             "build graph DSL root should not own parsing impl for {enum_name}"
         );
         assert!(
-            source.contains(&format!("impl FromStr for {enum_name}")),
+            owns_static_spelling_from_str(source, enum_name),
             "focused DSL spelling helper should own parsing impl for {enum_name}"
         );
         assert!(
-            source.contains(&format!("impl fmt::Display for {enum_name}")),
+            owns_static_spelling_display(source, enum_name),
             "focused DSL spelling helper should own display impl for {enum_name}"
         );
     }

@@ -5,82 +5,71 @@ use zen::error::FileTable;
 use zen::module_system::ModuleSystem;
 use zen::typechecker::TypeChecker;
 
-pub(super) fn cmd_emit_json_ast(path_str: &str) {
-    super::reject_build_zen_for_emit_json_mode(path_str);
-    super::reject_hand_authored_json_for_ast_emit(path_str);
-    let (graph, _files) = super::load_module_graph(path_str);
-    match zen::ir_json::ast_graph_to_json(&graph) {
+fn print_json_or_exit<E: std::fmt::Display>(result: Result<String, E>) {
+    match result {
         Ok(json) => println!("{json}"),
         Err(e) => {
             eprintln!("json emit error: {}", e);
             process::exit(1);
         }
     }
+}
+
+fn emit_typed_json<E: std::fmt::Display>(
+    path_str: &str,
+    reject_hand_authored: fn(&str),
+    serialize: impl FnOnce(&zen::ast::typed::TypedProgram) -> Result<String, E>,
+) {
+    super::reject_build_zen_for_emit_json_mode(path_str);
+    reject_hand_authored(path_str);
+    let typed = super::graph_frontend(path_str);
+    print_json_or_exit(serialize(&typed));
+}
+
+pub(super) fn cmd_emit_json_ast(path_str: &str) {
+    super::reject_build_zen_for_emit_json_mode(path_str);
+    super::reject_hand_authored_json_for_ast_emit(path_str);
+    let (graph, _files) = super::load_module_graph(path_str);
+    print_json_or_exit(zen::ir_json::ast_graph_to_json(&graph));
 }
 
 pub(super) fn cmd_emit_json_symbols(path_str: &str) {
     super::reject_build_zen_for_emit_json_mode(path_str);
     super::reject_hand_authored_json_for_symbols_emit(path_str);
     let (graph, _files) = super::load_module_graph(path_str);
-    match zen::ir_json::symbols_graph_to_json(&graph) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
+    print_json_or_exit(zen::ir_json::symbols_graph_to_json(&graph));
 }
 
 pub(super) fn cmd_emit_json_typed(path_str: &str) {
-    super::reject_build_zen_for_emit_json_mode(path_str);
-    super::reject_hand_authored_json_for_typed_emit(path_str);
-    let typed = super::graph_frontend(path_str);
-    match zen::ir_json::typed_program_to_json(&typed) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
+    emit_typed_json(
+        path_str,
+        super::reject_hand_authored_json_for_typed_emit,
+        zen::ir_json::typed_program_to_json,
+    );
 }
 
 pub(super) fn cmd_emit_json_layout(path_str: &str) {
-    super::reject_build_zen_for_emit_json_mode(path_str);
-    super::reject_hand_authored_json_for_layout_emit(path_str);
-    let typed = super::graph_frontend(path_str);
-    match zen::ir_json::layout_program_to_json(&typed) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
+    emit_typed_json(
+        path_str,
+        super::reject_hand_authored_json_for_layout_emit,
+        zen::ir_json::layout_program_to_json,
+    );
 }
 
 pub(super) fn cmd_emit_json_hir(path_str: &str) {
-    super::reject_build_zen_for_emit_json_mode(path_str);
-    super::reject_hand_authored_json_for_hir_emit(path_str);
-    let typed = super::graph_frontend(path_str);
-    match zen::ir_json::hir_program_to_json(&typed) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
+    emit_typed_json(
+        path_str,
+        super::reject_hand_authored_json_for_hir_emit,
+        zen::ir_json::hir_program_to_json,
+    );
 }
 
 pub(super) fn cmd_emit_json_mir(path_str: &str) {
-    super::reject_build_zen_for_emit_json_mode(path_str);
-    super::reject_hand_authored_json_for_mir_emit(path_str);
-    let typed = super::graph_frontend(path_str);
-    match zen::ir_json::mir_program_to_json(&typed) {
-        Ok(json) => println!("{json}"),
-        Err(e) => {
-            eprintln!("json emit error: {}", e);
-            process::exit(1);
-        }
-    }
+    emit_typed_json(
+        path_str,
+        super::reject_hand_authored_json_for_mir_emit,
+        zen::ir_json::mir_program_to_json,
+    );
 }
 
 pub(super) fn cmd_emit_json_diagnostics(path_str: &str) {

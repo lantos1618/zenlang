@@ -53,23 +53,7 @@ main = () i32 { 1 }
 
 #[test]
 fn resolver_declaration_semantic_tasks_collect_only_semantic_work() {
-    let program = parse_program(
-        r#"
-Point: { x: i32 = true }
-
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point.implements(Json) {
-    encode = (self: Point) StaticString { "point" }
-}
-
-Point.requires(Json)
-
-main = (value: Point) i32 { 1 }
-"#,
-    );
+    let program = resolver_semantic_bundle_program();
 
     let tasks =
         TypeChecker::collect_resolver_declaration_semantic_validation_tasks(&program.declarations);

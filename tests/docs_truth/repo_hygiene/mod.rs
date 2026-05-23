@@ -1,5 +1,25 @@
 use super::*;
 
+fn owns_static_spelling_from_str(source: &str, enum_name: &str) -> bool {
+    source.contains(&format!("impl FromStr for {enum_name}"))
+        || source.contains(&format!("impl_static_spelling_from_str!({enum_name},"))
+        || source.contains(&format!(
+            "impl_static_spelling_from_str!(\n    {enum_name},"
+        ))
+}
+
+fn owns_static_spelling_display(source: &str, enum_name: &str) -> bool {
+    source.contains(&format!("impl fmt::Display for {enum_name}"))
+        || source.contains(&format!("impl_static_spelling_display!({enum_name},"))
+        || source.contains(&format!("impl_static_spelling_display!(\n    {enum_name},"))
+}
+
+fn uses_static_spelling_parser(source: &str) -> bool {
+    source.contains("crate::static_spelling::parse_static_spelling(")
+        || source.contains("crate::static_spelling::parse_static_spelling_table(")
+        || source.contains("crate::static_spelling::impl_static_spelling_from_str!")
+}
+
 mod ast_expression_operators;
 mod build_graph_dsl;
 mod builtin_type_spelling;

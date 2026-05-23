@@ -1,41 +1,19 @@
-use std::fmt;
-use std::str::FromStr;
-
 mod spelling;
 
 pub(super) use spelling::CIntrinsic;
 
-impl fmt::Display for CIntrinsic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for CIntrinsic {
-    type Err = ();
-
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling_table(spelling::SPELLINGS, name)
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(CIntrinsic, as_str = CIntrinsic::as_str);
+crate::static_spelling::impl_static_spelling_from_str!(CIntrinsic, table = spelling::SPELLINGS);
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn intrinsic_spellings_round_trip_through_single_table() {
-        let mut seen = HashSet::new();
-
-        for (intrinsic, spelling) in spelling::SPELLINGS {
-            assert!(
-                seen.insert(*spelling),
-                "duplicate intrinsic spelling: {spelling}"
-            );
-            assert_eq!(intrinsic.as_str(), *spelling);
-            assert_eq!(intrinsic.to_string(), *spelling);
-            assert_eq!(spelling.parse::<CIntrinsic>(), Ok(*intrinsic));
-        }
+        crate::static_spelling::assert_static_spelling_table_round_trip(
+            spelling::SPELLINGS,
+            "intrinsic",
+        );
     }
 }

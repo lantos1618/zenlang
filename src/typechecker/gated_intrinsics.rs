@@ -1,6 +1,3 @@
-use std::fmt;
-use std::str::FromStr;
-
 mod spelling;
 
 pub(super) use spelling::GatedIntrinsic;
@@ -110,37 +107,21 @@ impl GatedIntrinsic {
     }
 }
 
-impl fmt::Display for GatedIntrinsic {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for GatedIntrinsic {
-    type Err = ();
-
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling_table(spelling::SPELLINGS, name)
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    GatedIntrinsic,
+    as_str = GatedIntrinsic::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(GatedIntrinsic, table = spelling::SPELLINGS);
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn gated_intrinsic_spellings_round_trip_through_single_table() {
-        let mut seen = HashSet::new();
-
-        for (intrinsic, spelling) in spelling::SPELLINGS {
-            assert!(
-                seen.insert(*spelling),
-                "duplicate gated intrinsic spelling: {spelling}"
-            );
-            assert_eq!(intrinsic.as_str(), *spelling);
-            assert_eq!(intrinsic.to_string(), *spelling);
-            assert_eq!(spelling.parse::<GatedIntrinsic>(), Ok(*intrinsic));
-        }
+        crate::static_spelling::assert_static_spelling_table_round_trip(
+            spelling::SPELLINGS,
+            "gated intrinsic",
+        );
     }
 }

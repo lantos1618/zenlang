@@ -1,5 +1,4 @@
 use super::ParserPrefixKeyword;
-use std::str::FromStr;
 
 impl ParserPrefixKeyword {
     const ALL: &[ParserPrefixKeyword] = &[
@@ -36,10 +35,8 @@ impl ParserPrefixKeyword {
     }
 }
 
-impl FromStr for ParserPrefixKeyword {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    ParserPrefixKeyword,
+    variants = ParserPrefixKeyword::ALL,
+    as_str = ParserPrefixKeyword::as_str
+);

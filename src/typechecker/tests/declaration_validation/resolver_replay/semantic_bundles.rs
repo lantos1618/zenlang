@@ -2,9 +2,8 @@ use super::*;
 
 mod task_collection;
 
-#[test]
-fn resolver_declaration_semantic_bundle_replays_validation_passes() {
-    let program = parse_program(
+fn resolver_semantic_bundle_program() -> ast::Program {
+    parse_program(
         r#"
 Point: { x: i32 = true }
 
@@ -20,7 +19,12 @@ Point.requires(Json)
 
 main = (value: Point) i32 { 1 }
 "#,
-    );
+    )
+}
+
+#[test]
+fn resolver_declaration_semantic_bundle_replays_validation_passes() {
+    let program = resolver_semantic_bundle_program();
     let symbols = crate::resolver::Resolver::new()
         .resolve_program(&program)
         .expect("resolver succeeds");

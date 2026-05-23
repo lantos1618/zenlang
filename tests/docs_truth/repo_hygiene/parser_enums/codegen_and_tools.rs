@@ -25,7 +25,7 @@ fn build_graph_host_effect_methods_parse_dsl_ident_enum() {
         "build graph host-effect method dispatch should parse method names through BuildTargetDslIdent"
     );
     assert!(
-        idents.contains("impl FromStr for BuildTargetDslIdent"),
+        owns_static_spelling_from_str(&idents, "BuildTargetDslIdent"),
         "BuildTargetDslIdent should own parsing for build DSL method names"
     );
     assert!(

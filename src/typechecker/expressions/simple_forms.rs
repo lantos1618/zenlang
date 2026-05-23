@@ -1,5 +1,4 @@
 use super::*;
-use std::str::FromStr;
 
 #[derive(Clone, Copy)]
 enum TypecheckerBoolLiteralKeyword {
@@ -27,13 +26,11 @@ impl TypecheckerBoolLiteralKeyword {
     }
 }
 
-impl FromStr for TypecheckerBoolLiteralKeyword {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        crate::static_spelling::parse_static_spelling(Self::ALL, value, Self::as_str)
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    TypecheckerBoolLiteralKeyword,
+    variants = TypecheckerBoolLiteralKeyword::ALL,
+    as_str = TypecheckerBoolLiteralKeyword::as_str
+);
 
 impl TypeChecker {
     pub(super) fn check_identifier_expr(
