@@ -21,7 +21,8 @@ impl TypeChecker {
         if let Some(behavior) = entry.behavior {
             self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, entry.span);
             if let Some(symbol) = type_symbol {
-                self.validate_resolver_behavior_impl_names(
+                self.validate_resolver_behavior_ref_contains_for_role(
+                    BehaviorRefRole::Impl,
                     symbol,
                     entry.type_name,
                     expected_behavior_edge(behavior, entry.behavior_type_args),
@@ -74,7 +75,8 @@ impl TypeChecker {
         }
         self.require_resolver_symbol(symbols, Namespace::Behavior, behavior, span);
         if let Some(symbol) = type_symbol {
-            self.validate_resolver_behavior_required_names(
+            self.validate_resolver_behavior_ref_contains_for_role(
+                BehaviorRefRole::Required,
                 symbol,
                 type_name,
                 expected_behavior_edge(behavior, behavior_type_args),
@@ -96,7 +98,8 @@ impl TypeChecker {
         self.require_resolver_symbol(symbols, Namespace::Behavior, parent, span);
         self.validate_generic_type_arg_refs_allow_unknowns(parent_type_args, span);
         if let Some(symbol) = symbols.lookup(Namespace::Behavior, behavior) {
-            self.validate_resolver_behavior_parent_names(
+            self.validate_resolver_behavior_ref_contains_for_role(
+                BehaviorRefRole::Parent,
                 symbol,
                 behavior,
                 expected_behavior_edge(parent, parent_type_args),

@@ -93,22 +93,9 @@ impl Parser {
         args: &[Expression],
         span: Span,
     ) -> Option<Expression> {
-        let action = name.parse::<LoopControlAction>().ok()?;
         (args.len() == 1).then_some(())?;
-
-        let Expression::Identifier {
-            name: control_name, ..
-        } = &args[0]
-        else {
-            return None;
-        };
-
-        self.loop_control_label(control_name)
-            .map(|target_label| Expression::LoopControl {
-                action,
-                target_label,
-                span,
-            })
+        let control_name = Self::identifier_name(&args[0])?;
+        self.loop_control_invocation(name, control_name, span)
     }
 
     fn parse_loop_control_method_call(
@@ -118,22 +105,31 @@ impl Parser {
         args: &[Expression],
         span: Span,
     ) -> Option<Expression> {
-        let action = name.parse::<LoopControlAction>().ok()?;
         args.is_empty().then_some(())?;
+        let control_name = Self::identifier_name(receiver)?;
+        self.loop_control_invocation(name, control_name, span)
+    }
 
-        let Expression::Identifier {
-            name: control_name, ..
-        } = receiver
-        else {
-            return None;
-        };
-
+    fn loop_control_invocation(
+        &self,
+        action_name: &str,
+        control_name: &str,
+        span: Span,
+    ) -> Option<Expression> {
+        let action = action_name.parse::<LoopControlAction>().ok()?;
         self.loop_control_label(control_name)
             .map(|target_label| Expression::LoopControl {
                 action,
                 target_label,
                 span,
             })
+    }
+
+    fn identifier_name(expr: &Expression) -> Option<&str> {
+        match expr {
+            Expression::Identifier { name, .. } => Some(name),
+            _ => None,
+        }
     }
 
     pub(super) fn parse_struct_literal(

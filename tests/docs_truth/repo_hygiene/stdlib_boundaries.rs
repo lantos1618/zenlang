@@ -101,6 +101,40 @@ fn std_facade_does_not_reexport_unpromoted_sketches() {
 }
 
 #[test]
+fn char_facade_reexports_canonical_char_surface() {
+    let source = read("stdlib/char.zen");
+
+    for required in [
+        "is_digit",
+        "is_alpha",
+        "is_alphanumeric",
+        "is_whitespace",
+        "is_uppercase",
+        "is_lowercase",
+        "is_hex_digit",
+        "is_octal_digit",
+        "is_binary_digit",
+        "is_control",
+        "is_printable",
+        "is_punctuation",
+        "to_uppercase",
+        "to_lowercase",
+        "digit_to_int",
+        "hex_to_int",
+        "NUL",
+        "TAB",
+        "NEWLINE",
+        "CARRIAGE_RETURN",
+        "SPACE",
+    ] {
+        assert!(
+            source.contains(required),
+            "stdlib/char.zen should re-export canonical char API item: {required}"
+        );
+    }
+}
+
+#[test]
 fn root_tests_directory_does_not_accumulate_legacy_zen_fixtures() {
     let root_tests = repo_root().join("tests");
     let mut legacy = std::fs::read_dir(&root_tests)

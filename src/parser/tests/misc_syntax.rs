@@ -26,46 +26,29 @@ fn parse_multiple_functions() {
     assert_eq!(prog.declarations.len(), 2);
 }
 
+fn assert_first_var_decl(source: &str, expected_mutable: bool) {
+    let prog = parse_ok(source);
+    let Declaration::Function { body, .. } = &prog.declarations[0] else {
+        panic!("expected Function, got {:?}", prog.declarations[0]);
+    };
+    let Expression::Block { statements, .. } = body else {
+        panic!("expected Block body");
+    };
+    let Statement::VarDecl { name, mutable, .. } = &statements[0] else {
+        panic!("expected VarDecl, got {:?}", statements[0]);
+    };
+    assert_eq!(name, "x");
+    assert_eq!(*mutable, expected_mutable);
+}
+
 #[test]
 fn parse_mutable_var() {
-    let prog = parse_ok("main = () void {\n    x ::= 5\n}");
-    match &prog.declarations[0] {
-        Declaration::Function { body, .. } => {
-            if let Expression::Block { statements, .. } = body {
-                match &statements[0] {
-                    Statement::VarDecl { name, mutable, .. } => {
-                        assert_eq!(name, "x");
-                        assert!(*mutable, "expected mutable variable");
-                    }
-                    other => panic!("expected VarDecl, got {:?}", other),
-                }
-            } else {
-                panic!("expected Block body");
-            }
-        }
-        other => panic!("expected Function, got {:?}", other),
-    }
+    assert_first_var_decl("main = () void {\n    x ::= 5\n}", true);
 }
 
 #[test]
 fn parse_immutable_var() {
-    let prog = parse_ok("main = () void {\n    x = 5\n}");
-    match &prog.declarations[0] {
-        Declaration::Function { body, .. } => {
-            if let Expression::Block { statements, .. } = body {
-                match &statements[0] {
-                    Statement::VarDecl { name, mutable, .. } => {
-                        assert_eq!(name, "x");
-                        assert!(!*mutable, "expected immutable variable");
-                    }
-                    other => panic!("expected VarDecl, got {:?}", other),
-                }
-            } else {
-                panic!("expected Block body");
-            }
-        }
-        other => panic!("expected Function, got {:?}", other),
-    }
+    assert_first_var_decl("main = () void {\n    x = 5\n}", false);
 }
 
 #[test]

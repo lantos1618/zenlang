@@ -56,12 +56,10 @@ Phase 5 is in evidence-hardening and cleanup. The generic specialization surface
 ## Anti-Slop Scrub Queue
 Use semantic-overlap and slop-cannon reports as triage input, not automatic edits. Record credible classes here; keep generated reports, embeddings, and model caches ignored.
 
-- fixed/guarded: duplicate public examples, stale scripts and `.claude`, stdlib
-  raw `@builtin` leakage, static spelling tables, lexer/token/parser helpers,
-  JSON emit shells, root `tests/*.zen` fixtures, resolver replay setup,
-  module-system stdlib gate matrices, generated VS Code output, experimental
-  std facade promotion, public behavior/generic example coverage, and duplicated
-  parser unary prefix construction.
+- fixed/guarded: duplicate public examples, stale scripts/`.claude`, stdlib
+  raw `@builtin` leakage, spelling/parser/JSON/test-helper repetition,
+  generated VS Code output, experimental std facade promotion, behavior examples,
+  resolver/generic-callable wrappers, char facade exports, and C atomic emission.
 - current slop-cannon reports: `/home/ubuntu/zenlang-slop-reports/2026-05-23-qwen-l40s`
   and `/home/ubuntu/zenlang-slop-reports/2026-05-23-current-post-behavior-example-scrub-hash`.
   Keep those generated JSON/HTML/embedding artifacts outside git.

@@ -65,13 +65,15 @@ impl TypeChecker {
         tasks: &ResolverValidationReplayTasks<'_>,
     ) {
         for task in &tasks.behavior_associations.type_associations {
-            self.validate_resolver_behavior_impl_list(
+            self.validate_resolver_behavior_ref_list_for_role(
+                BehaviorRefRole::Impl,
                 task.symbol,
                 task.name,
                 &task.impl_edges,
                 task.span,
             );
-            self.validate_resolver_behavior_required_list(
+            self.validate_resolver_behavior_ref_list_for_role(
+                BehaviorRefRole::Required,
                 task.symbol,
                 task.name,
                 &task.required_edges,
@@ -80,7 +82,8 @@ impl TypeChecker {
         }
 
         for task in &tasks.behavior_associations.behavior_parents {
-            self.validate_resolver_behavior_parent_list(
+            self.validate_resolver_behavior_ref_list_for_role(
+                BehaviorRefRole::Parent,
                 task.symbol,
                 task.name,
                 &task.parent_edges,

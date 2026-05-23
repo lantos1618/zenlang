@@ -7,7 +7,7 @@ use crate::ast::AstType;
 use crate::error::{Diagnostic, Span};
 
 pub(crate) use super::monomorphize_types::type_to_ast;
-use super::TypeChecker;
+use super::{GenericFunctionTemplate, TypeChecker};
 
 impl TypeChecker {
     pub(crate) fn specialize_generic_function(
@@ -17,31 +17,7 @@ impl TypeChecker {
         span: Span,
     ) -> Option<String> {
         let template = self.generic_functions.get(name).cloned()?;
-        if self.reject_missing_generic_substitutions(
-            "function",
-            name,
-            &template.type_params,
-            substitutions,
-            span,
-        ) {
-            return None;
-        }
-
-        let mangled =
-            self.generic_function_mangled_name(name, &template.type_params, substitutions);
-        let specialization_key = self.generic_specialization_key("function", &template, &mangled);
-        if let Some(existing) = self.specializations_seen.get(&specialization_key) {
-            return Some(existing.clone());
-        }
-
-        let mangled = self.reserve_generic_specialization_name(
-            &specialization_key,
-            &mangled,
-            template.specialization_scope.as_deref(),
-        );
-        self.specialize_generic_template_body(&mangled, &template, substitutions, None);
-
-        Some(mangled)
+        self.specialize_generic_callable("function", name, template, substitutions, span, None)
     }
 
     pub(crate) fn specialize_generic_method(
@@ -51,8 +27,21 @@ impl TypeChecker {
         span: Span,
     ) -> Option<String> {
         let template = self.generic_methods.get(name).cloned()?;
+        let self_type = self.generic_method_self_type(name, substitutions);
+        self.specialize_generic_callable("method", name, template, substitutions, span, self_type)
+    }
+
+    fn specialize_generic_callable(
+        &mut self,
+        kind: &str,
+        name: &str,
+        template: GenericFunctionTemplate,
+        substitutions: &HashMap<String, Type>,
+        span: Span,
+        self_type: Option<Type>,
+    ) -> Option<String> {
         if self.reject_missing_generic_substitutions(
-            "method",
+            kind,
             name,
             &template.type_params,
             substitutions,
@@ -63,7 +52,7 @@ impl TypeChecker {
 
         let mangled =
             self.generic_function_mangled_name(name, &template.type_params, substitutions);
-        let specialization_key = self.generic_specialization_key("method", &template, &mangled);
+        let specialization_key = self.generic_specialization_key(kind, &template, &mangled);
         if let Some(existing) = self.specializations_seen.get(&specialization_key) {
             return Some(existing.clone());
         }
@@ -73,7 +62,6 @@ impl TypeChecker {
             &mangled,
             template.specialization_scope.as_deref(),
         );
-        let self_type = self.generic_method_self_type(name, substitutions);
         self.specialize_generic_template_body(&mangled, &template, substitutions, self_type);
 
         Some(mangled)
@@ -82,7 +70,7 @@ impl TypeChecker {
     fn specialize_generic_template_body(
         &mut self,
         mangled: &str,
-        template: &super::GenericFunctionTemplate,
+        template: &GenericFunctionTemplate,
         substitutions: &HashMap<String, Type>,
         self_type: Option<Type>,
     ) {
