@@ -112,6 +112,7 @@ fn raw_pointer_intrinsics_are_rejected_as_ownership_gates() {
         r#"
 main = () void {
     @builtin.gep(0, 1)
+    @builtin.raw_ptr_offset(0, 1)
     @builtin.gep_struct(0, 1)
     @builtin.raw_ptr_cast(0)
     @builtin.ptr_to_int(0)
@@ -127,8 +128,16 @@ main = () void {
         .check_program(&program)
         .expect_err("raw pointer intrinsics should stay gated until ownership semantics exist");
 
+    let pointer_offset_gate_count = err
+        .iter()
+        .filter(|diagnostic| diagnostic.message.contains("raw pointer offset is gated"))
+        .count();
+    assert!(
+        pointer_offset_gate_count >= 2,
+        "expected gep and raw_ptr_offset ownership gates, got {err:?}"
+    );
+
     for expected in [
-        "raw pointer offset is gated",
         "raw struct pointer offset is gated",
         "raw pointer cast is gated",
         "raw pointer to integer conversion is gated",

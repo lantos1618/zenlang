@@ -40,6 +40,9 @@ impl GatedIntrinsic {
             Self::Gep => {
                 "raw pointer offset is gated until ownership and layout semantics are implemented"
             }
+            Self::RawPtrOffset => {
+                "raw pointer offset is gated until ownership and layout semantics are implemented"
+            }
             Self::GepStruct => {
                 "raw struct pointer offset is gated until ownership and layout semantics are implemented"
             }

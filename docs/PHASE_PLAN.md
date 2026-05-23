@@ -15,6 +15,9 @@ docs, tests, and commits only.
 - JSON is compiler-owned IR output.
 - YAML is human-authored config/spec input.
 - build.zen is deterministic comptime build graph construction.
+- Project imports must resolve through the stdlib surface or names exposed by
+  the project root `build.zen`; ad hoc reach-through module paths are not a
+  stable namespace model.
 - `StaticString` is baked program data; allocator-backed `String` is dynamic.
 - `Type.implements(Behavior)` covers non-generic explicit behavior associations
   until the solver supports advanced forms.
@@ -28,9 +31,9 @@ Required Agent UX: agent-readable diagnostics with stable codes, spans, related 
 ## Compiler And Stdlib Boundary
 Compiler-owned: parsing, typing, resolver metadata, diagnostics, checked IR/JSON, build graph output, lowering, backend emission, and primitive `@builtin` hooks. Rust may expose raw hooks such as allocation, byte memory, syscalls, atomics, and scheduler primitives, but it must not own allocator policy, async API shape, collection semantics, or user-facing runtime composition.
 
-Stdlib-owned: allocator implementations, dynamic string construction, collections, IO wrappers, sync/async runtime APIs, actors, and higher-level wrappers over compiler hooks. Raw `@builtin` calls should stay behind `stdlib/compiler.zen`; other stdlib modules should import compiler wrappers or typed stdlib abstractions.
+Stdlib-owned: allocator implementations, dynamic string construction, collections, IO wrappers, sync/async runtime APIs, actors, and higher-level wrappers over compiler hooks. Dynamic `String` should be implemented in stdlib on top of allocator and memory/compiler facade hooks, not as parser/compiler-owned special syntax. Raw `@builtin` calls should stay behind `stdlib/compiler.zen`; other stdlib modules should import compiler wrappers or typed stdlib abstractions.
 
-Stdlib anti-slop pass: audit `stdlib/` for stale LLVM-era wording, direct raw-intrinsic leakage, gated syntax claims, oversized sketch files, duplicate allocator/async APIs, and modules that present experimental surfaces as promoted. Promote only APIs with parse/typecheck/build evidence and docs-truth coverage.
+Stdlib anti-slop pass: audit `stdlib/` for stale LLVM-era wording, direct raw-intrinsic leakage, gated syntax claims, oversized sketch files, duplicate allocator/async APIs, and modules that present experimental surfaces as promoted. Most current stdlib files are placeholders/sketches from earlier work; do not treat them as implemented evidence until the real parser, typechecker, build path, and docs-truth gates prove them. Promote only APIs with parse/typecheck/build evidence and docs-truth coverage.
 
 ## Compressed Evidence Map
 This is a capability index, not a changelog. Granular evidence belongs in tests,

@@ -22,6 +22,7 @@ macro_rules! gated_intrinsic_spellings {
             RawAllocate => "raw_allocate",
             RawDeallocate => "raw_deallocate",
             RawPtrCast => "raw_ptr_cast",
+            RawPtrOffset => "raw_ptr_offset",
             RawReallocate => "raw_reallocate",
             Store => "store",
             Syscall0 => "syscall0",

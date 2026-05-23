@@ -78,6 +78,25 @@ fn stdlib_allocator_import_is_gated_before_loading_sketch() {
 }
 
 #[test]
+fn stdlib_compiler_facade_import_is_gated_before_loading_sketch() {
+    assert_stdlib_import_is_gated_before_loading_sketch(
+        "",
+        "compiler.zen",
+        "{ raw_allocate } = @std.compiler",
+        "std compiler facade is gated",
+        "compiler facade",
+    );
+
+    assert_stdlib_import_is_gated_before_loading_sketch(
+        "",
+        "compiler.zen",
+        "{ compiler } = @std",
+        "std compiler facade is gated",
+        "compiler facade",
+    );
+}
+
+#[test]
 fn stdlib_async_runtime_import_is_gated_before_loading_sketch() {
     assert_stdlib_import_is_gated_before_loading_sketch(
         "concurrency/async",
