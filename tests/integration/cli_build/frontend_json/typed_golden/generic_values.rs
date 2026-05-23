@@ -37,6 +37,15 @@ fn emit_json_typed_generic_recursive_function_schema_matches_golden() {
 }
 
 #[test]
+fn emit_json_typed_multi_file_imported_generic_function_return_enum_schema_matches_golden() {
+    assert_typed_golden(
+        "multi_file_imported_generic_function_return_enum_dependency/main.zen",
+        "tests/fixtures/ir_json/typed_multi_file_imported_generic_function_return_enum.golden.json",
+        "multi-file imported generic function return enum",
+    );
+}
+
+#[test]
 fn emit_json_typed_generic_vec_schema_matches_golden() {
     assert_typed_golden(
         "generic_vec.zen",
