@@ -1,0 +1,8 @@
+{ io } = std
+{ outer } = model
+
+main = () i32 {
+    io.println("${outer<i32>(83)}")
+    io.println("${outer<bool>(true)}")
+    0
+}

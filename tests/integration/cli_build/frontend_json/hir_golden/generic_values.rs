@@ -37,6 +37,15 @@ fn emit_json_hir_multi_file_generic_imported_worklist_chain_schema_matches_golde
 }
 
 #[test]
+fn emit_json_hir_multi_file_generic_imported_worklist_multi_specialization_schema_matches_golden() {
+    assert_hir_golden(
+        "tests/zen/multi_file_generic_imported_worklist_multi_specialization/main.zen",
+        "tests/fixtures/ir_json/hir_multi_file_generic_imported_worklist_multi_specialization.golden.json",
+        "multi-file imported generic worklist multi-specialization input",
+    );
+}
+
+#[test]
 fn emit_json_hir_multi_file_generic_imported_diamond_same_name_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/multi_file_generic_imported_diamond_same_name/main.zen",

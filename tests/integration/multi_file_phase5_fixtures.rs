@@ -22,6 +22,14 @@ fn test_multi_file_generic_imported_worklist_chain_imports() {
 }
 
 #[test]
+fn test_multi_file_generic_imported_worklist_multi_specialization_imports() {
+    let zen_path =
+        test_dir().join("multi_file_generic_imported_worklist_multi_specialization/main.zen");
+    let actual = compile_and_run(&zen_path);
+    assert_eq!(actual, "83\ntrue\n");
+}
+
+#[test]
 fn test_multi_file_generic_imported_diamond_same_name_imports() {
     let zen_path = test_dir().join("multi_file_generic_imported_diamond_same_name/main.zen");
     let actual = compile_and_run(&zen_path);

@@ -1,0 +1,76 @@
+{
+  "format": "zen.hir.v0",
+  "schema_version": 0,
+  "semantic_status": "checked",
+  "declarations": {
+    "types": [],
+    "functions": [
+      {
+        "name": "main",
+        "params": [],
+        "return_type": "i32"
+      },
+      {
+        "name": "inner_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "middle_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "outer_i32",
+        "params": [
+          {
+            "name": "value",
+            "type": "i32"
+          }
+        ],
+        "return_type": "i32"
+      },
+      {
+        "name": "inner_bool",
+        "params": [
+          {
+            "name": "value",
+            "type": "bool"
+          }
+        ],
+        "return_type": "bool"
+      },
+      {
+        "name": "middle_bool",
+        "params": [
+          {
+            "name": "value",
+            "type": "bool"
+          }
+        ],
+        "return_type": "bool"
+      },
+      {
+        "name": "outer_bool",
+        "params": [
+          {
+            "name": "value",
+            "type": "bool"
+          }
+        ],
+        "return_type": "bool"
+      }
+    ],
+    "globals": []
+  }
+}
