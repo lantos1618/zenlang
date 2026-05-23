@@ -4,6 +4,7 @@ mod codegen_test_splits;
 mod core_semantics_splits;
 mod declaration_validation_splits;
 mod focused_tests;
+mod frontend_json_splits;
 mod function_method_template_splits;
 mod generic_behavior_splits;
 mod integration_fixture_splits;
