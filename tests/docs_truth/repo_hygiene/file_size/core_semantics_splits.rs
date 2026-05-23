@@ -155,3 +155,63 @@ fn core_type_substitution_tests_live_in_focused_helper() {
         "type_helpers.rs should include the focused substitution module"
     );
 }
+
+#[test]
+fn core_match_semantics_tests_live_in_focused_helpers() {
+    let root = read("src/typechecker/tests/core_semantics/match_semantics.rs");
+    let enum_matches = read("src/typechecker/tests/core_semantics/match_semantics/enum_matches.rs");
+    let bool_matches = read("src/typechecker/tests/core_semantics/match_semantics/bool_matches.rs");
+    let result_types = read("src/typechecker/tests/core_semantics/match_semantics/result_types.rs");
+
+    for test_name in [
+        "enum_match_missing_variant_is_error",
+        "enum_match_duplicate_variant_is_error",
+        "enum_match_unknown_variant_is_error",
+        "enum_match_payload_shape_is_checked",
+        "enum_match_wildcard_after_all_variants_is_redundant",
+        "enum_match_variant_after_wildcard_is_redundant",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "match_semantics.rs should not own enum match test: {test_name}"
+        );
+        assert!(
+            enum_matches.contains(&format!("fn {test_name}")),
+            "enum match test should live in focused helper: {test_name}"
+        );
+    }
+
+    for test_name in [
+        "bool_match_missing_arm_is_error_for_value_match",
+        "bool_match_duplicate_arm_is_error",
+    ] {
+        assert!(
+            !root.contains(&format!("fn {test_name}")),
+            "match_semantics.rs should not own bool match test: {test_name}"
+        );
+        assert!(
+            bool_matches.contains(&format!("fn {test_name}")),
+            "bool match test should live in focused helper: {test_name}"
+        );
+    }
+
+    assert!(
+        !root.contains("fn match_arm_return_does_not_force_never_result_type"),
+        "match_semantics.rs should not own match result-type tests"
+    );
+    assert!(
+        result_types.contains("fn match_arm_return_does_not_force_never_result_type"),
+        "match result-type tests should live in focused helper"
+    );
+
+    assert!(
+        root.lines().count() < 80,
+        "match_semantics.rs should stay as a small router for match semantic tests"
+    );
+    for module in ["enum_matches", "bool_matches", "result_types"] {
+        assert!(
+            root.contains(&format!("mod {module};")),
+            "match_semantics.rs should include focused module `{module}`"
+        );
+    }
+}
