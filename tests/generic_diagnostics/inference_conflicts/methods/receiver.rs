@@ -19,11 +19,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method inference conflict",
     );
     assert!(
         errors.iter().all(|d| !d.message.contains("argument 2")),
@@ -56,11 +59,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.replace`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method receiver inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.replace",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method receiver inference conflict",
     );
 }
 
@@ -85,11 +91,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Result.unwrap_or`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic Result enum method receiver inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Result.unwrap_or",
+        "T",
+        "i32",
+        "StaticString",
+        "generic Result enum method receiver inference conflict",
     );
     assert!(
         errors.iter().all(|d| !d.message.contains("argument 1")),

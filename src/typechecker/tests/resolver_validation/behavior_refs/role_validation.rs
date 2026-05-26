@@ -6,12 +6,12 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
         (
             BehaviorRefRole::Parent,
             BehaviorRefCheck::Contains,
-            ("behavior", "parents", "parent refs", "E0235", "E0245"),
+            ("behavior", "parents", "parent refs", "E7235", "E7245"),
         ),
         (
             BehaviorRefRole::Parent,
             BehaviorRefCheck::List,
-            ("behavior", "parents", "parent refs", "E0240", "E0246"),
+            ("behavior", "parents", "parent refs", "E7240", "E7246"),
         ),
         (
             BehaviorRefRole::Impl,
@@ -20,8 +20,8 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
                 "type",
                 "behavior impls",
                 "behavior impl refs",
-                "E0236",
-                "E0247",
+                "E7236",
+                "E7247",
             ),
         ),
         (
@@ -31,8 +31,8 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
                 "type",
                 "behavior impls",
                 "behavior impl refs",
-                "E0238",
-                "E0248",
+                "E7238",
+                "E7248",
             ),
         ),
         (
@@ -42,8 +42,8 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
                 "type",
                 "behavior requires",
                 "behavior requires refs",
-                "E0237",
-                "E0249",
+                "E7237",
+                "E7249",
             ),
         ),
         (
@@ -53,8 +53,8 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
                 "type",
                 "behavior requires",
                 "behavior requires refs",
-                "E0239",
-                "E0250",
+                "E7239",
+                "E7250",
             ),
         ),
     ];
@@ -66,11 +66,11 @@ fn behavior_ref_validation_maps_role_and_check_diagnostics() {
                 validation.symbol_kind,
                 validation.name_label,
                 validation.ref_label,
-                validation.name_code,
-                validation.ref_code,
             ),
-            expected
+            (expected.0, expected.1, expected.2)
         );
+        assert_eq!(validation.name_code, expected.3);
+        assert_eq!(validation.ref_code, expected.4);
     }
 
     let contains =
@@ -114,6 +114,12 @@ fn behavior_ref_validation_separates_role_labels_from_check_codes() {
         required,
         ("type", "behavior requires", "behavior requires refs")
     );
-    assert_eq!(parent_contains, ("E0235", "E0245"));
-    assert_eq!(parent_list, ("E0240", "E0246"));
+    assert_eq!(
+        (parent_contains.0.number(), parent_contains.1.number()),
+        ("E7235".to_string(), "E7245".to_string())
+    );
+    assert_eq!(
+        (parent_list.0.number(), parent_list.1.number()),
+        ("E7240".to_string(), "E7246".to_string())
+    );
 }

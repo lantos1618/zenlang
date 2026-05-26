@@ -1,18 +1,38 @@
 use super::*;
 
-/// Infix operator binding powers (left, right).
-pub(super) fn infix_bp(token: &Token) -> Option<(u8, u8)> {
+pub(super) struct InfixOperator {
+    pub op: BinaryOp,
+    pub l_bp: u8,
+    pub r_bp: u8,
+}
+
+impl InfixOperator {
+    const fn new(op: BinaryOp, l_bp: u8, r_bp: u8) -> Self {
+        Self { op, l_bp, r_bp }
+    }
+}
+
+/// Infix operator and binding powers for Pratt parsing.
+pub(super) fn infix_operator(token: &Token) -> Option<InfixOperator> {
     match token {
-        Token::Or => Some((1, 2)),
-        Token::And => Some((3, 4)),
-        Token::Pipe => Some((5, 6)),
-        Token::BitXor => Some((7, 8)),
-        Token::BitAnd => Some((9, 10)),
-        Token::Eq | Token::NotEq => Some((11, 12)),
-        Token::Lt | Token::Gt | Token::LtEq | Token::GtEq => Some((13, 14)),
-        Token::ShiftLeft | Token::ShiftRight => Some((15, 16)),
-        Token::Plus | Token::Minus => Some((17, 18)),
-        Token::Star | Token::Slash | Token::Percent => Some((19, 20)),
+        Token::Or => Some(InfixOperator::new(BinaryOp::Or, 1, 2)),
+        Token::And => Some(InfixOperator::new(BinaryOp::And, 3, 4)),
+        Token::Pipe => Some(InfixOperator::new(BinaryOp::BitOr, 5, 6)),
+        Token::BitXor => Some(InfixOperator::new(BinaryOp::BitXor, 7, 8)),
+        Token::BitAnd => Some(InfixOperator::new(BinaryOp::BitAnd, 9, 10)),
+        Token::Eq => Some(InfixOperator::new(BinaryOp::Eq, 11, 12)),
+        Token::NotEq => Some(InfixOperator::new(BinaryOp::NotEq, 11, 12)),
+        Token::Lt => Some(InfixOperator::new(BinaryOp::Lt, 13, 14)),
+        Token::Gt => Some(InfixOperator::new(BinaryOp::Gt, 13, 14)),
+        Token::LtEq => Some(InfixOperator::new(BinaryOp::LtEq, 13, 14)),
+        Token::GtEq => Some(InfixOperator::new(BinaryOp::GtEq, 13, 14)),
+        Token::ShiftLeft => Some(InfixOperator::new(BinaryOp::ShiftLeft, 15, 16)),
+        Token::ShiftRight => Some(InfixOperator::new(BinaryOp::ShiftRight, 15, 16)),
+        Token::Plus => Some(InfixOperator::new(BinaryOp::Add, 17, 18)),
+        Token::Minus => Some(InfixOperator::new(BinaryOp::Sub, 17, 18)),
+        Token::Star => Some(InfixOperator::new(BinaryOp::Mul, 19, 20)),
+        Token::Slash => Some(InfixOperator::new(BinaryOp::Div, 19, 20)),
+        Token::Percent => Some(InfixOperator::new(BinaryOp::Mod, 19, 20)),
         _ => None,
     }
 }

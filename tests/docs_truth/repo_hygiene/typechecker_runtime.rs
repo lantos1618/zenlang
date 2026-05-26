@@ -50,8 +50,6 @@ fn typechecker_boolean_literals_use_owned_keyword_enum() {
     for required in [
         "enum TypecheckerBoolLiteralKeyword",
         "const ALL: &[TypecheckerBoolLiteralKeyword]",
-        "impl FromStr for TypecheckerBoolLiteralKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
         "name.parse::<TypecheckerBoolLiteralKeyword>()",
     ] {
         assert!(
@@ -59,4 +57,9 @@ fn typechecker_boolean_literals_use_owned_keyword_enum() {
             "typechecker boolean literal spelling should live in TypecheckerBoolLiteralKeyword: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&simple_forms, "TypecheckerBoolLiteralKeyword")
+            && uses_static_spelling_parser(&simple_forms),
+        "typechecker boolean literal spelling should use shared static spelling parsing"
+    );
 }

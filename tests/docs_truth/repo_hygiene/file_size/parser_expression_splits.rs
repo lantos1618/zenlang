@@ -46,4 +46,18 @@ fn parser_expression_tests_live_in_focused_helpers() {
         root.lines().count() < 80,
         "expressions.rs should stay as a small router for parser expression tests"
     );
+
+    let parser_tests = read("src/parser/tests.rs");
+    assert!(
+        parser_tests.contains("fn parse_single_decl("),
+        "parser tests should share a helper for the common single-declaration parse assertion"
+    );
+
+    for module in ["control_flow", "enum_variants", "forms"] {
+        let focused = read(format!("{module_dir}/{module}.rs"));
+        assert!(
+            !focused.contains("assert_eq!(prog.declarations.len(), 1)"),
+            "parser expression tests should not repeat trivial one-declaration assertions in `{module}`"
+        );
+    }
 }

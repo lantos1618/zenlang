@@ -120,6 +120,17 @@ fn monomorphize_specialized_type_name_recovery_lives_in_focused_helper() {
         "monomorphize_specialized_type_names.rs should own Type-to-AstType recovery for monomorphization"
     );
     assert!(
+        specialized_types.contains("fn reserve_specialized_type_definition"),
+        "monomorphize_specialized_types.rs should share struct/enum specialization reservation bookkeeping"
+    );
+    assert_eq!(
+        specialized_types
+            .matches("remember_specialized_type_source")
+            .count(),
+        1,
+        "specialized type source tracking should be owned by one shared reservation helper"
+    );
+    assert!(
         module.contains("mod monomorphize_specialized_type_names;"),
         "typechecker module should include the focused specialized type-name helper"
     );
@@ -129,6 +140,7 @@ fn monomorphize_specialized_type_name_recovery_lives_in_focused_helper() {
 fn monomorphize_inference_substitution_lives_in_focused_helper() {
     let shapes = read("src/typechecker/monomorphize_inference_shapes.rs");
     let substitution = read("src/typechecker/monomorphize_inference_substitution.rs");
+    let ast_substitution = read("src/typechecker/ast_type_substitution.rs");
     let module = read("src/typechecker/mod.rs");
 
     assert!(
@@ -141,11 +153,28 @@ fn monomorphize_inference_substitution_lives_in_focused_helper() {
     );
     assert!(
         substitution.contains("pub(super) fn substitute_inference_ast_type"),
-        "monomorphize_inference_substitution.rs should own recursive inference AstType substitution"
+        "monomorphize_inference_substitution.rs should expose inference AstType substitution"
+    );
+    assert!(
+        substitution.contains("substitute_ast_type_names"),
+        "monomorphize_inference_substitution.rs should delegate recursive walking to the shared AstType helper"
+    );
+    assert!(
+        ast_substitution.contains("pub(in crate::typechecker) fn substitute_ast_type_names"),
+        "ast_type_substitution.rs should own recursive AstType name substitution"
+    );
+    assert!(
+        ast_substitution.contains("AstType::Function")
+            && ast_substitution.contains("AstType::Generic"),
+        "shared AstType substitution should cover function and generic shapes"
     );
     assert!(
         substitution.contains("pub(super) fn ast_type_substitutions"),
         "monomorphize_inference_substitution.rs should own inference substitution map construction"
+    );
+    assert!(
+        module.contains("mod ast_type_substitution;"),
+        "typechecker module should include the shared AstType substitution helper"
     );
     assert!(
         module.contains("mod monomorphize_inference_substitution;"),

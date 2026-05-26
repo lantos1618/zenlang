@@ -113,10 +113,10 @@ Point.implements(PrettyJson) {
         Span::dummy(),
     );
 
-    assert!(tc.diagnostics.iter().any(|d| d.code == "E0236" && d.message.contains(
+    assert!(tc.diagnostics.iter().any(|d| d.code == "E7236" && d.message.contains(
             "resolver type symbol 'Point' has behavior impls 'PrettyJson', expected to include 'Json<StaticString>'"
         )));
-    assert!(tc.diagnostics.iter().any(|d| d.code == "E0247" && d.message.contains(
+    assert!(tc.diagnostics.iter().any(|d| d.code == "E7247" && d.message.contains(
             "resolver type symbol 'Point' has behavior impl refs 'PrettyJson', expected to include 'Json<StaticString>'"
         )));
 }

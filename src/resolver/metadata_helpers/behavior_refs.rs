@@ -1,19 +1,10 @@
-use crate::ast::{behavior_type_args_match_target_params, AstType};
+use crate::ast::{
+    behavior_ref_display as ast_behavior_ref_display, behavior_type_args_match_target_params,
+    AstType,
+};
 
 pub(in crate::resolver) fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
-    if type_args.is_empty() {
-        behavior.to_string()
-    } else {
-        format!(
-            "{}<{}>",
-            behavior,
-            type_args
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
+    ast_behavior_ref_display(behavior, type_args)
 }
 
 pub(in crate::resolver) fn resolver_method_key(type_name: &str, method_name: &str) -> String {

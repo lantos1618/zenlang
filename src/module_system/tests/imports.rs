@@ -4,19 +4,8 @@ use super::*;
 fn load_file_with_relative_import() {
     let tmp = setup_temp_dir();
 
-    let math_path = tmp.path().join("math.zen");
-    fs::write(
-        &math_path,
-        "pub add = (a: i32, b: i32) i32 {\n    a + b\n}\n",
-    )
-    .unwrap();
-
-    let main_path = tmp.path().join("main.zen");
-    fs::write(
-        &main_path,
-        "{ add } = math\n\nmain = () i32 {\n    add(1, 2)\n}\n",
-    )
-    .unwrap();
+    write_public_add_module(&tmp);
+    let main_path = write_main_importing_add(&tmp);
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
@@ -32,23 +21,18 @@ fn load_file_with_relative_import() {
 fn circular_import_detected() {
     let tmp = setup_temp_dir();
 
-    let a_path = tmp.path().join("a.zen");
-    fs::write(&a_path, "{ bar } = b\n\nfoo = () i32 { 1 }\n").unwrap();
-
-    let b_path = tmp.path().join("b.zen");
-    fs::write(&b_path, "{ foo } = a\n\nbar = () i32 { 2 }\n").unwrap();
+    let a_path = write_module(&tmp, "a", "{ bar } = b\n\nfoo = () i32 { 1 }\n");
+    write_module(&tmp, "b", "{ foo } = a\n\nbar = () i32 { 2 }\n");
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
 
     let result = ms.load_with_imports(&a_path, &mut files);
     assert!(result.is_err(), "circular import should be an error");
-    let errs = result.unwrap_err();
-    let msg = format!("{}", errs[0]);
-    assert!(
-        msg.contains("circular import"),
-        "error should mention circular import, got: {}",
-        msg
+    assert_error_contains(
+        result,
+        "circular import",
+        "error should mention circular import",
     );
 }
 
@@ -56,20 +40,17 @@ fn circular_import_detected() {
 fn missing_import_file_error() {
     let tmp = setup_temp_dir();
 
-    let main_path = tmp.path().join("main.zen");
-    fs::write(&main_path, "{ Foo } = nonexistent\n\nmain = () i32 { 0 }\n").unwrap();
+    let main_path = write_main(&tmp, "{ Foo } = nonexistent\n\nmain = () i32 { 0 }\n");
 
     let mut files = FileTable::new();
     let mut ms = ModuleSystem::new();
 
     let result = ms.load_with_imports(&main_path, &mut files);
     assert!(result.is_err(), "missing import file should be an error");
-    let errs = result.unwrap_err();
-    let msg = format!("{}", errs[0]);
-    assert!(
-        msg.contains("cannot find imported module"),
-        "error should mention missing file, got: {}",
-        msg
+    assert_error_contains(
+        result,
+        "cannot find imported module",
+        "error should mention missing file",
     );
 }
 

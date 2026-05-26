@@ -23,8 +23,8 @@ impl TypeChecker {
             Self::behavior_ref_parts(resolver_required_ref.as_ref(), behavior, behavior_type_args);
 
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6005",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6005,
                 format!("undefined type `{}`", type_name),
                 span,
             ));
@@ -46,8 +46,8 @@ impl TypeChecker {
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
 
         if !self.type_implements_behavior(type_name, &behavior_key) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6007",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6007,
                 format!(
                     "type `{}` does not implement required behavior `{}`",
                     type_name, behavior_key
@@ -79,8 +79,8 @@ impl TypeChecker {
         span: Span,
     ) {
         if !self.behaviors.contains_key(behavior) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6006",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6006,
                 format!("undefined behavior `{}`", behavior),
                 span,
             ));
@@ -111,8 +111,8 @@ impl TypeChecker {
             .iter()
             .any(|existing| existing.key == parent_ref.key)
         {
-            self.diagnostics.push(Diagnostic::error(
-                "E6011",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6011,
                 format!("duplicate behavior inheritance `{behavior}.extends({parent_display})`"),
                 span,
             ));

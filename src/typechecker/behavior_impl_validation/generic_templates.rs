@@ -28,8 +28,8 @@ impl TypeChecker {
     ) {
         let type_params = named_type_arg_names(type_args);
         if type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E5001,
                 format!(
                     "generic behavior implementation target `{type_name}` must use named type parameters"
                 ),
@@ -46,17 +46,13 @@ impl TypeChecker {
         else {
             return;
         };
-        if expected_type_arg_count != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic type `{}` expects {} type arguments, found {}",
-                    type_name,
-                    expected_type_arg_count,
-                    type_args.len()
-                ),
-                span,
-            ));
+        if !self.validate_type_arg_arity(
+            "type",
+            type_name,
+            expected_type_arg_count,
+            type_args,
+            span,
+        ) {
             return;
         }
 
@@ -109,8 +105,8 @@ impl TypeChecker {
                     .iter()
                     .any(|required| required.name == *name)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E6005",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E6005,
                         format!(
                             "method `{}` is not declared by behavior `{}`",
                             name,
@@ -134,8 +130,8 @@ impl TypeChecker {
                 if required.default_body.is_some() {
                     continue;
                 }
-                self.diagnostics.push(Diagnostic::error(
-                    "E6001",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6001,
                     format!(
                         "generic type `{}` implementation of `{}` is missing required method `{}`",
                         context.type_name,
@@ -148,8 +144,8 @@ impl TypeChecker {
             };
 
             if actual.params.len() != required.params.len() {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6002,
                     format!(
                         "method `{}` for behavior `{}` expects {} parameters, found {}",
                         required.name,
@@ -179,8 +175,8 @@ impl TypeChecker {
                 context.type_name,
                 context.type_args,
             ) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6002,
                     format!(
                         "parameter {} for method `{}` in behavior `{}` expects `{}`, found `{}`",
                         idx + 1,
@@ -206,8 +202,8 @@ impl TypeChecker {
             context.type_name,
             context.type_args,
         ) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6002",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6002,
                 format!(
                     "method `{}` for behavior `{}` expects return `{}`, found `{}`",
                     required.name,

@@ -1,4 +1,5 @@
 use super::*;
+use crate::module_system::import_errors::{missing_export_error, private_export_error};
 
 impl ModuleSystem {
     pub(super) fn collect_imported_declarations(
@@ -35,18 +36,9 @@ impl ModuleSystem {
 
             if !found_public {
                 if found_private {
-                    return Err(vec![CompileError::Resolution(
-                        format!(
-                            "symbol '{}' in module '{}' is not exported",
-                            name, module_name
-                        ),
-                        Some(import_span),
-                    )]);
+                    return Err(private_export_error(name, module_name, import_span));
                 }
-                return Err(vec![CompileError::Resolution(
-                    format!("module '{}' does not export '{}'", module_name, name),
-                    Some(import_span),
-                )]);
+                return Err(missing_export_error(name, module_name, import_span));
             }
         }
 

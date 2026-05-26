@@ -9,3 +9,6 @@ pub mod parser;
 pub mod resolver;
 pub mod target_yaml;
 pub mod typechecker;
+
+mod root_spelling;
+mod static_spelling;

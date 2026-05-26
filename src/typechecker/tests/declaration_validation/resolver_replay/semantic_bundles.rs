@@ -2,9 +2,8 @@ use super::*;
 
 mod task_collection;
 
-#[test]
-fn resolver_declaration_semantic_bundle_replays_validation_passes() {
-    let program = parse_program(
+fn resolver_semantic_bundle_program() -> ast::Program {
+    parse_program(
         r#"
 Point: { x: i32 = true }
 
@@ -20,10 +19,13 @@ Point.requires(Json)
 
 main = (value: Point) i32 { 1 }
 "#,
-    );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    )
+}
+
+#[test]
+fn resolver_declaration_semantic_bundle_replays_validation_passes() {
+    let program = resolver_semantic_bundle_program();
+    let symbols = resolve_program_symbols(&program);
     let metadata_tasks =
         TypeChecker::collect_resolver_declaration_metadata_tasks(&program.declarations);
     let semantic_tasks =
@@ -73,26 +75,8 @@ main = (value: Point) i32 { 1 }
 
 #[test]
 fn resolver_declaration_collection_bundle_replays_metadata_semantics_and_refresh() {
-    let program = parse_program(
-        r#"
-Point: { x: i32 = true }
-
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point.implements(Json) {
-    encode = (self: Point) StaticString { "point" }
-}
-
-Point.requires(Json)
-
-main = (value: Point) i32 { 1 }
-"#,
-    );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let program = resolver_semantic_bundle_program();
+    let symbols = resolve_program_symbols(&program);
     let tasks = TypeChecker::collect_declaration_collection_replay_tasks(&program.declarations);
     let mut stale_declarations = program.declarations.clone();
     if let Declaration::Requires { behavior, .. } = &mut stale_declarations[3] {
@@ -145,26 +129,8 @@ main = (value: Point) i32 { 1 }
 
 #[test]
 fn resolver_declaration_semantic_bundle_replays_dedicated_semantic_tasks() {
-    let program = parse_program(
-        r#"
-Point: { x: i32 = true }
-
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point.implements(Json) {
-    encode = (self: Point) StaticString { "point" }
-}
-
-Point.requires(Json)
-
-main = (value: Point) i32 { 1 }
-"#,
-    );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let program = resolver_semantic_bundle_program();
+    let symbols = resolve_program_symbols(&program);
     let mut checker = TypeChecker::new();
     checker.collect_declarations_with_symbols(&program.declarations, &symbols);
     checker.diagnostics.clear();

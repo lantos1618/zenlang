@@ -10,6 +10,12 @@ fn parse_program(src: &str) -> ast::Program {
     crate::parser::parse(tokens, file_id).expect("parse")
 }
 
+fn resolve_program_symbols(program: &ast::Program) -> crate::resolver::SymbolTable {
+    crate::resolver::Resolver::new()
+        .resolve_program(program)
+        .expect("resolver succeeds")
+}
+
 mod resolver_metadata;
 
 mod resolver_validation;

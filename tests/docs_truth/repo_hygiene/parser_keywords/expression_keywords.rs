@@ -24,8 +24,6 @@ fn parser_prefix_keywords_use_owned_keyword_enum() {
     for required in [
         "enum ParserPrefixKeyword",
         "const ALL: &[ParserPrefixKeyword]",
-        "impl FromStr for ParserPrefixKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
         "name.parse::<ParserPrefixKeyword>()",
     ] {
         assert!(
@@ -33,6 +31,11 @@ fn parser_prefix_keywords_use_owned_keyword_enum() {
             "parser prefix keyword spelling should live in ParserPrefixKeyword: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserPrefixKeyword")
+            && uses_static_spelling_parser(&keywords),
+        "parser prefix keyword spelling should use shared static spelling parsing"
+    );
 }
 
 #[test]
@@ -50,8 +53,6 @@ fn parser_pattern_keywords_use_owned_keyword_enum() {
     for required in [
         "enum ParserPatternKeyword",
         "const ALL: &[ParserPatternKeyword]",
-        "impl FromStr for ParserPatternKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
         "name.parse::<ParserPatternKeyword>()",
     ] {
         assert!(
@@ -59,6 +60,11 @@ fn parser_pattern_keywords_use_owned_keyword_enum() {
             "parser pattern keyword spelling should live in ParserPatternKeyword: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserPatternKeyword")
+            && uses_static_spelling_parser(&keywords),
+        "parser pattern keyword spelling should use shared static spelling parsing"
+    );
 }
 
 #[test]
@@ -76,8 +82,6 @@ fn parser_this_methods_use_owned_method_enum() {
     for required in [
         "enum ParserThisMethod",
         "const ALL: &[ParserThisMethod]",
-        "impl FromStr for ParserThisMethod",
-        ".find(|method| method.as_str() == value)",
         "method.parse::<ParserThisMethod>()",
     ] {
         assert!(
@@ -85,4 +89,9 @@ fn parser_this_methods_use_owned_method_enum() {
             "parser @this method spelling should live in ParserThisMethod: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserThisMethod")
+            && uses_static_spelling_parser(&keywords),
+        "parser @this method spelling should use shared static spelling parsing"
+    );
 }

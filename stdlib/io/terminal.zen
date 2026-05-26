@@ -4,6 +4,7 @@
 { compiler } = @std
 { ByteBuffer } = @std.core.buffer
 { Allocator } = @std.memory.allocator
+{ SYS_FCNTL, SYS_IOCTL, SYS_NANOSLEEP, SYS_READ, SYS_WRITE } = @std.sys.syscall
 
 // ============================================================================
 // Terminal Size
@@ -18,8 +19,7 @@ TermSize: {
 // Returns default 80x24 if ioctl fails
 Terminal.size = (buf: ByteBuffer) TermSize {
     addr = buf.addr()
-    // TIOCGWINSZ = 0x5413
-    result = compiler.syscall3(16, 1, 0x5413, addr)
+    result = compiler.syscall3(SYS_IOCTL, 1, 0x5413, addr)
     result < 0 ?
         | true { TermSize { rows: 24, cols: 80 } }
         | false {
@@ -48,8 +48,7 @@ Terminal.raw_mode = (alloc: Allocator) TermState {
     old_addr = old_buf.addr()
     new_addr = new_buf.addr()
 
-    // TCGETS = 0x5401
-    compiler.syscall3(16, 0, 0x5401, old_addr)
+    compiler.syscall3(SYS_IOCTL, 0, 0x5401, old_addr)
     new_buf.copy(old_buf.ptr(), 60)
 
     // Clear ICANON and ECHO from c_lflag (offset 12)
@@ -60,8 +59,7 @@ Terminal.raw_mode = (alloc: Allocator) TermState {
     new_buf.set(23, 1)  // VMIN
     new_buf.set(22, 0)  // VTIME
 
-    // TCSETS = 0x5402
-    compiler.syscall3(16, 0, 0x5402, new_addr)
+    compiler.syscall3(SYS_IOCTL, 0, 0x5402, new_addr)
 
     TermState { old_termios: old_buf, new_termios: new_buf }
 }
@@ -69,7 +67,7 @@ Terminal.raw_mode = (alloc: Allocator) TermState {
 // Restore original terminal settings
 Terminal.restore = (ts: TermState) void {
     addr = ts.old_termios.addr()
-    compiler.syscall3(16, 0, 0x5402, addr)
+    compiler.syscall3(SYS_IOCTL, 0, 0x5402, addr)
 }
 
 // Free terminal state buffers
@@ -86,43 +84,42 @@ Terminal.free_state = (ts: TermState, alloc: Allocator) void {
 Terminal.hide_cursor = (buf: ByteBuffer) void {
     buf.write_str(0, "\x1b[?25l", 6)
     addr = buf.addr()
-    compiler.syscall3(1, 1, addr, 6)
+    compiler.syscall3(SYS_WRITE, 1, addr, 6)
 }
 
 // Show cursor
 Terminal.show_cursor = (buf: ByteBuffer) void {
     buf.write_str(0, "\x1b[?25h", 6)
     addr = buf.addr()
-    compiler.syscall3(1, 1, addr, 6)
+    compiler.syscall3(SYS_WRITE, 1, addr, 6)
 }
 
 // Enter alternate screen buffer
 Terminal.alt_screen_on = (buf: ByteBuffer) void {
     buf.write_str(0, "\x1b[?1049h", 8)
     addr = buf.addr()
-    compiler.syscall3(1, 1, addr, 8)
+    compiler.syscall3(SYS_WRITE, 1, addr, 8)
 }
 
 // Leave alternate screen buffer
 Terminal.alt_screen_off = (buf: ByteBuffer) void {
     buf.write_str(0, "\x1b[?1049l", 8)
     addr = buf.addr()
-    compiler.syscall3(1, 1, addr, 8)
+    compiler.syscall3(SYS_WRITE, 1, addr, 8)
 }
 
 // Clear screen and move cursor to home
 Terminal.clear = (buf: ByteBuffer) void {
     buf.write_str(0, "\x1b[H\x1b[J", 7)
     addr = buf.addr()
-    compiler.syscall3(1, 1, addr, 7)
+    compiler.syscall3(SYS_WRITE, 1, addr, 7)
 }
 
 // Move cursor to position (1-indexed)
 Terminal.move_to = (buf: ByteBuffer, row: i32, col: i32) void {
     // Simple version: \x1b[{row};{col}H
-    // For now just write escape sequence with fixed format
     buf.write_str(0, "\x1b[", 2)
-    // TODO: proper number formatting when we have int_to_string
+    // Number formatting should route through stdlib string formatting once promoted.
 }
 
 // ============================================================================
@@ -132,22 +129,22 @@ Terminal.move_to = (buf: ByteBuffer, row: i32, col: i32) void {
 // Read single key (blocking)
 Terminal.read_key = (buf: ByteBuffer) i32 {
     addr = buf.addr()
-    compiler.syscall3(0, 0, addr, 1)
+    compiler.syscall3(SYS_READ, 0, addr, 1)
     cast(buf.get(0), i32)
 }
 
 // Poll for key (non-blocking) - returns 0 if no key
 Terminal.poll_key = (buf: ByteBuffer) i32 {
     // Get current flags
-    flags = compiler.syscall3(72, 0, 3, 0)
+    flags = compiler.syscall3(SYS_FCNTL, 0, 3, 0)
     // Add O_NONBLOCK (2048)
-    compiler.syscall3(72, 0, 4, flags + 2048)
+    compiler.syscall3(SYS_FCNTL, 0, 4, flags + 2048)
 
     addr = buf.addr()
-    n = compiler.syscall3(0, 0, addr, 1)
+    n = compiler.syscall3(SYS_READ, 0, addr, 1)
 
     // Restore flags
-    compiler.syscall3(72, 0, 4, flags)
+    compiler.syscall3(SYS_FCNTL, 0, 4, flags)
 
     n > 0 ?
         | true { cast(buf.get(0), i32) }
@@ -164,5 +161,5 @@ Terminal.sleep_ms = (buf: ByteBuffer, ms: i32) void {
     buf.set_i64(0, 0)
     ms_ns = cast(ms, i64) * 1000000
     buf.set_i64(8, ms_ns)
-    compiler.syscall2(35, addr, 0)
+    compiler.syscall2(SYS_NANOSLEEP, addr, 0)
 }

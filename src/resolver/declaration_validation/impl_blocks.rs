@@ -32,8 +32,8 @@ impl Resolver {
         let scoped_type_params = target_type_params(type_args);
 
         if !self.is_known_type_name(table, &scoped_type_params, type_name) {
-            diagnostics.push(Diagnostic::error(
-                "E0201",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0201,
                 format!("unknown type symbol '{type_name}'"),
                 span,
             ));
@@ -74,8 +74,8 @@ impl Resolver {
     ) {
         let behavior_known = self.is_known_behavior_name(table, behavior);
         if !behavior_known {
-            diagnostics.push(Diagnostic::error(
-                "E0202",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0202,
                 format!("unknown behavior symbol '{behavior}'"),
                 span,
             ));
@@ -84,13 +84,10 @@ impl Resolver {
             let behavior_display = behavior_ref_display(behavior, behavior_type_args);
             if !table.record_behavior_impl(
                 type_name,
-                BehaviorRefMetadata {
-                    name: behavior.to_string(),
-                    type_args: behavior_type_args.to_vec(),
-                },
+                BehaviorRefMetadata::new(behavior, behavior_type_args),
             ) {
-                diagnostics.push(Diagnostic::error(
-                    "E0217",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0217,
                     format!(
                         "duplicate behavior implementation `{behavior_display}` for `{type_name}`"
                     ),

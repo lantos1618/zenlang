@@ -1,24 +1,11 @@
-use super::super::*;
+use super::*;
 
 #[test]
 fn check_module_graph_entry_uses_graph_import_bindings() {
-    let tmp = tempfile::tempdir().expect("temp dir");
-    let math_path = tmp.path().join("math.zen");
-    std::fs::write(&math_path, "pub add = (a: i32, b: i32) i32 { a + b }\n")
-        .expect("write imported module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let graph = module_graph_from_sources(
+        &[("math", "pub add = (a: i32, b: i32) i32 { a + b }\n")],
         "{ add } = math\n\nmain = () i32 { add(1, 2) }\n",
-    )
-    .expect("write entry module");
-
-    let mut files = crate::error::FileTable::new();
-    let mut modules = crate::module_system::ModuleSystem::new();
-    let graph = modules
-        .load_module_graph(&main_path, &mut files)
-        .expect("module graph");
+    );
     let entry = graph.module(graph.entry).expect("entry module");
     assert!(
         !entry
@@ -29,8 +16,7 @@ fn check_module_graph_entry_uses_graph_import_bindings() {
         "graph entry should not merge imported declarations"
     );
 
-    let mut tc = TypeChecker::new();
-    let typed = tc
+    let typed = TypeChecker::new()
         .check_module_graph_entry(&graph)
         .expect("graph import bindings should seed imported signatures");
 
@@ -46,17 +32,11 @@ fn check_module_graph_entry_uses_graph_import_bindings() {
 
 #[test]
 fn check_module_graph_entry_seeds_imported_function_type_signatures() {
-    let tmp = tempfile::tempdir().expect("temp dir");
-    let callbacks_path = tmp.path().join("callbacks.zen");
-    std::fs::write(
-        &callbacks_path,
-        "pub apply = (callback: (i32) i32, value: i32) i32 { value }\n",
-    )
-    .expect("write imported module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    check_module_graph_sources(
+        &[(
+            "callbacks",
+            "pub apply = (callback: (i32) i32, value: i32) i32 { value }\n",
+        )],
         r#"{ apply } = callbacks
 
 main = () i32 {
@@ -65,15 +45,5 @@ main = () i32 {
 }
 "#,
     )
-    .expect("write entry module");
-
-    let mut files = crate::error::FileTable::new();
-    let mut modules = crate::module_system::ModuleSystem::new();
-    let graph = modules
-        .load_module_graph(&main_path, &mut files)
-        .expect("module graph");
-
-    let mut tc = TypeChecker::new();
-    tc.check_module_graph_entry(&graph)
-        .expect("graph import bindings should seed function-typed signatures");
+    .expect("graph import bindings should seed function-typed signatures");
 }

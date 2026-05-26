@@ -11,30 +11,9 @@ impl CIntrinsic {
                 let ptr = emitter.emit_expr_inline(&args[0]);
                 Some(format!("__atomic_load_n({}, __ATOMIC_SEQ_CST)", ptr))
             }
-            CIntrinsic::AtomicStore => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let val = emitter.emit_expr_inline(&args[1]);
-                Some(format!(
-                    "__atomic_store_n({}, {}, __ATOMIC_SEQ_CST)",
-                    ptr, val
-                ))
-            }
-            CIntrinsic::AtomicAdd => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let val = emitter.emit_expr_inline(&args[1]);
-                Some(format!(
-                    "__atomic_fetch_add({}, {}, __ATOMIC_SEQ_CST)",
-                    ptr, val
-                ))
-            }
-            CIntrinsic::AtomicSub => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let val = emitter.emit_expr_inline(&args[1]);
-                Some(format!(
-                    "__atomic_fetch_sub({}, {}, __ATOMIC_SEQ_CST)",
-                    ptr, val
-                ))
-            }
+            CIntrinsic::AtomicStore => Some(emit_atomic_ptr_val(emitter, args, "__atomic_store_n")),
+            CIntrinsic::AtomicAdd => Some(emit_atomic_ptr_val(emitter, args, "__atomic_fetch_add")),
+            CIntrinsic::AtomicSub => Some(emit_atomic_ptr_val(emitter, args, "__atomic_fetch_sub")),
             CIntrinsic::AtomicCas => {
                 let ptr = emitter.emit_expr_inline(&args[0]);
                 let expected = emitter.emit_expr_inline(&args[1]);
@@ -47,15 +26,20 @@ impl CIntrinsic {
                 ))
             }
             CIntrinsic::AtomicXchg => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let val = emitter.emit_expr_inline(&args[1]);
-                Some(format!(
-                    "__atomic_exchange_n({}, {}, __ATOMIC_SEQ_CST)",
-                    ptr, val
-                ))
+                Some(emit_atomic_ptr_val(emitter, args, "__atomic_exchange_n"))
             }
             CIntrinsic::Fence => Some("(__atomic_thread_fence(__ATOMIC_SEQ_CST), (void)0)".into()),
             _ => None,
         }
     }
+}
+
+fn emit_atomic_ptr_val(
+    emitter: &mut CEmitter,
+    args: &[TypedExpression],
+    intrinsic: &str,
+) -> String {
+    let ptr = emitter.emit_expr_inline(&args[0]);
+    let val = emitter.emit_expr_inline(&args[1]);
+    format!("{intrinsic}({ptr}, {val}, __ATOMIC_SEQ_CST)")
 }

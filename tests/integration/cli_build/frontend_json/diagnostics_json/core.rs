@@ -12,13 +12,16 @@ main = () i32 {
         "ordinary type error",
     );
 
-    assert_eq!(json["format"], "zen.diagnostics.v0");
+    assert_eq!(json["format"], "zen.diagnostics.v1");
     assert_eq!(json["semantic_status"], "diagnostic");
     assert_eq!(json["files"].as_array().expect("files array").len(), 1);
 
     let diagnostic = &json["diagnostics"][0];
     assert_eq!(diagnostic["severity"], "error");
     assert_eq!(diagnostic["code"], "E3030");
+    assert_eq!(diagnostic["slug"], "type_e3030");
+    assert_eq!(diagnostic["phase"], "typechecker");
+    assert_eq!(diagnostic["category"], "type");
     assert!(
         diagnostic["suggested_fixes"]
             .as_array()

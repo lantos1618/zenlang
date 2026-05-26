@@ -21,11 +21,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic method `Option.unwrap_or` expects 1 type arguments, found 2")),
-        "expected generic enum method arity diagnostic, got {errors:?}"
+    assert_generic_arity_diagnostic(
+        &errors,
+        "method",
+        "Option.unwrap_or",
+        1,
+        2,
+        "generic enum method arity",
     );
     assert!(
         errors.iter().all(|d| !d.message.contains("argument 2")),
@@ -54,11 +56,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic method `Result.unwrap_or` expects 2 type arguments, found 1")),
-        "expected generic Result enum method arity diagnostic, got {errors:?}"
+    assert_generic_arity_diagnostic(
+        &errors,
+        "method",
+        "Result.unwrap_or",
+        2,
+        1,
+        "generic Result enum method arity",
     );
     assert!(
         errors

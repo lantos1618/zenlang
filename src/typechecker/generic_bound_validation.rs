@@ -51,8 +51,8 @@ impl TypeChecker {
         symbols: Option<&SymbolTable>,
     ) {
         let Some(expected) = self.generic_behavior_type_param_count(behavior, symbols) else {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E5002,
                 format!(
                     "generic bound `{}` on type parameter `{}` references undefined behavior",
                     behavior, param
@@ -62,28 +62,7 @@ impl TypeChecker {
             return;
         };
 
-        let found = type_args.len();
-        if expected == 0 && found > 0 {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic behavior `{}` does not accept type arguments",
-                    behavior
-                ),
-                span,
-            ));
-            return;
-        }
-        if expected != found {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic behavior `{}` expects {} type arguments, found {}",
-                    behavior, expected, found
-                ),
-                span,
-            ));
-        }
+        self.validate_type_arg_arity("behavior", behavior, expected, type_args, span);
     }
 
     fn generic_behavior_type_param_count(
@@ -120,8 +99,8 @@ impl TypeChecker {
             let behavior_key = self.behavior_bound_key(bound, substitutions);
             let behavior_display = behavior_bound_display(bound, substitutions);
             let Some(type_name) = Self::behavior_bound_type_name(concrete) else {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6004",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6004,
                     format!(
                         "type `{}` does not implement behavior `{}` required by `{}`",
                         concrete.display_name(),
@@ -135,8 +114,8 @@ impl TypeChecker {
             if !self.type_implements_behavior(&type_name, &behavior_key)
                 && !self.generic_type_implements_behavior(concrete, &behavior_key)
             {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6004",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6004,
                     format!(
                         "type `{}` does not implement behavior `{}` required by `{}`",
                         type_name, behavior_display, param

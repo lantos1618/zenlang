@@ -17,6 +17,8 @@ these files as focused language samples.
   counters, and recursion.
 - [examples/06_error_handling.zen](06_error_handling.zen): `Result<T, E>`,
   `Option<T>`, matching, and explicit propagation.
+- [examples/07_behaviors_and_generics.zen](07_behaviors_and_generics.zen):
+  behavior declarations, implementations, generic bounds, and dot-call dispatch.
 
 ## Project Example
 
@@ -26,4 +28,5 @@ these files as focused language samples.
 - [examples/project/build.zen](project/build.zen)
 
 `examples/project/` is the canonical multi-file example. The numbered files are
-the canonical single-topic examples.
+the canonical single-topic examples. `build.zen` is a constrained build-graph
+fixture, not a general package manager or scripting surface.

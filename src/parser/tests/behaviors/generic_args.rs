@@ -1,5 +1,15 @@
 use super::super::*;
 
+fn assert_single_json_t_bound(type_params: &[crate::ast::TypeParam]) {
+    assert_eq!(type_params.len(), 1);
+    assert_eq!(type_params[0].name, "T");
+    assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
+    assert_eq!(
+        type_params[0].constraint_type_args,
+        vec![AstType::Named("T".into())]
+    );
+}
+
 #[test]
 fn generic_type_association_keywords_are_explicitly_gated() {
     for (keyword, source) in [
@@ -105,13 +115,7 @@ fn parse_generic_behavior_function_bound_with_type_args() {
     let prog = parse_ok("encode<T: Json<T>> = (value: T) StaticString { \"\" }");
     match &prog.declarations[0] {
         Declaration::Function { type_params, .. } => {
-            assert_eq!(type_params.len(), 1);
-            assert_eq!(type_params[0].name, "T");
-            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
-            assert_eq!(
-                type_params[0].constraint_type_args,
-                vec![AstType::Named("T".into())]
-            );
+            assert_single_json_t_bound(type_params);
         }
         other => panic!("expected Function, got {:?}", other),
     }
@@ -122,13 +126,7 @@ fn parse_generic_behavior_type_bound_with_type_args() {
     let prog = parse_ok("Box<T: Json<T>>: { value: T }");
     match &prog.declarations[0] {
         Declaration::Struct { type_params, .. } => {
-            assert_eq!(type_params.len(), 1);
-            assert_eq!(type_params[0].name, "T");
-            assert_eq!(type_params[0].constraint.as_deref(), Some("Json"));
-            assert_eq!(
-                type_params[0].constraint_type_args,
-                vec![AstType::Named("T".into())]
-            );
+            assert_single_json_t_bound(type_params);
         }
         other => panic!("expected Struct, got {:?}", other),
     }

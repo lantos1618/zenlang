@@ -93,3 +93,45 @@ fn ast_type_reference_task_collection_lives_in_focused_helper() {
         "generic_type_validation.rs should stay focused on task execution and resolver helpers"
     );
 }
+
+#[test]
+fn generic_type_arg_arity_diagnostics_use_one_formatter() {
+    let root = read("src/typechecker/mod.rs");
+    let diagnostics = read("src/typechecker/generic_type_arg_diagnostics.rs");
+
+    for helper in [
+        "fn reject_nongeneric_type_args",
+        "fn report_generic_type_arg_arity",
+        "fn validate_type_arg_arity",
+    ] {
+        assert!(
+            !root.contains(helper),
+            "typechecker root should not own generic type-argument arity diagnostics: {helper}"
+        );
+        assert!(
+            diagnostics.contains(helper),
+            "generic type-argument diagnostics should live in focused helper: {helper}"
+        );
+    }
+    assert!(
+        root.contains("mod generic_type_arg_diagnostics;"),
+        "typechecker root should include focused generic type-argument diagnostics"
+    );
+
+    for path in [
+        "src/typechecker/behavior_impl_validation/generic_templates.rs",
+        "src/typechecker/expressions/enum_variant.rs",
+        "src/typechecker/expressions/struct_literal.rs",
+        "src/typechecker/generic_bound_validation.rs",
+        "src/typechecker/generic_type_reference_walker/type_refs.rs",
+        "src/typechecker/monomorphize.rs",
+    ] {
+        let source = read(path);
+        assert!(
+            !source.contains("expects {} type arguments, found {}")
+                && !source.contains("expects {} type arguments, found 0")
+                && !source.contains("expects {expected} type arguments, found {found}"),
+            "{path} should use the shared generic type-argument arity helper"
+        );
+    }
+}

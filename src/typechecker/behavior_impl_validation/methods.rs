@@ -16,8 +16,8 @@ impl TypeChecker {
                     .iter()
                     .any(|required| required.name == method.method_name)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E6005",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E6005,
                         format!(
                             "method `{}` is not declared by behavior `{}`",
                             method.method_name, behavior_key
@@ -56,8 +56,8 @@ impl TypeChecker {
                 if required.default_body.is_some() {
                     continue;
                 }
-                self.diagnostics.push(Diagnostic::error(
-                    "E6001",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6001,
                     format!(
                         "type `{}` implementation of `{}` is missing required method `{}`",
                         type_name, behavior_key, required.name
@@ -83,8 +83,8 @@ impl TypeChecker {
                 .unwrap_or_else(|| actual_return_type.clone().unwrap_or(AstType::Void));
 
             if actual_param_types.len() != required.params.len() {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6002,
                     format!(
                         "method `{}` for behavior `{}` expects {} parameters, found {}",
                         required.name,
@@ -104,8 +104,8 @@ impl TypeChecker {
                 .enumerate()
             {
                 if !self.impl_ast_types_compatible(&expected.ty, actual_ty, type_name) {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E6002",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E6002,
                         format!(
                             "parameter {} for method `{}` in behavior `{}` expects `{}`, found `{}`",
                             idx + 1,
@@ -124,8 +124,8 @@ impl TypeChecker {
 
             let expected_return = required.return_type.as_ref().unwrap_or(&AstType::Void);
             if !self.impl_ast_types_compatible(expected_return, &actual_return, type_name) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E6002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6002,
                     format!(
                         "method `{}` for behavior `{}` expects return `{}`, found `{}`",
                         required.name,

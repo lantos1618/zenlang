@@ -9,9 +9,7 @@ Mapper: behavior {
 }
 "#,
     );
-    let symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let symbols = resolve_program_symbols(&program);
     if let Declaration::Behavior { methods, .. } = &mut program.declarations[0] {
         methods[0].params[1].ty = AstType::I32;
         methods[0].return_type = Some(AstType::I32);

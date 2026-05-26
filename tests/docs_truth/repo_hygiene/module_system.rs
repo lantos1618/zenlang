@@ -26,11 +26,9 @@ fn module_system_roots_use_owned_prefix_enum() {
 
     for required in [
         "enum ModuleRootPrefix",
-        "const STD: &'static str = \"std\"",
-        "const AT_STD: &'static str = \"@std\"",
-        "impl FromStr for ModuleRootPrefix",
-        "impl fmt::Display for ModuleRootPrefix",
-        ".find(|prefix| prefix.as_str() == value)",
+        "use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};",
+        "Self::Std => STD_ROOT",
+        "Self::AtStd => AT_STD_ROOT",
         "pub(super) fn parse_module_root_prefix",
     ] {
         assert!(
@@ -38,6 +36,12 @@ fn module_system_roots_use_owned_prefix_enum() {
             "module root spelling should live in ModuleRootPrefix: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&root_prefix, "ModuleRootPrefix")
+            && owns_static_spelling_display(&root_prefix, "ModuleRootPrefix")
+            && uses_static_spelling_parser(&root_prefix),
+        "module root spelling should use shared static spelling parse/display glue"
+    );
 }
 
 #[test]

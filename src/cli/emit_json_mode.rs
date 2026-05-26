@@ -76,7 +76,7 @@ impl EmitJsonMode {
 impl FromStr for EmitJsonMode {
     type Err = ();
 
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
+    fn from_str(value: &str) -> Result<Self, ()> {
         Self::ORDERED
             .iter()
             .copied()

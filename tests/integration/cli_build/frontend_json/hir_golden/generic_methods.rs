@@ -49,7 +49,7 @@ fn emit_json_hir_generic_method_method_worklist_schema_matches_golden() {
 fn emit_json_hir_multi_file_type_method_worklist_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/multi_file_type_method_worklist/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_type_method_worklist.golden.json",
+        "tests/fixtures/ir_json/hir_generic_method_worklist.golden.json",
         "multi-file type method worklist input",
     );
 }
@@ -112,7 +112,7 @@ fn emit_json_hir_generic_enum_method_nested_result_schema_matches_golden() {
 fn emit_json_hir_multi_file_generic_method_nested_result_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/multi_file_type_method_nested_result_dependency/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_method_nested_result.golden.json",
+        "tests/fixtures/ir_json/hir_generic_method_nested_result.golden.json",
         "multi-file generic method nested result input",
     );
 }
@@ -121,7 +121,7 @@ fn emit_json_hir_multi_file_generic_method_nested_result_schema_matches_golden()
 fn emit_json_hir_multi_file_generic_result_method_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/multi_file_generic_result_enum_method/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_result_method.golden.json",
+        "tests/fixtures/ir_json/hir_generic_result_method.golden.json",
         "multi-file generic Result method input",
     );
 }

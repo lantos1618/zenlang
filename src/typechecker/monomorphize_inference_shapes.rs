@@ -4,9 +4,6 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 use super::monomorphize_inference::InferenceConflict;
-use super::monomorphize_inference_substitution::{
-    ast_type_substitutions, substitute_inference_ast_type,
-};
 use super::TypeChecker;
 
 impl TypeChecker {
@@ -123,11 +120,17 @@ impl TypeChecker {
         let Some((params, fields)) = self.generic_struct_inference_shape(generic_name) else {
             return;
         };
-        let substitutions = ast_type_substitutions(&params, expected_type_args);
-        for (expected, (_, actual)) in fields.iter().zip(actual_fields.iter()) {
-            let expected = substitute_inference_ast_type(expected, &substitutions);
-            self.match_type_param(&expected, actual, type_params, map, conflicts);
-        }
+        self.match_inference_shape_items(
+            &params,
+            expected_type_args,
+            fields
+                .iter()
+                .zip(actual_fields.iter())
+                .map(|(expected, (_, actual))| (expected, actual)),
+            type_params,
+            map,
+            conflicts,
+        );
     }
 
     fn match_enum_shape(
@@ -142,13 +145,18 @@ impl TypeChecker {
         let Some((params, variants)) = self.generic_enum_inference_shape(generic_name) else {
             return;
         };
-        let substitutions = ast_type_substitutions(&params, expected_type_args);
-        for (expected_payload, (_, actual_payload)) in variants.iter().zip(actual_variants.iter()) {
-            if let (Some(expected), Some(actual)) = (expected_payload, actual_payload) {
-                let expected = substitute_inference_ast_type(expected, &substitutions);
-                self.match_type_param(&expected, actual, type_params, map, conflicts);
-            }
-        }
+        self.match_inference_shape_items(
+            &params,
+            expected_type_args,
+            variants.iter().zip(actual_variants.iter()).filter_map(
+                |(expected_payload, (_, actual_payload))| {
+                    Some((expected_payload.as_ref()?, actual_payload.as_ref()?))
+                },
+            ),
+            type_params,
+            map,
+            conflicts,
+        );
     }
 
     fn generic_definition_param_refs(&self, generic_name: &str) -> Vec<AstType> {

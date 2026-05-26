@@ -16,17 +16,18 @@ impl TypeChecker {
         let mut saw_never_arm = false;
 
         for arm in arms {
-            self.push_scope();
-            self.bind_pattern(&arm.pattern, &typed_scrutinee.ty);
-            let typed_body = self.check_expr(&arm.body)?;
+            let (typed_body, pattern) = self.with_scope(|checker| {
+                checker.bind_pattern(&arm.pattern, &typed_scrutinee.ty);
+                let typed_body = checker.check_expr(&arm.body)?;
+                let pattern = checker.lower_pattern(&arm.pattern, &typed_scrutinee.ty);
+                Ok((typed_body, pattern))
+            })?;
             if typed_body.ty == Type::Never {
                 saw_never_arm = true;
             } else if !saw_value_arm && typed_body.ty != Type::Void {
                 result_type = typed_body.ty.clone();
                 saw_value_arm = true;
             }
-            let pattern = self.lower_pattern(&arm.pattern, &typed_scrutinee.ty);
-            self.pop_scope();
             typed_arms.push(TypedMatchArm {
                 pattern,
                 body: TypedBlock {

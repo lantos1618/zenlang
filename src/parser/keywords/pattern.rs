@@ -1,5 +1,4 @@
 use super::ParserPatternKeyword;
-use std::str::FromStr;
 
 impl ParserPatternKeyword {
     const ALL: &[ParserPatternKeyword] = &[
@@ -21,14 +20,8 @@ impl ParserPatternKeyword {
     }
 }
 
-impl FromStr for ParserPatternKeyword {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|keyword| keyword.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    ParserPatternKeyword,
+    variants = ParserPatternKeyword::ALL,
+    as_str = ParserPatternKeyword::as_str
+);

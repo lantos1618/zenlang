@@ -2,16 +2,34 @@ use std::fmt;
 
 use serde::Serialize;
 
+mod compiler_diagnostic_code;
 mod diagnostic;
+mod diagnostic_code;
 mod diagnostic_enrichment;
+mod diagnostic_metadata;
+mod diagnostic_payload;
 mod file_table;
+mod protocol;
+mod resolver_contract_code;
 #[cfg(test)]
 mod tests;
 
+pub use compiler_diagnostic_code::CompilerDiagnosticCode;
 pub use diagnostic::{
     ContextFrame, ContextKind, Diagnostic, Label, Severity, SuggestedFix, TextEdit,
 };
+pub use diagnostic_code::DiagnosticCode;
+pub use diagnostic_metadata::{DiagnosticCategory, DiagnosticDescriptor, DiagnosticPhase};
+pub use diagnostic_payload::{DiagnosticFact, RelatedDiagnostic};
 pub use file_table::{FileId, FileTable};
+pub use protocol::{
+    code_actions_for_lsp, dap_launch_failure, diagnostics_for_ai, diagnostics_for_lsp,
+    AgentDiagnostic, DapDiagnosticBundle, DapLaunchFailure, DapOutputBody, LspCodeAction,
+    LspCodeActionData, LspCodeDescription, LspDiagnostic, LspDiagnosticData, LspDiagnosticRecord,
+    LspRelatedInformation, LspTextEdit, ProtocolFact, ProtocolLocation, ProtocolPosition,
+    ProtocolRange, ProtocolRelated, ProtocolSuggestedFix, ProtocolTextEdit,
+};
+pub use resolver_contract_code::ResolverContractCode;
 
 // ── Span ───────────────────────────────────────────────────────────
 
@@ -117,59 +135,27 @@ impl From<CompileError> for Diagnostic {
     fn from(err: CompileError) -> Self {
         match err {
             CompileError::Syntax(msg, span) => {
-                let diagnostic = Diagnostic {
-                    severity: Severity::Error,
-                    code: "E2000".to_string(),
-                    message: msg,
-                    span,
-                    labels: Vec::new(),
-                    notes: Vec::new(),
-                    context: Vec::new(),
-                    suggested_fixes: Vec::new(),
-                };
+                let diagnostic = Diagnostic::error_code_optional(DiagnosticCode::Syntax, msg, span);
                 diagnostic
                     .with_removed_return_fix()
                     .with_removed_infix_as_cast_fix()
                     .with_generic_association_target_gate_context()
             }
-            CompileError::Type(msg, span) => Diagnostic {
-                severity: Severity::Error,
-                code: "E3000".to_string(),
-                message: msg,
-                span,
-                labels: Vec::new(),
-                notes: Vec::new(),
-                context: Vec::new(),
-                suggested_fixes: Vec::new(),
-            },
+            CompileError::Type(msg, span) => {
+                Diagnostic::error_code_optional(DiagnosticCode::Type, msg, span)
+            }
             CompileError::Resolution(msg, span) => {
                 let code = if msg == GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE {
-                    "E2000"
+                    DiagnosticCode::Syntax
                 } else {
-                    "E3500"
+                    DiagnosticCode::Resolution
                 };
-                Diagnostic {
-                    severity: Severity::Error,
-                    code: code.to_string(),
-                    message: msg,
-                    span,
-                    labels: Vec::new(),
-                    notes: Vec::new(),
-                    context: Vec::new(),
-                    suggested_fixes: Vec::new(),
-                }
-                .with_generated_behavior_derive_gate_context()
+                Diagnostic::error_code_optional(code, msg, span)
+                    .with_generated_behavior_derive_gate_context()
             }
-            CompileError::Internal(msg) => Diagnostic {
-                severity: Severity::Error,
-                code: "E9999".to_string(),
-                message: msg,
-                span: None,
-                labels: Vec::new(),
-                notes: Vec::new(),
-                context: Vec::new(),
-                suggested_fixes: Vec::new(),
-            },
+            CompileError::Internal(msg) => {
+                Diagnostic::error_code_optional(DiagnosticCode::Internal, msg, None)
+            }
         }
     }
 }

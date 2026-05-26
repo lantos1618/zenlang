@@ -25,7 +25,6 @@ DEFAULT_INCLUDES = (
     ".github/workflows/",
     "Cargo.toml",
     "CONTRIBUTING.md",
-    "LANGUAGE_SPEC.zen",
     "README.md",
 )
 

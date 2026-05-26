@@ -41,8 +41,6 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
         "mod spelling;",
         "macro_rules! c_intrinsic_spellings",
         "const SPELLINGS: &[(CIntrinsic, &str)]",
-        "impl fmt::Display for CIntrinsic",
-        "impl FromStr for CIntrinsic",
         "name.parse::<CIntrinsic>()",
         "CIntrinsic::$variant",
         r#"RawAllocate => "raw_allocate""#,
@@ -54,6 +52,11 @@ fn codegen_c_intrinsics_use_owned_name_enum() {
             "C intrinsic spelling should live in CIntrinsic: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&source, "CIntrinsic")
+            && owns_static_spelling_display(&source, "CIntrinsic"),
+        "C intrinsic spelling should use shared static spelling parse/display glue"
+    );
 
     assert!(
         names.lines().count() < 220,

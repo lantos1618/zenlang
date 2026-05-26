@@ -103,7 +103,7 @@ fn emit_json_hir_generic_ufc_dedup_schema_matches_golden() {
 fn emit_json_hir_generic_ufc_function_schema_matches_golden() {
     assert_hir_golden(
         "tests/zen/generic_ufc_function.zen",
-        "tests/fixtures/ir_json/hir_generic_ufc_function.golden.json",
+        "tests/fixtures/ir_json/hir_generic_ufc_dedup.golden.json",
         "generic UFC function input",
     );
 }

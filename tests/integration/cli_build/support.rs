@@ -1,6 +1,21 @@
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
+#[path = "support/file_read_graphs.rs"]
+mod file_read_graphs;
+#[path = "support/graph_only_libraries.rs"]
+mod graph_only_libraries;
+
+pub(super) use file_read_graphs::{
+    write_multiple_executable_file_read_graph, write_single_executable_file_read_graph,
+};
+pub(super) use graph_only_libraries::{
+    assert_emit_c_source, assert_graph_only_library_build_output,
+    assert_graph_only_library_test_output, assert_no_build_dir, write_graph_only_library_project,
+    write_graph_only_library_test_project, GraphOnlyLibrarySource, LIBRARY_TYPE_ERROR_DIAGNOSTIC,
+    MISSING_LIBRARY_SOURCE_DIAGNOSTIC,
+};
+
 pub(super) fn write_single_executable_graph(tmp: &tempfile::TempDir) {
     write_file(
         tmp,

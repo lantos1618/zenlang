@@ -1,5 +1,31 @@
 use super::*;
 
+#[derive(Clone, Copy)]
+struct UntypedVarDeclMode {
+    mutable: bool,
+    constant: bool,
+}
+
+impl UntypedVarDeclMode {
+    fn from_token(token: &Token) -> Option<Self> {
+        match token {
+            Token::ConstAssign => Some(Self {
+                mutable: false,
+                constant: true,
+            }),
+            Token::DeclareAssign => Some(Self {
+                mutable: true,
+                constant: false,
+            }),
+            Token::Assign => Some(Self {
+                mutable: false,
+                constant: false,
+            }),
+            _ => None,
+        }
+    }
+}
+
 impl Parser {
     // ── Statements ────────────────────────────────────────────
 
@@ -10,81 +36,23 @@ impl Parser {
         if let Token::Identifier(ref name) = self.peek().clone() {
             let name = name.clone();
 
-            // Check next significant token
-            match self.peek_ahead(1) {
-                Token::ConstAssign => {
-                    // name := expr (const)
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume :=
-                    self.skip_newlines();
-                    let value = self.parse_expression()?;
-                    let span = name_span.merge(value.span());
-                    return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
-                        name,
-                        ty: None,
-                        value,
-                        mutable: false,
-                        constant: true,
-                        span,
-                    }));
-                }
-                Token::DeclareAssign => {
-                    // name ::= expr (mutable)
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume ::=
-                    self.skip_newlines();
-                    let value = self.parse_expression()?;
-                    let span = name_span.merge(value.span());
-                    return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
-                        name,
-                        ty: None,
-                        value,
-                        mutable: true,
-                        constant: false,
-                        span,
-                    }));
-                }
-                Token::Colon if self.is_typed_var_decl() => {
-                    // Could be `name: Type = expr` (typed var decl)
-                    // or `name: Type` (type annotation — rare)
-                    // Peek further: name : Type = expr
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume :
-                    let ty = self.parse_type()?;
-                    self.skip_newlines();
-                    self.expect(&Token::Assign)?;
-                    self.skip_newlines();
-                    let value = self.parse_expression()?;
-                    let span = name_span.merge(value.span());
-                    return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
-                        name,
-                        ty: Some(ty),
-                        value,
-                        mutable: false,
-                        constant: false,
-                        span,
-                    }));
-                }
-                Token::Assign => {
-                    // name = expr — could be const decl or assignment
-                    // In Zen, `name = expr` at statement level is a const binding (like :=)
-                    // unless `name` already exists as mutable
-                    // For now, parse as const var decl at statement level
-                    let (_, name_span) = self.advance(); // consume name
-                    self.advance(); // consume =
-                    self.skip_newlines();
-                    let value = self.parse_expression()?;
-                    let span = name_span.merge(value.span());
-                    return Ok(StmtOrExpr::Stmt(Statement::VarDecl {
-                        name,
-                        ty: None,
-                        value,
-                        mutable: false,
-                        constant: false,
-                        span,
-                    }));
-                }
-                _ => {}
+            let next = self.peek_ahead(1);
+            if let Some(mode) = UntypedVarDeclMode::from_token(next) {
+                let (_, name_span) = self.advance(); // consume name
+                self.advance(); // consume assignment token
+                return self.finish_var_decl(name, name_span, None, mode.mutable, mode.constant);
+            }
+
+            if matches!(next, Token::Colon) && self.is_typed_var_decl() {
+                // Could be `name: Type = expr` (typed var decl)
+                // or `name: Type` (type annotation — rare)
+                // Peek further: name : Type = expr
+                let (_, name_span) = self.advance(); // consume name
+                self.advance(); // consume :
+                let ty = self.parse_type()?;
+                self.skip_newlines();
+                self.expect(&Token::Assign)?;
+                return self.finish_var_decl(name, name_span, Some(ty), false, false);
             }
         }
 
@@ -131,5 +99,26 @@ impl Parser {
                 _ => i += 1,
             }
         }
+    }
+
+    fn finish_var_decl(
+        &mut self,
+        name: String,
+        name_span: Span,
+        ty: Option<AstType>,
+        mutable: bool,
+        constant: bool,
+    ) -> Result<StmtOrExpr, CompileError> {
+        self.skip_newlines();
+        let value = self.parse_expression()?;
+        let span = name_span.merge(value.span());
+        Ok(StmtOrExpr::Stmt(Statement::VarDecl {
+            name,
+            ty,
+            value,
+            mutable,
+            constant,
+            span,
+        }))
     }
 }

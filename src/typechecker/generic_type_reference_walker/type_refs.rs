@@ -14,15 +14,18 @@ impl TypeChecker {
         }
 
         if let Some(gated) = gated_builtin_type_name(name) {
-            self.diagnostics
-                .push(Diagnostic::error("E0202", gated.gate_message(), span));
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0202,
+                gated.gate_message(),
+                span,
+            ));
             return;
         }
 
         if !self.is_known_named_type(name) {
             if reject_unknown {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0201",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0201,
                     format!("unknown type symbol '{name}'"),
                     span,
                 ));
@@ -41,14 +44,7 @@ impl TypeChecker {
             });
         if let Some((kind, type_param_count)) = generic {
             if type_param_count > 0 {
-                self.diagnostics.push(Diagnostic::error(
-                    "E5001",
-                    format!(
-                        "generic {} `{}` expects {} type arguments, found 0",
-                        kind, name, type_param_count
-                    ),
-                    span,
-                ));
+                self.report_generic_type_arg_arity(kind, name, type_param_count, 0, span);
             }
         }
     }
@@ -62,8 +58,11 @@ impl TypeChecker {
         reject_unknown: bool,
     ) {
         if let Some(gated) = gated_builtin_type_name(name) {
-            self.diagnostics
-                .push(Diagnostic::error("E0202", gated.gate_message(), span));
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0202,
+                gated.gate_message(),
+                span,
+            ));
             return;
         }
 
@@ -92,8 +91,8 @@ impl TypeChecker {
             )
         } else {
             if reject_unknown && !self.imports.contains_key(name) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0201",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0201,
                     format!("unknown type symbol '{name}'"),
                     span,
                 ));
@@ -101,30 +100,7 @@ impl TypeChecker {
             return;
         };
 
-        if type_params.is_empty() && !type_args.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic {} `{}` does not accept type arguments",
-                    kind, name
-                ),
-                span,
-            ));
-            return;
-        }
-
-        if type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic {} `{}` expects {} type arguments, found {}",
-                    kind,
-                    name,
-                    type_params.len(),
-                    type_args.len()
-                ),
-                span,
-            ));
+        if !self.validate_type_arg_arity(kind, name, type_params.len(), type_args, span) {
             return;
         }
 

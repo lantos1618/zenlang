@@ -62,38 +62,11 @@ impl Parser {
         }
 
         if matches!(self.peek(), Token::Lt) {
-            let type_args = self.parse_generic_type_args()?;
+            let type_args = self.parse_type_arg_list()?;
             return Ok(Self::resolve_generic_type_name(name, type_args));
         }
 
         Ok(AstType::Named(name.to_string()))
-    }
-
-    fn parse_generic_type_args(&mut self) -> Result<Vec<AstType>, CompileError> {
-        self.expect(&Token::Lt)?;
-        let mut type_args = Vec::new();
-        loop {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::Gt | Token::ShiftRight) {
-                break;
-            }
-            type_args.push(self.parse_type()?);
-            self.skip_newlines();
-            match self.peek() {
-                Token::Comma => {
-                    self.advance();
-                }
-                Token::Gt | Token::ShiftRight => break,
-                other => {
-                    return Err(CompileError::Syntax(
-                        format!("expected `,` or `>` in type argument list, found {other:?}"),
-                        Some(self.peek_span()),
-                    ));
-                }
-            }
-        }
-        self.expect_gt()?;
-        Ok(type_args)
     }
 
     fn resolve_generic_type_name(base: &str, type_args: Vec<AstType>) -> AstType {

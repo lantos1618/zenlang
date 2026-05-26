@@ -8,9 +8,7 @@ Point: { x: i32 }
 Point.label = () StaticString { "point" }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.remove_for_test(Namespace::Type, "Point");
     let mut tc = TypeChecker::new();
 
@@ -39,9 +37,7 @@ Box.get<T> = (self: Box<T>) T {
 }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.set_parameter_type_names_for_test(
         Namespace::Value,
         "Box.get",
@@ -74,9 +70,7 @@ Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
 }
 "#,
     );
-    let mut symbols = crate::resolver::Resolver::new()
-        .resolve_program(&program)
-        .expect("resolver succeeds");
+    let mut symbols = resolve_program_symbols(&program);
     symbols.set_parameter_type_names_for_test(
         Namespace::Value,
         "Box.map",

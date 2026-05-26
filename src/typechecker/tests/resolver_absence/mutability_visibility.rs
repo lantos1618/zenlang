@@ -16,11 +16,18 @@ main = (mut input: i32) i32 {
     let symbol = symbols
         .lookup_scoped(Namespace::Local, "input")
         .expect("local symbol");
-    let entries = MutabilityAbsenceValidation { code: "MUTABLE" }.entries(symbol);
+    let entries = MutabilityAbsenceValidation {
+        code: "MUTABLE".into(),
+    }
+    .entries(symbol);
 
     assert_eq!(
         entries,
-        [AbsentMetadataEntry::new(true, "MUTABLE", "mutability")]
+        [AbsentMetadataEntry::new(
+            true,
+            "MUTABLE".into(),
+            "mutability"
+        )]
     );
 }
 
@@ -28,40 +35,42 @@ main = (mut input: i32) i32 {
 fn mutability_absence_validation_uses_module_resolver_code() {
     let validation = MutabilityAbsenceValidation::module_resolver_code();
 
-    assert_eq!(validation.code, "E0345");
+    assert_eq!(validation.code, "E7345");
 }
 
 #[test]
 fn mutability_absence_validation_uses_import_resolver_code() {
     let validation = MutabilityAbsenceValidation::import_resolver_code();
 
-    assert_eq!(validation.code, "E0344");
+    assert_eq!(validation.code, "E7344");
 }
 
 #[test]
 fn mutability_absence_validation_uses_type_like_resolver_code() {
     let validation = MutabilityAbsenceValidation::type_like_resolver_code();
 
-    assert_eq!(validation.code, "E0314");
+    assert_eq!(validation.code, "E7314");
 }
 
 #[test]
 fn mutability_absence_validation_uses_variant_resolver_code() {
     let validation = MutabilityAbsenceValidation::variant_resolver_code();
 
-    assert_eq!(validation.code, "E0343");
+    assert_eq!(validation.code, "E7343");
 }
 
 #[test]
 fn mutability_absence_validation_uses_value_resolver_code() {
     let validation = MutabilityAbsenceValidation::value_resolver_code();
 
-    assert_eq!(validation.code, "E0308");
+    assert_eq!(validation.code, "E7308");
 }
 
 #[test]
 fn mutability_validation_formats_actual_and_expected() {
-    let validation = MutabilityValidation { code: "MUTABLE" };
+    let validation = MutabilityValidation {
+        code: "MUTABLE".into(),
+    };
 
     assert_eq!(validation.code, "MUTABLE");
     assert_eq!(
@@ -79,12 +88,14 @@ fn mutability_validation_formats_actual_and_expected() {
 fn mutability_validation_uses_resolver_code() {
     let validation = MutabilityValidation::resolver_code();
 
-    assert_eq!(validation.code, "E0231");
+    assert_eq!(validation.code, "E7231");
 }
 
 #[test]
 fn visibility_validation_formats_actual_and_expected() {
-    let validation = VisibilityValidation { code: "VISIBLE" };
+    let validation = VisibilityValidation {
+        code: "VISIBLE".into(),
+    };
 
     assert_eq!(validation.code, "VISIBLE");
     assert_eq!(validation.display(true, false), ("public", "private"));
@@ -99,40 +110,40 @@ fn visibility_validation_formats_actual_and_expected() {
 fn visibility_validation_uses_local_resolver_code() {
     let validation = VisibilityValidation::local_resolver_code();
 
-    assert_eq!(validation.code, "E0247");
+    assert_eq!(validation.code, "E7247");
 }
 
 #[test]
 fn visibility_validation_uses_module_resolver_code() {
     let validation = VisibilityValidation::module_resolver_code();
 
-    assert_eq!(validation.code, "E0229");
+    assert_eq!(validation.code, "E7229");
 }
 
 #[test]
 fn visibility_validation_uses_import_resolver_code() {
     let validation = VisibilityValidation::import_resolver_code();
 
-    assert_eq!(validation.code, "E0245");
+    assert_eq!(validation.code, "E7245");
 }
 
 #[test]
 fn visibility_validation_uses_type_like_resolver_code() {
     let validation = VisibilityValidation::type_like_resolver_code();
 
-    assert_eq!(validation.code, "E0225");
+    assert_eq!(validation.code, "E7225");
 }
 
 #[test]
 fn visibility_validation_uses_variant_resolver_code() {
     let validation = VisibilityValidation::variant_resolver_code();
 
-    assert_eq!(validation.code, "E0226");
+    assert_eq!(validation.code, "E7226");
 }
 
 #[test]
 fn visibility_validation_uses_value_resolver_code() {
     let validation = VisibilityValidation::value_resolver_code();
 
-    assert_eq!(validation.code, "E0224");
+    assert_eq!(validation.code, "E7224");
 }

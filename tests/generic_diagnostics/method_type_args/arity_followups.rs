@@ -14,12 +14,7 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic function `pick` expects 2 type arguments, found 1")),
-        "expected explicit generic arity diagnostic, got {errors:?}"
-    );
+    assert_generic_arity_diagnostic(&errors, "function", "pick", 2, 1, "generic function arity");
     assert!(
         errors
             .iter()
@@ -47,12 +42,7 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic method `Box.pick` expects 2 type arguments, found 1")),
-        "expected explicit generic method arity diagnostic, got {errors:?}"
-    );
+    assert_generic_arity_diagnostic(&errors, "method", "Box.pick", 2, 1, "generic method arity");
     assert!(
         errors
             .iter()
@@ -75,11 +65,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic function `take_second` expects 2 type arguments, found 1")),
-        "expected explicit generic arity diagnostic, got {errors:?}"
+    assert_generic_arity_diagnostic(
+        &errors,
+        "function",
+        "take_second",
+        2,
+        1,
+        "generic function arity",
     );
     assert!(
         errors.iter().all(|d| !d.message.contains("argument 1")),
@@ -106,11 +98,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic method `Box.take_second` expects 2 type arguments, found 1")),
-        "expected explicit generic method arity diagnostic, got {errors:?}"
+    assert_generic_arity_diagnostic(
+        &errors,
+        "method",
+        "Box.take_second",
+        2,
+        1,
+        "generic method arity",
     );
     assert!(
         errors.iter().all(|d| !d.message.contains("argument 2")),

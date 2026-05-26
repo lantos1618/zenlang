@@ -44,6 +44,16 @@ fn semantic_builtin_type_checks_use_shared_spelling_helper() {
         helper.contains("pub fn is_builtin_type_name"),
         "builtin type-name recognition should be centralized"
     );
+    let typed_types = read("src/ast/typed/types.rs");
+    let monomorphize_types = read("src/typechecker/monomorphize_types.rs");
+    assert!(
+        typed_types.contains("pub fn builtin_source_name(&self) -> Option<&'static str>"),
+        "resolved builtin type display spelling should be centralized on Type"
+    );
+    assert!(
+        monomorphize_types.contains("ty.builtin_source_name()"),
+        "type mangle keys should reuse Type builtin source spelling instead of repeating it"
+    );
     assert!(
         !helper.contains("name == DYNAMIC_STRING_TYPE_NAME"),
         "builtin type-name recognition should route through GatedBuiltinType, not a direct spelling check"

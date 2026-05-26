@@ -3,6 +3,23 @@ use crate::ast::Expression;
 use super::dsl::{BuildTargetDslKind, BuildTargetField};
 use super::BuildGraphError;
 
+pub(super) struct TargetCommonFields {
+    pub(super) dependencies: Vec<String>,
+    pub(super) features: Vec<String>,
+}
+
+pub(super) fn common_target_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+) -> Result<TargetCommonFields, BuildGraphError> {
+    Ok(TargetCommonFields {
+        dependencies: optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
+            .unwrap_or_default(),
+        features: optional_string_array_field(kind, fields, BuildTargetField::Features)?
+            .unwrap_or_default(),
+    })
+}
+
 pub(super) fn required_string_field(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],

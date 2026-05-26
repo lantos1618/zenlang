@@ -67,6 +67,10 @@ fn v1_spec_records_resolver_generic_and_behavior_evidence() {
         spec.lines().count() <= 175,
         "docs/V1_SPEC.md should stay compact; move exhaustive evidence to tests, golden fixtures, or git history"
     );
+    assert!(
+        !spec.contains("`break`, `continue`"),
+        "docs/V1_SPEC.md should not advertise break/continue as public loop controls"
+    );
 }
 
 #[test]

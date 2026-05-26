@@ -24,11 +24,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic struct bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic struct bound",
     );
 }
 
@@ -56,11 +56,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic enum bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic enum bound",
     );
 }
 
@@ -86,11 +86,11 @@ read = (box: Box<Point>) i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic struct annotation bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic struct annotation bound",
     );
 }
 
@@ -116,11 +116,11 @@ read = (value: Option<Point>) i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic enum annotation bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic enum annotation bound",
     );
 }
 
@@ -148,11 +148,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic struct local annotation bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic struct local annotation bound",
     );
 }
 
@@ -180,10 +180,10 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic enum local annotation bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic enum local annotation bound",
     );
 }

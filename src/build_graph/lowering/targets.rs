@@ -2,8 +2,8 @@ use crate::ast::Expression;
 
 use super::dsl::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField};
 use super::target_fields::{
-    optional_string_array_field, optional_string_field, required_one_of_string_fields,
-    required_string_array_field, required_string_field,
+    common_target_fields, optional_string_field, required_one_of_string_fields,
+    required_string_array_field, required_string_field, TargetCommonFields,
 };
 use super::{BuildGraphError, BuildTargetInput, BuildTargetKind};
 
@@ -117,57 +117,56 @@ fn executable_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
-    let root_source_file = required_one_of_string_fields(
+    let (root_source_file, common) = single_source_fields(
         kind,
         fields,
         &[BuildTargetField::Main, BuildTargetField::RootSourceFile],
     )?;
+    let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
 
-    Ok(BuildTargetInput {
-        name: target_name,
-        kind: BuildTargetKind::Executable {
+    Ok(single_source_target(
+        target_name,
+        BuildTargetKind::Executable {
             root_source_file: root_source_file.clone(),
             out_dir,
         },
-        sources: vec![root_source_file],
-        dependencies,
-        features,
-    })
+        root_source_file,
+        common,
+    ))
 }
 
 fn test_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let root_source_file = required_one_of_string_fields(
+    let (root_source_file, common) = single_source_fields(
         kind,
         fields,
         &[BuildTargetField::Root, BuildTargetField::RootSourceFile],
     )?;
     let target_name = optional_string_field(kind, fields, BuildTargetField::Name)?
         .unwrap_or_else(|| target_name_from_root(&root_source_file));
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
 
-    Ok(BuildTargetInput {
-        name: target_name,
-        kind: BuildTargetKind::Test {
+    Ok(single_source_target(
+        target_name,
+        BuildTargetKind::Test {
             root_source_file: root_source_file.clone(),
         },
-        sources: vec![root_source_file],
-        dependencies,
-        features,
-    })
+        root_source_file,
+        common,
+    ))
+}
+
+fn single_source_fields(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    root_fields: &[BuildTargetField],
+) -> Result<(String, TargetCommonFields), BuildGraphError> {
+    Ok((
+        required_one_of_string_fields(kind, fields, root_fields)?,
+        common_target_fields(kind, fields)?,
+    ))
 }
 
 fn library_target_from_fields(
@@ -176,11 +175,7 @@ fn library_target_from_fields(
 ) -> Result<BuildTargetInput, BuildGraphError> {
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let exports = required_string_array_field(kind, fields, BuildTargetField::Exports)?;
-    let dependencies =
-        optional_string_array_field(kind, fields, BuildTargetField::Dependencies)?
-            .unwrap_or_default();
-    let features =
-        optional_string_array_field(kind, fields, BuildTargetField::Features)?.unwrap_or_default();
+    let common = common_target_fields(kind, fields)?;
     if exports.is_empty() {
         return Err(BuildGraphError::UnsupportedBuildScript(format!(
             "field `{}` in `{kind}` build target must contain at least one source",
@@ -194,9 +189,24 @@ fn library_target_from_fields(
             exports: exports.clone(),
         },
         sources: exports,
-        dependencies,
-        features,
+        dependencies: common.dependencies,
+        features: common.features,
     })
+}
+
+fn single_source_target(
+    name: String,
+    kind: BuildTargetKind,
+    root_source_file: String,
+    common: TargetCommonFields,
+) -> BuildTargetInput {
+    BuildTargetInput {
+        name,
+        kind,
+        sources: vec![root_source_file],
+        dependencies: common.dependencies,
+        features: common.features,
+    }
 }
 
 fn target_name_from_root(root: &str) -> String {

@@ -2,9 +2,7 @@ use super::*;
 
 #[test]
 fn parse_simple_function() {
-    let prog = parse_ok("add = (a: i32, b: i32) i32 {\n    a + b\n}");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("add = (a: i32, b: i32) i32 {\n    a + b\n}") {
         Declaration::Function { name, params, .. } => {
             assert_eq!(name, "add");
             assert_eq!(params.len(), 2);
@@ -15,8 +13,7 @@ fn parse_simple_function() {
 
 #[test]
 fn parse_generic_function_call_type_args() {
-    let prog = parse_ok("f = () i32 { identity<i32>(1) }");
-    match &prog.declarations[0] {
+    match parse_single_decl("f = () i32 { identity<i32>(1) }") {
         Declaration::Function { body, .. } => match body {
             Expression::Block {
                 expr: Some(expr), ..
@@ -37,8 +34,7 @@ fn parse_generic_function_call_type_args() {
 
 #[test]
 fn parse_generic_method_call_type_args() {
-    let prog = parse_ok("f = (box: Box<i32>) i32 { box.get<i32>() }");
-    match &prog.declarations[0] {
+    match parse_single_decl("f = (box: Box<i32>) i32 { box.get<i32>() }") {
         Declaration::Function { body, .. } => match body {
             Expression::Block {
                 expr: Some(expr), ..
@@ -59,9 +55,7 @@ fn parse_generic_method_call_type_args() {
 
 #[test]
 fn parse_struct_def() {
-    let prog = parse_ok("Point: {\n    x: f64,\n    y: f64\n}");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("Point: {\n    x: f64,\n    y: f64\n}") {
         Declaration::Struct { name, fields, .. } => {
             assert_eq!(name, "Point");
             assert_eq!(fields.len(), 2);
@@ -74,9 +68,7 @@ fn parse_struct_def() {
 
 #[test]
 fn parse_enum_def() {
-    let prog = parse_ok("Color:\n    Red,\n    Green,\n    Blue");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("Color:\n    Red,\n    Green,\n    Blue") {
         Declaration::Enum { name, variants, .. } => {
             assert_eq!(name, "Color");
             assert_eq!(variants.len(), 3);
@@ -88,9 +80,7 @@ fn parse_enum_def() {
 
 #[test]
 fn parse_import() {
-    let prog = parse_ok("{ io } = std");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("{ io } = std") {
         Declaration::Import {
             names, module_path, ..
         } => {
@@ -103,9 +93,7 @@ fn parse_import() {
 
 #[test]
 fn parse_import_multi() {
-    let prog = parse_ok("{ Channel, Mutex } = std.sync");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl("{ Channel, Mutex } = std.sync") {
         Declaration::Import {
             names, module_path, ..
         } => {
@@ -118,9 +106,9 @@ fn parse_import_multi() {
 
 #[test]
 fn parse_method() {
-    let prog = parse_ok("Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 {\n    0.0\n}");
-    assert_eq!(prog.declarations.len(), 1);
-    match &prog.declarations[0] {
+    match parse_single_decl(
+        "Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 {\n    0.0\n}",
+    ) {
         Declaration::Method {
             type_name,
             method_name,

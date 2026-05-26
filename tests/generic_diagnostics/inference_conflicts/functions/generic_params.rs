@@ -19,11 +19,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic function `choose_box`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic function struct inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "function",
+        "choose_box",
+        "T",
+        "i32",
+        "StaticString",
+        "generic function struct inference conflict",
     );
 }
 
@@ -46,10 +49,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic function `choose_option`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic function enum inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "function",
+        "choose_option",
+        "T",
+        "i32",
+        "StaticString",
+        "generic function enum inference conflict",
     );
 }

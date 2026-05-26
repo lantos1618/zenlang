@@ -46,8 +46,8 @@ impl TypeChecker {
                 let field_type = self.lookup_field_type(&typed_obj.ty, field);
                 if field_type == Type::Unknown {
                     if let Some(type_name) = self.field_access_type_name(&typed_obj.ty) {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E3052",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E3052,
                             format!("type `{}` has no field `{}`", type_name, field),
                             span,
                         ));
@@ -109,8 +109,8 @@ impl TypeChecker {
         let elem_ty = match &typed_obj.ty {
             Type::Array { elem, .. } | Type::Slice(elem) => *elem.clone(),
             _ => {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3051",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3051,
                     format!(
                         "cannot index into non-array type `{}`",
                         typed_obj.ty.display_name()

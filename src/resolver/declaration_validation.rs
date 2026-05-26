@@ -50,8 +50,8 @@ impl Resolver {
                 ..
             } => {
                 if !self.is_known_type_name(table, &[], type_name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0201",
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0201,
                         format!("unknown type symbol '{type_name}'"),
                         *span,
                     ));

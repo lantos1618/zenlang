@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E3500",
+      "slug": "resolution",
+      "phase": "resolver",
+      "category": "resolution",
+      "docs_path": "docs/DIAGNOSTICS.md#resolution",
       "message": "duplicate required behavior `Json<StaticString>` for `Point`",
       "span": {
         "file_id": 0,
@@ -23,7 +27,9 @@
       "labels": [],
       "notes": [],
       "context": [],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

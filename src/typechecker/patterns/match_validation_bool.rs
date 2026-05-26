@@ -22,8 +22,8 @@ impl TypeChecker {
             match &arm.pattern {
                 Pattern::BoolTrue { span } => {
                     if true_seen || wildcard_seen {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E4005",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E4005,
                             "duplicate match arm for `true`",
                             *span,
                         ));
@@ -32,8 +32,8 @@ impl TypeChecker {
                 }
                 Pattern::BoolFalse { span } => {
                     if false_seen || wildcard_seen {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E4005",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E4005,
                             "duplicate match arm for `false`",
                             *span,
                         ));
@@ -42,8 +42,8 @@ impl TypeChecker {
                 }
                 Pattern::Wildcard { span } => {
                     if wildcard_seen || (true_seen && false_seen) {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E4005",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E4005,
                             "redundant wildcard match arm",
                             *span,
                         ));
@@ -64,8 +64,8 @@ impl TypeChecker {
             let replacement = Self::missing_bool_match_fix_replacement(&missing_values);
             let insertion = Span::new(span.file_id, span.end, span.end);
             self.diagnostics.push(
-                Diagnostic::error(
-                    "E4006",
+                Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4006,
                     format!("non-exhaustive bool match: missing {missing}"),
                     span,
                 )

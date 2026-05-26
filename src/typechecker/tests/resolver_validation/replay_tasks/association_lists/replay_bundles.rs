@@ -19,7 +19,7 @@ main = (input: i32) i32 {
         .resolve_program(&program)
         .expect("resolver succeeds");
     let expected =
-        TypeChecker::collect_resolver_validation_replay_tasks(&program, &symbols).expected_symbols;
+        TypeChecker::collect_resolver_contract_replay_tasks(&program, &symbols).expected_symbols;
 
     assert!(expected.validate_imports);
     assert!(expected
@@ -59,8 +59,7 @@ Point.requires(Json<StaticString>)
         .resolve_program(&program)
         .expect("resolver succeeds");
 
-    let tasks =
-        TypeChecker::collect_resolver_validation_replay_declaration_tasks(&program, &symbols);
+    let tasks = TypeChecker::collect_resolver_contract_replay_declaration_tasks(&program, &symbols);
 
     assert!(tasks
         .expected_symbols
@@ -109,7 +108,7 @@ main = (input: i32) i32 {
         .resolve_program(&program)
         .expect("resolver succeeds");
 
-    let tasks = TypeChecker::collect_resolver_validation_replay_tasks(&program, &symbols);
+    let tasks = TypeChecker::collect_resolver_contract_replay_tasks(&program, &symbols);
 
     assert!(tasks
         .expected_symbols

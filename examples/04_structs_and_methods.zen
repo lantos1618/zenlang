@@ -1,5 +1,5 @@
 // Structs and Methods in Zen
-// Zen uses UFC (Uniform Function Call) - any function is also a method
+// Dot calls and function calls are call-site spellings for attached functions.
 
 { io } = std
 

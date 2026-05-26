@@ -17,8 +17,8 @@ impl Resolver {
         let mut seen_params = HashSet::new();
         for param in params {
             if !seen_params.insert(param.name.as_str()) {
-                diagnostics.push(Diagnostic::error(
-                    "E0214",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0214,
                     format!("duplicate parameter `{}`", param.name),
                     param.span,
                 ));
@@ -44,16 +44,16 @@ impl Resolver {
         let mut seen_type_params = HashSet::new();
         for type_param in type_params {
             if !seen_type_params.insert(type_param.name.as_str()) {
-                diagnostics.push(Diagnostic::error(
-                    "E0213",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0213,
                     format!("duplicate type parameter `{}`", type_param.name),
                     type_param.span,
                 ));
             }
             if let Some(constraint) = &type_param.constraint {
                 if !self.is_known_behavior_name(table, constraint) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0202",
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0202,
                         format!("unknown behavior symbol '{constraint}'"),
                         type_param.span,
                     ));
@@ -84,12 +84,16 @@ impl Resolver {
         match ast_type {
             AstType::Named(name) => {
                 if let Some(gated) = gated_builtin_type_name(name) {
-                    diagnostics.push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0202,
+                        gated.gate_message(),
+                        span,
+                    ));
                     return;
                 }
                 if !self.is_known_type_name(table, type_params, name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0201",
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0201,
                         format!("unknown type symbol '{name}'"),
                         span,
                     ));
@@ -97,12 +101,16 @@ impl Resolver {
             }
             AstType::Generic { name, type_args } => {
                 if let Some(gated) = gated_builtin_type_name(name) {
-                    diagnostics.push(Diagnostic::error("E0202", gated.gate_message(), span));
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0202,
+                        gated.gate_message(),
+                        span,
+                    ));
                     return;
                 }
                 if !self.is_known_type_name(table, type_params, name) {
-                    diagnostics.push(Diagnostic::error(
-                        "E0201",
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0201,
                         format!("unknown type symbol '{name}'"),
                         span,
                     ));
@@ -147,8 +155,8 @@ impl Resolver {
             }
             AstType::SelfType => {
                 if !allow_self_type {
-                    diagnostics.push(Diagnostic::error(
-                        "E0204",
+                    diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0204,
                         "Self type is only valid in method or behavior contexts",
                         span,
                     ));

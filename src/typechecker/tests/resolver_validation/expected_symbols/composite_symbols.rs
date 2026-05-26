@@ -2,12 +2,7 @@ use super::*;
 
 #[test]
 fn expected_behavior_symbol_builds_type_like_and_methods_together() {
-    let type_params = vec![ast::TypeParam {
-        name: "T".to_string(),
-        constraint: None,
-        constraint_type_args: vec![],
-        span: Span::dummy(),
-    }];
+    let type_params = vec![unbounded_type_param("T")];
     let methods = vec![ast::BehaviorMethod {
         name: "encode".to_string(),
         params: vec![Param {
@@ -41,12 +36,7 @@ fn expected_behavior_symbol_builds_type_like_and_methods_together() {
 
 #[test]
 fn expected_struct_symbol_builds_type_like_and_fields_together() {
-    let type_params = vec![ast::TypeParam {
-        name: "T".to_string(),
-        constraint: None,
-        constraint_type_args: vec![],
-        span: Span::dummy(),
-    }];
+    let type_params = vec![unbounded_type_param("T")];
     let fields = vec![StructField {
         name: "value".to_string(),
         ty: AstType::Named("T".to_string()),
@@ -71,12 +61,7 @@ fn expected_struct_symbol_builds_type_like_and_fields_together() {
 
 #[test]
 fn expected_enum_symbol_builds_type_like_and_variants_together() {
-    let type_params = vec![ast::TypeParam {
-        name: "T".to_string(),
-        constraint: None,
-        constraint_type_args: vec![],
-        span: Span::dummy(),
-    }];
+    let type_params = vec![unbounded_type_param("T")];
     let variants = vec![
         EnumVariant {
             name: "Some".to_string(),

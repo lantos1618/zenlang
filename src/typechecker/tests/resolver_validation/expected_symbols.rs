@@ -3,6 +3,24 @@ use super::*;
 mod composite_symbols;
 mod leaf_symbols;
 
+fn unbounded_type_param(name: &str) -> ast::TypeParam {
+    ast::TypeParam {
+        name: name.to_string(),
+        constraint: None,
+        constraint_type_args: vec![],
+        span: Span::dummy(),
+    }
+}
+
+fn bounded_type_param(name: &str, behavior: &str, type_args: Vec<AstType>) -> ast::TypeParam {
+    ast::TypeParam {
+        name: name.to_string(),
+        constraint: Some(behavior.to_string()),
+        constraint_type_args: type_args,
+        span: Span::dummy(),
+    }
+}
+
 #[test]
 fn expected_parameter_builds_name_display_and_type_together() {
     let parameter = ExpectedParameter::new(
@@ -37,12 +55,7 @@ fn expected_return_metadata_defaults_and_displays_together() {
 
 #[test]
 fn expected_type_parameter_builds_bound_display_and_ref_together() {
-    let type_param = ast::TypeParam {
-        name: "T".to_string(),
-        constraint: Some("Json".to_string()),
-        constraint_type_args: vec![AstType::Named("T".to_string())],
-        span: Span::dummy(),
-    };
+    let type_param = bounded_type_param("T", "Json", vec![AstType::Named("T".to_string())]);
 
     let expected = ExpectedTypeParameter::new(&type_param);
     let bound = expected.bound.expect("expected bound");
@@ -155,12 +168,11 @@ fn expected_value_signature_builds_components_together() {
         span: Span::dummy(),
     }];
     let return_type = Some(AstType::Named("T".to_string()));
-    let type_params = vec![ast::TypeParam {
-        name: "T".to_string(),
-        constraint: Some("Json".to_string()),
-        constraint_type_args: vec![AstType::Named("T".to_string())],
-        span: Span::dummy(),
-    }];
+    let type_params = vec![bounded_type_param(
+        "T",
+        "Json",
+        vec![AstType::Named("T".to_string())],
+    )];
 
     let signature = ExpectedValueSignature::new(&params, &return_type, &type_params);
 
@@ -205,12 +217,11 @@ fn expected_value_symbol_builds_signature_and_visibility_together() {
 
 #[test]
 fn expected_type_like_symbol_builds_type_params_and_visibility_together() {
-    let type_params = vec![ast::TypeParam {
-        name: "T".to_string(),
-        constraint: Some("Json".to_string()),
-        constraint_type_args: vec![AstType::Named("T".to_string())],
-        span: Span::dummy(),
-    }];
+    let type_params = vec![bounded_type_param(
+        "T",
+        "Json",
+        vec![AstType::Named("T".to_string())],
+    )];
 
     let symbol = ExpectedTypeLikeSymbol::new(&type_params, Some(true));
 

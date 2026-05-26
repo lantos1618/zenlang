@@ -1,5 +1,6 @@
 mod behavior_impl_method_splits;
 mod build_graph_splits;
+mod cli_host_effect_splits;
 mod codegen_test_splits;
 mod core_semantics_splits;
 mod declaration_validation_splits;
@@ -10,6 +11,7 @@ mod generic_behavior_splits;
 mod integration_fixture_splits;
 mod integration_import_visibility_splits;
 mod lexer_and_monomorphize;
+mod lexer_token_spelling;
 mod module_system_splits;
 mod parser_enum_splits;
 mod parser_expression_splits;

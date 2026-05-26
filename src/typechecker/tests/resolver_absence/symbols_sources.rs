@@ -3,11 +3,11 @@ use super::*;
 #[test]
 fn resolver_symbol_presence_validation_formats_messages() {
     let extra = ResolverSymbolPresenceValidation {
-        code: "EXTRA",
+        code: "EXTRA".into(),
         presence: ResolverSymbolPresence::Extra,
     };
     let missing = ResolverSymbolPresenceValidation {
-        code: "MISSING",
+        code: "MISSING".into(),
         presence: ResolverSymbolPresence::Missing,
     };
 
@@ -30,19 +30,19 @@ fn resolver_symbol_presence_validation_uses_resolver_codes() {
     let extra_declaration = ResolverSymbolPresenceValidation::extra_declaration_resolver_code();
     let extra_local = ResolverSymbolPresenceValidation::extra_local_resolver_code();
 
-    assert_eq!(missing.code, "E0210");
+    assert_eq!(missing.code, "E7210");
     assert!(matches!(missing.presence, ResolverSymbolPresence::Missing));
-    assert_eq!(missing_local.code, "E0228");
+    assert_eq!(missing_local.code, "E7228");
     assert!(matches!(
         missing_local.presence,
         ResolverSymbolPresence::Missing
     ));
-    assert_eq!(extra_declaration.code, "E0243");
+    assert_eq!(extra_declaration.code, "E7243");
     assert!(matches!(
         extra_declaration.presence,
         ResolverSymbolPresence::Extra
     ));
-    assert_eq!(extra_local.code, "E0244");
+    assert_eq!(extra_local.code, "E7244");
     assert!(matches!(
         extra_local.presence,
         ResolverSymbolPresence::Extra
@@ -57,7 +57,7 @@ fn resolver_symbol_presence_validation_pushes_diagnostic() {
         "value",
         "main",
         ResolverSymbolPresenceValidation {
-            code: "EXTRA",
+            code: "EXTRA".into(),
             presence: ResolverSymbolPresence::Extra,
         },
         Span::dummy(),
@@ -73,7 +73,10 @@ fn resolver_symbol_presence_validation_pushes_diagnostic() {
 
 #[test]
 fn source_absence_validation_builds_source_validation() {
-    let validation = SourceAbsenceValidation { code: "SOURCE" }.source_validation();
+    let validation = SourceAbsenceValidation {
+        code: "SOURCE".into(),
+    }
+    .source_validation();
 
     assert_eq!(validation.code, "SOURCE");
     assert_eq!(validation.actual_missing, "none");
@@ -85,33 +88,33 @@ fn source_absence_validation_builds_source_validation() {
 fn source_absence_validation_uses_type_like_resolver_code() {
     let validation = SourceAbsenceValidation::type_like_resolver_code();
 
-    assert_eq!(validation.code, "E0309");
+    assert_eq!(validation.code, "E7309");
 }
 
 #[test]
 fn source_absence_validation_uses_variant_resolver_code() {
     let validation = SourceAbsenceValidation::variant_resolver_code();
 
-    assert_eq!(validation.code, "E0329");
+    assert_eq!(validation.code, "E7329");
 }
 
 #[test]
 fn source_absence_validation_uses_value_resolver_code() {
     let validation = SourceAbsenceValidation::value_resolver_code();
 
-    assert_eq!(validation.code, "E0297");
+    assert_eq!(validation.code, "E7297");
 }
 
 #[test]
 fn source_validation_formats_message() {
     let quoted = SourceValidation {
-        code: "SOURCE",
+        code: "SOURCE".into(),
         actual_missing: "unknown",
         expected_missing: "none",
         quote_expected: true,
     };
     let unquoted = SourceValidation {
-        code: "SOURCE",
+        code: "SOURCE".into(),
         actual_missing: "none",
         expected_missing: "none",
         quote_expected: false,
@@ -134,19 +137,19 @@ fn source_validation_uses_resolver_codes() {
     let import = SourceValidation::import_resolver_code();
     let local = SourceValidation::local_resolver_code();
 
-    assert_eq!(module.code, "E0230");
+    assert_eq!(module.code, "E7230");
     assert_eq!(module.actual_missing, "none");
     assert_eq!(module.expected_missing, "none");
     assert!(!module.quote_expected);
-    assert_eq!(stripped_import.code, "E0246");
+    assert_eq!(stripped_import.code, "E7246");
     assert_eq!(stripped_import.actual_missing, "unknown");
     assert_eq!(stripped_import.expected_missing, "a module source");
     assert!(!stripped_import.quote_expected);
-    assert_eq!(import.code, "E0227");
+    assert_eq!(import.code, "E7227");
     assert_eq!(import.actual_missing, "unknown");
     assert_eq!(import.expected_missing, "none");
     assert!(import.quote_expected);
-    assert_eq!(local.code, "E0248");
+    assert_eq!(local.code, "E7248");
     assert_eq!(local.actual_missing, "none");
     assert_eq!(local.expected_missing, "none");
     assert!(!local.quote_expected);
@@ -156,7 +159,7 @@ fn source_validation_uses_resolver_codes() {
 fn absent_metadata_entry_formats_message() {
     let entry = AbsentMetadataEntry {
         present: true,
-        code: "ABSENT",
+        code: "ABSENT".into(),
         label: "parameter count",
     };
 

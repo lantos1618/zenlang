@@ -63,8 +63,7 @@ fn parser_module_roots_use_owned_root_enum() {
     for required in [
         "enum ParserModuleRoot",
         "const ALL: &[ParserModuleRoot]",
-        "impl FromStr for ParserModuleRoot",
-        ".find(|root| root.as_str() == value)",
+        "use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT};",
         "ParserModuleRoot::AtBuiltin.as_str().to_string()",
         "ParserModuleRoot::AtStd.join_module_parts(&module_parts)",
     ] {
@@ -76,6 +75,11 @@ fn parser_module_roots_use_owned_root_enum() {
             "parser module root spelling should live in ParserModuleRoot: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserModuleRoot")
+            && uses_static_spelling_parser(&keywords),
+        "parser module root spelling should use shared static spelling parsing"
+    );
 }
 
 #[test]
@@ -97,8 +101,6 @@ fn parser_mutability_keywords_use_owned_keyword_enum() {
     for required in [
         "enum ParserMutabilityKeyword",
         "const ALL: &[ParserMutabilityKeyword]",
-        "impl FromStr for ParserMutabilityKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
         "self.consume_mutability_keyword()",
     ] {
         assert!(
@@ -108,6 +110,11 @@ fn parser_mutability_keywords_use_owned_keyword_enum() {
             "parser mutability spelling should live in ParserMutabilityKeyword: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserMutabilityKeyword")
+            && uses_static_spelling_parser(&keywords),
+        "parser mutability spelling should use shared static spelling parsing"
+    );
 }
 
 #[test]
@@ -132,8 +139,6 @@ fn parser_behavior_declaration_keyword_uses_owned_keyword_enum() {
     for required in [
         "enum ParserBehaviorKeyword",
         "const ALL: &[ParserBehaviorKeyword]",
-        "impl FromStr for ParserBehaviorKeyword",
-        ".find(|keyword| keyword.as_str() == value)",
         "keyword.parse::<ParserBehaviorKeyword>()",
         "ParserBehaviorKeyword::Behavior.as_str()",
     ] {
@@ -144,4 +149,9 @@ fn parser_behavior_declaration_keyword_uses_owned_keyword_enum() {
             "parser behavior declaration spelling should live in ParserBehaviorKeyword: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&keywords, "ParserBehaviorKeyword")
+            && uses_static_spelling_parser(&keywords),
+        "parser behavior declaration spelling should use shared static spelling parsing"
+    );
 }

@@ -1,5 +1,4 @@
 use super::ParserThisMethod;
-use std::str::FromStr;
 
 impl ParserThisMethod {
     const ALL: &[ParserThisMethod] = &[ParserThisMethod::Defer];
@@ -13,14 +12,8 @@ impl ParserThisMethod {
     }
 }
 
-impl FromStr for ParserThisMethod {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|method| method.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    ParserThisMethod,
+    variants = ParserThisMethod::ALL,
+    as_str = ParserThisMethod::as_str
+);

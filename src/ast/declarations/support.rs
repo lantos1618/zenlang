@@ -2,8 +2,6 @@ use crate::ast::expressions::Expression;
 use crate::ast::types::{AstType, Param};
 use crate::error::Span;
 use serde::Serialize;
-use std::fmt;
-use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum TypeDeclarationKeyword {
@@ -39,23 +37,15 @@ impl TypeDeclarationKeyword {
     }
 }
 
-impl fmt::Display for TypeDeclarationKeyword {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for TypeDeclarationKeyword {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|keyword| keyword.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    TypeDeclarationKeyword,
+    as_str = TypeDeclarationKeyword::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(
+    TypeDeclarationKeyword,
+    variants = TypeDeclarationKeyword::ALL,
+    as_str = TypeDeclarationKeyword::as_str
+);
 
 /// A field in a struct definition.
 #[derive(Debug, Clone, PartialEq, Serialize)]

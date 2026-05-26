@@ -141,15 +141,13 @@ Task.new = (entry: i64, arg: i64, allocator: Allocator) Result<Task, i32> {
 task_entry_trampoline = () void {
     // Get task pointer from stack (set up in Task.new)
     // This is architecture-specific - we need inline assembly here
-    // For now, use a simplified model where entry is called directly
-
     // In a real implementation, this would:
     // 1. Read task pointer from known stack location
     // 2. Call task.entry_fn(task.entry_arg)
     // 3. Mark task as Completed
     // 4. Yield to scheduler
 
-    compiler.trap()  // Placeholder - real impl needs asm
+    compiler.trap()  // Traps until the task trampoline is backed by assembly.
 }
 
 // ============================================================================
@@ -162,7 +160,6 @@ task_entry_trampoline = () void {
 // The function signature is:
 //   context_switch(old: Ptr<TaskContext>, new: Ptr<TaskContext>)
 
-// For now, provide a stub that documents what needs to happen
 context_switch = (old_ctx: i64, new_ctx: i64) void {
     // In assembly, this would:
     //
@@ -190,7 +187,7 @@ context_switch = (old_ctx: i64, new_ctx: i64) void {
     // .resume_point:
     //    ret
 
-    // Stub implementation - will be replaced with intrinsic
+    // Traps until context switching is backed by assembly or an intrinsic.
     compiler.trap()
 }
 

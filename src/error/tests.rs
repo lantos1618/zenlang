@@ -62,7 +62,25 @@ fn diagnostic_error_constructor() {
     let d = Diagnostic::error("E1001", "unterminated string", Span::new(0, 5, 10));
     assert_eq!(d.severity, Severity::Error);
     assert_eq!(d.code, "E1001");
+    assert_eq!(d.slug, "raw_e1001");
+    assert_eq!(d.phase, DiagnosticPhase::Unknown);
+    assert_eq!(d.category, DiagnosticCategory::Unknown);
     assert!(d.is_error());
+}
+
+#[test]
+fn diagnostic_error_code_constructor_uses_descriptor_metadata() {
+    let d = Diagnostic::error_code(
+        ResolverContractCode::E0233,
+        "missing module graph module",
+        Span::new(0, 5, 10),
+    );
+    assert_eq!(d.severity, Severity::Error);
+    assert_eq!(d.code, "E7233");
+    assert_eq!(d.slug, "resolver_contract_e7233");
+    assert_eq!(d.phase, DiagnosticPhase::ResolverContract);
+    assert_eq!(d.category, DiagnosticCategory::ResolverContract);
+    assert_eq!(d.docs_path, "docs/DIAGNOSTICS.md#resolver-contract");
 }
 
 #[test]
@@ -103,5 +121,89 @@ fn compile_error_to_diagnostic() {
     let d: Diagnostic = e.into();
     assert_eq!(d.severity, Severity::Error);
     assert_eq!(d.code, "E3000");
+    assert_eq!(d.slug, "type");
+    assert_eq!(d.phase, DiagnosticPhase::TypeChecker);
+    assert_eq!(d.category, DiagnosticCategory::Type);
     assert_eq!(d.span, Some(Span::new(1, 5, 10)));
+}
+
+#[test]
+fn diagnostic_code_registry_has_unique_numbers() {
+    let mut seen = std::collections::HashSet::new();
+
+    for code in DiagnosticCode::BASE {
+        let number = code.number();
+        assert!(
+            seen.insert(number.clone()),
+            "duplicate diagnostic code {number}"
+        );
+    }
+
+    for code in ResolverContractCode::ALL {
+        let diagnostic_code = DiagnosticCode::from(*code);
+        let number = diagnostic_code.number();
+        assert!(
+            seen.insert(number.clone()),
+            "duplicate diagnostic code {number}"
+        );
+    }
+
+    for code in CompilerDiagnosticCode::ALL {
+        let diagnostic_code = DiagnosticCode::from(*code);
+        let number = diagnostic_code.number();
+        assert!(
+            seen.insert(number.clone()),
+            "duplicate diagnostic code {number}"
+        );
+    }
+}
+
+#[test]
+fn diagnostic_protocol_views_keep_agent_lsp_and_dap_metadata() {
+    let mut files = FileTable::new();
+    let file_id = files.add_file(
+        "/tmp/main.zen".into(),
+        "main = () i32 {\n  false\n}\n".into(),
+    );
+    let diagnostic = Diagnostic::error_code(
+        DiagnosticCode::Type,
+        "return type mismatch: expected `i32`, found `bool`",
+        Span::new(file_id, 18, 23),
+    )
+    .with_related(Span::new(file_id, 0, 4), "function starts here")
+    .with_fact("expected", "i32")
+    .with_suggested_fix(SuggestedFix::new(
+        "replace_bool_with_i32",
+        "Replace bool with integer",
+        vec![TextEdit::new(Span::new(file_id, 18, 23), "0")],
+    ));
+    let diagnostics = vec![diagnostic];
+
+    let ai = diagnostics_for_ai(&diagnostics, &files);
+    assert_eq!(ai[0].slug, "type");
+    assert_eq!(ai[0].phase, "typechecker");
+    assert_eq!(ai[0].category, "type");
+    assert_eq!(ai[0].facts[0].key, "expected");
+    assert_eq!(ai[0].related[0].message, "function starts here");
+
+    let lsp = diagnostics_for_lsp(&diagnostics, &files);
+    assert_eq!(lsp[0].uri, "file:///tmp/main.zen");
+    assert_eq!(lsp[0].diagnostic.severity, 1);
+    assert_eq!(lsp[0].diagnostic.code, "E3000");
+    assert_eq!(lsp[0].diagnostic.data.slug, "type");
+    assert_eq!(lsp[0].diagnostic.related_information.len(), 1);
+    assert_eq!(
+        lsp[0].diagnostic.code_description.as_ref().unwrap().href,
+        "docs/DIAGNOSTICS.md#type-checking"
+    );
+
+    let actions = code_actions_for_lsp(&diagnostics, &files);
+    assert_eq!(actions[0].kind, "quickfix");
+    assert_eq!(actions[0].data.fix_kind, "replace_bool_with_i32");
+    assert_eq!(actions[0].edits[0].new_text, "0");
+
+    let dap = dap_launch_failure(&diagnostics, &files);
+    assert_eq!(dap.format, "zen.dap.diagnostics.v1");
+    assert!(dap.body.output.contains("error[E3000]"));
+    assert_eq!(dap.body.data.diagnostics[0].slug, "type");
 }

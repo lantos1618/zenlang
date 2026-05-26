@@ -124,8 +124,8 @@ impl TypeChecker {
         };
 
         if !self.types_compatible(&expected, &actual_ty) {
-            self.diagnostics.push(Diagnostic::error(
-                "E3073",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3073,
                 format!(
                     "field `{}` default expects `{}`, found `{}`",
                     field_name,

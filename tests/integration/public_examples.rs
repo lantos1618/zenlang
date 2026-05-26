@@ -12,6 +12,7 @@ fn public_examples_typecheck_through_cli() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
         "examples/project/math_utils.zen",
     ] {
@@ -74,6 +75,7 @@ fn public_runnable_examples_compile_through_cli() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
     ] {
         assert_zen_build_succeeds(path);
@@ -89,6 +91,7 @@ fn public_runnable_examples_execute_through_cli() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
     ] {
         assert_zen_build_and_run_succeeds(path);

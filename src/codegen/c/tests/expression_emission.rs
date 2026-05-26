@@ -66,41 +66,32 @@ fn emit_function_call() {
 #[test]
 fn emit_field_access() {
     let mut e = CEmitter::new();
-    let obj = Box::new(texpr(
-        TypedExprKind::Variable("p".into()),
-        Type::Struct {
-            name: "Point".into(),
-            fields: vec![],
-        },
-    ));
-    let expr = texpr(
-        TypedExprKind::FieldAccess {
-            object: obj,
-            field: "x".into(),
-        },
-        Type::I32,
-    );
+    let expr = field_access_expr(Type::Struct {
+        name: "Point".into(),
+        fields: vec![],
+    });
     assert_eq!(e.emit_expr_inline(&expr), "p.x");
 }
 
 #[test]
 fn emit_field_access_through_ptr() {
     let mut e = CEmitter::new();
-    let obj = Box::new(texpr(
-        TypedExprKind::Variable("p".into()),
-        Type::Ptr(Box::new(Type::Struct {
-            name: "Point".into(),
-            fields: vec![],
-        })),
-    ));
-    let expr = texpr(
+    let expr = field_access_expr(Type::Ptr(Box::new(Type::Struct {
+        name: "Point".into(),
+        fields: vec![],
+    })));
+    assert_eq!(e.emit_expr_inline(&expr), "p->x");
+}
+
+fn field_access_expr(object_type: Type) -> TypedExpression {
+    let object = Box::new(texpr(TypedExprKind::Variable("p".into()), object_type));
+    texpr(
         TypedExprKind::FieldAccess {
-            object: obj,
+            object,
             field: "x".into(),
         },
         Type::I32,
-    );
-    assert_eq!(e.emit_expr_inline(&expr), "p->x");
+    )
 }
 
 #[test]

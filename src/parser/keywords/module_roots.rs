@@ -1,16 +1,13 @@
 use super::ParserModuleRoot;
-use std::str::FromStr;
+use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT};
 
 impl ParserModuleRoot {
     const ALL: &[ParserModuleRoot] = &[ParserModuleRoot::AtBuiltin, ParserModuleRoot::AtStd];
 
-    const AT_BUILTIN: &'static str = "@builtin";
-    const AT_STD: &'static str = "@std";
-
     pub(in crate::parser) fn as_str(self) -> &'static str {
         match self {
-            Self::AtBuiltin => Self::AT_BUILTIN,
-            Self::AtStd => Self::AT_STD,
+            Self::AtBuiltin => AT_BUILTIN_ROOT,
+            Self::AtStd => AT_STD_ROOT,
         }
     }
 
@@ -23,14 +20,8 @@ impl ParserModuleRoot {
     }
 }
 
-impl FromStr for ParserModuleRoot {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|root| root.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    ParserModuleRoot,
+    variants = ParserModuleRoot::ALL,
+    as_str = ParserModuleRoot::as_str
+);

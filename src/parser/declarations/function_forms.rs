@@ -53,13 +53,7 @@ impl Parser {
         self.expect(&Token::RParen)?;
         self.skip_newlines();
 
-        // optional return type
-        let return_type = if !matches!(self.peek(), Token::LBrace) {
-            Some(self.parse_type()?)
-        } else {
-            None
-        };
-
+        let return_type = self.parse_optional_return_type_before_block()?;
         self.skip_newlines();
 
         // body block

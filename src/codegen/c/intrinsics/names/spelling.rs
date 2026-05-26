@@ -46,7 +46,6 @@ macro_rules! c_intrinsic_spellings {
             RawPtrOffset => "raw_ptr_offset",
             RawReallocate => "raw_reallocate",
             SetDiscriminant => "set_discriminant",
-            SetPayload => "set_payload",
             Sizeof => "sizeof",
             SitofpI64F64 => "sitofp_i64_f64",
             StaticStringPtr => "static_string_ptr",

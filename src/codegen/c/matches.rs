@@ -13,27 +13,10 @@ impl CEmitter {
                 self.emit_conditional(scrutinee, arms, result_var);
             }
             MatchKind::WhileLoop => {
-                let cond = self.emit_expr_inline(scrutinee);
-                self.line(&format!("while ({}) {{", cond));
-                self.indent();
-                if let Some(arm) = arms.first() {
-                    self.emit_block_body(&arm.body);
-                }
-                self.dedent();
-                self.line("}");
+                self.emit_loop_match(scrutinee, arms, None);
             }
             MatchKind::ControlledLoop { label } => {
-                let cond = self.emit_expr_inline(scrutinee);
-                self.line(&format!("while ({}) {{", cond));
-                self.indent();
-                if let Some(arm) = arms.first() {
-                    self.emit_block_body(&arm.body);
-                }
-                self.line(&format!("{label}_next:"));
-                self.line("continue;");
-                self.dedent();
-                self.line("}");
-                self.line(&format!("{label}_done:;"));
+                self.emit_loop_match(scrutinee, arms, Some(label));
             }
             MatchKind::EnumMatch => {
                 self.emit_enum_match(scrutinee, arms, result_var);
@@ -41,6 +24,29 @@ impl CEmitter {
             MatchKind::ValueMatch => {
                 self.emit_value_match(scrutinee, arms, result_var);
             }
+        }
+    }
+
+    fn emit_loop_match(
+        &mut self,
+        scrutinee: &TypedExpression,
+        arms: &[TypedMatchArm],
+        control_label: Option<&str>,
+    ) {
+        let cond = self.emit_expr_inline(scrutinee);
+        self.line(&format!("while ({}) {{", cond));
+        self.indent();
+        if let Some(arm) = arms.first() {
+            self.emit_block_body(&arm.body);
+        }
+        if let Some(label) = control_label {
+            self.line(&format!("{label}_next:"));
+            self.line("continue;");
+        }
+        self.dedent();
+        self.line("}");
+        if let Some(label) = control_label {
+            self.line(&format!("{label}_done:;"));
         }
     }
 
@@ -56,33 +62,20 @@ impl CEmitter {
         for arm in arms {
             match &arm.pattern {
                 TypedPattern::Bool(true) => {
-                    if first {
-                        self.line(&format!("if ({}) {{", cond));
-                        first = false;
-                    } else {
-                        self.line(&format!("else if ({}) {{", cond));
-                    }
+                    self.emit_match_if_branch_open(&mut first, &cond);
                 }
                 TypedPattern::Bool(false) => {
                     self.line("else {");
                 }
                 TypedPattern::Wildcard => {
-                    if first {
-                        self.line("{");
-                        first = false;
-                    } else {
-                        self.line("else {");
-                    }
+                    self.emit_match_fallback_branch_open(&mut first);
                 }
                 _ => {
-                    self.line(&format!("if ({}) {{", cond));
+                    self.line(&format!("if ({cond}) {{"));
                     first = false;
                 }
             }
-            self.indent();
-            self.emit_block_body_with_result(&arm.body, result_var);
-            self.dedent();
-            self.line("}");
+            self.emit_match_result_branch_body(&arm.body, result_var);
         }
     }
 
@@ -115,18 +108,12 @@ impl CEmitter {
                             c_ident(variant).to_lowercase()
                         ));
                     }
-                    self.emit_block_body_with_result(&arm.body, result_var);
-                    self.line("break;");
-                    self.dedent();
-                    self.line("}");
+                    self.emit_switch_match_arm_body(&arm.body, result_var);
                 }
                 TypedPattern::Wildcard => {
                     self.line("default: {");
                     self.indent();
-                    self.emit_block_body_with_result(&arm.body, result_var);
-                    self.line("break;");
-                    self.dedent();
-                    self.line("}");
+                    self.emit_switch_match_arm_body(&arm.body, result_var);
                 }
                 _ => {}
             }
@@ -147,30 +134,49 @@ impl CEmitter {
             match &arm.pattern {
                 TypedPattern::Value(val) => {
                     let v = self.emit_expr_inline(val);
-                    if first {
-                        self.line(&format!("if ({} == {}) {{", scrut, v));
-                        first = false;
-                    } else {
-                        self.line(&format!("else if ({} == {}) {{", scrut, v));
-                    }
+                    self.emit_match_if_branch_open(&mut first, &format!("{scrut} == {v}"));
                 }
                 TypedPattern::Wildcard => {
                     self.line("else {");
                 }
                 _ => {
-                    if first {
-                        self.line("{");
-                        first = false;
-                    } else {
-                        self.line("else {");
-                    }
+                    self.emit_match_fallback_branch_open(&mut first);
                 }
             }
-            self.indent();
-            self.emit_block_body_with_result(&arm.body, result_var);
-            self.dedent();
-            self.line("}");
+            self.emit_match_result_branch_body(&arm.body, result_var);
         }
+    }
+
+    fn emit_match_if_branch_open(&mut self, first: &mut bool, condition: &str) {
+        if *first {
+            self.line(&format!("if ({condition}) {{"));
+            *first = false;
+        } else {
+            self.line(&format!("else if ({condition}) {{"));
+        }
+    }
+
+    fn emit_match_fallback_branch_open(&mut self, first: &mut bool) {
+        if *first {
+            self.line("{");
+            *first = false;
+        } else {
+            self.line("else {");
+        }
+    }
+
+    fn emit_switch_match_arm_body(&mut self, block: &TypedBlock, result_var: Option<&str>) {
+        self.emit_block_body_with_result(block, result_var);
+        self.line("break;");
+        self.dedent();
+        self.line("}");
+    }
+
+    fn emit_match_result_branch_body(&mut self, block: &TypedBlock, result_var: Option<&str>) {
+        self.indent();
+        self.emit_block_body_with_result(block, result_var);
+        self.dedent();
+        self.line("}");
     }
 
     fn emit_block_body_with_result(&mut self, block: &TypedBlock, result_var: Option<&str>) {

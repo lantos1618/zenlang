@@ -22,23 +22,18 @@ impl TypeChecker {
         behavior: &str,
         behavior_type_args: &[AstType],
     ) -> Option<BehaviorRefMetadata> {
-        match role {
-            BehaviorRefRole::Impl => Self::pop_resolver_behavior_ref(
-                self.resolver_backed_collection,
-                &mut self.resolver_behavior_impl_refs,
-                type_name,
-                behavior,
-                behavior_type_args,
-            ),
-            BehaviorRefRole::Required => Self::pop_resolver_behavior_ref(
-                self.resolver_backed_collection,
-                &mut self.resolver_behavior_required_refs,
-                type_name,
-                behavior,
-                behavior_type_args,
-            ),
-            BehaviorRefRole::Parent => None,
-        }
+        let refs_by_type = match role {
+            BehaviorRefRole::Impl => &mut self.resolver_behavior_impl_refs,
+            BehaviorRefRole::Required => &mut self.resolver_behavior_required_refs,
+            BehaviorRefRole::Parent => return None,
+        };
+        Self::pop_resolver_behavior_ref(
+            self.resolver_backed_collection,
+            refs_by_type,
+            type_name,
+            behavior,
+            behavior_type_args,
+        )
     }
 
     pub(in crate::typechecker) fn behavior_ref_parts<'a>(

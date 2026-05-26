@@ -27,8 +27,8 @@ impl TypeChecker {
                 existing.key == behavior_ref.key
             }
         }) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6003",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6003,
                 format!(
                     "duplicate implementation of behavior `{}` for generic type `{}`",
                     behavior_ref.key,
@@ -42,8 +42,8 @@ impl TypeChecker {
         if let Some(existing) =
             self.find_overlapping_generic_behavior_impl(type_name, &behavior_ref)
         {
-            self.diagnostics.push(Diagnostic::error(
-                "E6010",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6010,
                 format!(
                     "overlapping implementations of behaviors `{}` and `{}` for generic type `{}`",
                     existing,

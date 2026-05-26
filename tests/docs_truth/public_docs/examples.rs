@@ -12,6 +12,7 @@ fn examples_index_uses_canonical_tutorial_and_project_paths() {
         "examples/04_structs_and_methods.zen",
         "examples/05_loops.zen",
         "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
         "examples/project/main.zen",
         "examples/project/test.zen",
     ] {
@@ -61,6 +62,7 @@ fn examples_directory_contains_only_canonical_public_examples() {
             "04_structs_and_methods.zen",
             "05_loops.zen",
             "06_error_handling.zen",
+            "07_behaviors_and_generics.zen",
             "README.md",
             "project",
         ],
@@ -83,4 +85,47 @@ fn stale_generated_tooling_directories_are_removed() {
             "{path} should not exist; stale generated tooling/examples/build outputs should stay out of the repo"
         );
     }
+}
+
+#[test]
+fn public_examples_do_not_explain_implementation_stand_ins() {
+    for path in [
+        "examples/01_hello_world.zen",
+        "examples/02_variables_and_types.zen",
+        "examples/03_pattern_matching.zen",
+        "examples/04_structs_and_methods.zen",
+        "examples/05_loops.zen",
+        "examples/06_error_handling.zen",
+        "examples/07_behaviors_and_generics.zen",
+        "examples/project/main.zen",
+        "examples/project/math_utils.zen",
+        "examples/project/test.zen",
+        "examples/project/build.zen",
+    ] {
+        let source = read(path);
+        assert!(
+            !source.contains("stand-in"),
+            "{path} should teach the language surface without implementation stand-in wording"
+        );
+    }
+}
+
+#[test]
+fn public_hello_example_is_not_a_test_fixture_clone() {
+    let public_example = normalized_zen_source(&read("examples/01_hello_world.zen"));
+    let test_fixture = normalized_zen_source(&read("tests/zen/hello.zen"));
+
+    assert_ne!(
+        public_example, test_fixture,
+        "public hello example should not be a duplicate of the internal hello fixture"
+    );
+}
+
+fn normalized_zen_source(source: &str) -> String {
+    source
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

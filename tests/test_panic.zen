@@ -1,5 +1,0 @@
-// Test panic intrinsic
-
-main = () void {
-    @builtin.panic("This is a test panic!")
-}

@@ -1,4 +1,4 @@
-use zen::error::{CompileError, Diagnostic, FileTable, Severity};
+use zen::error::{CompileError, Diagnostic, FileTable};
 
 pub(super) fn print_errors(errs: &[CompileError], files: &FileTable) {
     for err in errs {
@@ -8,29 +8,15 @@ pub(super) fn print_errors(errs: &[CompileError], files: &FileTable) {
 }
 
 pub(super) fn print_diagnostic(diag: &Diagnostic, files: &FileTable) {
-    let severity = match diag.severity {
-        Severity::Error => "error",
-        Severity::Warning => "warning",
-        Severity::Info => "info",
-        Severity::Hint => "hint",
-    };
-
     if let Some(span) = diag.span {
         let path = files.get_path(span.file_id).unwrap_or("<unknown>");
         if let Some((line, col)) = files.line_col(span.file_id, span.start) {
-            eprintln!(
-                "{}:{}:{}: {}: {}",
-                path,
-                line + 1,
-                col + 1,
-                severity,
-                diag.message
-            );
+            eprintln!("{}:{}:{}: {}", path, line + 1, col + 1, diag);
         } else {
-            eprintln!("{}: {}: {}", path, severity, diag.message);
+            eprintln!("{}: {}", path, diag);
         }
     } else {
-        eprintln!("{}: {}", severity, diag.message);
+        eprintln!("{diag}");
     }
 
     for label in &diag.labels {

@@ -9,18 +9,7 @@ impl Parser {
         self.skip_newlines();
         self.expect(&Token::Assign)?;
         self.skip_newlines();
-        self.expect(&Token::LBrace)?;
-
-        let mut methods = Vec::new();
-        loop {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::RBrace) {
-                break;
-            }
-            let decl = self.parse_declaration()?;
-            methods.push(decl);
-        }
-        let end = self.expect(&Token::RBrace)?;
+        let (methods, end) = self.parse_impl_block_methods(&[])?;
 
         Ok(Declaration::ImplBlock {
             type_name,
@@ -41,19 +30,7 @@ impl Parser {
         self.skip_newlines();
         self.expect(&Token::Assign)?;
         self.skip_newlines();
-        self.expect(&Token::LBrace)?;
-
-        let mut methods = Vec::new();
-        loop {
-            self.skip_newlines();
-            if matches!(self.peek(), Token::RBrace) {
-                break;
-            }
-            let mut decl = self.parse_declaration()?;
-            Self::prepend_impl_type_params(&mut decl, &type_params);
-            methods.push(decl);
-        }
-        let end = self.expect(&Token::RBrace)?;
+        let (methods, end) = self.parse_impl_block_methods(&type_params)?;
 
         Ok(Declaration::ImplBlock {
             type_name,
@@ -63,6 +40,27 @@ impl Parser {
             methods,
             span: name_span.merge(end),
         })
+    }
+
+    pub(in crate::parser) fn parse_impl_block_methods(
+        &mut self,
+        type_params: &[TypeParam],
+    ) -> Result<(Vec<Declaration>, Span), CompileError> {
+        self.expect(&Token::LBrace)?;
+
+        let mut methods = Vec::new();
+        loop {
+            self.skip_newlines();
+            if matches!(self.peek(), Token::RBrace) {
+                break;
+            }
+            let mut method = self.parse_declaration()?;
+            Self::prepend_impl_type_params(&mut method, type_params);
+            methods.push(method);
+        }
+        let end = self.expect(&Token::RBrace)?;
+
+        Ok((methods, end))
     }
 
     pub(super) fn prepend_impl_type_params(decl: &mut Declaration, impl_type_params: &[TypeParam]) {

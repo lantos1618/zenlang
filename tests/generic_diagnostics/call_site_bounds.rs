@@ -27,11 +27,11 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("type `Point` does not implement behavior `Json` required by `T`")),
-        "expected generic function bound diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E6004",
+        "type `Point` does not implement behavior `Json` required by `T`",
+        "generic function bound",
     );
     assert!(
         errors

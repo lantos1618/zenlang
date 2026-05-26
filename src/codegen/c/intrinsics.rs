@@ -166,17 +166,6 @@ impl CEmitter {
                 // Payload sits after the discriminant (4 bytes, aligned)
                 format!("((uint8_t*)({}) + sizeof(int32_t))", val)
             }
-            CIntrinsic::SetPayload => {
-                let ptr = self.emit_expr_inline(&args[0]);
-                let payload = self.emit_expr_inline(&args[1]);
-                // This is a raw byte copy; caller must know the size.
-                // For now emit a memcpy placeholder — the typechecker
-                // should provide size info in practice.
-                format!(
-                    "(memcpy((uint8_t*)({}) + sizeof(int32_t), {}, 0), (void)0)",
-                    ptr, payload
-                )
-            }
             _ => unreachable!("syscall intrinsic should be handled before category lowering"),
         }
     }

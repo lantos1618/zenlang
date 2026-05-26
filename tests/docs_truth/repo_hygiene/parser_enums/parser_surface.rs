@@ -36,15 +36,16 @@ fn parser_type_declaration_suffixes_use_owned_keyword_enum() {
         );
     }
 
-    for required in [
-        "pub const ALL: &[TypeDeclarationKeyword]",
-        ".find(|keyword| keyword.as_str() == value)",
-    ] {
+    for required in ["pub const ALL: &[TypeDeclarationKeyword]"] {
         assert!(
             ast_declaration_support.contains(required),
             "TypeDeclarationKeyword spelling should parse through its static table: {required}"
         );
     }
+    assert!(
+        uses_static_spelling_parser(&ast_declaration_support),
+        "TypeDeclarationKeyword spelling should parse through shared static spelling glue"
+    );
 }
 
 #[test]

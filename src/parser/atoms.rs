@@ -11,36 +11,9 @@ impl Parser {
         self.skip_newlines();
         match self.peek().clone() {
             // Unary operators
-            Token::Minus => {
-                let (_, span) = self.advance();
-                let operand = self.parse_expr_bp(prefix_bp())?;
-                let s = span.merge(operand.span());
-                Ok(Expression::UnaryOp {
-                    op: UnaryOp::Neg,
-                    operand: Box::new(operand),
-                    span: s,
-                })
-            }
-            Token::Not => {
-                let (_, span) = self.advance();
-                let operand = self.parse_expr_bp(prefix_bp())?;
-                let s = span.merge(operand.span());
-                Ok(Expression::UnaryOp {
-                    op: UnaryOp::Not,
-                    operand: Box::new(operand),
-                    span: s,
-                })
-            }
-            Token::Tilde => {
-                let (_, span) = self.advance();
-                let operand = self.parse_expr_bp(prefix_bp())?;
-                let s = span.merge(operand.span());
-                Ok(Expression::UnaryOp {
-                    op: UnaryOp::BitNot,
-                    operand: Box::new(operand),
-                    span: s,
-                })
-            }
+            Token::Minus => self.parse_unary_prefix(UnaryOp::Neg),
+            Token::Not => self.parse_unary_prefix(UnaryOp::Not),
+            Token::Tilde => self.parse_unary_prefix(UnaryOp::BitNot),
 
             // Literals
             Token::IntLiteral(_) => {
@@ -187,5 +160,16 @@ impl Parser {
                 ))
             }
         }
+    }
+
+    fn parse_unary_prefix(&mut self, op: UnaryOp) -> Result<Expression, CompileError> {
+        let (_, op_span) = self.advance();
+        let operand = self.parse_expr_bp(prefix_bp())?;
+        let span = op_span.merge(operand.span());
+        Ok(Expression::UnaryOp {
+            op,
+            operand: Box::new(operand),
+            span,
+        })
     }
 }

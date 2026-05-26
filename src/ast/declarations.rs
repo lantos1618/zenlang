@@ -105,7 +105,7 @@ pub enum Declaration {
     /// Top-level expression.
     TopLevelExpr { expr: Expression, span: Span },
 
-    /// Error recovery placeholder — allows parser to continue after errors.
+    /// Error recovery node that allows parsing to continue after errors.
     Error { span: Span },
 }
 

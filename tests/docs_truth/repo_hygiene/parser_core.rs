@@ -61,11 +61,7 @@ fn parser_pratt_infix_lives_in_focused_helper() {
     let expressions = read("src/parser/expressions.rs");
     let infix = read("src/parser/expressions/infix.rs");
 
-    for helper in [
-        "fn parse_infix_or_range_expr",
-        "enum InfixParse",
-        "fn binary_op_for_token",
-    ] {
+    for helper in ["fn parse_infix_or_range_expr", "enum InfixParse"] {
         assert!(
             !expressions.contains(helper),
             "parser expression root should not own Pratt infix helper: {helper}"
@@ -75,6 +71,14 @@ fn parser_pratt_infix_lives_in_focused_helper() {
             "Pratt infix helper should live in focused helper: {helper}"
         );
     }
+    assert!(
+        !infix.contains("fn binary_op_for_token"),
+        "Pratt infix helper should not keep a second token-to-binary-op table"
+    );
+    assert!(
+        infix.contains("infix_operator(self.peek())"),
+        "Pratt infix helper should use unified operator metadata"
+    );
 
     for forbidden in [
         "REMOVED_AS_CAST_L_BP",
@@ -95,5 +99,28 @@ fn parser_pratt_infix_lives_in_focused_helper() {
     assert!(
         expressions.lines().count() < 220,
         "parser expression root should stay focused on Pratt dispatch"
+    );
+}
+
+#[test]
+fn parser_type_argument_lists_have_one_parser() {
+    let types = read("src/parser/types.rs");
+    let block_helpers = read("src/parser/block_helpers.rs");
+
+    assert!(
+        block_helpers.contains("fn parse_type_arg_list"),
+        "shared parser helper should own type argument list parsing"
+    );
+    assert!(
+        types.contains("self.parse_type_arg_list()?"),
+        "type-name parsing should reuse the shared type argument list parser"
+    );
+    assert!(
+        !types.contains("fn parse_generic_type_args"),
+        "types.rs should not duplicate type argument list parsing"
+    );
+    assert!(
+        !types.contains("expected `,` or `>` in type argument list"),
+        "type argument diagnostics should be emitted from the shared list parser"
     );
 }

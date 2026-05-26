@@ -20,8 +20,9 @@ fn typechecker_root_imports_use_static_root_enum() {
 
     for required in [
         "enum RootImportPath",
-        "const STD: &'static str = \"std\"",
-        "const AT_STD: &'static str = \"@std\"",
+        "use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};",
+        "Self::Std => STD_ROOT",
+        "Self::AtStd => AT_STD_ROOT",
         "const ALL: &[RootImportPath]",
         "impl fmt::Display for RootImportPath",
         ".find(|root| root.matches_path(path))",
@@ -36,8 +37,8 @@ fn typechecker_root_imports_use_static_root_enum() {
 
 #[test]
 fn typechecker_imported_method_seeding_lives_in_focused_helper() {
-    let dependencies = read("src/typechecker/resolver_validation/imports_source_dependencies.rs");
-    let seeding = read("src/typechecker/resolver_validation/imported_method_seeding.rs");
+    let dependencies = read("src/typechecker/resolver_contract/imports_source_dependencies.rs");
+    let seeding = read("src/typechecker/resolver_contract/imported_method_seeding.rs");
 
     for helper in [
         "seed_imported_method_with_dependencies",
@@ -54,9 +55,9 @@ fn typechecker_imported_method_seeding_lives_in_focused_helper() {
         );
     }
 
-    let root = read("src/typechecker/resolver_validation.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
     assert!(
-        root.contains("include!(\"resolver_validation/imported_method_seeding.rs\");"),
+        root.contains("include!(\"resolver_contract/imported_method_seeding.rs\");"),
         "resolver validation should include focused imported method seeding"
     );
 }

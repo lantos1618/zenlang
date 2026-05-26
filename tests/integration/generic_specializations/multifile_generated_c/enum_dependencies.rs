@@ -2,156 +2,157 @@ use super::*;
 
 #[test]
 fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols() {
-    let c_source =
-        compile_to_c_with_generated_call_check(&test_dir().join("multi_file_generic/main.zen"));
-    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
-    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
-    assert!(c_source.contains("int32_t unwrap_option_i32(Option_i32 value, int32_t fallback)"));
-    assert!(c_source.contains(
-        "int32_t unwrap_result_i32_StaticString(Result_i32_StaticString value, int32_t fallback)"
-    ));
-    assert!(c_source.contains("unwrap_option_i32(some, 0LL)"));
-    assert!(c_source.contains("unwrap_result_i32_StaticString(err, 9LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_option_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_result_i32_StaticString");
-    assert!(!c_source.contains("Option_T"));
-    assert!(!c_source.contains("Result_T"));
-    assert!(!c_source.contains("T unwrap_option"));
-    assert!(!c_source.contains("T unwrap_result"));
-    assert!(!c_source.contains("unwrap_option(some"));
-    assert!(!c_source.contains("unwrap_result(err"));
+    compile_to_c_with_specialization_check(
+        &test_dir().join("multi_file_generic/main.zen"),
+        &[
+            "typedef struct Option_i32 Option_i32;",
+            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
+            "int32_t unwrap_option_i32(Option_i32 value, int32_t fallback)",
+            "int32_t unwrap_result_i32_StaticString(Result_i32_StaticString value, int32_t fallback)",
+            "unwrap_option_i32(some, 0LL)",
+            "unwrap_result_i32_StaticString(err, 9LL)",
+        ],
+        &["unwrap_option_i32", "unwrap_result_i32_StaticString"],
+        &[
+            "Option_T",
+            "Result_T",
+            "T unwrap_option",
+            "T unwrap_result",
+            "unwrap_option(some",
+            "unwrap_result(err",
+        ],
+    );
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_enum_method/main.zen"),
+        &[
+            "typedef struct Option_i32 Option_i32;",
+            "int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)",
+            "Option_unwrap_or_i32(some, 0LL)",
+            "Option_unwrap_or_i32(none, 89LL)",
+        ],
+        &["Option_unwrap_or_i32"],
+        &["Option_T", "T Option_unwrap_or", "Option_unwrap_or(some"],
     );
-    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
-    assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
-    assert!(c_source.contains("Option_unwrap_or_i32(some, 0LL)"));
-    assert!(c_source.contains("Option_unwrap_or_i32(none, 89LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
-    assert!(!c_source.contains("Option_T"));
-    assert!(!c_source.contains("T Option_unwrap_or"));
-    assert!(!c_source.contains("Option_unwrap_or(some"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_result_enum_method/main.zen"),
+        &[
+            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
+            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
+            "Result_unwrap_or_i32_StaticString(ok, 0LL)",
+            "Result_unwrap_or_i32_StaticString(err, 144LL)",
+        ],
+        &["Result_unwrap_or_i32_StaticString"],
+        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
     );
-    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
-    assert!(c_source.contains(
-        "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)"
-    ));
-    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok, 0LL)"));
-    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err, 144LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_i32_StaticString");
-    assert!(!c_source.contains("Result_T"));
-    assert!(!c_source.contains("T Result_unwrap_or"));
-    assert!(!c_source.contains("Result_unwrap_or(err"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_result_enum_multi_specialization/main.zen"),
+        &[
+            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
+            "typedef struct Result_bool_StaticString Result_bool_StaticString;",
+            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
+            "bool Result_unwrap_or_bool_StaticString(Result_bool_StaticString self, bool fallback)",
+            "Result_unwrap_or_i32_StaticString(ok_int, 0LL)",
+            "Result_unwrap_or_i32_StaticString(err_int, 144LL)",
+            "Result_unwrap_or_bool_StaticString(ok_bool, true)",
+            "Result_unwrap_or_bool_StaticString(err_bool, true)",
+        ],
+        &[
+            "Result_unwrap_or_i32_StaticString",
+            "Result_unwrap_or_bool_StaticString",
+        ],
+        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
     );
-    assert!(c_source.contains("typedef struct Result_i32_StaticString Result_i32_StaticString;"));
-    assert!(c_source.contains("typedef struct Result_bool_StaticString Result_bool_StaticString;"));
-    assert!(c_source.contains(
-        "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)"
-    ));
-    assert!(c_source.contains(
-        "bool Result_unwrap_or_bool_StaticString(Result_bool_StaticString self, bool fallback)"
-    ));
-    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(ok_int, 0LL)"));
-    assert!(c_source.contains("Result_unwrap_or_i32_StaticString(err_int, 144LL)"));
-    assert!(c_source.contains("Result_unwrap_or_bool_StaticString(ok_bool, true)"));
-    assert!(c_source.contains("Result_unwrap_or_bool_StaticString(err_bool, true)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_i32_StaticString");
-    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_or_bool_StaticString");
-    assert!(!c_source.contains("Result_T"));
-    assert!(!c_source.contains("T Result_unwrap_or"));
-    assert!(!c_source.contains("Result_unwrap_or(err"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen"),
+        &[
+            "typedef struct Option_i32",
+            "Option_i32 wrap_i32(int32_t value)",
+            "int32_t unwrap_i32(Option_i32 value, int32_t fallback)",
+            "wrap_i32(107LL)",
+            "unwrap_i32(value, 0LL)",
+        ],
+        &["wrap_i32", "unwrap_i32"],
+        &["T wrap", "T unwrap"],
     );
-    assert!(c_source.contains("typedef struct Option_i32"));
-    assert!(c_source.contains("Option_i32 wrap_i32(int32_t value)"));
-    assert!(c_source.contains("int32_t unwrap_i32(Option_i32 value, int32_t fallback)"));
-    assert!(c_source.contains("wrap_i32(107LL)"));
-    assert!(c_source.contains("unwrap_i32(value, 0LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "wrap_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "unwrap_i32");
-    assert!(!c_source.contains("T wrap"));
-    assert!(!c_source.contains("T unwrap"));
 
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_imported_type_same_name_collision/main.zen"),
+        &[
+            "left_i32(1LL)",
+            "right_i32(2LL)",
+            "typedef struct Box_i32 Box_i32;",
+            "typedef struct right_Box_i32 right_Box_i32;",
+            "typedef struct Choice_i32 Choice_i32;",
+            "typedef struct right_Choice_i32 right_Choice_i32;",
+            "const Box_i32 box = (Box_i32){ .value = value };",
+            "const right_Box_i32 box = (right_Box_i32){ .value = value, .extra = 29LL };",
+            "__tmp2 = 11LL;",
+            "int32_t found = choice.data.extra;",
+            "__tmp3 = found;",
+        ],
+        &["left_i32", "right_i32"],
+        &["Box_T", "Choice_T"],
     );
-    assert!(c_source.contains("left_i32(1LL)"));
-    assert!(c_source.contains("right_i32(2LL)"));
-    assert!(c_source.contains("typedef struct Box_i32 Box_i32;"));
-    assert!(c_source.contains("typedef struct right_Box_i32 right_Box_i32;"));
-    assert!(c_source.contains("typedef struct Choice_i32 Choice_i32;"));
-    assert!(c_source.contains("typedef struct right_Choice_i32 right_Choice_i32;"));
-    assert!(c_source.contains("const Box_i32 box = (Box_i32){ .value = value };"));
-    assert!(c_source
-        .contains("const right_Box_i32 box = (right_Box_i32){ .value = value, .extra = 29LL };"));
-    assert!(c_source.contains("__tmp2 = 11LL;"));
-    assert!(c_source.contains("int32_t found = choice.data.extra;"));
-    assert!(c_source.contains("__tmp3 = found;"));
-    assert_c_call_resolves_to_single_definition(&c_source, "left_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "right_i32");
-    assert!(!c_source.contains("Box_T"));
-    assert!(!c_source.contains("Choice_T"));
 }
 
 #[test]
 fn multi_file_generic_enum_method_worklist_specializations_emit_reachable_methods_once() {
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_enum_method_worklist/main.zen"),
+        &[
+            "typedef struct Option_i32 Option_i32;",
+            "typedef struct Option_bool Option_bool;",
+            "int32_t Option_value_or_i32(Option_i32 self, int32_t fallback)",
+            "int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)",
+            "bool Option_value_or_bool(Option_bool self, bool fallback)",
+            "bool Option_unwrap_or_bool(Option_bool self, bool fallback)",
+            "Option_value_or_i32(some_int, 0LL)",
+            "Option_value_or_i32(none_int, 97LL)",
+            "Option_value_or_bool(some_bool, false)",
+            "Option_value_or_bool(none_bool, true)",
+            "Option_unwrap_or_i32(self, fallback)",
+            "Option_unwrap_or_bool(self, fallback)",
+        ],
+        &[
+            "Option_value_or_i32",
+            "Option_unwrap_or_i32",
+            "Option_value_or_bool",
+            "Option_unwrap_or_bool",
+        ],
+        &[
+            "Option_T",
+            "T Option_value_or",
+            "T Option_unwrap_or",
+            "Option_value_or(some",
+            "Option_unwrap_or(self",
+        ],
     );
-
-    assert!(c_source.contains("typedef struct Option_i32 Option_i32;"));
-    assert!(c_source.contains("typedef struct Option_bool Option_bool;"));
-    assert!(c_source.contains("int32_t Option_value_or_i32(Option_i32 self, int32_t fallback)"));
-    assert!(c_source.contains("int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)"));
-    assert!(c_source.contains("bool Option_value_or_bool(Option_bool self, bool fallback)"));
-    assert!(c_source.contains("bool Option_unwrap_or_bool(Option_bool self, bool fallback)"));
-    assert!(c_source.contains("Option_value_or_i32(some_int, 0LL)"));
-    assert!(c_source.contains("Option_value_or_i32(none_int, 97LL)"));
-    assert!(c_source.contains("Option_value_or_bool(some_bool, false)"));
-    assert!(c_source.contains("Option_value_or_bool(none_bool, true)"));
-    assert!(c_source.contains("Option_unwrap_or_i32(self, fallback)"));
-    assert!(c_source.contains("Option_unwrap_or_bool(self, fallback)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_value_or_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_i32");
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_value_or_bool");
-    assert_c_call_resolves_to_single_definition(&c_source, "Option_unwrap_or_bool");
-    assert!(!c_source.contains("Option_T"));
-    assert!(!c_source.contains("T Option_value_or"));
-    assert!(!c_source.contains("T Option_unwrap_or"));
-    assert!(!c_source.contains("Option_value_or(some"));
-    assert!(!c_source.contains("Option_unwrap_or(self"));
 }
 
 #[test]
 fn multi_file_generic_result_error_type_specializations_do_not_collapse() {
-    let c_source = compile_to_c_with_generated_call_check(
+    compile_to_c_with_specialization_check(
         &test_dir().join("multi_file_generic_result_error_multi_specialization/main.zen"),
+        &[
+            "typedef struct Result_i32_bool Result_i32_bool;",
+            "typedef struct Result_i32_i32 Result_i32_i32;",
+            "bool Result_unwrap_err_i32_bool(Result_i32_bool self, bool fallback)",
+            "int32_t Result_unwrap_err_i32_i32(Result_i32_i32 self, int32_t fallback)",
+            "Result_unwrap_err_i32_bool(err_bool, false)",
+            "Result_unwrap_err_i32_bool(ok_bool, false)",
+            "Result_unwrap_err_i32_i32(err_i32, 0LL)",
+            "Result_unwrap_err_i32_i32(ok_i32, 88LL)",
+        ],
+        &["Result_unwrap_err_i32_bool", "Result_unwrap_err_i32_i32"],
+        &[
+            "Result_T",
+            "Result_i32_E",
+            "E Result_unwrap_err",
+            "Result_unwrap_err(err",
+        ],
     );
-
-    assert!(c_source.contains("typedef struct Result_i32_bool Result_i32_bool;"));
-    assert!(c_source.contains("typedef struct Result_i32_i32 Result_i32_i32;"));
-    assert!(
-        c_source.contains("bool Result_unwrap_err_i32_bool(Result_i32_bool self, bool fallback)")
-    );
-    assert!(c_source
-        .contains("int32_t Result_unwrap_err_i32_i32(Result_i32_i32 self, int32_t fallback)"));
-    assert!(c_source.contains("Result_unwrap_err_i32_bool(err_bool, false)"));
-    assert!(c_source.contains("Result_unwrap_err_i32_bool(ok_bool, false)"));
-    assert!(c_source.contains("Result_unwrap_err_i32_i32(err_i32, 0LL)"));
-    assert!(c_source.contains("Result_unwrap_err_i32_i32(ok_i32, 88LL)"));
-    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_err_i32_bool");
-    assert_c_call_resolves_to_single_definition(&c_source, "Result_unwrap_err_i32_i32");
-    assert!(!c_source.contains("Result_T"));
-    assert!(!c_source.contains("Result_i32_E"));
-    assert!(!c_source.contains("E Result_unwrap_err"));
-    assert!(!c_source.contains("Result_unwrap_err(err"));
 }

@@ -25,17 +25,17 @@ impl TypeChecker {
             .map(|(name, var)| (name.clone(), var.ty.clone()))
             .collect();
 
-        self.push_scope();
-        let mut param_types = Vec::new();
-        let mut param_names = HashSet::new();
-        for param in params {
-            let ty = self.resolve_type(&param.ty);
-            self.define_var_with_mutability(&param.name, ty.clone(), param.mutable);
-            param_types.push(ty);
-            param_names.insert(param.name.clone());
-        }
-        let typed_body = self.check_expr(body)?;
-        self.pop_scope();
+        let (param_types, param_names, typed_body) = self.with_scope(|checker| {
+            let mut param_types = Vec::new();
+            let mut param_names = HashSet::new();
+            for param in params {
+                let ty = checker.resolve_type(&param.ty);
+                checker.define_var_with_mutability(&param.name, ty.clone(), param.mutable);
+                param_types.push(ty);
+                param_names.insert(param.name.clone());
+            }
+            Ok((param_types, param_names, checker.check_expr(body)?))
+        })?;
 
         let ret_type = if let Some(return_type) = return_type {
             self.resolve_type(return_type)

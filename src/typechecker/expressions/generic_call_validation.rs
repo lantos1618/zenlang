@@ -63,8 +63,8 @@ impl TypeChecker {
         span: &Span,
     ) {
         if params.len() != args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E3021",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3021,
                 format!(
                     "{} `{}` expects {} arguments, found {}",
                     kind,
@@ -84,8 +84,8 @@ impl TypeChecker {
             }
 
             if !self.types_compatible(&expected, &actual.ty) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3022",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3022,
                     format!(
                         "argument {} for `{}` expects `{}`, found `{}`",
                         idx + 1,
@@ -108,8 +108,8 @@ impl TypeChecker {
     ) -> bool {
         let valid = conflicts.is_empty();
         for conflict in conflicts {
-            self.diagnostics.push(Diagnostic::error(
-                "E5000",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E5000,
                 format!(
                     "conflicting inferred type argument `{}` for generic {} `{}`: inferred `{}` and `{}`",
                     conflict.param,

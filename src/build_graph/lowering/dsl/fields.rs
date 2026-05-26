@@ -1,5 +1,4 @@
 use super::BuildTargetField;
-use std::{fmt, str::FromStr};
 
 impl BuildTargetField {
     const ALL: &[BuildTargetField] = &[
@@ -45,20 +44,12 @@ impl BuildTargetField {
     }
 }
 
-impl fmt::Display for BuildTargetField {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for BuildTargetField {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|field| field.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    BuildTargetField,
+    as_str = BuildTargetField::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(
+    BuildTargetField,
+    variants = BuildTargetField::ALL,
+    as_str = BuildTargetField::as_str
+);

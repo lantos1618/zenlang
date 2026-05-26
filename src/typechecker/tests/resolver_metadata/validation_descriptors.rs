@@ -12,7 +12,7 @@ fn resolver_count_display_formats_known_and_missing_counts() {
 fn count_validation_formats_message() {
     let validation = CountValidation {
         label: "parameter count",
-        code: "COUNT",
+        code: "COUNT".into(),
     };
 
     assert_eq!(validation.code, "COUNT");
@@ -31,7 +31,7 @@ fn count_validation_uses_value_parameter_resolver_code() {
     let validation = CountValidation::value_parameter_resolver_code();
 
     assert_eq!(validation.label, "parameter count");
-    assert_eq!(validation.code, "E0211");
+    assert_eq!(validation.code, "E7211");
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn count_validation_uses_field_resolver_code() {
     let validation = CountValidation::field_resolver_code();
 
     assert_eq!(validation.label, "field count");
-    assert_eq!(validation.code, "E0214");
+    assert_eq!(validation.code, "E7214");
 }
 
 #[test]
@@ -47,16 +47,16 @@ fn count_validation_uses_variant_payload_resolver_code() {
     let validation = CountValidation::variant_payload_resolver_code();
 
     assert_eq!(validation.label, "payload count");
-    assert_eq!(validation.code, "E0215");
+    assert_eq!(validation.code, "E7215");
 }
 
 #[test]
 fn type_parameter_validation_formats_messages() {
     let validation = TypeParameterValidation {
-        count_code: "COUNT",
-        name_code: "NAMES",
-        bound_code: "BOUNDS",
-        bound_ref_code: "BOUND_REFS",
+        count_code: "COUNT".into(),
+        name_code: "NAMES".into(),
+        bound_code: "BOUNDS".into(),
+        bound_ref_code: "BOUND_REFS".into(),
     };
 
     assert_eq!(validation.name_code, "NAMES");
@@ -78,29 +78,29 @@ fn type_parameter_validation_formats_messages() {
 fn type_parameter_validation_uses_type_like_resolver_codes() {
     let validation = TypeParameterValidation::type_like_resolver_codes();
 
-    assert_eq!(validation.count_code, "E0213");
-    assert_eq!(validation.name_code, "E0346");
-    assert_eq!(validation.bound_code, "E0222");
-    assert_eq!(validation.bound_ref_code, "E0350");
+    assert_eq!(validation.count_code, "E7213");
+    assert_eq!(validation.name_code, "E7346");
+    assert_eq!(validation.bound_code, "E7222");
+    assert_eq!(validation.bound_ref_code, "E7350");
 }
 
 #[test]
 fn type_parameter_validation_uses_value_resolver_codes() {
     let validation = TypeParameterValidation::value_resolver_codes();
 
-    assert_eq!(validation.count_code, "E0220");
-    assert_eq!(validation.name_code, "E0347");
-    assert_eq!(validation.bound_code, "E0221");
-    assert_eq!(validation.bound_ref_code, "E0351");
+    assert_eq!(validation.count_code, "E7220");
+    assert_eq!(validation.name_code, "E7347");
+    assert_eq!(validation.bound_code, "E7221");
+    assert_eq!(validation.bound_ref_code, "E7351");
 }
 
 #[test]
 fn type_parameter_validation_builds_count_validation() {
     let validation = TypeParameterValidation {
-        count_code: "COUNT",
-        name_code: "NAMES",
-        bound_code: "BOUNDS",
-        bound_ref_code: "BOUND_REFS",
+        count_code: "COUNT".into(),
+        name_code: "NAMES".into(),
+        bound_code: "BOUNDS".into(),
+        bound_ref_code: "BOUND_REFS".into(),
     }
     .count_validation();
 
@@ -111,9 +111,9 @@ fn type_parameter_validation_builds_count_validation() {
 #[test]
 fn value_parameter_validation_formats_messages() {
     let validation = ValueParameterValidation {
-        name_code: "NAMES",
-        display_type_code: "TYPES",
-        typed_type_code: "TYPED_TYPES",
+        name_code: "NAMES".into(),
+        display_type_code: "TYPES".into(),
+        typed_type_code: "TYPED_TYPES".into(),
     };
 
     assert_eq!(validation.name_code, "NAMES");
@@ -135,16 +135,16 @@ fn value_parameter_validation_formats_messages() {
 fn value_parameter_validation_uses_resolver_codes() {
     let validation = ValueParameterValidation::resolver_codes();
 
-    assert_eq!(validation.name_code, "E0223");
-    assert_eq!(validation.display_type_code, "E0216");
-    assert_eq!(validation.typed_type_code, "E0356");
+    assert_eq!(validation.name_code, "E7223");
+    assert_eq!(validation.display_type_code, "E7216");
+    assert_eq!(validation.typed_type_code, "E7356");
 }
 
 #[test]
 fn return_validation_formats_messages() {
     let validation = ReturnValidation {
-        display_code: "RETURN",
-        typed_code: "TYPED_RETURN",
+        display_code: "RETURN".into(),
+        typed_code: "TYPED_RETURN".into(),
     };
 
     assert_eq!(validation.display_code, "RETURN");
@@ -162,15 +162,15 @@ fn return_validation_formats_messages() {
 fn return_validation_uses_resolver_codes() {
     let validation = ReturnValidation::resolver_codes();
 
-    assert_eq!(validation.display_code, "E0212");
-    assert_eq!(validation.typed_code, "E0357");
+    assert_eq!(validation.display_code, "E7212");
+    assert_eq!(validation.typed_code, "E7357");
 }
 
 #[test]
 fn behavior_method_validation_formats_messages() {
     let validation = BehaviorMethodValidation {
-        display_code: "METHODS",
-        typed_code: "TYPED_METHODS",
+        display_code: "METHODS".into(),
+        typed_code: "TYPED_METHODS".into(),
     };
 
     assert_eq!(validation.display_code, "METHODS");
@@ -192,6 +192,6 @@ fn behavior_method_validation_formats_messages() {
 fn behavior_method_validation_uses_resolver_codes() {
     let validation = BehaviorMethodValidation::resolver_codes();
 
-    assert_eq!(validation.display_code, "E0219");
-    assert_eq!(validation.typed_code, "E0355");
+    assert_eq!(validation.display_code, "E7219");
+    assert_eq!(validation.typed_code, "E7355");
 }

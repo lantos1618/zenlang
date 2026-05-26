@@ -76,11 +76,18 @@ agent/claude_output.jsonl
 /.venv/
 /.cache/huggingface/
 /.cache/torch/
+/.anti-slop-cache/
+/.anti-slop-out/
 /hf-cache/
 /model-cache/
 /models/
+/anti_slop_map.html
+/anti_slop_report.json
+/embeddings.json
 /semantic-overlap-report.md
 /semantic-overlap-report.json
+/slop-reports/
+/zenlang-slop-reports/
 
 # Security and sensitive files
 .env
@@ -104,6 +111,6 @@ secrets.yml
 *Bearer*
 *Authorization*
 .opencode/
-vscode-extension/out/extension.js
+/vscode-extension/out/
 examples/build_demo/target/
 examples/demo_project/target/

@@ -10,7 +10,6 @@ fn ci_and_release_only_advertise_existing_targets() {
     let extension_readme = read("vscode-extension/README.md");
     let extension_package = read("vscode-extension/package.json");
     let extension_source = read("vscode-extension/src/extension.ts");
-    let setup_lsp = read("setup_lsp.sh");
 
     assert!(ci.contains("cargo fmt --check"));
     assert!(ci.contains("cargo clippy -- -D warnings"));
@@ -76,10 +75,6 @@ fn ci_and_release_only_advertise_existing_targets() {
             !extension_source.contains(unsupported),
             "vscode-extension/src/extension.ts advertises unsupported target/artifact: {unsupported}"
         );
-        assert!(
-            !setup_lsp.contains(unsupported),
-            "setup_lsp.sh advertises unsupported target/artifact: {unsupported}"
-        );
     }
 }
 
@@ -128,7 +123,6 @@ fn checked_in_configs_do_not_contain_secret_literals() {
         ".github/workflows/release.yml",
         ".vscode/settings.json",
         ".vscode/launch.json",
-        ".vscode/zen-language-config.json",
     ];
 
     for path in config_paths {
@@ -139,5 +133,34 @@ fn checked_in_configs_do_not_contain_secret_literals() {
                 "{path} contains credential-looking marker {marker}"
             );
         }
+    }
+}
+
+#[test]
+fn generated_vscode_extension_output_is_not_tracked() {
+    let gitignore = read(".gitignore");
+    assert!(
+        gitignore.contains("/vscode-extension/out/"),
+        "compiled VS Code extension output should stay ignored"
+    );
+
+    let output = std::process::Command::new("git")
+        .args(["ls-files", "vscode-extension/out"])
+        .current_dir(repo_root())
+        .output()
+        .expect("list tracked VS Code build output");
+    assert!(
+        output.status.success(),
+        "git ls-files failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for path in String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter(|path| !path.trim().is_empty())
+    {
+        assert!(
+            !repo_root().join(path).exists(),
+            "compiled VS Code extension output should not be present in the working tree: {path}"
+        );
     }
 }

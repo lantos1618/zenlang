@@ -24,7 +24,7 @@ fn emit_json_layout_nested_generic_result_schema_matches_golden() {
     assert_layout_matches_fixture(
         &fixture("tests/zen/generic_nested_result_enum.zen"),
         "nested generic Result program input",
-        "tests/fixtures/ir_json/layout_nested_generic_result.golden.json",
+        "tests/fixtures/ir_json/layout_generic_enum_method_nested_result.golden.json",
     );
 }
 
@@ -42,7 +42,7 @@ fn emit_json_layout_multi_file_generic_enum_method_schema_matches_golden() {
     assert_layout_matches_fixture(
         &fixture("tests/zen/multi_file_generic_enum_method/main.zen"),
         "multi-file generic enum method program input",
-        "tests/fixtures/ir_json/layout_multi_file_generic_enum_method.golden.json",
+        "tests/fixtures/ir_json/layout_generic_option.golden.json",
     );
 }
 
@@ -51,7 +51,7 @@ fn emit_json_layout_multi_file_generic_result_method_schema_matches_golden() {
     assert_layout_matches_fixture(
         &fixture("tests/zen/multi_file_generic_result_enum_method/main.zen"),
         "multi-file generic Result method program input",
-        "tests/fixtures/ir_json/layout_multi_file_generic_result_method.golden.json",
+        "tests/fixtures/ir_json/layout_generic_result.golden.json",
     );
 }
 
@@ -60,7 +60,7 @@ fn emit_json_layout_multi_file_generic_function_return_enum_schema_matches_golde
     assert_layout_matches_fixture(
         &fixture("tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen"),
         "multi-file generic function return enum program input",
-        "tests/fixtures/ir_json/layout_multi_file_generic_function_return_enum.golden.json",
+        "tests/fixtures/ir_json/layout_generic_option.golden.json",
     );
 }
 

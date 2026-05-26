@@ -1,5 +1,4 @@
 use super::*;
-use std::str::FromStr;
 
 #[derive(Clone, Copy)]
 enum TypecheckerBoolLiteralKeyword {
@@ -27,17 +26,11 @@ impl TypecheckerBoolLiteralKeyword {
     }
 }
 
-impl FromStr for TypecheckerBoolLiteralKeyword {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|keyword| keyword.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_from_str!(
+    TypecheckerBoolLiteralKeyword,
+    variants = TypecheckerBoolLiteralKeyword::ALL,
+    as_str = TypecheckerBoolLiteralKeyword::as_str
+);
 
 impl TypeChecker {
     pub(super) fn check_identifier_expr(
@@ -61,8 +54,8 @@ impl TypeChecker {
                     && !self.functions.contains_key(name)
                     && !self.is_import(name)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3040",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3040,
                         format!("undefined variable `{}`", name),
                         span,
                     ));
@@ -84,20 +77,21 @@ impl TypeChecker {
         expr: &Option<Box<Expression>>,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        self.push_scope();
-        let mut typed_stmts = Vec::new();
-        for stmt in statements {
-            typed_stmts.push(self.check_statement(stmt)?);
-        }
-        let typed_expr = match expr {
-            Some(e) => Some(Box::new(self.check_expr(e)?)),
-            None => None,
-        };
-        let ty = typed_expr
-            .as_ref()
-            .map(|e| e.ty.clone())
-            .unwrap_or(Type::Void);
-        self.pop_scope();
+        let (typed_stmts, typed_expr, ty) = self.with_scope(|checker| {
+            let mut typed_stmts = Vec::new();
+            for stmt in statements {
+                typed_stmts.push(checker.check_statement(stmt)?);
+            }
+            let typed_expr = match expr {
+                Some(e) => Some(Box::new(checker.check_expr(e)?)),
+                None => None,
+            };
+            let ty = typed_expr
+                .as_ref()
+                .map(|e| e.ty.clone())
+                .unwrap_or(Type::Void);
+            Ok((typed_stmts, typed_expr, ty))
+        })?;
 
         Ok(TypedExpression {
             kind: TypedExprKind::Block(TypedBlock {

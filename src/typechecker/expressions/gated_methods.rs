@@ -1,6 +1,4 @@
 use super::*;
-use std::fmt;
-use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum GatedMethod {
@@ -23,13 +21,13 @@ impl GatedMethod {
 
     pub(super) fn diagnostic(self, span: Span) -> Diagnostic {
         match self {
-            Self::ResultRaise => Diagnostic::error(
-                "E3054",
+            Self::ResultRaise => Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3054,
                 "`.raise()` is gated until Result propagation typing and lowering are implemented",
                 span,
             ),
-            Self::EffectAwait => Diagnostic::error(
-                "E3055",
+            Self::EffectAwait => Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3055,
                 "`.await()` is gated until Sync/Async effect checking and task lowering are implemented",
                 span,
             ),
@@ -37,20 +35,9 @@ impl GatedMethod {
     }
 }
 
-impl fmt::Display for GatedMethod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for GatedMethod {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        GatedMethod::ALL
-            .iter()
-            .copied()
-            .find(|method| method.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(GatedMethod, as_str = GatedMethod::as_str);
+crate::static_spelling::impl_static_spelling_from_str!(
+    GatedMethod,
+    variants = GatedMethod::ALL,
+    as_str = GatedMethod::as_str
+);

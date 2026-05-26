@@ -1,25 +1,15 @@
 use std::collections::HashMap;
 
+use super::ast_type_substitution::substitute_ast_type_names;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 pub(super) fn type_mangle_key(ty: &Type) -> String {
+    if let Some(name) = ty.builtin_source_name() {
+        return name.into();
+    }
+
     match ty {
-        Type::I8 => "i8".into(),
-        Type::I16 => "i16".into(),
-        Type::I32 => "i32".into(),
-        Type::I64 => "i64".into(),
-        Type::U8 => "u8".into(),
-        Type::U16 => "u16".into(),
-        Type::U32 => "u32".into(),
-        Type::U64 => "u64".into(),
-        Type::Usize => "usize".into(),
-        Type::F32 => "f32".into(),
-        Type::F64 => "f64".into(),
-        Type::Bool => "bool".into(),
-        Type::Void => "void".into(),
-        Type::Str => "StaticString".into(),
-        Type::String => "String".into(),
         Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
             symbol_mangle_key(name)
         }
@@ -41,6 +31,7 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
         }
         Type::Never => "never".into(),
         Type::Unknown => "unknown".into(),
+        _ => unreachable!("handled by builtin_source_name"),
     }
 }
 
@@ -62,11 +53,16 @@ pub(super) fn concrete_name_matches_generic(concrete_name: &str, generic_name: &
 
 #[cfg(test)]
 mod tests {
-    use super::{type_mangle_key, Type};
+    use super::{type_mangle_key, type_to_ast, AstType, Type};
 
     #[test]
     fn static_string_mangle_uses_public_type_name() {
         assert_eq!(type_mangle_key(&Type::Str), "StaticString");
+    }
+
+    #[test]
+    fn type_to_ast_preserves_dynamic_string_variant() {
+        assert_eq!(type_to_ast(&Type::String), AstType::String);
     }
 }
 
@@ -75,44 +71,7 @@ pub(super) fn substitute_ast_type(
     ast_type: &AstType,
     substitutions: &HashMap<String, Type>,
 ) -> AstType {
-    match ast_type {
-        AstType::Named(name) => {
-            if let Some(concrete) = substitutions.get(name) {
-                type_to_ast(concrete)
-            } else {
-                ast_type.clone()
-            }
-        }
-        AstType::Ptr(inner) => AstType::Ptr(Box::new(substitute_ast_type(inner, substitutions))),
-        AstType::MutPtr(inner) => {
-            AstType::MutPtr(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::RawPtr(inner) => {
-            AstType::RawPtr(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::Slice(inner) => {
-            AstType::Slice(Box::new(substitute_ast_type(inner, substitutions)))
-        }
-        AstType::Array { elem, size } => AstType::Array {
-            elem: Box::new(substitute_ast_type(elem, substitutions)),
-            size: *size,
-        },
-        AstType::Function { params, ret } => AstType::Function {
-            params: params
-                .iter()
-                .map(|param| substitute_ast_type(param, substitutions))
-                .collect(),
-            ret: Box::new(substitute_ast_type(ret, substitutions)),
-        },
-        AstType::Generic { name, type_args } => AstType::Generic {
-            name: name.clone(),
-            type_args: type_args
-                .iter()
-                .map(|a| substitute_ast_type(a, substitutions))
-                .collect(),
-        },
-        _ => ast_type.clone(),
-    }
+    substitute_ast_type_names(ast_type, &|name| substitutions.get(name).map(type_to_ast))
 }
 
 /// Convert a resolved Type back to an AstType (best-effort, for substitution).
@@ -132,7 +91,7 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
         Type::Bool => AstType::Bool,
         Type::Void => AstType::Void,
         Type::Str => AstType::Str,
-        Type::String => AstType::Named("String".into()),
+        Type::String => AstType::String,
         Type::Named(n) => AstType::Named(n.clone()),
         Type::Struct { name, .. } => AstType::Named(name.clone()),
         Type::Enum { name, .. } => AstType::Named(name.clone()),

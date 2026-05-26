@@ -19,8 +19,8 @@ impl SymbolTable {
             self.by_scoped_name.contains_key(&scoped_key)
         };
         if duplicate {
-            return Err(Box::new(Diagnostic::error(
-                "E0200",
+            return Err(Box::new(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0200,
                 format!(
                     "duplicate {} symbol '{}'",
                     namespace.diagnostic_name(),

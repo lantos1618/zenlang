@@ -69,11 +69,6 @@ fn parser_type_names_use_owned_type_name_enums() {
         "pub enum BuiltinGenericTypeName",
         "pub const ALL: &[BuiltinTypeName]",
         "pub const ALL: &[BuiltinGenericTypeName]",
-        "impl FromStr for BuiltinTypeName",
-        "impl FromStr for BuiltinGenericTypeName",
-        "impl fmt::Display for BuiltinTypeName",
-        "impl fmt::Display for BuiltinGenericTypeName",
-        ".find(|name| name.as_str() == value)",
         "name.parse::<BuiltinTypeName>()",
         "base.parse::<BuiltinGenericTypeName>()",
     ] {
@@ -82,4 +77,15 @@ fn parser_type_names_use_owned_type_name_enums() {
             "parser type-name spelling should live in shared AST type-name enums: {required}"
         );
     }
+    for enum_name in ["BuiltinTypeName", "BuiltinGenericTypeName"] {
+        assert!(
+            owns_static_spelling_from_str(&type_names, enum_name)
+                && owns_static_spelling_display(&type_names, enum_name),
+            "parser type-name spelling should own parse/display glue for {enum_name}"
+        );
+    }
+    assert!(
+        uses_static_spelling_parser(&type_names),
+        "parser type-name spelling should parse through shared static spelling glue"
+    );
 }

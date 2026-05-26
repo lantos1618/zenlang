@@ -8,6 +8,7 @@
 //! The typechecker NEVER defaults unknown types to I32. If a type can't be
 //! resolved, it's an error.
 
+pub(in crate::typechecker) mod ast_type_substitution;
 mod behavior_associations;
 mod behavior_impl_methods;
 mod behavior_impl_signature_collection;
@@ -25,12 +26,14 @@ mod environment;
 mod expressions;
 mod gated_intrinsics;
 mod generic_bound_validation;
+mod generic_type_arg_diagnostics;
 mod generic_type_reference_walker;
 mod generic_type_validation;
 mod import_roots;
 mod monomorphize;
 mod monomorphize_dependencies;
 mod monomorphize_inference;
+mod monomorphize_inference_shape_items;
 mod monomorphize_inference_shapes;
 mod monomorphize_inference_substitution;
 mod monomorphize_method_self;
@@ -49,9 +52,9 @@ mod program_type_defs;
 mod resolve;
 mod resolve_binary_ops;
 mod resolver_backed_collection;
+mod resolver_contract;
 mod resolver_lookup;
 mod resolver_metadata_collection;
-mod resolver_validation;
 mod scope_management;
 mod self_type_validation;
 mod semantic_validation;
@@ -66,7 +69,7 @@ use crate::ast::{
     self, behavior_type_args_match_target_params, named_type_arg_names, AstType, BehaviorMethod,
     Declaration, EnumVariant, Expression, Param, StructField, TypeParam,
 };
-use crate::error::{Diagnostic, Span};
+use crate::error::{Diagnostic, DiagnosticCode, ResolverContractCode, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
     BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace, Symbol,
@@ -91,37 +94,21 @@ impl TypeChecker {
         span: Span,
     ) -> Option<HashMap<String, AstType>> {
         let Some(info) = self.behaviors.get(behavior).cloned() else {
-            self.diagnostics.push(Diagnostic::error(
-                "E6006",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6006,
                 format!("undefined behavior `{}`", behavior),
                 span,
             ));
             return None;
         };
 
-        if info.type_params.is_empty() && !type_args.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5002",
-                format!(
-                    "non-generic behavior `{}` does not accept type arguments",
-                    behavior
-                ),
-                span,
-            ));
-            return None;
-        }
-
-        if info.type_params.len() != type_args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E5001",
-                format!(
-                    "generic behavior `{}` expects {} type arguments, found {}",
-                    behavior,
-                    info.type_params.len(),
-                    type_args.len()
-                ),
-                span,
-            ));
+        if !self.validate_type_arg_arity(
+            "behavior",
+            behavior,
+            info.type_params.len(),
+            type_args,
+            span,
+        ) {
             return None;
         }
 

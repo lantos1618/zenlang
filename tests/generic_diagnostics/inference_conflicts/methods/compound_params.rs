@@ -22,11 +22,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_with`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method function-type inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_with",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method function-type inference conflict",
     );
 }
 
@@ -50,11 +53,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_array`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method array-type inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_array",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method array-type inference conflict",
     );
 }
 
@@ -78,11 +84,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_raw`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method raw-pointer inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_raw",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method raw-pointer inference conflict",
     );
 }
 
@@ -106,11 +115,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_ptr`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method pointer inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_ptr",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method pointer inference conflict",
     );
 }
 
@@ -134,11 +146,14 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_mut_ptr`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method mutable pointer inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_mut_ptr",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method mutable pointer inference conflict",
     );
 }
 
@@ -162,10 +177,13 @@ main = () i32 {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d.message.contains(
-            "conflicting inferred type argument `T` for generic method `Box.choose_slice`: inferred `i32` and `StaticString`"
-        )),
-        "expected generic method slice inference conflict diagnostic, got {errors:?}"
+    assert_inference_conflict(
+        &errors,
+        "method",
+        "Box.choose_slice",
+        "T",
+        "i32",
+        "StaticString",
+        "generic method slice inference conflict",
     );
 }

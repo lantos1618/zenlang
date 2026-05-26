@@ -1,5 +1,4 @@
 use super::BuildTargetDslKind;
-use std::{fmt, str::FromStr};
 
 impl BuildTargetDslKind {
     const ALL: &[BuildTargetDslKind] = &[
@@ -34,20 +33,12 @@ impl BuildTargetDslKind {
     }
 }
 
-impl fmt::Display for BuildTargetDslKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for BuildTargetDslKind {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|kind| kind.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    BuildTargetDslKind,
+    as_str = BuildTargetDslKind::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(
+    BuildTargetDslKind,
+    variants = BuildTargetDslKind::ALL,
+    as_str = BuildTargetDslKind::as_str
+);

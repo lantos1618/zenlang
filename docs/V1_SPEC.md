@@ -20,7 +20,7 @@ Every accepted syntax form must have a spec entry and Test Evidence before it is
 | Enum declaration `Name: Variant, Payload(Type)` | implemented | `resolver_records_enum_function_type_payloads`, `resolver_records_generic_enum_function_type_payloads`, `tests/zen/enums.zen`, `tests/zen/duplicate_enum_variant_names.zen` |
 | Local imports `{ name } = module.path` | implemented | `check_module_graph_entry_seeds_imported_function_type_signatures`, `check_module_graph_entry_specializes_imported_generic_functions`, `tests/zen/multi_file_generic/main.zen` |
 | Immutable and mutable local bindings | implemented | `resolver_records_top_level_expr_locals`, `resolver_records_closure_locals`, `resolver_records_mutable_closure_parameter_locals`, `resolver_records_same_name_locals_in_distinct_scopes`, `tests/zen/mutability.zen` |
-| Final expression results, `break`, `continue`, and prefix `loop((l) { ... })` controls | implemented | `parser::tests::parse_return_keyword_is_removed`, `parser::tests::parse_loop_control_param_expr`, `tests/zen/loops.zen` |
+| Final expression results and prefix `loop((l) { ... })` controls | implemented | `parser::tests::parse_return_keyword_is_removed`, `parser::tests::parse_loop_control_param_expr`, `tests/zen/loops.zen` |
 | Pattern-style `?` arms | implemented | `resolver_records_pattern_locals`, `check_program_with_symbols_requires_resolver_pattern_locals`, `tests/zen/conditionals.zen` |
 | Field access and struct literals | implemented | `parser::tests::parse_struct_literal`, `tests/zen/nested_structs.zen` |
 | UFC-style method calls | implemented | `parser::tests::parse_ufc_chain`, `tests/zen/ufc.zen` |

@@ -35,10 +35,8 @@ fn typechecker_gated_methods_use_owned_action_enum() {
         "gated_methods.rs should keep an enum-owned static table"
     );
     assert!(
-        gated_methods.contains("GatedMethod::ALL")
-            && gated_methods.contains(".iter()")
-            && gated_methods.contains(".copied()")
-            && gated_methods.contains(".find(|method| method.as_str() == value)"),
+        gated_methods.contains("const ALL: &[GatedMethod]")
+            && uses_static_spelling_parser(&gated_methods),
         "typechecker gated method parsing should use the enum-owned static table"
     );
     assert!(
@@ -134,8 +132,6 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         "mod spelling;",
         "macro_rules! gated_intrinsic_spellings",
         "const SPELLINGS: &[(GatedIntrinsic, &str)]",
-        "impl fmt::Display for GatedIntrinsic",
-        "impl FromStr for GatedIntrinsic",
         "GatedIntrinsic::$variant",
         r#"AsyncEnqueue => "async_enqueue""#,
         r#"RawAllocate => "raw_allocate""#,
@@ -143,13 +139,18 @@ fn typechecker_gated_intrinsics_use_owned_name_enum() {
         r#"TypeMatch => "type_match""#,
         "pub(super) const fn as_str",
         "pub(super) const fn gate_message(self) -> &'static str",
-        ".find(|(_, spelling)| *spelling == name)",
     ] {
         assert!(
             source.contains(required),
             "gated intrinsic spelling should live in GatedIntrinsic: {required}"
         );
     }
+    assert!(
+        owns_static_spelling_from_str(&source, "GatedIntrinsic")
+            && owns_static_spelling_display(&source, "GatedIntrinsic")
+            && uses_static_spelling_parser(&source),
+        "gated intrinsic spelling should use shared static spelling parse/display glue"
+    );
     assert!(
         !gated.contains("const ATOMIC_ADD"),
         "gated_intrinsics.rs should not keep per-intrinsic spelling constants in semantic gate logic"

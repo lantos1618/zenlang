@@ -1,5 +1,4 @@
-use std::fmt;
-use std::str::FromStr;
+use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ModuleRootPrefix {
@@ -8,14 +7,12 @@ pub(super) enum ModuleRootPrefix {
 }
 
 impl ModuleRootPrefix {
-    const STD: &'static str = "std";
-    const AT_STD: &'static str = "@std";
     const ALL: &[ModuleRootPrefix] = &[ModuleRootPrefix::Std, ModuleRootPrefix::AtStd];
 
     pub(super) const fn as_str(self) -> &'static str {
         match self {
-            Self::Std => Self::STD,
-            Self::AtStd => Self::AT_STD,
+            Self::Std => STD_ROOT,
+            Self::AtStd => AT_STD_ROOT,
         }
     }
 
@@ -24,23 +21,15 @@ impl ModuleRootPrefix {
     }
 }
 
-impl fmt::Display for ModuleRootPrefix {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for ModuleRootPrefix {
-    type Err = ();
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::ALL
-            .iter()
-            .copied()
-            .find(|prefix| prefix.as_str() == value)
-            .ok_or(())
-    }
-}
+crate::static_spelling::impl_static_spelling_display!(
+    ModuleRootPrefix,
+    as_str = ModuleRootPrefix::as_str
+);
+crate::static_spelling::impl_static_spelling_from_str!(
+    ModuleRootPrefix,
+    variants = ModuleRootPrefix::ALL,
+    as_str = ModuleRootPrefix::as_str
+);
 
 pub(super) fn parse_module_root_prefix(value: &str) -> Option<ModuleRootPrefix> {
     value.parse().ok()

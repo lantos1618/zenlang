@@ -24,8 +24,11 @@ impl TypeChecker {
 
         if module.as_deref() == Some(GatedIntrinsic::INTRINSIC_MODULE) {
             if let Ok(gated) = name.parse::<GatedIntrinsic>() {
-                self.diagnostics
-                    .push(Diagnostic::error("E0203", gated.gate_message(), span));
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0203,
+                    gated.gate_message(),
+                    span,
+                ));
                 return Ok(TypedExpression {
                     kind: TypedExprKind::FunctionCall {
                         function: full_name,
@@ -42,16 +45,7 @@ impl TypeChecker {
             if !info.type_params.is_empty() {
                 self.resolve_generic_function_call(&full_name, &info, type_args, &typed_args, span)
             } else {
-                if !type_args.is_empty() {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E5002",
-                        format!(
-                            "non-generic function `{}` does not accept type arguments",
-                            full_name
-                        ),
-                        span,
-                    ));
-                }
+                self.reject_nongeneric_type_args("function", &full_name, type_args, span);
                 self.check_call_signature("function", &full_name, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             }
@@ -66,15 +60,15 @@ impl TypeChecker {
                 name.to_string()
             };
             if let Some(info) = self.methods.get(&full_name).cloned() {
-                self.reject_direct_module_call_type_args("method", &full_name, type_args, span);
+                self.reject_nongeneric_type_args("method", &full_name, type_args, span);
                 self.check_call_signature("method", &full_name, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             } else if let Some(info) = self.functions.get(&mangled).cloned() {
-                self.reject_direct_module_call_type_args("function", &full_name, type_args, span);
+                self.reject_nongeneric_type_args("function", &full_name, type_args, span);
                 self.check_call_signature("function", &mangled, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             } else {
-                self.reject_direct_module_call_type_args("function", &full_name, type_args, span);
+                self.reject_nongeneric_type_args("function", &full_name, type_args, span);
                 let m = module.as_deref().unwrap_or("");
                 self.diagnostics.push(Diagnostic::warning(
                     "W3041",
@@ -84,8 +78,8 @@ impl TypeChecker {
                 (full_name.clone(), Type::Void)
             }
         } else {
-            self.diagnostics.push(Diagnostic::error(
-                "E3020",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3020,
                 format!("undefined function `{}`", name),
                 span,
             ));
@@ -100,26 +94,5 @@ impl TypeChecker {
             ty: ret_type,
             span,
         })
-    }
-
-    fn reject_direct_module_call_type_args(
-        &mut self,
-        kind: &str,
-        name: &str,
-        type_args: &[AstType],
-        span: Span,
-    ) {
-        if type_args.is_empty() {
-            return;
-        }
-
-        self.diagnostics.push(Diagnostic::error(
-            "E5002",
-            format!(
-                "non-generic {} `{}` does not accept type arguments",
-                kind, name
-            ),
-            span,
-        ));
     }
 }

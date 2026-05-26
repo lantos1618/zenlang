@@ -7,8 +7,8 @@ mod support_helpers;
 
 #[test]
 fn typechecker_resolver_validation_post_pass_lives_in_focused_helper() {
-    let entry = read("src/typechecker/resolver_validation/entry_symbols.rs");
-    let post_pass = read("src/typechecker/resolver_validation/post_pass.rs");
+    let entry = read("src/typechecker/resolver_contract/entry_symbols.rs");
+    let post_pass = read("src/typechecker/resolver_contract/post_pass.rs");
 
     for helper in [
         "validate_no_extra_resolver_declaration_symbols",
@@ -25,18 +25,18 @@ fn typechecker_resolver_validation_post_pass_lives_in_focused_helper() {
         );
     }
 
-    let root = read("src/typechecker/resolver_validation.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
     assert!(
-        root.contains("include!(\"resolver_validation/post_pass.rs\");"),
+        root.contains("include!(\"resolver_contract/post_pass.rs\");"),
         "resolver validation should include focused post-pass validation"
     );
 }
 
 #[test]
 fn typechecker_resolver_expected_value_symbols_live_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation_support.rs");
-    let monolith = read("src/typechecker/resolver_validation_support/expected_symbols.rs");
-    let focused = read("src/typechecker/resolver_validation_support/expected_value_symbols.rs");
+    let root = read("src/typechecker/resolver_contract_support.rs");
+    let monolith = read("src/typechecker/resolver_contract_support/expected_symbols.rs");
+    let focused = read("src/typechecker/resolver_contract_support/expected_value_symbols.rs");
 
     for helper in [
         "ExpectedValueSignature",
@@ -57,16 +57,16 @@ fn typechecker_resolver_expected_value_symbols_live_in_focused_helper() {
     }
 
     assert!(
-        root.contains("include!(\"resolver_validation_support/expected_value_symbols.rs\");"),
+        root.contains("include!(\"resolver_contract_support/expected_value_symbols.rs\");"),
         "resolver validation support should include focused expected value-symbol helpers"
     );
 }
 
 #[test]
 fn typechecker_resolver_local_scope_support_lives_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation_support.rs");
-    let field_variant = read("src/typechecker/resolver_validation_support/field_variant_scope.rs");
-    let local_scope = read("src/typechecker/resolver_validation_support/local_scope.rs");
+    let root = read("src/typechecker/resolver_contract_support.rs");
+    let field_variant = read("src/typechecker/resolver_contract_support/field_variant_scope.rs");
+    let local_scope = read("src/typechecker/resolver_contract_support/local_scope.rs");
 
     for helper in ["ResolverScopeCursor", "ResolverLocalScope"] {
         assert!(
@@ -84,18 +84,16 @@ fn typechecker_resolver_local_scope_support_lives_in_focused_helper() {
         "field/variant metadata support should stay focused on metadata helpers"
     );
     assert!(
-        root.contains("include!(\"resolver_validation_support/local_scope.rs\");"),
+        root.contains("include!(\"resolver_contract_support/local_scope.rs\");"),
         "resolver validation support should include focused local-scope helper"
     );
 }
 
 #[test]
 fn typechecker_resolver_type_parameter_helpers_live_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation_support.rs");
-    let constructors =
-        read("src/typechecker/resolver_validation_support/type_info_constructors.rs");
-    let type_params =
-        read("src/typechecker/resolver_validation_support/resolver_type_parameters.rs");
+    let root = read("src/typechecker/resolver_contract_support.rs");
+    let constructors = read("src/typechecker/resolver_contract_support/type_info_constructors.rs");
+    let type_params = read("src/typechecker/resolver_contract_support/resolver_type_parameters.rs");
 
     for helper in [
         "type_param_bounds_from_resolver_refs",
@@ -118,16 +116,16 @@ fn typechecker_resolver_type_parameter_helpers_live_in_focused_helper() {
         "type info constructors should stay focused on constructing environment records"
     );
     assert!(
-        root.contains("include!(\"resolver_validation_support/resolver_type_parameters.rs\");"),
+        root.contains("include!(\"resolver_contract_support/resolver_type_parameters.rs\");"),
         "resolver validation support should include focused resolver type-parameter helpers"
     );
 }
 
 #[test]
 fn typechecker_resolver_variant_metadata_lives_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation.rs");
-    let types = read("src/typechecker/resolver_validation/metadata_types.rs");
-    let variants = read("src/typechecker/resolver_validation/metadata_variants.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
+    let types = read("src/typechecker/resolver_contract/metadata_types.rs");
+    let variants = read("src/typechecker/resolver_contract/metadata_variants.rs");
 
     for helper in [
         "validate_resolver_variant_names",
@@ -147,16 +145,16 @@ fn typechecker_resolver_variant_metadata_lives_in_focused_helper() {
     }
 
     assert!(
-        root.contains("include!(\"resolver_validation/metadata_variants.rs\");"),
+        root.contains("include!(\"resolver_contract/metadata_variants.rs\");"),
         "resolver validation should include focused variant metadata helper"
     );
 }
 
 #[test]
 fn typechecker_resolver_absence_diagnostics_live_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation.rs");
-    let diagnostics = read("src/typechecker/resolver_validation/metadata_diagnostics.rs");
-    let absence = read("src/typechecker/resolver_validation/metadata_absence.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
+    let diagnostics = read("src/typechecker/resolver_contract/metadata_diagnostics.rs");
+    let absence = read("src/typechecker/resolver_contract/metadata_absence.rs");
 
     for helper in [
         "validate_resolver_absent_value_signature_metadata",
@@ -183,7 +181,65 @@ fn typechecker_resolver_absence_diagnostics_live_in_focused_helper() {
         "resolver metadata diagnostics should stay focused on generic emitters"
     );
     assert!(
-        root.contains("include!(\"resolver_validation/metadata_absence.rs\");"),
+        root.contains("include!(\"resolver_contract/metadata_absence.rs\");"),
         "resolver validation should include focused absence diagnostics"
     );
+}
+
+#[test]
+fn resolver_contract_production_diagnostics_use_typed_codes() {
+    let mut offenders = Vec::new();
+    collect_raw_diagnostic_code_strings("src/typechecker/resolver_contract", &mut offenders);
+    collect_raw_diagnostic_code_strings(
+        "src/typechecker/resolver_contract_support",
+        &mut offenders,
+    );
+
+    assert!(
+        offenders.is_empty(),
+        "resolver contract production code should use DiagnosticCode/ResolverContractCode, not raw diagnostic strings: {}",
+        offenders.join(", ")
+    );
+}
+
+fn collect_raw_diagnostic_code_strings(path: &str, offenders: &mut Vec<String>) {
+    let path = repo_root().join(path);
+    if path.is_dir() {
+        for entry in std::fs::read_dir(&path)
+            .unwrap_or_else(|err| panic!("read directory {}: {err}", path.display()))
+        {
+            let entry = entry
+                .unwrap_or_else(|err| panic!("read directory entry {}: {err}", path.display()));
+            collect_raw_diagnostic_code_strings(
+                entry
+                    .path()
+                    .strip_prefix(repo_root())
+                    .expect("path lives under repo root")
+                    .to_str()
+                    .expect("repo path is UTF-8"),
+                offenders,
+            );
+        }
+        return;
+    }
+
+    if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+        return;
+    }
+
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("read {}: {err}", path.display()));
+    if source.as_bytes().windows(7).any(|window| {
+        window[0] == b'"'
+            && window[1] == b'E'
+            && window[2..6].iter().all(|byte| byte.is_ascii_digit())
+            && window[6] == b'"'
+    }) {
+        offenders.push(
+            path.strip_prefix(repo_root())
+                .expect("path lives under repo root")
+                .display()
+                .to_string(),
+        );
+    }
 }

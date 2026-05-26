@@ -211,8 +211,8 @@ impl TypeChecker {
             } => {
                 self.check_expr(start)?;
                 self.check_expr(end)?;
-                Err(Diagnostic::error(
-                    "E3053",
+                Err(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3053,
                     "range expressions are not implemented; range typing remains gated",
                     *span,
                 ))

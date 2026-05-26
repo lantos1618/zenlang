@@ -139,8 +139,8 @@ impl TypeChecker {
         match ast_type {
             AstType::SelfType => {
                 if !allow_self_type {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E0204",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0204,
                         "Self type is only valid in method or behavior contexts",
                         span,
                     ));
