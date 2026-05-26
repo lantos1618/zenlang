@@ -12,8 +12,8 @@ impl TypeChecker {
                     .get(&behavior)
                     .copied()
                     .unwrap_or_else(Span::dummy);
-                self.diagnostics.push(Diagnostic::error(
-                    "E6008",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E6008,
                     format!("behavior inheritance cycle involving `{}`", behavior),
                     span,
                 ));
@@ -98,8 +98,8 @@ impl TypeChecker {
 
                 if let Some(previous) = seen_methods.get(&method.name) {
                     if !behavior_method_signatures_match(previous, &method) {
-                        diagnostics.push(Diagnostic::error(
-                            "E6009",
+                        diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E6009,
                             format!(
                                 "conflicting behavior method `{}` inherited by `{}`",
                                 method.name, root_behavior

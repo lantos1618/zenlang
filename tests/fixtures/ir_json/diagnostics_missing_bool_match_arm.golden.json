@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E4006",
+      "slug": "pattern_e4006",
+      "phase": "typechecker",
+      "category": "pattern",
+      "docs_path": "docs/DIAGNOSTICS.md#type-checking",
       "message": "non-exhaustive bool match: missing `false`",
       "span": {
         "file_id": 0,
@@ -41,7 +45,9 @@
             }
           ]
         }
-      ]
+      ],
+      "related": [],
+      "facts": []
     }
   ]
 }

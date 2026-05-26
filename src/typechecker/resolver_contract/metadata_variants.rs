@@ -146,7 +146,7 @@ impl TypeChecker {
             name,
             &[AbsentMetadataEntry::new(
                 symbol.variant_names.is_some(),
-                "E0338",
+                ResolverContractCode::E0338.into(),
                 "variant names",
             )],
             span,

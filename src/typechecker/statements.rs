@@ -50,8 +50,8 @@ impl TypeChecker {
                 };
 
                 if !self.types_compatible(&var_type, &typed_value.ty) {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3072",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3072,
                         format!(
                             "variable `{}` expects `{}`, found `{}`",
                             name,
@@ -122,8 +122,8 @@ impl TypeChecker {
                     && typed_value.ty != Type::Unknown
                     && !self.types_compatible(&typed_target.ty, &typed_value.ty)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3071",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3071,
                         format!(
                             "assignment expects `{}`, found `{}`",
                             typed_target.ty.display_name(),
@@ -152,26 +152,26 @@ impl TypeChecker {
                 })
             }
             Statement::Block { stmts, span } => {
-                self.push_scope();
-                let mut typed_stmts = Vec::new();
-                for s in stmts {
-                    typed_stmts.push(self.check_statement(s)?);
-                }
-                self.pop_scope();
-                // Return the last statement as an expression
-                let _last = typed_stmts
-                    .last()
-                    .map(|s| match &s.kind {
-                        TypedStatementKind::Expression(e) => e.ty.clone(),
-                        _ => Type::Void,
-                    })
-                    .unwrap_or(Type::Void);
+                let (typed_stmts, last_ty) = self.with_scope(|checker| {
+                    let mut typed_stmts = Vec::new();
+                    for s in stmts {
+                        typed_stmts.push(checker.check_statement(s)?);
+                    }
+                    let last_ty = typed_stmts
+                        .last()
+                        .map(|s| match &s.kind {
+                            TypedStatementKind::Expression(e) => e.ty.clone(),
+                            _ => Type::Void,
+                        })
+                        .unwrap_or(Type::Void);
+                    Ok((typed_stmts, last_ty))
+                })?;
                 Ok(TypedStatement {
                     kind: TypedStatementKind::Expression(TypedExpression {
                         kind: TypedExprKind::Block(TypedBlock {
                             statements: typed_stmts,
                             expr: None,
-                            ty: _last,
+                            ty: last_ty,
                             span: *span,
                         }),
                         ty: Type::Void,
@@ -192,8 +192,8 @@ impl TypeChecker {
         span: &crate::error::Span,
     ) {
         if !mutable {
-            self.diagnostics.push(Diagnostic::error(
-                "E3070",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3070,
                 format!("cannot assign to immutable variable `{}`", name),
                 *span,
             ));
@@ -203,8 +203,8 @@ impl TypeChecker {
             && *target_ty != Type::Unknown
             && !self.types_compatible(target_ty, &value.ty)
         {
-            self.diagnostics.push(Diagnostic::error(
-                "E3071",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3071,
                 format!(
                     "assignment to `{}` expects `{}`, found `{}`",
                     name,

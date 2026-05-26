@@ -38,8 +38,8 @@ impl TypeChecker {
             .collect();
 
         if !missing.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E4000",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E4000,
                 format!(
                     "non-exhaustive match on `{}`: missing {}",
                     enum_name,
@@ -69,8 +69,8 @@ impl TypeChecker {
         for arm in arms {
             if let Pattern::Wildcard { span } = &arm.pattern {
                 if wildcard_seen || seen.len() == variant_payloads.len() {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E4002",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E4002,
                         "redundant wildcard match arm",
                         *span,
                     ));
@@ -86,8 +86,8 @@ impl TypeChecker {
             };
             let span = arm.pattern.span();
             let Some(expected_payload) = variant_payloads.get(variant) else {
-                self.diagnostics.push(Diagnostic::error(
-                    "E4001",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4001,
                     format!("enum `{enum_name}` has no variant `{variant}`"),
                     span,
                 ));
@@ -95,27 +95,27 @@ impl TypeChecker {
             };
 
             if wildcard_seen {
-                self.diagnostics.push(Diagnostic::error(
-                    "E4002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4002,
                     format!("redundant match arm for `{enum_name}.{variant}`"),
                     span,
                 ));
             } else if !seen.insert(variant.to_string()) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E4002",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4002,
                     format!("duplicate match arm for `{enum_name}.{variant}`"),
                     span,
                 ));
             }
 
             match (expected_payload.is_some(), has_payload) {
-                (true, false) => self.diagnostics.push(Diagnostic::error(
-                    "E4003",
+                (true, false) => self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4003,
                     format!("match arm `{enum_name}.{variant}` requires a payload"),
                     span,
                 )),
-                (false, true) => self.diagnostics.push(Diagnostic::error(
-                    "E4004",
+                (false, true) => self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E4004,
                     format!("match arm `{enum_name}.{variant}` does not accept a payload"),
                     span,
                 )),

@@ -2,9 +2,9 @@ use super::*;
 
 #[test]
 fn typechecker_resolver_expected_formatting_lives_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation_support.rs");
-    let helpers = read("src/typechecker/resolver_validation_support/expected_helpers.rs");
-    let formatting = read("src/typechecker/resolver_validation_support/expected_formatting.rs");
+    let root = read("src/typechecker/resolver_contract_support.rs");
+    let helpers = read("src/typechecker/resolver_contract_support/expected_helpers.rs");
+    let formatting = read("src/typechecker/resolver_contract_support/expected_formatting.rs");
 
     for helper in [
         "visibility_name",
@@ -46,7 +46,7 @@ fn typechecker_resolver_expected_formatting_lives_in_focused_helper() {
     }
 
     assert!(
-        root.contains("include!(\"resolver_validation_support/expected_formatting.rs\");"),
+        root.contains("include!(\"resolver_contract_support/expected_formatting.rs\");"),
         "resolver validation support should include focused expected formatting helper"
     );
 }

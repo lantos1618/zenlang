@@ -3,8 +3,8 @@ use super::*;
 #[test]
 fn field_validation_formats_messages() {
     let validation = FieldValidation {
-        display_code: "FIELDS",
-        typed_code: "TYPED_FIELDS",
+        display_code: "FIELDS".into(),
+        typed_code: "TYPED_FIELDS".into(),
     };
 
     assert_eq!(validation.display_code, "FIELDS");
@@ -27,15 +27,15 @@ fn field_validation_formats_messages() {
 fn field_validation_uses_resolver_codes() {
     let validation = FieldValidation::resolver_codes();
 
-    assert_eq!(validation.display_code, "E0217");
-    assert_eq!(validation.typed_code, "E0358");
+    assert_eq!(validation.display_code, "E7217");
+    assert_eq!(validation.typed_code, "E7358");
 }
 
 #[test]
 fn variant_payload_validation_formats_messages() {
     let validation = VariantPayloadValidation {
-        display_code: "PAYLOAD",
-        typed_code: "TYPED_PAYLOAD",
+        display_code: "PAYLOAD".into(),
+        typed_code: "TYPED_PAYLOAD".into(),
     };
 
     assert_eq!(validation.display_code, "PAYLOAD");
@@ -53,13 +53,15 @@ fn variant_payload_validation_formats_messages() {
 fn variant_payload_validation_uses_resolver_codes() {
     let validation = VariantPayloadValidation::resolver_codes();
 
-    assert_eq!(validation.display_code, "E0218");
-    assert_eq!(validation.typed_code, "E0359");
+    assert_eq!(validation.display_code, "E7218");
+    assert_eq!(validation.typed_code, "E7359");
 }
 
 #[test]
 fn variant_owner_validation_formats_message() {
-    let validation = VariantOwnerValidation { code: "OWNER" };
+    let validation = VariantOwnerValidation {
+        code: "OWNER".into(),
+    };
 
     assert_eq!(validation.code, "OWNER");
     assert_eq!(
@@ -72,12 +74,14 @@ fn variant_owner_validation_formats_message() {
 fn variant_owner_validation_uses_resolver_code() {
     let validation = VariantOwnerValidation::resolver_code();
 
-    assert_eq!(validation.code, "E0242");
+    assert_eq!(validation.code, "E7242");
 }
 
 #[test]
 fn variant_name_validation_formats_message() {
-    let validation = VariantNameValidation { code: "VARIANTS" };
+    let validation = VariantNameValidation {
+        code: "VARIANTS".into(),
+    };
 
     assert_eq!(validation.code, "VARIANTS");
     assert_eq!(
@@ -90,5 +94,5 @@ fn variant_name_validation_formats_message() {
 fn variant_name_validation_uses_resolver_code() {
     let validation = VariantNameValidation::resolver_code();
 
-    assert_eq!(validation.code, "E0241");
+    assert_eq!(validation.code, "E7241");
 }

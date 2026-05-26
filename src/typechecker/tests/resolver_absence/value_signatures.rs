@@ -14,12 +14,12 @@ add = (left: i32, right: i32) i32 { left + right }
         .lookup(Namespace::Value, "add")
         .expect("value symbol");
     let entries = ValueSignatureAbsenceValidation {
-        parameter_count_code: "PARAM_COUNT",
-        parameter_name_code: "PARAM_NAMES",
-        parameter_type_name_code: "PARAM_TYPES",
-        parameter_type_code: "TYPED_PARAM_TYPES",
-        return_type_code: "RETURN_TYPE",
-        typed_return_type_code: "TYPED_RETURN_TYPE",
+        parameter_count_code: "PARAM_COUNT".into(),
+        parameter_name_code: "PARAM_NAMES".into(),
+        parameter_type_name_code: "PARAM_TYPES".into(),
+        parameter_type_code: "TYPED_PARAM_TYPES".into(),
+        return_type_code: "RETURN_TYPE".into(),
+        typed_return_type_code: "TYPED_RETURN_TYPE".into(),
     }
     .entries(symbol);
 
@@ -41,58 +41,58 @@ add = (left: i32, right: i32) i32 { left + right }
 fn value_signature_absence_validation_uses_module_resolver_codes() {
     let validation = ValueSignatureAbsenceValidation::module_resolver_codes();
 
-    assert_eq!(validation.parameter_count_code, "E0265");
-    assert_eq!(validation.parameter_name_code, "E0267");
-    assert_eq!(validation.parameter_type_name_code, "E0268");
-    assert_eq!(validation.parameter_type_code, "E0371");
-    assert_eq!(validation.return_type_code, "E0266");
-    assert_eq!(validation.typed_return_type_code, "E0372");
+    assert_eq!(validation.parameter_count_code, "E7265");
+    assert_eq!(validation.parameter_name_code, "E7267");
+    assert_eq!(validation.parameter_type_name_code, "E7268");
+    assert_eq!(validation.parameter_type_code, "E7371");
+    assert_eq!(validation.return_type_code, "E7266");
+    assert_eq!(validation.typed_return_type_code, "E7372");
 }
 
 #[test]
 fn value_signature_absence_validation_uses_import_resolver_codes() {
     let validation = ValueSignatureAbsenceValidation::import_resolver_codes();
 
-    assert_eq!(validation.parameter_count_code, "E0281");
-    assert_eq!(validation.parameter_name_code, "E0283");
-    assert_eq!(validation.parameter_type_name_code, "E0284");
-    assert_eq!(validation.parameter_type_code, "E0362");
-    assert_eq!(validation.return_type_code, "E0282");
-    assert_eq!(validation.typed_return_type_code, "E0363");
+    assert_eq!(validation.parameter_count_code, "E7281");
+    assert_eq!(validation.parameter_name_code, "E7283");
+    assert_eq!(validation.parameter_type_name_code, "E7284");
+    assert_eq!(validation.parameter_type_code, "E7362");
+    assert_eq!(validation.return_type_code, "E7282");
+    assert_eq!(validation.typed_return_type_code, "E7363");
 }
 
 #[test]
 fn value_signature_absence_validation_uses_local_resolver_codes() {
     let validation = ValueSignatureAbsenceValidation::local_resolver_codes();
 
-    assert_eq!(validation.parameter_count_code, "E0249");
-    assert_eq!(validation.parameter_name_code, "E0251");
-    assert_eq!(validation.parameter_type_name_code, "E0252");
-    assert_eq!(validation.parameter_type_code, "E0380");
-    assert_eq!(validation.return_type_code, "E0250");
-    assert_eq!(validation.typed_return_type_code, "E0381");
+    assert_eq!(validation.parameter_count_code, "E7249");
+    assert_eq!(validation.parameter_name_code, "E7251");
+    assert_eq!(validation.parameter_type_name_code, "E7252");
+    assert_eq!(validation.parameter_type_code, "E7380");
+    assert_eq!(validation.return_type_code, "E7250");
+    assert_eq!(validation.typed_return_type_code, "E7381");
 }
 
 #[test]
 fn value_signature_absence_validation_uses_type_like_resolver_codes() {
     let validation = ValueSignatureAbsenceValidation::type_like_resolver_codes();
 
-    assert_eq!(validation.parameter_count_code, "E0310");
-    assert_eq!(validation.parameter_name_code, "E0312");
-    assert_eq!(validation.parameter_type_name_code, "E0313");
-    assert_eq!(validation.parameter_type_code, "E0360");
-    assert_eq!(validation.return_type_code, "E0311");
-    assert_eq!(validation.typed_return_type_code, "E0361");
+    assert_eq!(validation.parameter_count_code, "E7310");
+    assert_eq!(validation.parameter_name_code, "E7312");
+    assert_eq!(validation.parameter_type_name_code, "E7313");
+    assert_eq!(validation.parameter_type_code, "E7360");
+    assert_eq!(validation.return_type_code, "E7311");
+    assert_eq!(validation.typed_return_type_code, "E7361");
 }
 
 #[test]
 fn value_signature_absence_validation_uses_variant_resolver_codes() {
     let validation = ValueSignatureAbsenceValidation::variant_resolver_codes();
 
-    assert_eq!(validation.parameter_count_code, "E0330");
-    assert_eq!(validation.parameter_name_code, "E0332");
-    assert_eq!(validation.parameter_type_name_code, "E0333");
-    assert_eq!(validation.parameter_type_code, "E0389");
-    assert_eq!(validation.return_type_code, "E0331");
-    assert_eq!(validation.typed_return_type_code, "E0390");
+    assert_eq!(validation.parameter_count_code, "E7330");
+    assert_eq!(validation.parameter_name_code, "E7332");
+    assert_eq!(validation.parameter_type_name_code, "E7333");
+    assert_eq!(validation.parameter_type_code, "E7389");
+    assert_eq!(validation.return_type_code, "E7331");
+    assert_eq!(validation.typed_return_type_code, "E7390");
 }

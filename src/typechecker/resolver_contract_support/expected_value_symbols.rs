@@ -62,17 +62,17 @@ struct ExpectedParameterMetadata {
 
 #[derive(Clone, Copy)]
 struct ValueParameterValidation {
-    name_code: &'static str,
-    display_type_code: &'static str,
-    typed_type_code: &'static str,
+    name_code: DiagnosticCode,
+    display_type_code: DiagnosticCode,
+    typed_type_code: DiagnosticCode,
 }
 
 impl ValueParameterValidation {
     fn resolver_codes() -> Self {
         Self {
-            name_code: "E0223",
-            display_type_code: "E0216",
-            typed_type_code: "E0356",
+            name_code: ResolverContractCode::E0223.into(),
+            display_type_code: ResolverContractCode::E0216.into(),
+            typed_type_code: ResolverContractCode::E0356.into(),
         }
     }
 
@@ -126,15 +126,15 @@ impl ExpectedReturnMetadata {
 
 #[derive(Clone, Copy)]
 struct ReturnValidation {
-    display_code: &'static str,
-    typed_code: &'static str,
+    display_code: DiagnosticCode,
+    typed_code: DiagnosticCode,
 }
 
 impl ReturnValidation {
     fn resolver_codes() -> Self {
         Self {
-            display_code: "E0212",
-            typed_code: "E0357",
+            display_code: ResolverContractCode::E0212.into(),
+            typed_code: ResolverContractCode::E0357.into(),
         }
     }
 

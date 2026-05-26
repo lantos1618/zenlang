@@ -36,8 +36,8 @@ impl TypeChecker {
             return false;
         }
 
-        self.diagnostics.push(Diagnostic::error(
-            "E6013",
+        self.diagnostics.push(Diagnostic::error_code(
+            crate::error::CompilerDiagnosticCode::E6013,
             format!(
                 "generic type `{}` expects {} type arguments, found 0",
                 type_name, type_param_count

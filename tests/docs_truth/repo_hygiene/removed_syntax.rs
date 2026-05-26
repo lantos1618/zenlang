@@ -182,8 +182,8 @@ fn source_ast_does_not_carry_dead_char_literal_nodes() {
         "src/build_graph/lowering.rs",
         "src/typechecker/self_type_validation/expressions.rs",
         "src/typechecker/generic_type_reference_walker/expressions.rs",
-        "src/typechecker/resolver_validation/local_traversal.rs",
-        "src/typechecker/resolver_validation_support/expected_local_traversal.rs",
+        "src/typechecker/resolver_contract/local_traversal.rs",
+        "src/typechecker/resolver_contract_support/expected_local_traversal.rs",
     ] {
         let source = read(path);
         for forbidden in ["CharLiteral", "TODO: implement char literal type"] {

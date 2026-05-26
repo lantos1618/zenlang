@@ -1,6 +1,7 @@
 use std::fmt;
 
-use super::Span;
+use super::diagnostic_payload::{raw_slug, DiagnosticFact, RelatedDiagnostic};
+use super::{DiagnosticCategory, DiagnosticCode, DiagnosticPhase, Span};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
@@ -108,40 +109,91 @@ impl SuggestedFix {
 pub struct Diagnostic {
     pub severity: Severity,
     pub code: String,
+    pub slug: String,
+    pub phase: DiagnosticPhase,
+    pub category: DiagnosticCategory,
+    pub docs_path: String,
     pub message: String,
     pub span: Option<Span>,
     pub labels: Vec<Label>,
     pub notes: Vec<String>,
     pub context: Vec<ContextFrame>,
     pub suggested_fixes: Vec<SuggestedFix>,
+    pub related: Vec<RelatedDiagnostic>,
+    pub facts: Vec<DiagnosticFact>,
 }
 
 impl Diagnostic {
     /// Create an error diagnostic.
     pub fn error(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
+        Self::raw(Severity::Error, code.into(), message.into(), Some(span))
+    }
+
+    pub fn error_optional(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        span: Option<Span>,
+    ) -> Self {
+        Self::raw(Severity::Error, code.into(), message.into(), span)
+    }
+
+    pub fn error_code(
+        code: impl Into<DiagnosticCode>,
+        message: impl Into<String>,
+        span: Span,
+    ) -> Self {
+        Self::from_code(code.into(), message.into(), Some(span))
+    }
+
+    pub fn error_code_optional(
+        code: impl Into<DiagnosticCode>,
+        message: impl Into<String>,
+        span: Option<Span>,
+    ) -> Self {
+        Self::from_code(code.into(), message.into(), span)
+    }
+
+    fn from_code(code: DiagnosticCode, message: String, span: Option<Span>) -> Self {
+        let descriptor = code.descriptor();
         Self {
-            severity: Severity::Error,
-            code: code.into(),
-            message: message.into(),
-            span: Some(span),
+            severity: descriptor.severity,
+            code: descriptor.number,
+            slug: descriptor.slug,
+            phase: descriptor.phase,
+            category: descriptor.category,
+            docs_path: descriptor.docs_path,
+            message,
+            span,
             labels: Vec::new(),
             notes: Vec::new(),
             context: Vec::new(),
             suggested_fixes: Vec::new(),
+            related: Vec::new(),
+            facts: Vec::new(),
         }
     }
 
     /// Create a warning diagnostic.
     pub fn warning(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
+        Self::raw(Severity::Warning, code.into(), message.into(), Some(span))
+    }
+
+    fn raw(severity: Severity, code: String, message: String, span: Option<Span>) -> Self {
         Self {
-            severity: Severity::Warning,
-            code: code.into(),
-            message: message.into(),
-            span: Some(span),
+            severity,
+            slug: raw_slug(&code),
+            phase: DiagnosticPhase::Unknown,
+            category: DiagnosticCategory::Unknown,
+            docs_path: String::new(),
+            code,
+            message,
+            span,
             labels: Vec::new(),
             notes: Vec::new(),
             context: Vec::new(),
             suggested_fixes: Vec::new(),
+            related: Vec::new(),
+            facts: Vec::new(),
         }
     }
 
@@ -165,6 +217,16 @@ impl Diagnostic {
 
     pub fn with_suggested_fix(mut self, fix: SuggestedFix) -> Self {
         self.suggested_fixes.push(fix);
+        self
+    }
+
+    pub fn with_related(mut self, span: Span, message: impl Into<String>) -> Self {
+        self.related.push(RelatedDiagnostic::new(span, message));
+        self
+    }
+
+    pub fn with_fact(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.facts.push(DiagnosticFact::new(key, value));
         self
     }
 

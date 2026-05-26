@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E2000",
+      "slug": "syntax",
+      "phase": "parser",
+      "category": "syntax",
+      "docs_path": "docs/DIAGNOSTICS.md#syntax",
       "message": "generic association target `Type<T>.derive` is gated; use non-generic `derive` associations or keep the generic behavior target deferred to docs/V1_SPEC.md",
       "span": {
         "file_id": 0,
@@ -38,7 +42,9 @@
           "message": "reserved generic behavior association target"
         }
       ],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

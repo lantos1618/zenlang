@@ -1,27 +1,27 @@
 #[derive(Clone, Copy)]
 struct MutabilityAbsenceValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl MutabilityAbsenceValidation {
     fn module_resolver_code() -> Self {
-        Self { code: "E0345" }
+        Self { code: ResolverContractCode::E0345.into() }
     }
 
     fn import_resolver_code() -> Self {
-        Self { code: "E0344" }
+        Self { code: ResolverContractCode::E0344.into() }
     }
 
     fn type_like_resolver_code() -> Self {
-        Self { code: "E0314" }
+        Self { code: ResolverContractCode::E0314.into() }
     }
 
     fn variant_resolver_code() -> Self {
-        Self { code: "E0343" }
+        Self { code: ResolverContractCode::E0343.into() }
     }
 
     fn value_resolver_code() -> Self {
-        Self { code: "E0308" }
+        Self { code: ResolverContractCode::E0308.into() }
     }
 
     fn entries(self, symbol: &Symbol) -> [AbsentMetadataEntry; 1] {
@@ -41,20 +41,20 @@ impl AbsentMetadataValidation<1> for MutabilityAbsenceValidation {
 
 #[derive(Clone, Copy)]
 struct SourceAbsenceValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl SourceAbsenceValidation {
     fn type_like_resolver_code() -> Self {
-        Self { code: "E0309" }
+        Self { code: ResolverContractCode::E0309.into() }
     }
 
     fn variant_resolver_code() -> Self {
-        Self { code: "E0329" }
+        Self { code: ResolverContractCode::E0329.into() }
     }
 
     fn value_resolver_code() -> Self {
-        Self { code: "E0297" }
+        Self { code: ResolverContractCode::E0297.into() }
     }
 
     fn source_validation(self) -> SourceValidation {

@@ -45,15 +45,15 @@ struct ExpectedBehaviorMethodMetadata {
 
 #[derive(Clone, Copy)]
 struct BehaviorMethodValidation {
-    display_code: &'static str,
-    typed_code: &'static str,
+    display_code: DiagnosticCode,
+    typed_code: DiagnosticCode,
 }
 
 impl BehaviorMethodValidation {
     fn resolver_codes() -> Self {
         Self {
-            display_code: "E0219",
-            typed_code: "E0355",
+            display_code: ResolverContractCode::E0219.into(),
+            typed_code: ResolverContractCode::E0355.into(),
         }
     }
 

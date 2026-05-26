@@ -21,13 +21,13 @@ impl GatedMethod {
 
     pub(super) fn diagnostic(self, span: Span) -> Diagnostic {
         match self {
-            Self::ResultRaise => Diagnostic::error(
-                "E3054",
+            Self::ResultRaise => Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3054,
                 "`.raise()` is gated until Result propagation typing and lowering are implemented",
                 span,
             ),
-            Self::EffectAwait => Diagnostic::error(
-                "E3055",
+            Self::EffectAwait => Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3055,
                 "`.await()` is gated until Sync/Async effect checking and task lowering are implemented",
                 span,
             ),

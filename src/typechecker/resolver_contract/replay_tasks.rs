@@ -1,9 +1,9 @@
 impl TypeChecker {
-    pub(super) fn collect_resolver_validation_replay_declaration_tasks<'a>(
+    pub(super) fn collect_resolver_contract_replay_declaration_tasks<'a>(
         program: &'a ast::Program,
         symbols: &'a SymbolTable,
-    ) -> ResolverValidationReplayDeclarationTasks<'a> {
-        let mut tasks = ResolverValidationReplayDeclarationTasks::default();
+    ) -> ResolverContractReplayDeclarationTasks<'a> {
+        let mut tasks = ResolverContractReplayDeclarationTasks::default();
         let mut scope_cursor = ResolverScopeCursor::default();
 
         for decl in &program.declarations {
@@ -46,7 +46,7 @@ impl TypeChecker {
                             );
                         }
                     }
-                    push_resolver_validation_association_source(
+                    push_resolver_contract_association_source(
                         Namespace::Type,
                         name,
                         *span,
@@ -62,7 +62,7 @@ impl TypeChecker {
                     ..
                 } => {
                     push_expected_resolver_variant_symbols(variants, &mut tasks.expected_symbols);
-                    push_resolver_validation_association_source(
+                    push_resolver_contract_association_source(
                         Namespace::Type,
                         name,
                         *span,
@@ -87,7 +87,7 @@ impl TypeChecker {
                             );
                         }
                     }
-                    push_resolver_validation_association_source(
+                    push_resolver_contract_association_source(
                         Namespace::Behavior,
                         name,
                         *span,

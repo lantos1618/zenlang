@@ -202,7 +202,7 @@ impl TypeChecker {
                 Declaration::Derive { .. } | Declaration::Error { .. } => {}
             }
         }
-        let replay_tasks = Self::collect_resolver_validation_replay_tasks(program, symbols);
+        let replay_tasks = Self::collect_resolver_contract_replay_tasks(program, symbols);
         self.validate_no_extra_resolver_declaration_symbols(&replay_tasks, symbols);
         self.validate_no_extra_resolver_local_symbols(&replay_tasks, symbols);
         self.validate_resolver_behavior_association_lists(&replay_tasks);

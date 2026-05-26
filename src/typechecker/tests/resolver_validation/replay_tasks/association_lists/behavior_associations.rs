@@ -78,7 +78,7 @@ Point.requires(Json<StaticString>)
         .expect("resolver succeeds");
 
     let declaration_tasks =
-        TypeChecker::collect_resolver_validation_replay_declaration_tasks(&program, &symbols);
+        TypeChecker::collect_resolver_contract_replay_declaration_tasks(&program, &symbols);
     let association_tasks =
         TypeChecker::collect_resolver_behavior_association_list_tasks_from_declaration_tasks(
             &declaration_tasks,

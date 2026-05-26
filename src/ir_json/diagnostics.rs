@@ -20,12 +20,18 @@ struct DiagnosticJsonFile<'a> {
 struct DiagnosticJson<'a> {
     severity: String,
     code: &'a str,
+    slug: &'a str,
+    phase: &'static str,
+    category: &'static str,
+    docs_path: &'a str,
     message: &'a str,
     span: Option<DiagnosticJsonSpan<'a>>,
     labels: Vec<DiagnosticJsonLabel<'a>>,
     notes: &'a [String],
     context: Vec<DiagnosticJsonContext<'a>>,
     suggested_fixes: Vec<DiagnosticJsonSuggestedFix<'a>>,
+    related: Vec<DiagnosticJsonRelated<'a>>,
+    facts: Vec<DiagnosticJsonFact<'a>>,
 }
 
 #[derive(Serialize)]
@@ -49,6 +55,18 @@ struct DiagnosticJsonSuggestedFix<'a> {
 }
 
 #[derive(Serialize)]
+struct DiagnosticJsonRelated<'a> {
+    span: DiagnosticJsonSpan<'a>,
+    message: &'a str,
+}
+
+#[derive(Serialize)]
+struct DiagnosticJsonFact<'a> {
+    key: &'a str,
+    value: &'a str,
+}
+
+#[derive(Serialize)]
 struct DiagnosticJsonTextEdit<'a> {
     span: DiagnosticJsonSpan<'a>,
     replacement: &'a str,
@@ -69,7 +87,7 @@ pub fn diagnostics_to_json(
     files: &FileTable,
 ) -> serde_json::Result<String> {
     let graph = DiagnosticsJson {
-        format: "zen.diagnostics.v0",
+        format: "zen.diagnostics.v1",
         semantic_status: "diagnostic",
         files: diagnostic_json_files(files),
         diagnostics: diagnostics
@@ -77,6 +95,10 @@ pub fn diagnostics_to_json(
             .map(|diagnostic| DiagnosticJson {
                 severity: diagnostic.severity.to_string(),
                 code: diagnostic.code.as_str(),
+                slug: diagnostic.slug.as_str(),
+                phase: diagnostic.phase.as_str(),
+                category: diagnostic.category.as_str(),
+                docs_path: diagnostic.docs_path.as_str(),
                 message: diagnostic.message.as_str(),
                 span: diagnostic
                     .span
@@ -85,6 +107,8 @@ pub fn diagnostics_to_json(
                 notes: &diagnostic.notes,
                 context: diagnostic_json_context(&diagnostic.context, files),
                 suggested_fixes: diagnostic_json_suggested_fixes(diagnostic, files),
+                related: diagnostic_json_related(diagnostic, files),
+                facts: diagnostic_json_facts(diagnostic),
             })
             .collect(),
     };
@@ -162,6 +186,33 @@ fn diagnostic_json_suggested_fixes<'a>(
                     edits,
                 })
             }
+        })
+        .collect()
+}
+
+fn diagnostic_json_related<'a>(
+    diagnostic: &'a Diagnostic,
+    files: &'a FileTable,
+) -> Vec<DiagnosticJsonRelated<'a>> {
+    diagnostic
+        .related
+        .iter()
+        .filter_map(|related| {
+            diagnostic_json_span(related.span, files).map(|span| DiagnosticJsonRelated {
+                span,
+                message: related.message.as_str(),
+            })
+        })
+        .collect()
+}
+
+fn diagnostic_json_facts(diagnostic: &Diagnostic) -> Vec<DiagnosticJsonFact<'_>> {
+    diagnostic
+        .facts
+        .iter()
+        .map(|fact| DiagnosticJsonFact {
+            key: fact.key.as_str(),
+            value: fact.value.as_str(),
         })
         .collect()
 }

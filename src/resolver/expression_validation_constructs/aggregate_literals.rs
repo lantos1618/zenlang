@@ -48,15 +48,15 @@ impl Resolver {
 
                 for (field_name, _) in fields {
                     if !provided_fields.insert(field_name.as_str()) {
-                        diagnostics.push(Diagnostic::error(
-                            "E0208",
+                        diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E0208,
                             format!("duplicate field `{field_name}` for struct `{name}`"),
                             span,
                         ));
                     }
                     if !expected_fields.contains(field_name.as_str()) {
-                        diagnostics.push(Diagnostic::error(
-                            "E0209",
+                        diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E0209,
                             format!("unknown field `{field_name}` for struct `{name}`"),
                             span,
                         ));
@@ -65,8 +65,8 @@ impl Resolver {
 
                 for expected_field in expected_fields {
                     if !provided_fields.contains(expected_field) {
-                        diagnostics.push(Diagnostic::error(
-                            "E0210",
+                        diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E0210,
                             format!("missing field `{expected_field}` for struct `{name}`"),
                             span,
                         ));
@@ -74,8 +74,8 @@ impl Resolver {
                 }
             }
         } else if !self.is_known_type_name(table, type_params, name) {
-            diagnostics.push(Diagnostic::error(
-                "E0201",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0201,
                 format!("unknown type symbol '{name}'"),
                 span,
             ));
@@ -124,28 +124,28 @@ impl Resolver {
                     variant_symbol.variant_payload_count.unwrap_or(0),
                     payload.is_some(),
                 ) {
-                    (1, false) => diagnostics.push(Diagnostic::error(
-                        "E0206",
+                    (1, false) => diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0206,
                         format!("enum variant `{enum_name}.{variant}` requires a payload"),
                         span,
                     )),
-                    (0, true) => diagnostics.push(Diagnostic::error(
-                        "E0207",
+                    (0, true) => diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E0207,
                         format!("enum variant `{enum_name}.{variant}` does not accept a payload"),
                         span,
                     )),
                     _ => {}
                 }
             } else {
-                diagnostics.push(Diagnostic::error(
-                    "E0205",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0205,
                     format!("enum `{enum_name}` has no variant `{variant}`"),
                     span,
                 ));
             }
         } else if !self.is_known_type_name(table, type_params, enum_name) {
-            diagnostics.push(Diagnostic::error(
-                "E0201",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0201,
                 format!("unknown type symbol '{enum_name}'"),
                 span,
             ));

@@ -1,11 +1,11 @@
 #[derive(Clone, Copy)]
 struct MutabilityValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl MutabilityValidation {
     fn resolver_code() -> Self {
-        Self { code: "E0231" }
+        Self { code: ResolverContractCode::E0231.into() }
     }
 
     fn display(self, actual: Option<bool>, expected: bool) -> (&'static str, &'static str) {
@@ -28,32 +28,32 @@ impl MutabilityValidation {
 
 #[derive(Clone, Copy)]
 struct VisibilityValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl VisibilityValidation {
     fn module_resolver_code() -> Self {
-        Self { code: "E0229" }
+        Self { code: ResolverContractCode::E0229.into() }
     }
 
     fn import_resolver_code() -> Self {
-        Self { code: "E0245" }
+        Self { code: ResolverContractCode::E0245.into() }
     }
 
     fn type_like_resolver_code() -> Self {
-        Self { code: "E0225" }
+        Self { code: ResolverContractCode::E0225.into() }
     }
 
     fn variant_resolver_code() -> Self {
-        Self { code: "E0226" }
+        Self { code: ResolverContractCode::E0226.into() }
     }
 
     fn value_resolver_code() -> Self {
-        Self { code: "E0224" }
+        Self { code: ResolverContractCode::E0224.into() }
     }
 
     fn local_resolver_code() -> Self {
-        Self { code: "E0247" }
+        Self { code: ResolverContractCode::E0247.into() }
     }
 
     fn display(self, actual: bool, expected: bool) -> (&'static str, &'static str) {
@@ -76,35 +76,35 @@ enum ResolverSymbolPresence {
 
 #[derive(Clone, Copy)]
 struct ResolverSymbolPresenceValidation {
-    code: &'static str,
+    code: DiagnosticCode,
     presence: ResolverSymbolPresence,
 }
 
 impl ResolverSymbolPresenceValidation {
     fn missing_resolver_code() -> Self {
         Self {
-            code: "E0210",
+            code: ResolverContractCode::E0210.into(),
             presence: ResolverSymbolPresence::Missing,
         }
     }
 
     fn missing_local_resolver_code() -> Self {
         Self {
-            code: "E0228",
+            code: ResolverContractCode::E0228.into(),
             presence: ResolverSymbolPresence::Missing,
         }
     }
 
     fn extra_declaration_resolver_code() -> Self {
         Self {
-            code: "E0243",
+            code: ResolverContractCode::E0243.into(),
             presence: ResolverSymbolPresence::Extra,
         }
     }
 
     fn extra_local_resolver_code() -> Self {
         Self {
-            code: "E0244",
+            code: ResolverContractCode::E0244.into(),
             presence: ResolverSymbolPresence::Extra,
         }
     }
@@ -120,7 +120,7 @@ impl ResolverSymbolPresenceValidation {
 
 #[derive(Clone, Copy)]
 struct SourceValidation {
-    code: &'static str,
+    code: DiagnosticCode,
     actual_missing: &'static str,
     expected_missing: &'static str,
     quote_expected: bool,
@@ -129,7 +129,7 @@ struct SourceValidation {
 impl SourceValidation {
     fn module_resolver_code() -> Self {
         Self {
-            code: "E0230",
+            code: ResolverContractCode::E0230.into(),
             actual_missing: "none",
             expected_missing: "none",
             quote_expected: false,
@@ -138,7 +138,7 @@ impl SourceValidation {
 
     fn stripped_import_resolver_code() -> Self {
         Self {
-            code: "E0246",
+            code: ResolverContractCode::E0246.into(),
             actual_missing: "unknown",
             expected_missing: "a module source",
             quote_expected: false,
@@ -147,7 +147,7 @@ impl SourceValidation {
 
     fn import_resolver_code() -> Self {
         Self {
-            code: "E0227",
+            code: ResolverContractCode::E0227.into(),
             actual_missing: "unknown",
             expected_missing: "none",
             quote_expected: true,
@@ -156,7 +156,7 @@ impl SourceValidation {
 
     fn local_resolver_code() -> Self {
         Self {
-            code: "E0248",
+            code: ResolverContractCode::E0248.into(),
             actual_missing: "none",
             expected_missing: "none",
             quote_expected: false,
@@ -184,28 +184,28 @@ impl SourceValidation {
 #[derive(Clone, Copy)]
 struct CountValidation {
     label: &'static str,
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl CountValidation {
     fn value_parameter_resolver_code() -> Self {
         Self {
             label: "parameter count",
-            code: "E0211",
+            code: ResolverContractCode::E0211.into(),
         }
     }
 
     fn field_resolver_code() -> Self {
         Self {
             label: "field count",
-            code: "E0214",
+            code: ResolverContractCode::E0214.into(),
         }
     }
 
     fn variant_payload_resolver_code() -> Self {
         Self {
             label: "payload count",
-            code: "E0215",
+            code: ResolverContractCode::E0215.into(),
         }
     }
 

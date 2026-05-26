@@ -20,15 +20,15 @@ struct ExpectedFieldMetadata {
 
 #[derive(Clone, Copy)]
 struct FieldValidation {
-    display_code: &'static str,
-    typed_code: &'static str,
+    display_code: DiagnosticCode,
+    typed_code: DiagnosticCode,
 }
 
 impl FieldValidation {
     fn resolver_codes() -> Self {
         Self {
-            display_code: "E0217",
-            typed_code: "E0358",
+            display_code: ResolverContractCode::E0217.into(),
+            typed_code: ResolverContractCode::E0358.into(),
         }
     }
 
@@ -83,12 +83,12 @@ struct ExpectedVariantPayloadMetadata {
 
 #[derive(Clone, Copy)]
 struct VariantNameValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl VariantNameValidation {
     fn resolver_code() -> Self {
-        Self { code: "E0241" }
+        Self { code: ResolverContractCode::E0241.into() }
     }
 
     fn message(self, name: &str, actual: &str, expected: &str) -> String {
@@ -98,12 +98,12 @@ impl VariantNameValidation {
 
 #[derive(Clone, Copy)]
 struct VariantOwnerValidation {
-    code: &'static str,
+    code: DiagnosticCode,
 }
 
 impl VariantOwnerValidation {
     fn resolver_code() -> Self {
-        Self { code: "E0242" }
+        Self { code: ResolverContractCode::E0242.into() }
     }
 
     fn message(self, name: &str, actual: &str, expected: &str) -> String {
@@ -113,15 +113,15 @@ impl VariantOwnerValidation {
 
 #[derive(Clone, Copy)]
 struct VariantPayloadValidation {
-    display_code: &'static str,
-    typed_code: &'static str,
+    display_code: DiagnosticCode,
+    typed_code: DiagnosticCode,
 }
 
 impl VariantPayloadValidation {
     fn resolver_codes() -> Self {
         Self {
-            display_code: "E0218",
-            typed_code: "E0359",
+            display_code: ResolverContractCode::E0218.into(),
+            typed_code: ResolverContractCode::E0359.into(),
         }
     }
 

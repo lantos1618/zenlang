@@ -87,7 +87,7 @@ impl TypeChecker {
 
     fn validate_stripped_resolver_import_symbols(
         &mut self,
-        tasks: &ResolverValidationReplayTasks<'_>,
+        tasks: &ResolverContractReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
         if tasks.expected_symbols.validate_imports {
@@ -151,8 +151,8 @@ impl TypeChecker {
     ) {
         for binding in &entry.imports {
             let Some(source_module) = graph.module(binding.source_module) else {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0233",
+                self.diagnostics.push(Diagnostic::error_code(
+                    ResolverContractCode::E0233,
                     format!(
                         "module graph import '{}' points at missing module {:?}",
                         binding.local_name, binding.source_module
@@ -168,8 +168,8 @@ impl TypeChecker {
                 .iter()
                 .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
             else {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0234",
+                self.diagnostics.push(Diagnostic::error_code(
+                    ResolverContractCode::E0234,
                     format!(
                         "module graph import '{}' points at missing symbol '{}'",
                         binding.local_name, binding.source_symbol

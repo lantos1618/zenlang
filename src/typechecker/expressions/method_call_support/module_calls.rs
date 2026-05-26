@@ -84,8 +84,8 @@ impl TypeChecker {
             return Type::Void;
         }
 
-        self.diagnostics.push(Diagnostic::error(
-            "E3023",
+        self.diagnostics.push(Diagnostic::error_code(
+            crate::error::CompilerDiagnosticCode::E3023,
             format!("undefined module function `{}.{}`", recv_name, method),
             span,
         ));

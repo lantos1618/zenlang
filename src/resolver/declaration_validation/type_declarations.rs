@@ -19,8 +19,8 @@ impl Resolver {
         let mut seen_fields = HashSet::new();
         for field in fields {
             if !seen_fields.insert(field.name.as_str()) {
-                diagnostics.push(Diagnostic::error(
-                    "E0211",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0211,
                     format!("duplicate field `{}` for struct `{name}`", field.name),
                     field.span,
                 ));
@@ -82,8 +82,8 @@ impl Resolver {
         let mut seen_methods = HashSet::new();
         for method in methods {
             if !seen_methods.insert(method.name.as_str()) {
-                diagnostics.push(Diagnostic::error(
-                    "E0212",
+                diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0212,
                     format!("duplicate behavior method `{}` in `{name}`", method.name),
                     method.span,
                 ));

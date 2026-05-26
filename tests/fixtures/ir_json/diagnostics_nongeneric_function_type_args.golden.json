@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E5002",
+      "slug": "generic_e5002",
+      "phase": "typechecker",
+      "category": "generic",
+      "docs_path": "docs/DIAGNOSTICS.md#json-stable-codes",
       "message": "non-generic function `id` does not accept type arguments",
       "span": {
         "file_id": 0,
@@ -23,7 +27,9 @@
       "labels": [],
       "notes": [],
       "context": [],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

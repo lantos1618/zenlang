@@ -70,7 +70,7 @@ fn emit_json_diagnostics_rejects_hand_authored_json_before_diagnostic_override()
         "forged_diagnostics.json",
         r#"
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "diagnostics": [{
     "severity": "note",

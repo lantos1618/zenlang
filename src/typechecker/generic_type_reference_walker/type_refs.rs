@@ -14,15 +14,18 @@ impl TypeChecker {
         }
 
         if let Some(gated) = gated_builtin_type_name(name) {
-            self.diagnostics
-                .push(Diagnostic::error("E0202", gated.gate_message(), span));
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0202,
+                gated.gate_message(),
+                span,
+            ));
             return;
         }
 
         if !self.is_known_named_type(name) {
             if reject_unknown {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0201",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0201,
                     format!("unknown type symbol '{name}'"),
                     span,
                 ));
@@ -55,8 +58,11 @@ impl TypeChecker {
         reject_unknown: bool,
     ) {
         if let Some(gated) = gated_builtin_type_name(name) {
-            self.diagnostics
-                .push(Diagnostic::error("E0202", gated.gate_message(), span));
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0202,
+                gated.gate_message(),
+                span,
+            ));
             return;
         }
 
@@ -85,8 +91,8 @@ impl TypeChecker {
             )
         } else {
             if reject_unknown && !self.imports.contains_key(name) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E0201",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0201,
                     format!("unknown type symbol '{name}'"),
                     span,
                 ));

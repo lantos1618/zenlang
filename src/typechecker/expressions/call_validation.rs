@@ -10,8 +10,8 @@ impl TypeChecker {
         span: &Span,
     ) {
         if params.len() != args.len() {
-            self.diagnostics.push(Diagnostic::error(
-                "E3021",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3021,
                 format!(
                     "{} `{}` expects {} arguments, found {}",
                     kind,
@@ -31,8 +31,8 @@ impl TypeChecker {
             }
 
             if !self.types_compatible(&expected, &actual.ty) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3022",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3022,
                     format!(
                         "argument {} for `{}` expects `{}`, found `{}`",
                         idx + 1,
@@ -78,8 +78,8 @@ impl TypeChecker {
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
         if !type_name.is_empty() {
-            self.diagnostics.push(Diagnostic::error(
-                "E3043",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3043,
                 format!("type `{}` has no method `{}`", type_name, method),
                 span,
             ));

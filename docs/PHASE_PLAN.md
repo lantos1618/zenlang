@@ -53,6 +53,15 @@ golden fixtures, and git history.
 ## Current Phase
 Phase 5 is in evidence-hardening and cleanup. The generic specialization surfaces are implemented; continue closing proof gaps, keeping generated C consistent, and preventing large-file/slop regressions.
 
+## Feature Status Confidence
+| Surface | Status | Confidence |
+|---|---|---|
+| Generic specialization, worklist C output, and resolver replay | implemented | high |
+| Diagnostics JSON, typed/HIR/MIR JSON, and build graph evidence | implemented | high |
+| Behavior declarations, explicit associations, and std facades | experimental | medium |
+| Dev UX, Agent UX, LSP/editor workflows, and package/link driver | planned | medium |
+| Async, typed allocator runtime, raw memory, syscalls, and comptime type matching | gated | high |
+
 ## Anti-Slop Scrub Queue
 Use semantic-overlap and slop-cannon reports as triage input, not automatic edits. Record credible classes here; keep generated reports, embeddings, and model caches ignored.
 
@@ -63,6 +72,7 @@ Use semantic-overlap and slop-cannon reports as triage input, not automatic edit
 - fixed/guarded after follow-up report review: removed the orphan compiler intrinsic registry that was tracked but not compiled, pinned intrinsic spelling truth to the active `CIntrinsic` and `GatedIntrinsic` tables, centralized module-root spellings, and factored small semantic-overlap helpers for imported behavior/source dependencies, resolver behavior refs, enum payload parsing, generic type-name fallback, and impl `Self` matching.
 - fixed/guarded in semantic-helper scrub: generic inference shape item matching, resolver scoped type-reference validation, executable/test target single-source lowering, C match branch body emission, behavior-bound generated-C assertion ladders, and gated enum payload mutation now share focused helpers or explicit guards without weakening file-focus hygiene tests.
 - reviewed/fixed in current slop-cannon follow-up: top resolver, declaration-collection, build-target, parser, and C-match clusters had no slop-example matches and no exact/near duplicate edges; real small duplicates were scrubbed in resolver method type-reference dispatch, binary logical operand diagnostics, and C match branch emission, while parser generic-disambiguation and resolver/declaration/build symmetry stayed explicit because collapsing it would hide distinct language behavior.
+- current three-round cleanup: added grouped Rust signature inventory, centralized module-graph test fixtures, and deduplicated resolver expected-symbol type-parameter fixtures.
 - next code cleanup: runtime/std facade stand-ins, split intrinsic registry, operator tables, builtin type/layout metadata, lexer keyword/root-token spellings, runtime descriptor enums, lossy `Type` to `AstType` conversion, generic callable specialization, behavior-ref/key normalization, resolver task routing, resolver-local traversal helpers, resolver metadata absence profiles, generic behavior-impl template insertion, call-resolution normalization, and build-target lowering specs.
 - next test cleanup: generated-C substring ladders, metadata absence matrices, docs-truth prose pinning, exact temporary-name assertions, byte-identical IR golden outputs, repetitive host-effect matrices, and private-layout hygiene checks that behave like `1 == 1`.
 - next docs/stdlib cleanup: public std/build facade story, async/actor/allocator sketch quarantine, duplicate allocator/async API shapes, and compact status docs that avoid repeating the phase plan.

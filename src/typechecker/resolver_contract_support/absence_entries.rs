@@ -5,12 +5,12 @@ trait AbsentMetadataValidation<const N: usize>: Copy {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct AbsentMetadataEntry {
     present: bool,
-    code: &'static str,
+    code: DiagnosticCode,
     label: &'static str,
 }
 
 impl AbsentMetadataEntry {
-    fn new(present: bool, code: &'static str, label: &'static str) -> Self {
+    fn new(present: bool, code: DiagnosticCode, label: &'static str) -> Self {
         Self {
             present,
             code,

@@ -48,17 +48,17 @@ fn expected_resolver_impl_method_key(
     )
 }
 
-fn push_resolver_validation_association_source<'a>(
+fn push_resolver_contract_association_source<'a>(
     namespace: Namespace,
     name: &'a str,
     span: Span,
     symbols: &'a SymbolTable,
     expected: &mut ResolverExpectedSymbolSets,
-    sources: &mut Vec<ResolverValidationBehaviorAssociationSource<'a>>,
+    sources: &mut Vec<ResolverContractBehaviorAssociationSource<'a>>,
 ) {
     expected.declarations.insert((namespace, name.to_string()));
     if let Some(symbol) = symbols.lookup(namespace, name) {
-        sources.push(ResolverValidationBehaviorAssociationSource { name, symbol, span });
+        sources.push(ResolverContractBehaviorAssociationSource { name, symbol, span });
     }
 }
 

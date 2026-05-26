@@ -10,7 +10,6 @@ pub use types::Type;
 
 // ─── Typed AST Nodes ─────────────────────────────────────────────────────────
 // These mirror the untyped AST but every expression carries its resolved Type.
-// We keep this minimal for now — it will be fleshed out when building the typechecker.
 
 /// A typed expression: the expression kind + its resolved type + span.
 #[derive(Debug, Clone, PartialEq, Serialize)]

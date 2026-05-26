@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E2000",
+      "slug": "syntax",
+      "phase": "parser",
+      "category": "syntax",
+      "docs_path": "docs/DIAGNOSTICS.md#syntax",
       "message": "return keyword has been removed; use the final expression in the block",
       "span": {
         "file_id": 0,
@@ -41,7 +45,9 @@
             }
           ]
         }
-      ]
+      ],
+      "related": [],
+      "facts": []
     }
   ]
 }

@@ -3,8 +3,8 @@ struct BehaviorRefValidation {
     symbol_kind: &'static str,
     name_label: &'static str,
     ref_label: &'static str,
-    name_code: &'static str,
-    ref_code: &'static str,
+    name_code: DiagnosticCode,
+    ref_code: DiagnosticCode,
 }
 
 #[derive(Clone, Copy)]
@@ -41,14 +41,14 @@ impl BehaviorRefValidation {
         }
     }
 
-    fn codes_for(role: BehaviorRefRole, check: BehaviorRefCheck) -> (&'static str, &'static str) {
+    fn codes_for(role: BehaviorRefRole, check: BehaviorRefCheck) -> (DiagnosticCode, DiagnosticCode) {
         match (role, check) {
-            (BehaviorRefRole::Parent, BehaviorRefCheck::Contains) => ("E0235", "E0245"),
-            (BehaviorRefRole::Parent, BehaviorRefCheck::List) => ("E0240", "E0246"),
-            (BehaviorRefRole::Impl, BehaviorRefCheck::Contains) => ("E0236", "E0247"),
-            (BehaviorRefRole::Impl, BehaviorRefCheck::List) => ("E0238", "E0248"),
-            (BehaviorRefRole::Required, BehaviorRefCheck::Contains) => ("E0237", "E0249"),
-            (BehaviorRefRole::Required, BehaviorRefCheck::List) => ("E0239", "E0250"),
+            (BehaviorRefRole::Parent, BehaviorRefCheck::Contains) => (ResolverContractCode::E0235.into(), ResolverContractCode::E0245.into()),
+            (BehaviorRefRole::Parent, BehaviorRefCheck::List) => (ResolverContractCode::E0240.into(), ResolverContractCode::E0246.into()),
+            (BehaviorRefRole::Impl, BehaviorRefCheck::Contains) => (ResolverContractCode::E0236.into(), ResolverContractCode::E0247.into()),
+            (BehaviorRefRole::Impl, BehaviorRefCheck::List) => (ResolverContractCode::E0238.into(), ResolverContractCode::E0248.into()),
+            (BehaviorRefRole::Required, BehaviorRefCheck::Contains) => (ResolverContractCode::E0237.into(), ResolverContractCode::E0249.into()),
+            (BehaviorRefRole::Required, BehaviorRefCheck::List) => (ResolverContractCode::E0239.into(), ResolverContractCode::E0250.into()),
         }
     }
 

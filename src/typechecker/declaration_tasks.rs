@@ -101,7 +101,7 @@ struct ResolverTypeBehaviorRefreshTask {
     restored_name: String,
 }
 
-include!("resolver_validation_support.rs");
+include!("resolver_contract_support.rs");
 
 struct DefaultBehaviorMethod {
     name: String,

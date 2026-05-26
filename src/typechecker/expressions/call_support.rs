@@ -24,8 +24,11 @@ impl TypeChecker {
 
         if module.as_deref() == Some(GatedIntrinsic::INTRINSIC_MODULE) {
             if let Ok(gated) = name.parse::<GatedIntrinsic>() {
-                self.diagnostics
-                    .push(Diagnostic::error("E0203", gated.gate_message(), span));
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E0203,
+                    gated.gate_message(),
+                    span,
+                ));
                 return Ok(TypedExpression {
                     kind: TypedExprKind::FunctionCall {
                         function: full_name,
@@ -75,8 +78,8 @@ impl TypeChecker {
                 (full_name.clone(), Type::Void)
             }
         } else {
-            self.diagnostics.push(Diagnostic::error(
-                "E3020",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3020,
                 format!("undefined function `{}`", name),
                 span,
             ));

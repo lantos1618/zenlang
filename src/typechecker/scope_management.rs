@@ -9,6 +9,17 @@ impl TypeChecker {
         self.scopes.pop();
     }
 
+    #[allow(clippy::result_large_err)]
+    pub(crate) fn with_scope<T>(
+        &mut self,
+        check: impl FnOnce(&mut Self) -> Result<T, Diagnostic>,
+    ) -> Result<T, Diagnostic> {
+        self.push_scope();
+        let result = check(self);
+        self.pop_scope();
+        result
+    }
+
     pub(crate) fn define_var(&mut self, name: &str, ty: Type) {
         self.define_var_with_mutability(name, ty, false);
     }

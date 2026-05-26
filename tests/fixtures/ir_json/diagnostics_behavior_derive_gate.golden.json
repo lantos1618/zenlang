@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E2000",
+      "slug": "syntax",
+      "phase": "parser",
+      "category": "syntax",
+      "docs_path": "docs/DIAGNOSTICS.md#syntax",
       "message": "generated behavior association `Type.derive(...)` is gated until derive fallback resolution and ambiguity diagnostics are implemented",
       "span": {
         "file_id": 0,
@@ -38,7 +42,9 @@
           "message": "reserved generated/fallback behavior association"
         }
       ],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

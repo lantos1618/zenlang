@@ -36,8 +36,8 @@ impl TypeChecker {
             Self::behavior_ref_parts(resolver_impl_ref.as_ref(), behavior, behavior_type_args);
 
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6005",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6005,
                 format!("undefined type `{}`", type_name),
                 span,
             ));
@@ -74,8 +74,8 @@ impl TypeChecker {
             .behavior_impls
             .contains(&(type_name.to_string(), behavior_key.clone()))
         {
-            self.diagnostics.push(Diagnostic::error(
-                "E6003",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6003,
                 format!(
                     "duplicate implementation of behavior `{}` for type `{}`",
                     behavior_key, type_name
@@ -86,8 +86,8 @@ impl TypeChecker {
         }
 
         if let Some(existing) = self.find_overlapping_behavior_impl(type_name, &behavior_key) {
-            self.diagnostics.push(Diagnostic::error(
-                "E6010",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6010,
                 format!(
                     "overlapping implementations of behaviors `{}` and `{}` for type `{}`",
                     existing, behavior_key, type_name

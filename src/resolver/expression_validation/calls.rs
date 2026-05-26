@@ -46,8 +46,8 @@ impl Resolver {
             diagnostics,
         );
         if module.is_none() && !self.is_known_value_name(table, locals, name) {
-            diagnostics.push(Diagnostic::error(
-                "E0203",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0203,
                 format!("unknown value symbol '{name}'"),
                 span,
             ));
@@ -71,8 +71,8 @@ impl Resolver {
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !self.is_known_value_name(table, locals, name) {
-            diagnostics.push(Diagnostic::error(
-                "E0203",
+            diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0203,
                 format!("unknown value symbol '{name}'"),
                 span,
             ));

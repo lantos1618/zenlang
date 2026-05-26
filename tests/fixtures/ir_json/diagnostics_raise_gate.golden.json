@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E3054",
+      "slug": "type_e3054",
+      "phase": "typechecker",
+      "category": "type",
+      "docs_path": "docs/DIAGNOSTICS.md#type-checking",
       "message": "`.raise()` is gated until Result propagation typing and lowering are implemented",
       "span": {
         "file_id": 0,
@@ -23,7 +27,9 @@
       "labels": [],
       "notes": [],
       "context": [],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

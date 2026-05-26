@@ -9,7 +9,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != expected {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.code,
                 validation.message(symbol_kind, name, actual, expected),
                 span,
@@ -27,7 +27,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != Some(expected) {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.code,
                 validation.message(symbol_kind, name, actual, expected),
                 span,
@@ -62,7 +62,7 @@ impl TypeChecker {
         validation: ResolverSymbolPresenceValidation,
         span: Span,
     ) {
-        self.diagnostics.push(Diagnostic::error(
+        self.diagnostics.push(Diagnostic::error_code(
             validation.code,
             validation.message(symbol_kind, name),
             span,
@@ -77,7 +77,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if entry.present {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 entry.code,
                 entry.message(symbol_kind, name),
                 span,
@@ -119,7 +119,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != expected {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.code,
                 validation.message(symbol_kind, name, actual, expected),
                 span,
@@ -137,7 +137,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if actual != Some(expected) {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.code,
                 validation.message(symbol_kind, name, actual, expected),
                 span,
@@ -150,14 +150,14 @@ impl TypeChecker {
         actual: Option<&[T]>,
         expected: &[T],
         display: impl Fn(Option<&[T]>) -> String,
-        code: &'static str,
+        code: DiagnosticCode,
         message: impl Fn(&str, &str) -> String,
         span: Span,
     ) {
         if actual != Some(expected) {
             let actual_display = display(actual);
             let expected_display = display(Some(expected));
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 code,
                 message(&actual_display, &expected_display),
                 span,
@@ -170,14 +170,14 @@ impl TypeChecker {
         actual: Option<&T>,
         expected: Option<&T>,
         display: impl Fn(Option<&T>) -> String,
-        code: &'static str,
+        code: DiagnosticCode,
         message: impl Fn(&str, &str) -> String,
         span: Span,
     ) {
         if actual != expected {
             let actual_display = display(actual);
             let expected_display = display(expected);
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 code,
                 message(&actual_display, &expected_display),
                 span,

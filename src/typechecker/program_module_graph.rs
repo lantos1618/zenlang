@@ -6,8 +6,8 @@ impl TypeChecker {
         graph: &ResolvedModuleGraph,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         let Some(entry) = graph.module(graph.entry) else {
-            self.diagnostics.push(Diagnostic::error(
-                "E0232",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E0232,
                 format!("module graph missing entry module {:?}", graph.entry),
                 Span::dummy(),
             ));

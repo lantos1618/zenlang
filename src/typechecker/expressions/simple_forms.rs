@@ -54,8 +54,8 @@ impl TypeChecker {
                     && !self.functions.contains_key(name)
                     && !self.is_import(name)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3040",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3040,
                         format!("undefined variable `{}`", name),
                         span,
                     ));
@@ -77,20 +77,21 @@ impl TypeChecker {
         expr: &Option<Box<Expression>>,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        self.push_scope();
-        let mut typed_stmts = Vec::new();
-        for stmt in statements {
-            typed_stmts.push(self.check_statement(stmt)?);
-        }
-        let typed_expr = match expr {
-            Some(e) => Some(Box::new(self.check_expr(e)?)),
-            None => None,
-        };
-        let ty = typed_expr
-            .as_ref()
-            .map(|e| e.ty.clone())
-            .unwrap_or(Type::Void);
-        self.pop_scope();
+        let (typed_stmts, typed_expr, ty) = self.with_scope(|checker| {
+            let mut typed_stmts = Vec::new();
+            for stmt in statements {
+                typed_stmts.push(checker.check_statement(stmt)?);
+            }
+            let typed_expr = match expr {
+                Some(e) => Some(Box::new(checker.check_expr(e)?)),
+                None => None,
+            };
+            let ty = typed_expr
+                .as_ref()
+                .map(|e| e.ty.clone())
+                .unwrap_or(Type::Void);
+            Ok((typed_stmts, typed_expr, ty))
+        })?;
 
         Ok(TypedExpression {
             kind: TypedExprKind::Block(TypedBlock {

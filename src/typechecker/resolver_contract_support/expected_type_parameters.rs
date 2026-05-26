@@ -58,28 +58,28 @@ impl ExpectedTypeParameterMetadata {
 
 #[derive(Clone, Copy)]
 struct TypeParameterValidation {
-    count_code: &'static str,
-    name_code: &'static str,
-    bound_code: &'static str,
-    bound_ref_code: &'static str,
+    count_code: DiagnosticCode,
+    name_code: DiagnosticCode,
+    bound_code: DiagnosticCode,
+    bound_ref_code: DiagnosticCode,
 }
 
 impl TypeParameterValidation {
     fn type_like_resolver_codes() -> Self {
         Self {
-            count_code: "E0213",
-            name_code: "E0346",
-            bound_code: "E0222",
-            bound_ref_code: "E0350",
+            count_code: ResolverContractCode::E0213.into(),
+            name_code: ResolverContractCode::E0346.into(),
+            bound_code: ResolverContractCode::E0222.into(),
+            bound_ref_code: ResolverContractCode::E0350.into(),
         }
     }
 
     fn value_resolver_codes() -> Self {
         Self {
-            count_code: "E0220",
-            name_code: "E0347",
-            bound_code: "E0221",
-            bound_ref_code: "E0351",
+            count_code: ResolverContractCode::E0220.into(),
+            name_code: ResolverContractCode::E0347.into(),
+            bound_code: ResolverContractCode::E0221.into(),
+            bound_ref_code: ResolverContractCode::E0351.into(),
         }
     }
 

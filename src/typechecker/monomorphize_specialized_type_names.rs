@@ -14,32 +14,35 @@ impl TypeChecker {
         concrete_name: &str,
         ty: &Type,
     ) -> Option<(String, Vec<AstType>)> {
-        if let Some((name, params)) = self
-            .structs
-            .iter()
-            .find(|(name, info)| {
-                concrete_name != name.as_str()
-                    && self.concrete_type_name_matches_generic(concrete_name, name)
-                    && !info.type_params.is_empty()
-            })
-            .map(|(name, info)| (name.clone(), info.type_params.clone()))
-        {
-            let type_args = self.infer_specialized_type_args(&name, ty, &params);
-            if type_args.len() == params.len() {
-                return Some((name, type_args));
-            }
+        if let (Some(generic_name), Some(type_args)) = (
+            self.specialized_type_generic_names.get(concrete_name),
+            self.specialized_type_args.get(concrete_name),
+        ) {
+            return Some((generic_name.clone(), type_args.clone()));
         }
 
-        if let Some((name, params)) = self
-            .enums
+        let mut candidates = self
+            .structs
             .iter()
-            .find(|(name, info)| {
+            .filter(|(name, info)| {
                 concrete_name != name.as_str()
                     && self.concrete_type_name_matches_generic(concrete_name, name)
                     && !info.type_params.is_empty()
             })
-            .map(|(name, info)| (name.clone(), info.type_params.clone()))
-        {
+            .map(|(name, info)| (0u8, name.clone(), info.type_params.clone()))
+            .chain(
+                self.enums
+                    .iter()
+                    .filter(|(name, info)| {
+                        concrete_name != name.as_str()
+                            && self.concrete_type_name_matches_generic(concrete_name, name)
+                            && !info.type_params.is_empty()
+                    })
+                    .map(|(name, info)| (1u8, name.clone(), info.type_params.clone())),
+            )
+            .collect::<Vec<_>>();
+        candidates.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
+        for (_, name, params) in candidates {
             let type_args = self.infer_specialized_type_args(&name, ty, &params);
             if type_args.len() == params.len() {
                 return Some((name, type_args));

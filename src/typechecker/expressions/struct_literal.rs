@@ -85,8 +85,8 @@ impl TypeChecker {
             let typed = self.check_expr(field_expr)?;
 
             if !provided.insert(field_name.as_str()) {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3034",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3034,
                     format!("duplicate field `{}` for struct `{}`", field_name, name),
                     typed.span,
                 ));
@@ -97,8 +97,8 @@ impl TypeChecker {
                     && typed.ty != Type::Unknown
                     && !self.types_compatible(expected, &typed.ty)
                 {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3036",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3036,
                         format!(
                             "field `{}` for struct `{}` expects `{}`, found `{}`",
                             field_name,
@@ -110,8 +110,8 @@ impl TypeChecker {
                     ));
                 }
             } else if struct_info.is_some() && constructor_type_args_valid {
-                self.diagnostics.push(Diagnostic::error(
-                    "E3035",
+                self.diagnostics.push(Diagnostic::error_code(
+                    crate::error::CompilerDiagnosticCode::E3035,
                     format!("unknown field `{}` for struct `{}`", field_name, name),
                     typed.span,
                 ));
@@ -143,8 +143,8 @@ impl TypeChecker {
                                 typed.ty.clone()
                             };
                             if !self.types_compatible(expected, &actual_ty) {
-                                self.diagnostics.push(Diagnostic::error(
-                                    "E3036",
+                                self.diagnostics.push(Diagnostic::error_code(
+                                    crate::error::CompilerDiagnosticCode::E3036,
                                     format!(
                                         "field `{}` for struct `{}` expects `{}`, found `{}`",
                                         field_name,
@@ -159,8 +159,8 @@ impl TypeChecker {
                         typed_fields.push((field_name.clone(), typed));
                         continue;
                     }
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3037",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3037,
                         format!("missing field `{}` for struct `{}`", field_name, name),
                         span,
                     ));

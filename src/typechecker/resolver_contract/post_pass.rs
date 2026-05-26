@@ -1,7 +1,7 @@
 impl TypeChecker {
     fn validate_no_extra_resolver_declaration_symbols(
         &mut self,
-        tasks: &ResolverValidationReplayTasks<'_>,
+        tasks: &ResolverContractReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
         let expected = &tasks.expected_symbols;
@@ -38,7 +38,7 @@ impl TypeChecker {
 
     fn validate_no_extra_resolver_local_symbols(
         &mut self,
-        tasks: &ResolverValidationReplayTasks<'_>,
+        tasks: &ResolverContractReplayTasks<'_>,
         symbols: &SymbolTable,
     ) {
         let expected = &tasks.expected_symbols;
@@ -62,7 +62,7 @@ impl TypeChecker {
 
     fn validate_resolver_behavior_association_lists(
         &mut self,
-        tasks: &ResolverValidationReplayTasks<'_>,
+        tasks: &ResolverContractReplayTasks<'_>,
     ) {
         for task in &tasks.behavior_associations.type_associations {
             self.validate_resolver_behavior_ref_list_for_role(

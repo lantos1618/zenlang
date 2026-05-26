@@ -114,8 +114,8 @@ impl TypeChecker {
             return false;
         }
 
-        self.diagnostics.push(Diagnostic::error(
-            "E5000",
+        self.diagnostics.push(Diagnostic::error_code(
+            crate::error::CompilerDiagnosticCode::E5000,
             format!(
                 "cannot infer type argument{} {} for generic {} `{}`",
                 if missing.len() == 1 {

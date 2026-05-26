@@ -1,5 +1,5 @@
 {
-  "format": "zen.diagnostics.v0",
+  "format": "zen.diagnostics.v1",
   "semantic_status": "diagnostic",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "severity": "error",
       "code": "E0203",
+      "slug": "resolution_e0203",
+      "phase": "resolver",
+      "category": "resolution",
+      "docs_path": "docs/DIAGNOSTICS.md#resolution",
       "message": "atomic load is gated until memory-order and Sync/Async effect semantics are implemented",
       "span": {
         "file_id": 0,
@@ -23,7 +27,9 @@
       "labels": [],
       "notes": [],
       "context": [],
-      "suggested_fixes": []
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
     }
   ]
 }

@@ -27,26 +27,26 @@ struct ResolverExpectedSymbolSets {
 }
 
 #[derive(Default)]
-struct ResolverValidationReplayTasks<'a> {
+struct ResolverContractReplayTasks<'a> {
     expected_symbols: ResolverExpectedSymbolSets,
     behavior_associations: ResolverBehaviorAssociationListTasks<'a>,
 }
 
-struct ResolverValidationBehaviorAssociationSource<'a> {
+struct ResolverContractBehaviorAssociationSource<'a> {
     name: &'a str,
     symbol: &'a Symbol,
     span: Span,
 }
 
-struct ResolverValidationReplayDeclarationTasks<'a> {
+struct ResolverContractReplayDeclarationTasks<'a> {
     expected_symbols: ResolverExpectedSymbolSets,
     expected_associations: ExpectedBehaviorAssociations,
     expected_parents: ExpectedBehaviorEdges,
-    type_declarations: Vec<ResolverValidationBehaviorAssociationSource<'a>>,
-    behavior_declarations: Vec<ResolverValidationBehaviorAssociationSource<'a>>,
+    type_declarations: Vec<ResolverContractBehaviorAssociationSource<'a>>,
+    behavior_declarations: Vec<ResolverContractBehaviorAssociationSource<'a>>,
 }
 
-impl Default for ResolverValidationReplayDeclarationTasks<'_> {
+impl Default for ResolverContractReplayDeclarationTasks<'_> {
     fn default() -> Self {
         Self {
             expected_symbols: ResolverExpectedSymbolSets::default(),

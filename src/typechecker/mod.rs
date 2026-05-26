@@ -52,9 +52,9 @@ mod program_type_defs;
 mod resolve;
 mod resolve_binary_ops;
 mod resolver_backed_collection;
+mod resolver_contract;
 mod resolver_lookup;
 mod resolver_metadata_collection;
-mod resolver_validation;
 mod scope_management;
 mod self_type_validation;
 mod semantic_validation;
@@ -69,7 +69,7 @@ use crate::ast::{
     self, behavior_type_args_match_target_params, named_type_arg_names, AstType, BehaviorMethod,
     Declaration, EnumVariant, Expression, Param, StructField, TypeParam,
 };
-use crate::error::{Diagnostic, Span};
+use crate::error::{Diagnostic, DiagnosticCode, ResolverContractCode, Span};
 use crate::module_system::{ResolvedModule, ResolvedModuleGraph};
 use crate::resolver::{
     BehaviorMethodTypeMetadata, BehaviorRefMetadata, MethodSignatureMetadata, Namespace, Symbol,
@@ -94,8 +94,8 @@ impl TypeChecker {
         span: Span,
     ) -> Option<HashMap<String, AstType>> {
         let Some(info) = self.behaviors.get(behavior).cloned() else {
-            self.diagnostics.push(Diagnostic::error(
-                "E6006",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E6006,
                 format!("undefined behavior `{}`", behavior),
                 span,
             ));

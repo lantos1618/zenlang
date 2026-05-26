@@ -43,7 +43,7 @@ impl TypeChecker {
     ) {
         if !actual.contains_display(&expected.display) {
             let actual = format_behavior_ref_names(actual.names);
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.name_code,
                 validation.contains_name_message(name, &actual, &expected.display),
                 span,
@@ -53,7 +53,7 @@ impl TypeChecker {
             let actual = format_behavior_refs(actual.refs);
             let expected_ref =
                 behavior_ref_display(&expected.metadata.name, &expected.metadata.type_args);
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.ref_code,
                 validation.contains_ref_message(name, &actual, &expected_ref),
                 span,
@@ -73,7 +73,7 @@ impl TypeChecker {
         if !actual.names_match(&expected.names) {
             let actual = format_behavior_ref_names(actual.names);
             let expected_names = format_behavior_ref_names(Some(&expected.names));
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.name_code,
                 validation.list_name_message(name, &actual, &expected_names),
                 span,
@@ -82,7 +82,7 @@ impl TypeChecker {
         if !actual.refs_match(&expected.refs) {
             let actual = format_behavior_refs(actual.refs);
             let expected_refs = format_behavior_refs(Some(&expected.refs));
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(Diagnostic::error_code(
                 validation.ref_code,
                 validation.list_ref_message(name, &actual, &expected_refs),
                 span,

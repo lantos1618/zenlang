@@ -15,8 +15,8 @@ impl TypeChecker {
             return false;
         }
 
-        self.diagnostics.push(Diagnostic::error(
-            "E5002",
+        self.diagnostics.push(Diagnostic::error_code(
+            crate::error::CompilerDiagnosticCode::E5002,
             format!(
                 "non-generic {} `{}` does not accept type arguments",
                 kind, name
@@ -34,8 +34,8 @@ impl TypeChecker {
         found: usize,
         span: Span,
     ) {
-        self.diagnostics.push(Diagnostic::error(
-            "E5001",
+        self.diagnostics.push(Diagnostic::error_code(
+            crate::error::CompilerDiagnosticCode::E5001,
             format!("generic {kind} `{name}` expects {expected} type arguments, found {found}"),
             span,
         ));

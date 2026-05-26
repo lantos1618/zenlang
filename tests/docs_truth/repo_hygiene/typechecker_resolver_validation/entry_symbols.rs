@@ -2,9 +2,9 @@ use super::*;
 
 #[test]
 fn typechecker_resolver_entry_local_helpers_live_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation.rs");
-    let entry = read("src/typechecker/resolver_validation/entry_symbols.rs");
-    let locals = read("src/typechecker/resolver_validation/entry_locals.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
+    let entry = read("src/typechecker/resolver_contract/entry_symbols.rs");
+    let locals = read("src/typechecker/resolver_contract/entry_locals.rs");
 
     for helper in [
         "require_resolver_callable_locals",
@@ -25,17 +25,16 @@ fn typechecker_resolver_entry_local_helpers_live_in_focused_helper() {
         "resolver entry traversal should stay focused on declaration dispatch"
     );
     assert!(
-        root.contains("include!(\"resolver_validation/entry_locals.rs\");"),
+        root.contains("include!(\"resolver_contract/entry_locals.rs\");"),
         "resolver validation should include focused entry-local helpers"
     );
 }
 
 #[test]
 fn typechecker_resolver_behavior_association_entries_live_in_focused_helper() {
-    let root = read("src/typechecker/resolver_validation.rs");
-    let entry = read("src/typechecker/resolver_validation/entry_symbols.rs");
-    let behavior_entries =
-        read("src/typechecker/resolver_validation/entry_behavior_associations.rs");
+    let root = read("src/typechecker/resolver_contract.rs");
+    let entry = read("src/typechecker/resolver_contract/entry_symbols.rs");
+    let behavior_entries = read("src/typechecker/resolver_contract/entry_behavior_associations.rs");
 
     for helper in [
         "validate_resolver_impl_block_entry_symbols",
@@ -57,7 +56,7 @@ fn typechecker_resolver_behavior_association_entries_live_in_focused_helper() {
         "resolver entry traversal should stay focused on declaration dispatch"
     );
     assert!(
-        root.contains("include!(\"resolver_validation/entry_behavior_associations.rs\");"),
+        root.contains("include!(\"resolver_contract/entry_behavior_associations.rs\");"),
         "resolver validation should include focused behavior-association entry helpers"
     );
 }

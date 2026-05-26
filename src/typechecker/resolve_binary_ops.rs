@@ -45,14 +45,14 @@ impl TypeChecker {
         for ty in [left, right] {
             reject_binary_operand_if(
                 !ty.is_numeric(),
-                "E3010",
+                crate::error::CompilerDiagnosticCode::E3010,
                 || format!("arithmetic on non-numeric type `{}`", ty.display_name()),
                 span,
             )?;
         }
         if left != right {
-            return Err(Diagnostic::error(
-                "E3013",
+            return Err(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3013,
                 format!(
                     "arithmetic operands must have the same type, found `{}` and `{}`",
                     left.display_name(),
@@ -73,7 +73,7 @@ impl TypeChecker {
         for ty in [left, right] {
             reject_binary_operand_if(
                 *ty != Type::Bool && *ty != Type::Unknown,
-                "E3011",
+                crate::error::CompilerDiagnosticCode::E3011,
                 || {
                     format!(
                         "logical operator requires `bool`, found `{}`",
@@ -98,7 +98,7 @@ impl TypeChecker {
         for ty in [left, right] {
             reject_binary_operand_if(
                 !ty.is_integer(),
-                "E3012",
+                crate::error::CompilerDiagnosticCode::E3012,
                 || {
                     format!(
                         "bitwise operator requires integer type, found `{}`",
@@ -122,12 +122,12 @@ fn known_binary_operand<'a>(left: &'a Type, right: &'a Type) -> &'a Type {
 
 fn reject_binary_operand_if(
     reject: bool,
-    code: &'static str,
+    code: impl Into<crate::error::DiagnosticCode>,
     message: impl FnOnce() -> String,
     span: &Span,
 ) -> Result<(), Diagnostic> {
     if reject {
-        return Err(Diagnostic::error(code, message(), *span));
+        return Err(Diagnostic::error_code(code, message(), *span));
     }
     Ok(())
 }

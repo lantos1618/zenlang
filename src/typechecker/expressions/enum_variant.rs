@@ -74,8 +74,8 @@ impl TypeChecker {
                             && actual.ty != Type::Unknown
                             && !self.types_compatible(&expected, &actual.ty)
                         {
-                            self.diagnostics.push(Diagnostic::error(
-                                "E3062",
+                            self.diagnostics.push(Diagnostic::error_code(
+                                crate::error::CompilerDiagnosticCode::E3062,
                                 format!(
                                     "payload for enum variant `{}.{}` expects `{}`, found `{}`",
                                     enum_name,
@@ -88,8 +88,8 @@ impl TypeChecker {
                         }
                     }
                     (Some(_), None) => {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E3061",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E3061,
                             format!(
                                 "enum variant `{}.{}` requires a payload",
                                 enum_name, variant
@@ -98,8 +98,8 @@ impl TypeChecker {
                         ));
                     }
                     (None, Some(actual)) => {
-                        self.diagnostics.push(Diagnostic::error(
-                            "E3063",
+                        self.diagnostics.push(Diagnostic::error_code(
+                            crate::error::CompilerDiagnosticCode::E3063,
                             format!(
                                 "enum variant `{}.{}` does not accept a payload",
                                 enum_name, variant
@@ -110,16 +110,16 @@ impl TypeChecker {
                     (None, None) => {}
                 },
                 None => {
-                    self.diagnostics.push(Diagnostic::error(
-                        "E3060",
+                    self.diagnostics.push(Diagnostic::error_code(
+                        crate::error::CompilerDiagnosticCode::E3060,
                         format!("enum `{}` has no variant `{}`", enum_name, variant),
                         span,
                     ));
                 }
             }
         } else if !self.enums.contains_key(enum_name) {
-            self.diagnostics.push(Diagnostic::error(
-                "E3064",
+            self.diagnostics.push(Diagnostic::error_code(
+                crate::error::CompilerDiagnosticCode::E3064,
                 format!("undefined enum `{}`", enum_name),
                 span,
             ));

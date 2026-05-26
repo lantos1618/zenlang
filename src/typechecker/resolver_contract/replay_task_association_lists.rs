@@ -4,11 +4,11 @@ impl TypeChecker {
         program: &'a ast::Program,
         symbols: &'a SymbolTable,
     ) -> ResolverBehaviorAssociationListTasks<'a> {
-        Self::collect_resolver_validation_replay_tasks(program, symbols).behavior_associations
+        Self::collect_resolver_contract_replay_tasks(program, symbols).behavior_associations
     }
 
     pub(super) fn collect_resolver_behavior_association_list_tasks_from_declaration_tasks<'a>(
-        declaration_tasks: &ResolverValidationReplayDeclarationTasks<'a>,
+        declaration_tasks: &ResolverContractReplayDeclarationTasks<'a>,
     ) -> ResolverBehaviorAssociationListTasks<'a> {
         let mut tasks = ResolverBehaviorAssociationListTasks::default();
 
@@ -31,7 +31,7 @@ impl TypeChecker {
     }
 
     fn push_resolver_type_behavior_association_list_task<'a>(
-        source: &ResolverValidationBehaviorAssociationSource<'a>,
+        source: &ResolverContractBehaviorAssociationSource<'a>,
         expected: &ExpectedBehaviorAssociations,
         tasks: &mut Vec<ResolverTypeBehaviorAssociationListTask<'a>>,
     ) {
@@ -45,7 +45,7 @@ impl TypeChecker {
     }
 
     fn push_resolver_behavior_parent_list_task<'a>(
-        source: &ResolverValidationBehaviorAssociationSource<'a>,
+        source: &ResolverContractBehaviorAssociationSource<'a>,
         expected: &ExpectedBehaviorEdges,
         tasks: &mut Vec<ResolverBehaviorParentListTask<'a>>,
     ) {
