@@ -2,27 +2,9 @@ use super::super::*;
 
 #[test]
 fn imported_behavior_impl_specializations_do_not_emit_unspecialized_c_symbols() {
-    assert_fixture_specialization(
-        "multi_file_imported_behavior_impl/main.zen",
-        &[
-            "zen_str Point_encode__Json_StaticString(Point value)",
-            "zen_str encode_Point(Point value)",
-            "Point_encode__Json_StaticString(value)",
-        ],
-        &["Point_encode__Json_StaticString", "encode_Point"],
-        &["T_encode"],
-    );
+    assert_point_json_static_string_dispatch("multi_file_imported_behavior_impl/main.zen");
 
-    assert_fixture_specialization(
-        "multi_file_imported_impl_imported_behavior/main.zen",
-        &[
-            "zen_str Point_encode(Point value)",
-            "zen_str encode_Point(Point value)",
-            "Point_encode(value)",
-        ],
-        &["Point_encode", "encode_Point"],
-        &["T_encode"],
-    );
+    assert_point_encode_dispatch("multi_file_imported_impl_imported_behavior/main.zen");
 
     assert_fixture_specialization(
         "multi_file_imported_generic_target_behavior_association/main.zen",
@@ -87,25 +69,20 @@ fn imported_behavior_default_and_parent_dispatch_do_not_emit_unspecialized_c_sym
 
 #[test]
 fn imported_behavior_requires_do_not_emit_unspecialized_c_symbols() {
+    assert_point_json_static_string_dispatch("multi_file_imported_behavior_requires/main.zen");
+
+    assert_point_encode_dispatch("multi_file_imported_behavior_requires_inherited/main.zen");
+}
+
+fn assert_point_json_static_string_dispatch(fixture: &str) {
     assert_fixture_specialization(
-        "multi_file_imported_behavior_requires/main.zen",
+        fixture,
         &[
             "zen_str Point_encode__Json_StaticString(Point value)",
             "zen_str encode_Point(Point value)",
             "Point_encode__Json_StaticString(value)",
         ],
         &["Point_encode__Json_StaticString", "encode_Point"],
-        &["T_encode"],
-    );
-
-    assert_fixture_specialization(
-        "multi_file_imported_behavior_requires_inherited/main.zen",
-        &[
-            "zen_str Point_encode(Point value)",
-            "zen_str encode_Point(Point value)",
-            "Point_encode(value)",
-        ],
-        &["Point_encode", "encode_Point"],
         &["T_encode"],
     );
 }

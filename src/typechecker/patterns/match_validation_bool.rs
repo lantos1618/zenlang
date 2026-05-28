@@ -1,11 +1,8 @@
 use crate::ast::expressions::MatchArm;
 use crate::ast::Pattern;
-use crate::error::{
-    Diagnostic, Span, SuggestedFix, TextEdit, MISSING_BOOL_MATCH_ARM_FIX_KIND,
-    MISSING_BOOL_MATCH_ARM_FIX_TITLE,
-};
+use crate::error::{CompilerDiagnosticCode::*, Diagnostic, Span};
 
-use super::TypeChecker;
+use super::super::{quoted_list, TypeChecker};
 
 impl TypeChecker {
     pub(crate) fn check_bool_match_patterns(
@@ -19,78 +16,50 @@ impl TypeChecker {
         let mut wildcard_seen = false;
 
         for arm in arms {
-            match &arm.pattern {
-                Pattern::BoolTrue { span } => {
-                    if true_seen || wildcard_seen {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E4005,
-                            "duplicate match arm for `true`",
-                            *span,
-                        ));
-                    }
-                    true_seen = true;
-                }
-                Pattern::BoolFalse { span } => {
-                    if false_seen || wildcard_seen {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E4005,
-                            "duplicate match arm for `false`",
-                            *span,
-                        ));
-                    }
-                    false_seen = true;
-                }
+            let (value, seen, span) = match &arm.pattern {
+                Pattern::BoolTrue { span } => ("true", &mut true_seen, *span),
+                Pattern::BoolFalse { span } => ("false", &mut false_seen, *span),
                 Pattern::Wildcard { span } => {
                     if wildcard_seen || (true_seen && false_seen) {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E4005,
-                            "redundant wildcard match arm",
-                            *span,
-                        ));
+                        self.push_error(E4005, "redundant wildcard match arm", *span);
                     }
                     wildcard_seen = true;
+                    continue;
                 }
-                _ => {}
+                _ => continue,
+            };
+            if *seen || wildcard_seen {
+                self.push_error(E4005, format!("duplicate match arm for `{value}`"), span);
             }
+            *seen = true;
         }
 
         if require_exhaustive && !wildcard_seen && !(true_seen && false_seen) {
-            let missing_values = Self::missing_bool_match_values(true_seen, false_seen);
-            let missing = missing_values
+            let missing_values: &[&str] = match (true_seen, false_seen) {
+                (true, false) => &["false"],
+                (false, true) => &["true"],
+                _ => &["true", "false"],
+            };
+            let missing = quoted_list(missing_values);
+            let replacement = missing_values
                 .iter()
-                .map(|value| format!("`{value}`"))
+                .map(|value| format!("        | {value} {{ <expression> }}"))
                 .collect::<Vec<_>>()
-                .join(", ");
-            let replacement = Self::missing_bool_match_fix_replacement(&missing_values);
+                .join("\n");
             let insertion = Span::new(span.file_id, span.end, span.end);
             self.diagnostics.push(
                 Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E4006,
+                    E4006,
                     format!("non-exhaustive bool match: missing {missing}"),
                     span,
                 )
-                .with_suggested_fix(SuggestedFix::new(
-                    MISSING_BOOL_MATCH_ARM_FIX_KIND,
-                    MISSING_BOOL_MATCH_ARM_FIX_TITLE,
-                    vec![TextEdit::new(insertion, format!("\n{replacement}"))],
-                )),
+                .with_fix(
+                    "add_missing_bool_match_arm",
+                    "Add missing bool match arm",
+                    insertion,
+                    format!("\n{replacement}"),
+                ),
             );
         }
-    }
-
-    fn missing_bool_match_values(true_seen: bool, false_seen: bool) -> Vec<&'static str> {
-        match (true_seen, false_seen) {
-            (true, false) => vec!["false"],
-            (false, true) => vec!["true"],
-            _ => vec!["true", "false"],
-        }
-    }
-
-    fn missing_bool_match_fix_replacement(missing_values: &[&str]) -> String {
-        missing_values
-            .iter()
-            .map(|value| format!("        | {value} {{ <expression> }}"))
-            .collect::<Vec<_>>()
-            .join("\n")
     }
 }

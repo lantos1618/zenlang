@@ -2,8 +2,8 @@ use super::super::*;
 
 #[test]
 fn imported_function_behavior_bound_dependencies_do_not_emit_unspecialized_c_symbols() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_imported_function_imported_behavior_bound/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_imported_function_imported_behavior_bound/main.zen",
         &[
             "int32_t Point_encode__Json_i32(Point value)",
             "int32_t encode_Point(Point value)",
@@ -16,21 +16,12 @@ fn imported_function_behavior_bound_dependencies_do_not_emit_unspecialized_c_sym
 
 #[test]
 fn imported_function_signature_type_dependencies_do_not_emit_unspecialized_c_symbols() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_imported_function_return_type_dependency/main.zen"),
-        &[
-            "typedef struct Point",
-            "Point make_point(void)",
-            "int32_t Point_encode__Json_i32(Point value)",
-            "int32_t encode_Point(Point value)",
-            "Point_encode__Json_i32(value)",
-        ],
-        &["make_point", "Point_encode__Json_i32", "encode_Point"],
-        &["T_encode"],
+    assert_imported_return_type_dispatch(
+        "multi_file_imported_function_return_type_dependency/main.zen",
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_imported_function_param_type_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_imported_function_param_type_dependency/main.zen",
         &[
             "typedef struct Point",
             "Point make_point(void)",
@@ -43,8 +34,14 @@ fn imported_function_signature_type_dependencies_do_not_emit_unspecialized_c_sym
         &["T_encode"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_imported_function_imported_return_type_behavior/main.zen"),
+    assert_imported_return_type_dispatch(
+        "multi_file_imported_function_imported_return_type_behavior/main.zen",
+    );
+}
+
+fn assert_imported_return_type_dispatch(fixture: &str) {
+    assert_fixture_specialization(
+        fixture,
         &[
             "typedef struct Point",
             "Point make_point(void)",

@@ -1,28 +1,14 @@
-use super::super::*;
+use super::super::support::{
+    assert_diagnostic_code_and_message, frontend_diagnostics_for_module,
+    frontend_diagnostics_for_modules,
+};
+use super::{GENERIC_JSON_TRAIT, JSON_PRETTY_TRAITS};
 
 #[test]
 fn imported_behavior_extends_requires_parent_methods() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-
-pub PrettyJson: behavior {
-    pretty: (Self) StaticString
-}
-
-PrettyJson.extends(Json<StaticString>)
-"#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let diagnostics = frontend_diagnostics_for_module(
+        "traits.zen",
+        JSON_PRETTY_TRAITS,
         r#"
 { PrettyJson } = traits
 
@@ -40,41 +26,24 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject imported inherited behavior requirements");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("implementation of `PrettyJson` is missing required method `encode`"),
-        "expected inherited behavior method diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E6001",
+        "implementation of `PrettyJson` is missing required method `encode`",
+        "imported inherited behavior method",
     );
 }
 
 #[test]
 fn imported_behavior_extends_imported_parent_requires_parent_methods() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let base_path = tmp.path().join("base.zen");
-    std::fs::write(
-        &base_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-"#,
-    )
-    .expect("write base module");
-
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
+    let diagnostics = frontend_diagnostics_for_modules(
+        &[
+            ("base.zen", GENERIC_JSON_TRAIT),
+            (
+                "traits.zen",
+                r#"
 { Json } = base
 
 pub PrettyJson: behavior {
@@ -83,12 +52,8 @@ pub PrettyJson: behavior {
 
 PrettyJson.extends(Json<StaticString>)
 "#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+            ),
+        ],
         r#"
 { PrettyJson } = traits
 
@@ -106,29 +71,20 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject inherited imported parent requirements");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("implementation of `PrettyJson` is missing required method `encode`"),
-        "expected imported parent behavior method diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E6001",
+        "implementation of `PrettyJson` is missing required method `encode`",
+        "imported parent behavior method",
     );
 }
 
 #[test]
 fn imported_behavior_extends_requires_transitive_parent_methods() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
+    let diagnostics = frontend_diagnostics_for_module(
+        "traits.zen",
         r#"
 pub Json<T>: behavior {
     encode: (Self) T
@@ -145,12 +101,6 @@ pub FancyJson: behavior {
 PrettyJson.extends(Json<StaticString>)
 FancyJson.extends(PrettyJson)
 "#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
         r#"
 { FancyJson } = traits
 
@@ -172,20 +122,12 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
-
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path)).expect_err(
-        "compile_to_c should reject transitive imported inherited behavior requirements",
     );
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
 
-    assert!(
-        message.contains("implementation of `FancyJson` is missing required method `encode`"),
-        "expected transitive inherited behavior method diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E6001",
+        "implementation of `FancyJson` is missing required method `encode`",
+        "transitive inherited behavior method",
     );
 }

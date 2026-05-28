@@ -1,47 +1,16 @@
-use std::process::Command;
+use super::support::{
+    assert_emit_c_source, assert_no_build_dir, assert_zen_success, run_zen_in,
+    write_single_executable_graph, EMIT_ARGS,
+};
 
 #[test]
 fn emit_command_build_zen_outputs_target_c_source() {
     let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "myapp", main: "main.zen", out_dir: "build/" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("main.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write main.zen");
+    write_single_executable_graph(&tmp);
 
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen emit build.zen");
+    let output = run_zen_in(&tmp, EMIT_ARGS);
 
-    assert!(
-        output.status.success(),
-        "zen emit build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let c_source = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        c_source.contains("int32_t zen_main(void)"),
-        "expected target C source, stdout={c_source}"
-    );
-    assert!(
-        !tmp.path().join("build").join("myapp").exists(),
-        "zen emit build.zen should not compile the target binary"
-    );
+    assert_zen_success(EMIT_ARGS, &output);
+    assert_emit_c_source(&output);
+    assert_no_build_dir(tmp.path(), "zen emit build.zen");
 }

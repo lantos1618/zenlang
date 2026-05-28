@@ -1,128 +1,111 @@
-#[path = "build_command.rs"]
-mod build_command;
-#[path = "direct_file.rs"]
-mod direct_file;
+use super::super::support::{
+    BUILD_ARGS, BUILD_GRAPH_ARGS, DIRECT_ARGS, EMIT_ARGS, EXECUTABLE_ARGS,
+};
 
-use std::process::Command;
+const SINGLE_TARGET_COMMANDS: &[(&[&str], &str, super::ExecutableCommandExpectation)] = &[
+    (
+        BUILD_ARGS,
+        "build_command",
+        super::ExecutableCommandExpectation::BuildOutput,
+    ),
+    (
+        BUILD_GRAPH_ARGS,
+        "build_graph",
+        super::ExecutableCommandExpectation::BuildOutput,
+    ),
+    (
+        DIRECT_ARGS,
+        "direct_file",
+        super::ExecutableCommandExpectation::BuildOutput,
+    ),
+    (
+        EMIT_ARGS,
+        "emit",
+        super::ExecutableCommandExpectation::EmitStdout,
+    ),
+];
+#[test]
+fn executable_commands_accept_declared_env_read_fallbacks() {
+    for (args, label, expectation) in SINGLE_TARGET_COMMANDS {
+        for (case, fallback_arm) in super::DECLARED_ENV_READ_FALLBACK_CASES {
+            super::assert_executable_command_accepts_declared_env_read(
+                args,
+                fallback_arm,
+                &format!("{label}_single_target_{case}_fallback"),
+                *expectation,
+            );
+        }
+    }
+}
+
+#[test]
+fn executable_commands_accept_declared_env_read_for_multiple_targets() {
+    for args in EXECUTABLE_ARGS {
+        for (_, fallback_arm) in super::DECLARED_ENV_READ_FALLBACK_CASES {
+            assert_executable_command_accepts_declared_env_read_for_multiple_targets(
+                args,
+                fallback_arm,
+            );
+        }
+    }
+}
+
+#[test]
+fn executable_commands_accept_declared_env_read_with_unselected_targets() {
+    for args in EXECUTABLE_ARGS {
+        for (_, fallback_arm) in super::DECLARED_ENV_READ_FALLBACK_CASES {
+            assert_executable_command_accepts_declared_env_read_with_unselected_targets(
+                args,
+                fallback_arm,
+            );
+        }
+    }
+    for (_, fallback_arm) in super::DECLARED_ENV_READ_FALLBACK_CASES {
+        let (tmp, output) = super::run_declared_env_read_command(
+            EMIT_ARGS,
+            fallback_arm,
+            super::EXECUTABLE_WITH_VALID_UNSELECTED_TARGETS,
+            super::APP_UNIT_AND_LIB_SOURCES,
+        );
+        super::assert_stdout_contains(
+            &output,
+            "int32_t zen_main(void)",
+            "expected C output after declared env effect",
+        );
+        super::assert_no_build_dir(tmp.path(), "zen emit build.zen");
+    }
+}
 
 fn assert_executable_command_accepts_declared_env_read_with_unselected_targets(
     args: &[&str],
     fallback_arm: &str,
-    case_name: &str,
 ) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) {{ value }}
-        {fallback_arm}
-    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
-    b.add(Test {{ name: "unit", root: "missing_unit.zen" }})
-    b.add(Library {{ name: "core", exports: ["lib.zen"] }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("app.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write app.zen");
-    std::fs::write(
-        tmp.path().join("lib.zen"),
-        r#"
-value = () i32 {
-    1
-}
-"#,
-    )
-    .expect("write lib.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(args)
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen executable build graph command");
-
-    assert!(
-        output.status.success(),
-        "{case_name}: zen executable build graph command failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let (tmp, _) = super::run_declared_env_read_command(
+        args,
+        fallback_arm,
+        super::EXECUTABLE_WITH_MISSING_TEST_TARGETS,
+        super::APP_AND_LIB_SOURCES,
     );
 
     let bin_path = tmp.path().join("build").join("app").join("app");
-    assert!(
-        bin_path.exists(),
-        "expected {} to exist",
-        bin_path.display()
-    );
+    super::assert_path_exists(bin_path);
 }
 
 fn assert_executable_command_accepts_declared_env_read_for_multiple_targets(
     args: &[&str],
     fallback_arm: &str,
-    case_name: &str,
 ) {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    std_path = b.os.env("ZEN_STD") ?
-        | .Ok(value) {{ value }}
-        {fallback_arm}
-    b.add(Executable {{ name: "app", main: "app.zen", out_dir: "build/app/" }})
-    b.add(Executable {{ name: "tool", main: "tool.zen", out_dir: "build/tool/" }})
-    .Ok(b.config())
-}}
-"#,
-        ),
-    )
-    .expect("write build.zen");
-    for source in ["app.zen", "tool.zen"] {
-        std::fs::write(
-            tmp.path().join(source),
-            r#"
-main = () i32 {
-    0
-}
-"#,
-        )
-        .unwrap_or_else(|err| panic!("write {source}: {err}"));
-    }
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(args)
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen executable build graph command");
-
-    assert!(
-        output.status.success(),
-        "{case_name}: zen executable build graph command failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let (tmp, _) = super::run_declared_env_read_command(
+        args,
+        fallback_arm,
+        super::MULTIPLE_EXECUTABLE_TARGETS,
+        super::APP_TOOL_SOURCES,
     );
 
     for bin_path in [
         tmp.path().join("build").join("app").join("app"),
         tmp.path().join("build").join("tool").join("tool"),
     ] {
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
+        super::assert_path_exists(bin_path);
     }
 }

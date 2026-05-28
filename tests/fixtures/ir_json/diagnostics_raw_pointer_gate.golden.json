@@ -15,7 +15,7 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "raw pointer offset is gated until ownership and layout semantics are implemented",
+      "message": "`@builtin.gep` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
         "path": "$TMP/raw_pointer_gate.zen",

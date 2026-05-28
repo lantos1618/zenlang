@@ -1,26 +1,6 @@
 use super::*;
 
 impl Parser {
-    pub(super) fn parse_impl_block(
-        &mut self,
-        type_name: String,
-        name_span: Span,
-    ) -> Result<Declaration, CompileError> {
-        self.skip_newlines();
-        self.expect(&Token::Assign)?;
-        self.skip_newlines();
-        let (methods, end) = self.parse_impl_block_methods(&[])?;
-
-        Ok(Declaration::ImplBlock {
-            type_name,
-            behavior: None,
-            behavior_type_args: Vec::new(),
-            type_args: Vec::new(),
-            methods,
-            span: name_span.merge(end),
-        })
-    }
-
     pub(super) fn parse_impl_block_with_type_params(
         &mut self,
         type_name: String,

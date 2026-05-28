@@ -1,17 +1,11 @@
-//! Monomorphization helpers for generic struct and enum specializations.
-
 use std::collections::HashMap;
 
 use crate::ast::typed::{Type, TypeDefKind, TypedTypeDef};
 use crate::ast::AstType;
 use crate::error::Span;
 
+use super::monomorphize_names::reserve_specialization_name;
 use super::TypeChecker;
-
-struct ReservedSpecializedType {
-    mangled: String,
-    already_emitted: bool,
-}
 
 impl TypeChecker {
     pub(crate) fn specialize_generic_struct(
@@ -26,9 +20,6 @@ impl TypeChecker {
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "struct", name, span);
         self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
-        for (_, field_type) in &info.fields {
-            self.ensure_specialized_type_refs(field_type, &substitutions, span);
-        }
         let fields: Vec<(String, Type)> = info
             .fields
             .iter()
@@ -43,17 +34,16 @@ impl TypeChecker {
             self.ensure_specialized_type_refs_for_type(field_type, span);
         }
         let field_map = fields.iter().cloned().collect();
-        let reserved = self.reserve_specialized_type_definition(
+        let (mangled, already_emitted) = self.reserve_specialized_type_definition(
             "struct",
             name,
             type_args,
             info.specialization_scope.as_deref(),
         );
-        if !reserved.already_emitted {
+        if !already_emitted {
             self.specialized_types.push(TypedTypeDef {
-                name: reserved.mangled,
+                name: mangled,
                 kind: TypeDefKind::Struct { fields },
-                methods: Vec::new(),
                 span,
             });
         }
@@ -72,11 +62,6 @@ impl TypeChecker {
         let substitutions =
             self.type_param_substitutions(&info.type_params, type_args, "enum", name, span);
         self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
-        for (_, payload) in &info.variants {
-            if let Some(payload) = payload {
-                self.ensure_specialized_type_refs(payload, &substitutions, span);
-            }
-        }
         let variants: Vec<(String, Option<Type>)> = info
             .variants
             .iter()
@@ -89,19 +74,17 @@ impl TypeChecker {
                 )
             })
             .collect();
-        for (_, payload) in &variants {
-            if let Some(payload) = payload {
-                self.ensure_specialized_type_refs_for_type(payload, span);
-            }
+        for payload in variants.iter().filter_map(|(_, payload)| payload.as_ref()) {
+            self.ensure_specialized_type_refs_for_type(payload, span);
         }
         let variant_map = variants.iter().cloned().collect();
-        let reserved = self.reserve_specialized_type_definition(
+        let (mangled, already_emitted) = self.reserve_specialized_type_definition(
             "enum",
             name,
             type_args,
             info.specialization_scope.as_deref(),
         );
-        if !reserved.already_emitted {
+        if !already_emitted {
             let typed_variants = variants
                 .into_iter()
                 .enumerate()
@@ -109,16 +92,15 @@ impl TypeChecker {
                     |(tag, (variant_name, payload))| crate::ast::typed::TypedVariant {
                         name: variant_name,
                         tag: tag as u32,
-                        payload: payload.map(|ty| vec![("payload".to_string(), ty)]),
+                        payload,
                     },
                 )
                 .collect();
             self.specialized_types.push(TypedTypeDef {
-                name: reserved.mangled,
+                name: mangled,
                 kind: TypeDefKind::Enum {
                     variants: typed_variants,
                 },
-                methods: Vec::new(),
                 span,
             });
         }
@@ -131,28 +113,29 @@ impl TypeChecker {
         name: &str,
         type_args: &[AstType],
         specialization_scope: Option<&str>,
-    ) -> ReservedSpecializedType {
+    ) -> (String, bool) {
         let requested = self.mangle_generic_type_name(name, type_args);
         let specialization_key =
-            self.generic_type_specialization_key(kind, specialization_scope, &requested);
+            self.generic_specialization_key(kind, specialization_scope, &requested);
         let already_emitted = self
             .specialized_types_seen
             .contains_key(&specialization_key);
-        let mangled =
-            self.reserve_generic_type_name(&specialization_key, &requested, specialization_scope);
-        let concrete_type_args = self.concrete_specialized_type_args(type_args);
-        self.remember_specialized_type_source(&mangled, name, &concrete_type_args);
-
-        ReservedSpecializedType {
-            mangled,
-            already_emitted,
-        }
-    }
-
-    fn concrete_specialized_type_args(&self, type_args: &[AstType]) -> Vec<AstType> {
-        type_args
+        let mangled = reserve_specialization_name(
+            &mut self.specialized_types_seen,
+            &mut self.specialized_type_name_owners,
+            &specialization_key,
+            &requested,
+            specialization_scope,
+        );
+        let concrete_type_args: Vec<AstType> = type_args
             .iter()
             .map(|arg| self.type_to_ast_ref(&self.resolve_type(arg)))
-            .collect()
+            .collect();
+        self.specialized_type_generic_names
+            .insert(mangled.clone(), name.to_string());
+        self.specialized_type_args
+            .insert(mangled.clone(), concrete_type_args);
+
+        (mangled, already_emitted)
     }
 }

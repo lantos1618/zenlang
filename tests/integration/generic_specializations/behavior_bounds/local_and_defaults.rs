@@ -96,14 +96,5 @@ fn multi_file_behavior_bound_specializations_do_not_emit_unspecialized_c_symbols
         &["T_encode"],
     );
 
-    assert_fixture_specialization(
-        "multi_file_behavior_inheritance/main.zen",
-        &[
-            "zen_str Point_encode(Point value)",
-            "zen_str encode_Point(Point value)",
-            "Point_encode(value)",
-        ],
-        &["Point_encode", "encode_Point"],
-        &["T_encode"],
-    );
+    assert_point_encode_dispatch("multi_file_behavior_inheritance/main.zen");
 }

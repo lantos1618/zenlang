@@ -1,74 +1,29 @@
 use super::*;
 
-#[derive(Clone, Copy)]
-enum TypecheckerBoolLiteralKeyword {
-    True,
-    False,
-}
-
-impl TypecheckerBoolLiteralKeyword {
-    const ALL: &[TypecheckerBoolLiteralKeyword] = &[Self::True, Self::False];
-    const TRUE: &'static str = "true";
-    const FALSE: &'static str = "false";
-
-    const fn as_str(self) -> &'static str {
-        match self {
-            Self::True => Self::TRUE,
-            Self::False => Self::FALSE,
-        }
-    }
-
-    const fn value(self) -> bool {
-        match self {
-            Self::True => true,
-            Self::False => false,
-        }
-    }
-}
-
-crate::static_spelling::impl_static_spelling_from_str!(
-    TypecheckerBoolLiteralKeyword,
-    variants = TypecheckerBoolLiteralKeyword::ALL,
-    as_str = TypecheckerBoolLiteralKeyword::as_str
-);
-
 impl TypeChecker {
     pub(super) fn check_identifier_expr(
         &mut self,
         name: &str,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        if let Ok(keyword) = name.parse::<TypecheckerBoolLiteralKeyword>() {
-            return Ok(TypedExpression {
-                kind: TypedExprKind::BoolLiteral(keyword.value()),
-                ty: Type::Bool,
-                span,
-            });
+        if matches!(name, "true" | "false") {
+            return typed_ok(TypedExprKind::BoolLiteral(name == "true"), Type::Bool, span);
         }
 
-        let ty = match self.lookup_var(name) {
-            Some(t) => t,
-            None => {
-                if !self.structs.contains_key(name)
-                    && !self.enums.contains_key(name)
-                    && !self.functions.contains_key(name)
-                    && !self.is_import(name)
-                {
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3040,
-                        format!("undefined variable `{}`", name),
-                        span,
-                    ));
-                }
-                Type::Unknown
+        let ty = if let Some(info) = self.lookup_var_info(name) {
+            info.ty.clone()
+        } else {
+            if !self.structs.contains_key(name)
+                && !self.enums.contains_key(name)
+                && !self.functions.contains_key(name)
+                && !self.imports.contains(name)
+            {
+                self.push_error(E3040, format!("undefined variable `{}`", name), span);
             }
+            Type::Unknown
         };
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::Variable(name.to_owned()),
-            ty,
-            span,
-        })
+        typed_ok(TypedExprKind::Variable(name.to_owned()), ty, span)
     }
 
     pub(super) fn check_block_expr(
@@ -77,32 +32,29 @@ impl TypeChecker {
         expr: &Option<Box<Expression>>,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        let (typed_stmts, typed_expr, ty) = self.with_scope(|checker| {
-            let mut typed_stmts = Vec::new();
-            for stmt in statements {
-                typed_stmts.push(checker.check_statement(stmt)?);
-            }
-            let typed_expr = match expr {
+        let (typed_stmts, typed_tail, ty) = self.with_scope(|checker| {
+            let typed_stmts = statements
+                .iter()
+                .map(|stmt| checker.check_statement(stmt))
+                .collect::<Result<Vec<_>, _>>()?;
+            let typed_tail = match expr {
                 Some(e) => Some(Box::new(checker.check_expr(e)?)),
                 None => None,
             };
-            let ty = typed_expr
-                .as_ref()
-                .map(|e| e.ty.clone())
-                .unwrap_or(Type::Void);
-            Ok((typed_stmts, typed_expr, ty))
+            let ty = typed_tail.as_ref().map_or(Type::Void, |e| e.ty.clone());
+            Ok((typed_stmts, typed_tail, ty))
         })?;
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::Block(TypedBlock {
+        typed_ok(
+            TypedExprKind::Block(TypedBlock {
                 statements: typed_stmts,
-                expr: typed_expr,
+                expr: typed_tail,
                 ty: ty.clone(),
                 span,
             }),
             ty,
             span,
-        })
+        )
     }
 
     pub(super) fn check_cast_expr(
@@ -111,19 +63,19 @@ impl TypeChecker {
         target_type: &AstType,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        let typed_expr = self.check_expr(expr)?;
-        let from_type = typed_expr.ty.clone();
+        let checked_expr = self.check_expr(expr)?;
+        let from_type = checked_expr.ty.clone();
         let to_type = self.resolve_type(target_type);
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::Cast {
-                expr: Box::new(typed_expr),
+        typed_ok(
+            TypedExprKind::Cast {
+                expr: Box::new(checked_expr),
                 from_type,
                 to_type: to_type.clone(),
             },
-            ty: to_type,
+            to_type,
             span,
-        })
+        )
     }
 
     pub(super) fn check_string_interpolation_expr(
@@ -131,24 +83,19 @@ impl TypeChecker {
         parts: &[StringPart],
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        let mut typed_parts = Vec::new();
-        for part in parts {
-            match part {
-                StringPart::Literal(s) => {
-                    typed_parts.push(TypedStringPart::Literal(s.clone()));
-                }
-                StringPart::Expr(e) => {
-                    let typed = self.check_expr(e)?;
-                    typed_parts.push(TypedStringPart::Expr(typed));
-                }
-            }
-        }
+        let typed_parts = parts
+            .iter()
+            .map(|part| match part {
+                StringPart::Literal(s) => Ok(TypedStringPart::Literal(s.clone())),
+                StringPart::Expr(e) => Ok(TypedStringPart::Expr(self.check_expr(e)?)),
+            })
+            .collect::<Result<Vec<_>, Diagnostic>>()?;
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::StringInterpolation { parts: typed_parts },
-            ty: Type::Str,
+        typed_ok(
+            TypedExprKind::StringInterpolation { parts: typed_parts },
+            Type::Str,
             span,
-        })
+        )
     }
 
     pub(super) fn check_defer_expr(
@@ -156,18 +103,62 @@ impl TypeChecker {
         expr: &Expression,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        let typed_expr = self.check_expr(expr)?;
-        self.pending_defers.push(typed_expr);
+        let checked_expr = self.check_expr(expr)?;
+        self.pending_defers.push(checked_expr);
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::Block(TypedBlock {
+        typed_ok(
+            TypedExprKind::Block(TypedBlock {
                 statements: Vec::new(),
                 expr: None,
                 ty: Type::Void,
                 span,
             }),
-            ty: Type::Void,
+            Type::Void,
             span,
-        })
+        )
+    }
+
+    pub(super) fn check_closure_expr(
+        &mut self,
+        params: &[Param],
+        return_type: &Option<AstType>,
+        body: &Expression,
+        span: Span,
+    ) -> Result<TypedExpression, Diagnostic> {
+        let had_errors = !self.diagnostics.is_empty();
+        let (param_types, typed_body) = self.with_scope(|checker| {
+            let mut param_types = Vec::with_capacity(params.len());
+            for param in params {
+                let ty = checker.resolve_type(&param.ty);
+                checker.define_var_with_mutability(&param.name, ty.clone(), param.mutable);
+                param_types.push(ty);
+            }
+            Ok((param_types, checker.check_expr(body)?))
+        })?;
+        let ret = return_type
+            .as_ref()
+            .map_or_else(|| typed_body.ty.clone(), |ty| self.resolve_type(ty));
+
+        if !had_errors {
+            self.push_error(
+                E3056,
+                "closure expressions are gated until closure lowering and ABI are implemented",
+                span,
+            );
+        }
+        let closure_type = Type::Function {
+            params: param_types,
+            ret: Box::new(ret),
+        };
+        typed_ok(
+            TypedExprKind::Block(TypedBlock {
+                statements: Vec::new(),
+                expr: None,
+                ty: closure_type.clone(),
+                span,
+            }),
+            closure_type,
+            span,
+        )
     }
 }

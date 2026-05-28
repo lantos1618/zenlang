@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resolver_records_pattern_locals() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Option:
     None,
@@ -16,13 +16,8 @@ main = (value: Option) i32 {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-    let value = table
-        .lookup_scoped(Namespace::Local, "value")
-        .expect("parameter local symbol");
-    let inner = table
-        .lookup_scoped(Namespace::Local, "inner")
-        .expect("pattern local symbol");
+    let value = scoped_symbol(&table, Namespace::Local, "value");
+    let inner = scoped_symbol(&table, Namespace::Local, "inner");
 
     assert_ne!(value.scope_id, inner.scope_id);
     assert_eq!(inner.is_mutable, Some(false));

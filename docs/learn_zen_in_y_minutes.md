@@ -125,7 +125,7 @@ Imports destructure public names from a module path: `{ io } = std` and
 subdirectories, and exported names use `pub`.
 
 ## Memory And Ownership Preview
-Stable Zen does not hide heap allocation behind literals, interpolation, calls, or containers. Heap APIs show the owner and allocator path.
+Stable Zen does not hide heap allocation behind literals, interpolation, calls, or containers. Heap APIs show owner and allocator.
 ```zen
 OwnedBytes<T, A>: { ptr: RawPtr<T>, len: usize, capacity: usize, allocator: A }
 ```
@@ -152,13 +152,13 @@ Read the outer type first:
 
 There is no hidden conversion between sync and async allocation. `Result<...>` is complete now; `Task<Result<...>>` completes at a scheduler boundary.
 `make_buffer<T, A: Allocator<T, Sync>>` returns checked buffer data after matching `allocator.alloc(len)`.
-Raw allocation intrinsics (`@builtin.raw_allocate`, `@builtin.raw_deallocate`, `@builtin.raw_reallocate`) are compiler-owned preview names; stable source does not call them directly.
+Raw allocation hooks live behind the guarded `@builtin.<name>` compiler-facade boundary; stable source should call Zen stdlib wrappers rather than raw hooks directly.
 
-## Pointer, Slice, Array, Actor, And Comptime Preview
-`RawPtr<T>` is raw-memory spelling for allocator previews. `Ptr<T>`,
+## Pointer, Slice, Array, And Comptime Preview
+`RawPtr<T>` previews raw memory. `Ptr<T>`,
 `MutPtr<T>`, `Slice<T>`, and `[T; N]` name pointer, mutable pointer, slice, and
-fixed-array shapes. Raw pointer offset, casts, integer conversion, load, store,
-atomics, raw syscalls, comptime type matching, actor framework types, and scheduler operations stay gated.
+array shapes. Raw pointer offset, casts, integer conversion, load, store,
+atomics, raw syscalls, and comptime type matching stay gated at the compiler-owned primitive boundary. Scheduler APIs stay in Zen stdlib source.
 
 ## Translation Cheat Sheet
 | If you reach for | Use |

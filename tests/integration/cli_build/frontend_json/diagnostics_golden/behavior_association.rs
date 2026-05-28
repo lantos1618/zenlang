@@ -13,7 +13,6 @@ Json: behavior {
 
 Point.derive(Json)
 "#,
-        "tests/fixtures/ir_json/diagnostics_behavior_derive_gate.golden.json",
         "gated derive association",
         1,
         "gated derive diagnostics should emit one feature-gate diagnostic",
@@ -35,7 +34,6 @@ Json<T>: behavior {
 
 Box<T>.derive(Json<T>)
 "#,
-        "tests/fixtures/ir_json/diagnostics_generic_association_gate.golden.json",
         "gated generic association",
         1,
         "gated generic association diagnostics should emit one feature-gate diagnostic",
@@ -68,7 +66,6 @@ Point.implements(PrettyJson) {
     pretty = (value: Point) StaticString { "pretty" }
 }
 "#,
-        "tests/fixtures/ir_json/diagnostics_generic_behavior_overlap.golden.json",
         "overlapping generic behavior impls",
         1,
         "generic behavior overlap should emit one coherence diagnostic",

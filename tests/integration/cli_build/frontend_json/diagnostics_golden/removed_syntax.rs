@@ -9,7 +9,6 @@ main = () i32 {
     return 1
 }
 "#,
-        "tests/fixtures/ir_json/diagnostics_return.golden.json",
         "removed return syntax",
         1,
         "removed return diagnostics should emit one removed-syntax diagnostic",

@@ -1,10 +1,9 @@
-use crate::ast::Declaration;
+use crate::ast::{behavior_impl_method_symbol_key, method_symbol_key, Declaration};
 use crate::error::Diagnostic;
 
 use super::metadata_helpers::{
-    resolver_behavior_impl_method_key_with_target_args, resolver_behavior_method_signatures,
-    resolver_behavior_method_types, resolver_field_types, resolver_method_key,
-    resolver_value_signature, resolver_variant_names,
+    resolver_behavior_method_types, resolver_field_types, resolver_value_signature,
+    resolver_variant_names,
 };
 use super::symbol_table::TypeLikeMembers;
 use super::{Namespace, Resolver, SymbolTable};
@@ -14,42 +13,28 @@ impl Resolver {
         &self,
         table: &mut SymbolTable,
         decl: &Declaration,
-        skip_duplicate_behavior_impl_methods: bool,
-    ) -> Result<(), Box<Diagnostic>> {
+    ) -> Result<(), Diagnostic> {
+        if let Some(callable) = decl.as_callable() {
+            let key = match decl {
+                Declaration::Method { type_name, .. } => {
+                    method_symbol_key(type_name, callable.name)
+                }
+                _ => callable.name.to_string(),
+            };
+            table.define_value(
+                &key,
+                callable.public,
+                resolver_value_signature(
+                    callable.params,
+                    callable.return_type,
+                    callable.type_params,
+                ),
+                callable.span,
+            )?;
+            return Ok(());
+        }
+
         match decl {
-            Declaration::Function {
-                name,
-                type_params,
-                params,
-                return_type,
-                public,
-                span,
-                ..
-            } => {
-                table.define_value(
-                    name,
-                    *public,
-                    resolver_value_signature(params, return_type, type_params),
-                    *span,
-                )?;
-            }
-            Declaration::Method {
-                type_name,
-                method_name,
-                type_params,
-                params,
-                return_type,
-                public,
-                span,
-                ..
-            } => {
-                table.define_value(
-                    &resolver_method_key(type_name, method_name),
-                    *public,
-                    resolver_value_signature(params, return_type, type_params),
-                    *span,
-                )?;
-            }
             Declaration::Struct {
                 name,
                 type_params,
@@ -105,7 +90,6 @@ impl Resolver {
                     name,
                     *public,
                     type_params,
-                    resolver_behavior_method_signatures(methods),
                     resolver_behavior_method_types(methods),
                     *span,
                 )?;
@@ -130,45 +114,34 @@ impl Resolver {
                 methods,
                 ..
             } => {
-                if skip_duplicate_behavior_impl_methods {
-                    return Ok(());
-                }
                 for method in methods {
-                    if let Declaration::Function {
-                        name,
-                        type_params,
-                        params,
-                        return_type,
-                        public,
-                        span,
-                        ..
-                    } = method
-                    {
-                        let key = if let Some(behavior) = behavior {
-                            resolver_behavior_impl_method_key_with_target_args(
-                                type_name,
-                                name,
-                                behavior,
-                                behavior_type_args,
-                                type_args,
-                            )
-                        } else {
-                            resolver_method_key(type_name, name)
-                        };
+                    if let Some(method) = method.as_callable() {
+                        let key = behavior_impl_method_symbol_key(
+                            type_name,
+                            method.name,
+                            behavior.as_deref(),
+                            behavior_type_args,
+                            type_args,
+                        );
                         table.define_value(
                             &key,
-                            *public,
-                            resolver_value_signature(params, return_type, type_params),
-                            *span,
+                            method.public,
+                            resolver_value_signature(
+                                method.params,
+                                method.return_type,
+                                method.type_params,
+                            ),
+                            method.span,
                         )?;
                     }
                 }
             }
-            Declaration::Requires { .. }
+            Declaration::Function { .. }
+            | Declaration::Method { .. }
+            | Declaration::Requires { .. }
             | Declaration::Derive { .. }
             | Declaration::BehaviorExtends { .. }
-            | Declaration::TopLevelExpr { .. }
-            | Declaration::Error { .. } => {}
+            | Declaration::TopLevelExpr { .. } => {}
         }
         Ok(())
     }

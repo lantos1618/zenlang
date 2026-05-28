@@ -1,11 +1,26 @@
-//! Statement checking.
-#![allow(clippy::result_large_err)]
-
 use crate::ast::typed::*;
 use crate::ast::Statement;
-use crate::error::Diagnostic;
+use crate::error::{CompilerDiagnosticCode::*, Diagnostic, Span};
 
-use super::TypeChecker;
+use super::{literal_coerced_type, type_display_pair, TypeChecker};
+
+fn typed_assignment_statement(
+    target: TypedExpression,
+    value: TypedExpression,
+    span: Span,
+) -> TypedStatement {
+    TypedStatement {
+        kind: TypedStatementKind::Expression(TypedExpression {
+            kind: TypedExprKind::Assign {
+                target: Box::new(target),
+                value: Box::new(value),
+            },
+            ty: Type::Void,
+            span,
+        }),
+        span,
+    }
+}
 
 impl TypeChecker {
     pub(crate) fn check_statement(
@@ -25,47 +40,29 @@ impl TypeChecker {
                 let annotation_valid = ty
                     .as_ref()
                     .is_none_or(|t| self.generic_type_annotation_arities_valid(t));
-                let var_type = if let Some(t) = ty {
-                    if annotation_valid {
-                        self.resolve_type(t)
-                    } else {
-                        Type::Unknown
-                    }
-                } else {
-                    typed_value.ty.clone()
+                let var_type = match (ty, annotation_valid) {
+                    (Some(t), true) => self.resolve_type(t),
+                    (Some(_), false) => Type::Unknown,
+                    (None, _) => typed_value.ty.clone(),
                 };
 
-                // Literal coercion: int/float literals adopt the declared type
-                let typed_value = if (var_type.is_integer()
-                    && matches!(typed_value.kind, TypedExprKind::IntLiteral(_)))
-                    || (var_type.is_float()
-                        && matches!(typed_value.kind, TypedExprKind::FloatLiteral(_)))
-                {
-                    TypedExpression {
-                        ty: var_type.clone(),
-                        ..typed_value
-                    }
-                } else {
-                    typed_value
+                let typed_value = TypedExpression {
+                    ty: literal_coerced_type(&var_type, &typed_value),
+                    ..typed_value
                 };
 
                 if !self.types_compatible(&var_type, &typed_value.ty) {
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3072,
-                        format!(
-                            "variable `{}` expects `{}`, found `{}`",
-                            name,
-                            var_type.display_name(),
-                            typed_value.ty.display_name()
-                        ),
+                    let (expected, actual) = type_display_pair(&var_type, &typed_value.ty);
+                    self.push_error(
+                        E3072,
+                        format!("variable `{name}` expects `{expected}`, found `{actual}`"),
                         *span,
-                    ));
+                    );
                 }
 
-                // If `name = expr` form (not ::= or :=) and the variable already
-                // exists in scope, treat as reassignment instead of new binding.
-                if !*mutable && ty.is_none() && self.lookup_var_info(name).is_some() {
-                    let target_info = self.lookup_var_info(name).cloned().expect("checked above");
+                if let (false, None, Some(target_info)) =
+                    (*mutable, ty.as_ref(), self.lookup_var_info(name).cloned())
+                {
                     self.check_assignment_target(
                         name,
                         &target_info.ty,
@@ -73,21 +70,15 @@ impl TypeChecker {
                         &typed_value,
                         span,
                     );
-                    return Ok(TypedStatement {
-                        kind: TypedStatementKind::Expression(TypedExpression {
-                            kind: TypedExprKind::Assign {
-                                target: Box::new(TypedExpression {
-                                    kind: TypedExprKind::Variable(name.clone()),
-                                    ty: target_info.ty,
-                                    span: *span,
-                                }),
-                                value: Box::new(typed_value),
-                            },
-                            ty: Type::Void,
+                    return Ok(typed_assignment_statement(
+                        TypedExpression {
+                            kind: TypedExprKind::Variable(name.clone()),
+                            ty: target_info.ty,
                             span: *span,
-                        }),
-                        span: *span,
-                    });
+                        },
+                        typed_value,
+                        *span,
+                    ));
                 }
 
                 self.define_var_with_mutability(name, var_type.clone(), *mutable);
@@ -118,65 +109,20 @@ impl TypeChecker {
                             span,
                         );
                     }
-                } else if typed_target.ty != Type::Unknown
-                    && typed_value.ty != Type::Unknown
-                    && !self.types_compatible(&typed_target.ty, &typed_value.ty)
-                {
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3071,
-                        format!(
-                            "assignment expects `{}`, found `{}`",
-                            typed_target.ty.display_name(),
-                            typed_value.ty.display_name()
-                        ),
+                } else if !self.types_compatible(&typed_target.ty, &typed_value.ty) {
+                    let (expected, actual) = type_display_pair(&typed_target.ty, &typed_value.ty);
+                    self.push_error(
+                        E3071,
+                        format!("assignment expects `{expected}`, found `{actual}`"),
                         *span,
-                    ));
+                    );
                 }
-                Ok(TypedStatement {
-                    kind: TypedStatementKind::Expression(TypedExpression {
-                        kind: TypedExprKind::Assign {
-                            target: Box::new(typed_target),
-                            value: Box::new(typed_value),
-                        },
-                        ty: Type::Void,
-                        span: *span,
-                    }),
-                    span: *span,
-                })
+                Ok(typed_assignment_statement(typed_target, typed_value, *span))
             }
             Statement::Expression { expr, span } => {
                 let typed = self.check_expr(expr)?;
                 Ok(TypedStatement {
                     kind: TypedStatementKind::Expression(typed),
-                    span: *span,
-                })
-            }
-            Statement::Block { stmts, span } => {
-                let (typed_stmts, last_ty) = self.with_scope(|checker| {
-                    let mut typed_stmts = Vec::new();
-                    for s in stmts {
-                        typed_stmts.push(checker.check_statement(s)?);
-                    }
-                    let last_ty = typed_stmts
-                        .last()
-                        .map(|s| match &s.kind {
-                            TypedStatementKind::Expression(e) => e.ty.clone(),
-                            _ => Type::Void,
-                        })
-                        .unwrap_or(Type::Void);
-                    Ok((typed_stmts, last_ty))
-                })?;
-                Ok(TypedStatement {
-                    kind: TypedStatementKind::Expression(TypedExpression {
-                        kind: TypedExprKind::Block(TypedBlock {
-                            statements: typed_stmts,
-                            expr: None,
-                            ty: last_ty,
-                            span: *span,
-                        }),
-                        ty: Type::Void,
-                        span: *span,
-                    }),
                     span: *span,
                 })
             }
@@ -189,30 +135,23 @@ impl TypeChecker {
         target_ty: &Type,
         mutable: bool,
         value: &TypedExpression,
-        span: &crate::error::Span,
+        span: &Span,
     ) {
         if !mutable {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E3070,
+            self.push_error(
+                E3070,
                 format!("cannot assign to immutable variable `{}`", name),
                 *span,
-            ));
+            );
         }
 
-        if value.ty != Type::Unknown
-            && *target_ty != Type::Unknown
-            && !self.types_compatible(target_ty, &value.ty)
-        {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E3071,
-                format!(
-                    "assignment to `{}` expects `{}`, found `{}`",
-                    name,
-                    target_ty.display_name(),
-                    value.ty.display_name()
-                ),
+        if !self.types_compatible(target_ty, &value.ty) {
+            let (expected, actual) = type_display_pair(target_ty, &value.ty);
+            self.push_error(
+                E3071,
+                format!("assignment to `{name}` expects `{expected}`, found `{actual}`"),
                 value.span,
-            ));
+            );
         }
     }
 }

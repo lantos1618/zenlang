@@ -7,7 +7,7 @@ pub(super) fn cmd_check(path_str: &str) {
         let base_dir = build_path.parent().unwrap_or_else(|| Path::new("."));
         super::validate_build_graph_sources(base_dir, &graph);
         super::check_build_graph_sources(base_dir, &graph);
-        println!("  {} build targets — ok", graph.targets().len());
+        println!("  {} build targets — ok", graph.targets.len());
         return;
     }
 

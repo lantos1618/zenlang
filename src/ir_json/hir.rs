@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::ast::typed::{Type, TypeDefKind, TypedFunction, TypedProgram, TypedTypeDef};
+use crate::ast::typed::{Type, TypeDefKind, TypedProgram, TypedTypeDef};
 
 #[derive(Serialize)]
 struct HirJsonProgram {
@@ -41,14 +41,8 @@ struct HirVariant {
 #[derive(Serialize)]
 struct HirFunctionDecl {
     name: String,
-    params: Vec<HirParam>,
+    params: Vec<HirField>,
     return_type: String,
-}
-
-#[derive(Serialize)]
-struct HirParam {
-    name: String,
-    r#type: String,
 }
 
 #[derive(Serialize)]
@@ -65,7 +59,22 @@ pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<Stri
         semantic_status: "checked",
         declarations: HirDeclarations {
             types: program.types.iter().map(hir_type_decl).collect(),
-            functions: program.functions.iter().map(hir_function_decl).collect(),
+            functions: program
+                .functions
+                .iter()
+                .map(|function| HirFunctionDecl {
+                    name: function.name.clone(),
+                    params: function
+                        .params
+                        .iter()
+                        .map(|param| HirField {
+                            name: param.name.clone(),
+                            r#type: param.ty.display_name(),
+                        })
+                        .collect(),
+                    return_type: function.return_type.display_name(),
+                })
+                .collect(),
             globals: program
                 .globals
                 .iter()
@@ -100,27 +109,15 @@ fn hir_type_decl(type_def: &TypedTypeDef) -> HirTypeDecl {
                     tag: variant.tag,
                     payload: variant
                         .payload
-                        .as_deref()
-                        .map(hir_fields)
-                        .unwrap_or_default(),
+                        .iter()
+                        .map(|ty| HirField {
+                            name: "payload".to_string(),
+                            r#type: ty.display_name(),
+                        })
+                        .collect(),
                 })
                 .collect(),
         },
-    }
-}
-
-fn hir_function_decl(function: &TypedFunction) -> HirFunctionDecl {
-    HirFunctionDecl {
-        name: function.name.clone(),
-        params: function
-            .params
-            .iter()
-            .map(|param| HirParam {
-                name: param.name.clone(),
-                r#type: param.ty.display_name(),
-            })
-            .collect(),
-        return_type: function.return_type.display_name(),
     }
 }
 

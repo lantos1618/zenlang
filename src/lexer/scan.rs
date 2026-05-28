@@ -1,27 +1,21 @@
 use super::{Lexer, Token};
 use crate::error::{CompileError, Span};
 
-// ── Main scanning logic ──────────────────────────────────────────
-
 impl Lexer {
-    /// Produce the next token from the source.
     pub(super) fn lex_next(&mut self) -> Result<(Token, Span), CompileError> {
         self.skip_whitespace_and_comments()?;
 
         let start = self.byte_pos();
 
-        let ch = match self.peek() {
-            Some(c) => c,
-            None => return Ok((Token::EOF, self.make_span(start, start))),
+        let Some(ch) = self.peek() else {
+            return Ok((Token::EOF, self.make_span(start, start)));
         };
 
-        // Newlines are significant tokens
         if ch == '\n' {
             self.advance();
             return Ok((Token::Newline, self.make_span(start, self.byte_pos())));
         }
 
-        // Strings
         if ch == '"' {
             return self.lex_string();
         }
@@ -41,7 +35,7 @@ impl Lexer {
             return self.lex_number();
         }
         if ch == '@' {
-            return self.lex_at_token();
+            return Ok(self.lex_at_token());
         }
 
         if let Some(tok) = self.lex_multi_char_operator(start) {
@@ -80,29 +74,25 @@ impl Lexer {
         Ok((tok, self.make_span(start, end)))
     }
 
-    // ── Identifiers / keywords ───────────────────────────────────
-
     pub(super) fn lex_identifier(&mut self) -> (Token, Span) {
         let start = self.byte_pos();
-        let char_start = self.pos;
-        while let Some(ch) = self.peek() {
-            if ch.is_ascii_alphanumeric() || ch == '_' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-        let word: String = self.source[char_start..self.pos].iter().collect();
+        let word = self.lex_identifier_tail();
         let span = self.make_span(start, self.byte_pos());
         let tok = Token::from_keyword(&word).unwrap_or(Token::Identifier(word));
         (tok, span)
     }
 
-    // ── @ tokens ─────────────────────────────────────────────────
-
-    pub(super) fn lex_at_token(&mut self) -> Result<(Token, Span), CompileError> {
+    pub(super) fn lex_at_token(&mut self) -> (Token, Span) {
         let start = self.byte_pos();
-        self.advance(); // consume '@'
+        self.advance();
+        let word = self.lex_identifier_tail();
+        let span = self.make_span(start, self.byte_pos());
+        let tok =
+            Token::from_at_name(&word).unwrap_or_else(|| Token::Identifier(format!("@{word}")));
+        (tok, span)
+    }
+
+    fn lex_identifier_tail(&mut self) -> String {
         let id_start = self.pos;
         while let Some(ch) = self.peek() {
             if ch.is_ascii_alphanumeric() || ch == '_' {
@@ -111,10 +101,6 @@ impl Lexer {
                 break;
             }
         }
-        let word: String = self.source[id_start..self.pos].iter().collect();
-        let span = self.make_span(start, self.byte_pos());
-        let tok =
-            Token::from_at_name(&word).unwrap_or_else(|| Token::Identifier(format!("@{word}")));
-        Ok((tok, span))
+        self.source[id_start..self.pos].iter().collect()
     }
 }

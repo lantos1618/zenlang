@@ -1,6 +1,5 @@
-use super::gated_methods::GatedMethod;
 use super::*;
-use crate::typechecker::FuncInfo;
+use crate::typechecker::method_signature_key;
 
 mod module_calls;
 
@@ -21,171 +20,76 @@ impl TypeChecker {
 
         let typed_receiver = self.check_expr(receiver)?;
 
-        if let Ok(gated_method) = method.parse::<GatedMethod>() {
-            return Err(gated_method.diagnostic(span));
-        }
-
-        // Build args: receiver as first arg (for methods/UFC)
-        let mut typed_args = vec![typed_receiver.clone()];
-        for arg in args {
-            typed_args.push(self.check_expr(arg)?);
-        }
-
-        // Try to find method on receiver type
-        let type_name = match &typed_receiver.ty {
-            Type::Named(n) | Type::Struct { name: n, .. } | Type::Enum { name: n, .. } => n.clone(),
-            _ => String::new(),
-        };
-        let method_key = self
-            .behavior_specialized_method_key(&type_name, method)
-            .unwrap_or_else(|| Self::method_key(&type_name, method));
-
-        if let Some(info) = self.methods.get(&method_key).cloned() {
-            // Found as a type method — handle generics
-            let (resolved_method, ret_type) = if !info.type_params.is_empty() {
-                self.resolve_generic_method_call(&method_key, &info, type_args, &typed_args, span)
-            } else {
-                self.reject_nongeneric_type_args("method", &method_key, type_args, span);
-                self.check_call_signature("method", &method_key, &info.params, &typed_args, &span);
-                (method_key.clone(), self.resolve_type(&info.return_type))
-            };
-            return Ok(TypedExpression {
-                kind: TypedExprKind::FunctionCall {
-                    function: resolved_method,
-                    args: typed_args,
-                },
-                ty: ret_type,
+        if method == "raise" {
+            return Err(Diagnostic::error_code(
+                E3054,
+                "`.raise()` is gated until Result propagation typing and lowering are implemented",
                 span,
-            });
+            ));
         }
 
-        if let Some(generic_base) = self.generic_base_type_name(&type_name) {
-            let generic_method_key = self
-                .behavior_specialized_method_key(&generic_base, method)
-                .unwrap_or_else(|| Self::method_key(&generic_base, method));
-            if let Some(info) = self.methods.get(&generic_method_key).cloned() {
-                if !info.type_params.is_empty() {
-                    let (mangled, ret_type) = self.resolve_generic_method_call(
-                        &generic_method_key,
-                        &info,
-                        type_args,
-                        &typed_args,
-                        span,
-                    );
-                    return Ok(TypedExpression {
-                        kind: TypedExprKind::FunctionCall {
-                            function: mangled,
-                            args: typed_args,
-                        },
-                        ty: ret_type,
-                        span,
-                    });
-                } else {
-                    self.reject_nongeneric_type_args(
-                        "method",
-                        &generic_method_key,
-                        type_args,
-                        span,
-                    );
-                    self.check_call_signature(
-                        "method",
-                        &generic_method_key,
-                        &info.params,
-                        &typed_args,
-                        &span,
-                    );
-                    return Ok(TypedExpression {
-                        kind: TypedExprKind::FunctionCall {
-                            function: format!("{}_{}", generic_base, method),
-                            args: typed_args,
-                        },
-                        ty: self.resolve_type(&info.return_type),
-                        span,
-                    });
-                }
-            }
+        let mut typed_args = vec![typed_receiver.clone()];
+        typed_args.extend(self.check_exprs(args)?);
+
+        let type_name = typed_receiver.ty.nominal_name().unwrap_or("").to_string();
+        let generic_base_type =
+            self.structs
+                .iter()
+                .filter_map(|(name, info)| (!info.type_params.is_empty()).then_some(name.as_str()))
+                .chain(self.enums.iter().filter_map(|(name, info)| {
+                    (!info.type_params.is_empty()).then_some(name.as_str())
+                }))
+                .find(|name| self.concrete_type_name_matches_generic(&type_name, name))
+                .map(str::to_string);
+
+        let method_candidates = std::iter::once((type_name.as_str(), false))
+            .chain(generic_base_type.as_deref().map(|name| (name, true)));
+        for (candidate_type, generic_base) in method_candidates {
+            let method_key = self
+                .behavior_specialized_method_key(candidate_type, method)
+                .unwrap_or_else(|| method_signature_key(candidate_type, method));
+            let Some(info) = self.methods.get(&method_key).cloned() else {
+                continue;
+            };
+            let (resolved_method, ret_type) = self.resolve_callable_call(
+                "method",
+                &method_key,
+                &info,
+                type_args,
+                &typed_args,
+                span,
+            );
+            let resolved_method = if generic_base && info.type_params.is_empty() {
+                format!("{}_{}", candidate_type, method)
+            } else {
+                resolved_method
+            };
+            return Ok(typed_call_expr(resolved_method, typed_args, ret_type, span));
         }
 
         if let Some(info) = self.functions.get(method).cloned() {
-            // UFC: x.f(args) -> f(x, args)
-            let (resolved_function, ret_type) = if !info.type_params.is_empty() {
-                self.resolve_generic_function_call(method, &info, type_args, &typed_args, span)
-            } else {
-                self.reject_nongeneric_type_args("function", method, type_args, span);
-                self.check_call_signature("function", method, &info.params, &typed_args, &span);
-                (method.to_string(), self.resolve_type(&info.return_type))
-            };
-            Ok(TypedExpression {
-                kind: TypedExprKind::FunctionCall {
-                    function: resolved_function,
-                    args: typed_args,
-                },
-                ty: ret_type,
+            let (resolved_function, ret_type) =
+                self.resolve_callable_call("function", method, &info, type_args, &typed_args, span);
+            Ok(typed_call_expr(
+                resolved_function,
+                typed_args,
+                ret_type,
                 span,
-            })
+            ))
         } else {
-            self.unknown_method_expr(&type_name, method, typed_args, span)
-        }
-    }
-
-    fn resolve_generic_method_call(
-        &mut self,
-        method_key: &str,
-        info: &FuncInfo,
-        type_args: &[AstType],
-        typed_args: &[TypedExpression],
-        span: Span,
-    ) -> (String, Type) {
-        let (subs, type_args_valid) = if type_args.is_empty() {
-            let arg_types: Vec<Type> = typed_args.iter().map(|arg| arg.ty.clone()).collect();
-            let (subs, conflicts) = self.infer_method_type_args(
-                method_key,
-                &info.type_params,
-                &info.params,
-                &arg_types,
-            );
-            let inferred_type_args_valid =
-                self.report_inference_conflicts("method", method_key, conflicts, span);
-            (subs, inferred_type_args_valid)
-        } else {
-            self.explicit_type_arg_substitutions(
-                "method",
-                method_key,
-                &info.type_params,
-                type_args,
-                span,
-            )
-        };
-
-        let fallback_mangled =
-            self.generic_function_mangled_name(method_key, &info.type_params, &subs);
-        if !type_args_valid {
-            return (fallback_mangled, Type::Unknown);
-        }
-
-        let saved_self_type = self.current_self_type.clone();
-        self.current_self_type = self.generic_method_self_type(method_key, &subs);
-        self.check_call_signature_with_substitutions(
-            "method",
-            method_key,
-            &info.params,
-            typed_args,
-            &subs,
-            &span,
-        );
-
-        let result = if self.check_generic_bounds_valid(&info.type_param_bounds, &subs, span) {
-            if let Some(mangled) = self.specialize_generic_method(method_key, &subs, span) {
-                let ret_type = self.substitute_type(&info.return_type, &subs);
-                (mangled, ret_type)
-            } else {
-                (fallback_mangled, Type::Unknown)
+            if !type_name.is_empty() {
+                self.push_error(
+                    E3043,
+                    format!("type `{type_name}` has no method `{method}`"),
+                    span,
+                );
             }
-        } else {
-            (fallback_mangled, Type::Unknown)
-        };
-
-        self.current_self_type = saved_self_type;
-        result
+            Ok(typed_call_expr(
+                format!("{}_{}", type_name, method),
+                typed_args,
+                Type::Unknown,
+                span,
+            ))
+        }
     }
 }

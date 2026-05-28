@@ -3,29 +3,11 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
+use super::ast_type_substitution::substitute_ast_type_names;
 use super::monomorphize_inference::InferenceConflict;
 use super::TypeChecker;
 
 impl TypeChecker {
-    pub(super) fn match_generic_type_params(
-        &self,
-        generic_name: &str,
-        actual: &Type,
-        type_params: &[String],
-        map: &mut HashMap<String, Type>,
-        conflicts: &mut Vec<InferenceConflict>,
-    ) {
-        let type_args = self.generic_definition_param_refs(generic_name);
-        self.match_generic_type_with_args(
-            generic_name,
-            &type_args,
-            actual,
-            type_params,
-            map,
-            conflicts,
-        );
-    }
-
     pub(super) fn match_generic_type_with_args(
         &self,
         generic_name: &str,
@@ -35,25 +17,42 @@ impl TypeChecker {
         map: &mut HashMap<String, Type>,
         conflicts: &mut Vec<InferenceConflict>,
     ) {
-        if self.match_remembered_generic_type_args(
-            generic_name,
-            expected_type_args,
-            actual,
-            type_params,
-            map,
-            conflicts,
-        ) {
-            return;
+        let actual_name = match actual {
+            Type::Struct { name, .. } | Type::Enum { name, .. }
+                if self.concrete_type_name_matches_generic(name, generic_name) =>
+            {
+                Some(name)
+            }
+            _ => None,
+        };
+        if let Some((source_name, actual_type_args)) = actual_name.and_then(|name| {
+            self.specialized_type_generic_names
+                .get(name)
+                .zip(self.specialized_type_args.get(name))
+        }) {
+            if source_name == generic_name && actual_type_args.len() == expected_type_args.len() {
+                for (expected, actual) in expected_type_args.iter().zip(actual_type_args.iter()) {
+                    let actual = self.resolve_type(actual);
+                    self.match_type_param(expected, &actual, type_params, map, conflicts);
+                }
+                return;
+            }
         }
 
         match actual {
             Type::Struct { name, fields }
                 if self.concrete_type_name_matches_generic(name, generic_name) =>
             {
-                self.match_struct_shape(
-                    generic_name,
+                let Some(info) = self.structs.get(generic_name) else {
+                    return;
+                };
+                self.match_inference_shape_items(
+                    &info.type_params,
                     expected_type_args,
-                    fields,
+                    info.fields
+                        .iter()
+                        .zip(fields.iter())
+                        .map(|((_, expected), (_, actual))| (expected, actual)),
                     type_params,
                     map,
                     conflicts,
@@ -62,10 +61,17 @@ impl TypeChecker {
             Type::Enum { name, variants }
                 if self.concrete_type_name_matches_generic(name, generic_name) =>
             {
-                self.match_enum_shape(
-                    generic_name,
+                let Some(info) = self.enums.get(generic_name) else {
+                    return;
+                };
+                self.match_inference_shape_items(
+                    &info.type_params,
                     expected_type_args,
-                    variants,
+                    info.variants.iter().zip(variants.iter()).filter_map(
+                        |((_, expected_payload), (_, actual_payload))| {
+                            Some((expected_payload.as_ref()?, actual_payload.as_ref()?))
+                        },
+                    ),
                     type_params,
                     map,
                     conflicts,
@@ -75,125 +81,24 @@ impl TypeChecker {
         }
     }
 
-    fn match_remembered_generic_type_args(
+    fn match_inference_shape_items<'a>(
         &self,
-        generic_name: &str,
+        shape_params: &[String],
         expected_type_args: &[AstType],
-        actual: &Type,
-        type_params: &[String],
-        map: &mut HashMap<String, Type>,
-        conflicts: &mut Vec<InferenceConflict>,
-    ) -> bool {
-        let actual_name = match actual {
-            Type::Struct { name, .. } | Type::Enum { name, .. }
-                if self.concrete_type_name_matches_generic(name, generic_name) =>
-            {
-                name
-            }
-            _ => return false,
-        };
-        let Some(actual_type_args) =
-            self.remembered_specialized_type_args(actual_name, generic_name)
-        else {
-            return false;
-        };
-        if actual_type_args.len() != expected_type_args.len() {
-            return false;
-        }
-
-        for (expected, actual) in expected_type_args.iter().zip(actual_type_args.iter()) {
-            let actual = self.resolve_type(actual);
-            self.match_type_param(expected, &actual, type_params, map, conflicts);
-        }
-        true
-    }
-
-    fn match_struct_shape(
-        &self,
-        generic_name: &str,
-        expected_type_args: &[AstType],
-        actual_fields: &[(String, Type)],
+        items: impl IntoIterator<Item = (&'a AstType, &'a Type)>,
         type_params: &[String],
         map: &mut HashMap<String, Type>,
         conflicts: &mut Vec<InferenceConflict>,
     ) {
-        let Some((params, fields)) = self.generic_struct_inference_shape(generic_name) else {
-            return;
-        };
-        self.match_inference_shape_items(
-            &params,
-            expected_type_args,
-            fields
-                .iter()
-                .zip(actual_fields.iter())
-                .map(|(expected, (_, actual))| (expected, actual)),
-            type_params,
-            map,
-            conflicts,
-        );
-    }
-
-    fn match_enum_shape(
-        &self,
-        generic_name: &str,
-        expected_type_args: &[AstType],
-        actual_variants: &[(String, Option<Type>)],
-        type_params: &[String],
-        map: &mut HashMap<String, Type>,
-        conflicts: &mut Vec<InferenceConflict>,
-    ) {
-        let Some((params, variants)) = self.generic_enum_inference_shape(generic_name) else {
-            return;
-        };
-        self.match_inference_shape_items(
-            &params,
-            expected_type_args,
-            variants.iter().zip(actual_variants.iter()).filter_map(
-                |(expected_payload, (_, actual_payload))| {
-                    Some((expected_payload.as_ref()?, actual_payload.as_ref()?))
-                },
-            ),
-            type_params,
-            map,
-            conflicts,
-        );
-    }
-
-    fn generic_definition_param_refs(&self, generic_name: &str) -> Vec<AstType> {
-        self.structs
-            .get(generic_name)
-            .map(|info| &info.type_params)
-            .or_else(|| self.enums.get(generic_name).map(|info| &info.type_params))
-            .into_iter()
-            .flatten()
-            .map(|param| AstType::Named(param.clone()))
-            .collect()
-    }
-
-    fn generic_struct_inference_shape(
-        &self,
-        generic_name: &str,
-    ) -> Option<(Vec<String>, Vec<AstType>)> {
-        self.structs.get(generic_name).map(|info| {
-            (
-                info.type_params.clone(),
-                info.fields.iter().map(|(_, ty)| ty.clone()).collect(),
-            )
-        })
-    }
-
-    fn generic_enum_inference_shape(
-        &self,
-        generic_name: &str,
-    ) -> Option<(Vec<String>, Vec<Option<AstType>>)> {
-        self.enums.get(generic_name).map(|info| {
-            (
-                info.type_params.clone(),
-                info.variants
-                    .iter()
-                    .map(|(_, payload)| payload.clone())
-                    .collect(),
-            )
-        })
+        let substitutions: HashMap<String, AstType> = shape_params
+            .iter()
+            .cloned()
+            .zip(expected_type_args.iter().cloned())
+            .collect();
+        for (expected, actual) in items {
+            let expected =
+                substitute_ast_type_names(expected, &|name| substitutions.get(name).cloned());
+            self.match_type_param(&expected, actual, type_params, map, conflicts);
+        }
     }
 }

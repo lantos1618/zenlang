@@ -1085,27 +1085,16 @@
               {
                 "name": "Ok",
                 "tag": 0,
-                "payload": [
-                  [
-                    "payload",
-                    "I32"
-                  ]
-                ]
+                "payload": "I32"
               },
               {
                 "name": "Err",
                 "tag": 1,
-                "payload": [
-                  [
-                    "payload",
-                    "Str"
-                  ]
-                ]
+                "payload": "Str"
               }
             ]
           }
         },
-        "methods": [],
         "span": {
           "file_id": 0,
           "start": 209,
@@ -1120,27 +1109,16 @@
               {
                 "name": "Ok",
                 "tag": 0,
-                "payload": [
-                  [
-                    "payload",
-                    "Bool"
-                  ]
-                ]
+                "payload": "Bool"
               },
               {
                 "name": "Err",
                 "tag": 1,
-                "payload": [
-                  [
-                    "payload",
-                    "Str"
-                  ]
-                ]
+                "payload": "Str"
               }
             ]
           }
         },
-        "methods": [],
         "span": {
           "file_id": 0,
           "start": 307,

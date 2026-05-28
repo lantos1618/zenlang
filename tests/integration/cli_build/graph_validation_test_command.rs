@@ -1,163 +1,45 @@
-use std::process::Command;
+use std::process::Output;
+
+use super::support::{
+    assert_path_exists, assert_test_binary_and_output, assert_zen_success, build_graph_source,
+    run_zen_in, write_file, MAIN_ZERO, TEST_ARGS,
+};
 
 #[test]
 fn test_command_build_zen_runs_test_targets() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Test { name: "unit", root: "test.zen" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("test.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write test.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["test", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen test build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let (tmp, output) = run_test_command(
+        &[r#"    b.add(Test { name: "unit", root: "test.zen" })"#],
+        &["test.zen"],
     );
 
-    let bin_path = tmp.path().join("build").join("tests").join("unit");
-    assert!(
-        bin_path.exists(),
-        "expected {} to exist",
-        bin_path.display()
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
-        "expected test pass output, stdout={}",
-        String::from_utf8_lossy(&output.stdout)
-    );
+    assert_test_binary_and_output(&tmp, &output, "unit");
 }
 
 #[test]
 fn test_command_build_zen_runs_multiple_test_targets() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Test { name: "unit", root: "unit.zen" })
-    b.add(Test { name: "integration", root: "integration.zen" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("unit.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write unit.zen");
-    std::fs::write(
-        tmp.path().join("integration.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write integration.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["test", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen test build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let (tmp, output) = run_test_command(
+        &[
+            r#"    b.add(Test { name: "unit", root: "unit.zen" })"#,
+            r#"    b.add(Test { name: "integration", root: "integration.zen" })"#,
+        ],
+        &["unit.zen", "integration.zen"],
     );
 
     for name in ["unit", "integration"] {
-        let bin_path = tmp.path().join("build").join("tests").join(name);
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
-        assert!(
-            String::from_utf8_lossy(&output.stdout).contains(&format!("test {name} passed")),
-            "expected {name} pass output, stdout={}",
-            String::from_utf8_lossy(&output.stdout)
-        );
+        assert_test_binary_and_output(&tmp, &output, name);
     }
 }
 
 #[test]
 fn test_command_build_zen_runs_test_dependencies_first() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    std::fs::write(
-        tmp.path().join("build.zen"),
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Test {
+    let (tmp, output) = run_test_command(
+        &[r#"    b.add(Test {
         name: "integration",
         root: "integration.zen",
         dependencies: ["unit"],
     })
-    b.add(Test { name: "unit", root: "unit.zen" })
-    .Ok(b.config())
-}
-"#,
-    )
-    .expect("write build.zen");
-    std::fs::write(
-        tmp.path().join("unit.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write unit.zen");
-    std::fs::write(
-        tmp.path().join("integration.zen"),
-        r#"
-main = () i32 {
-    0
-}
-"#,
-    )
-    .expect("write integration.zen");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["test", "build.zen"])
-        .current_dir(tmp.path())
-        .output()
-        .expect("run zen test build.zen");
-
-    assert!(
-        output.status.success(),
-        "zen test build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    b.add(Test { name: "unit", root: "unit.zen" })"#],
+        &["unit.zen", "integration.zen"],
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -173,11 +55,19 @@ main = () i32 {
     );
 
     for name in ["unit", "integration"] {
-        let bin_path = tmp.path().join("build").join("tests").join(name);
-        assert!(
-            bin_path.exists(),
-            "expected {} to exist",
-            bin_path.display()
-        );
+        assert_path_exists(tmp.path().join("build").join("tests").join(name));
     }
+}
+
+fn run_test_command(targets: &[&str], source_paths: &[&str]) -> (tempfile::TempDir, Output) {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    write_file(&tmp, "build.zen", &build_graph_source(targets));
+
+    for path in source_paths {
+        write_file(&tmp, path, MAIN_ZERO);
+    }
+
+    let output = run_zen_in(&tmp, TEST_ARGS);
+    assert_zen_success(TEST_ARGS, &output);
+    (tmp, output)
 }

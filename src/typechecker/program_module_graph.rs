@@ -6,24 +6,16 @@ impl TypeChecker {
         graph: &ResolvedModuleGraph,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         let Some(entry) = graph.module(graph.entry) else {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0232,
+            self.push_error(
+                E0232,
                 format!("module graph missing entry module {:?}", graph.entry),
                 Span::dummy(),
-            ));
-            return Err(self
-                .diagnostics
-                .iter()
-                .filter(|diag| diag.is_error())
-                .cloned()
-                .collect());
+            );
+            return Err(self.diagnostics.clone());
         };
 
-        let mut modules = graph.modules().values().collect::<Vec<_>>();
-        modules.sort_by_key(|module| module.info.id.0);
-
         let mut dependency_programs = Vec::new();
-        for module in modules {
+        for module in graph.sorted_modules() {
             if module.info.id == graph.entry {
                 continue;
             }
@@ -35,14 +27,7 @@ impl TypeChecker {
             }
         }
 
-        if self.diagnostics.iter().any(|diag| diag.is_error()) {
-            return Err(self
-                .diagnostics
-                .iter()
-                .filter(|diag| diag.is_error())
-                .cloned()
-                .collect());
-        }
+        self.fail_if_errors()?;
 
         let mut typed = self.check_module_graph_module(graph, entry)?;
         for mut dependency in dependency_programs {
@@ -58,27 +43,9 @@ impl TypeChecker {
         graph: &ResolvedModuleGraph,
         module: &ResolvedModule,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
-        self.validate_resolver_symbols(&module.program, &module.symbols);
-        if self.diagnostics.iter().any(|diag| diag.is_error()) {
-            return Err(self
-                .diagnostics
-                .iter()
-                .filter(|diag| diag.is_error())
-                .cloned()
-                .collect());
-        }
-
         self.collect_module_graph_imports(graph, module);
-        if self.diagnostics.iter().any(|diag| diag.is_error()) {
-            return Err(self
-                .diagnostics
-                .iter()
-                .filter(|diag| diag.is_error())
-                .cloned()
-                .collect());
-        }
+        self.fail_if_errors()?;
 
-        self.collect_declarations_with_symbols(&module.program.declarations, &module.symbols);
-        self.check_program_after_collection(&module.program)
+        self.check_program(&module.program)
     }
 }

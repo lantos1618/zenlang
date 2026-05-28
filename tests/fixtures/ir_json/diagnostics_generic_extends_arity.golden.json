@@ -19,9 +19,9 @@
       "span": {
         "file_id": 0,
         "path": "$TMP/generic_extends_arity.zen",
-        "start": 45,
-        "end": 101,
-        "line": 6,
+        "start": 103,
+        "end": 127,
+        "line": 10,
         "column": 1
       },
       "labels": [],

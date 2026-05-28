@@ -11,24 +11,16 @@ pub(super) fn is_any_c_function_signature_line(trimmed: &str) -> bool {
         return false;
     }
 
-    let Some(paren) = trimmed.find('(') else {
+    let Some((before, name)) = c_function_head(trimmed) else {
         return false;
     };
-    let before = &trimmed[..paren];
-    let name_start = before
-        .trim_end()
-        .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-        .map_or(0, |idx| idx + 1);
-    let return_type = before[..name_start].trim();
-    let name = before[name_start..].trim();
-
-    !return_type.is_empty()
+    !before[..before.len() - name.len()].trim().is_empty()
         && is_tracked_c_function_name(name)
         && !before.contains('=')
         && !before.contains("return")
 }
 
-pub(super) fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
+pub(super) fn generated_c_calls_on_line(trimmed: &str) -> Vec<&str> {
     let mut calls = Vec::new();
     let bytes = trimmed.as_bytes();
     let mut index = 0;
@@ -46,8 +38,8 @@ pub(super) fn generated_c_calls_on_line(trimmed: &str) -> Vec<String> {
         }
 
         let name = &trimmed[start..paren];
-        if is_tracked_c_function_name(name) && !calls.iter().any(|call| call == name) {
-            calls.push(name.to_string());
+        if is_tracked_c_function_name(name) && !calls.contains(&name) {
+            calls.push(name);
         }
 
         index = paren + 1;
@@ -64,6 +56,15 @@ pub(super) fn is_tracked_c_function_name(name: &str) -> bool {
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
         && !is_untracked_c_call_name(name)
+}
+
+pub(super) fn c_function_head(trimmed: &str) -> Option<(&str, &str)> {
+    let paren = trimmed.find('(')?;
+    let before = trimmed[..paren].trim_end();
+    let name_start = before
+        .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .map_or(0, |idx| idx + 1);
+    Some((before, before[name_start..].trim()))
 }
 
 fn is_untracked_c_call_name(name: &str) -> bool {
@@ -92,12 +93,11 @@ fn is_untracked_c_call_name(name: &str) -> bool {
 }
 
 fn is_c_function_signature_line(trimmed: &str, name: &str) -> bool {
-    let needle = format!(" {name}(");
-    let Some(call_start) = trimmed.find(&needle) else {
+    let Some((before, signature_name)) = c_function_head(trimmed) else {
         return false;
     };
-    let prefix = &trimmed[..call_start];
-    !prefix.contains('=')
-        && !prefix.contains("return")
+    signature_name == name
+        && !before.contains('=')
+        && !before.contains("return")
         && (trimmed.ends_with(';') || trimmed.ends_with('{'))
 }

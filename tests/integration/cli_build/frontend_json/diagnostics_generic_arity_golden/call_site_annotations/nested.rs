@@ -19,6 +19,5 @@ read = (box: Box<Option<i32, StaticString>>) i32 {
 "#,
         "nested generic annotation inner arity",
         "nested generic annotation inner arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_nested_generic_annotation_inner_arity.golden.json",
     );
 }

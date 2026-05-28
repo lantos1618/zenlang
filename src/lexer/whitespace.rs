@@ -2,8 +2,6 @@ use super::Lexer;
 use crate::error::CompileError;
 
 impl Lexer {
-    /// Skip spaces, tabs, carriage returns and comments.
-    /// Newlines are NOT consumed — they become Newline tokens.
     pub(super) fn skip_whitespace_and_comments(&mut self) -> Result<(), CompileError> {
         loop {
             self.skip_chars_while(|ch| matches!(ch, ' ' | '\t' | '\r'));
@@ -15,8 +13,6 @@ impl Lexer {
         Ok(())
     }
 
-    /// Skip ALL whitespace (including newlines) and comments.
-    /// Used inside string interpolation where newlines are insignificant.
     pub(super) fn skip_all_whitespace_and_comments(&mut self) -> Result<(), CompileError> {
         loop {
             self.skip_chars_while(char::is_ascii_whitespace);

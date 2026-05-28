@@ -10,20 +10,14 @@ impl CEmitter {
     ) {
         match kind {
             MatchKind::ConditionalElse | MatchKind::Conditional => {
-                self.emit_conditional(scrutinee, arms, result_var);
+                self.emit_conditional(scrutinee, arms, result_var)
             }
-            MatchKind::WhileLoop => {
-                self.emit_loop_match(scrutinee, arms, None);
-            }
+            MatchKind::WhileLoop => self.emit_loop_match(scrutinee, arms, None),
             MatchKind::ControlledLoop { label } => {
-                self.emit_loop_match(scrutinee, arms, Some(label));
+                self.emit_loop_match(scrutinee, arms, Some(label))
             }
-            MatchKind::EnumMatch => {
-                self.emit_enum_match(scrutinee, arms, result_var);
-            }
-            MatchKind::ValueMatch => {
-                self.emit_value_match(scrutinee, arms, result_var);
-            }
+            MatchKind::EnumMatch => self.emit_enum_match(scrutinee, arms, result_var),
+            MatchKind::ValueMatch => self.emit_value_match(scrutinee, arms, result_var),
         }
     }
 
@@ -37,7 +31,7 @@ impl CEmitter {
         self.line(&format!("while ({}) {{", cond));
         self.indent();
         if let Some(arm) = arms.first() {
-            self.emit_block_body(&arm.body);
+            self.emit_block_body_with_result(&arm.body, None);
         }
         if let Some(label) = control_label {
             self.line(&format!("{label}_next:"));
@@ -61,15 +55,9 @@ impl CEmitter {
         let mut first = true;
         for arm in arms {
             match &arm.pattern {
-                TypedPattern::Bool(true) => {
-                    self.emit_match_if_branch_open(&mut first, &cond);
-                }
-                TypedPattern::Bool(false) => {
-                    self.line("else {");
-                }
-                TypedPattern::Wildcard => {
-                    self.emit_match_fallback_branch_open(&mut first);
-                }
+                TypedPattern::Bool(true) => self.emit_match_if_branch_open(&mut first, &cond),
+                TypedPattern::Bool(false) => self.line("else {"),
+                TypedPattern::Wildcard => self.emit_match_fallback_branch_open(&mut first),
                 _ => {
                     self.line(&format!("if ({cond}) {{"));
                     first = false;
@@ -99,7 +87,7 @@ impl CEmitter {
                     self.line(&format!("case {}: {{", tag));
                     self.indent();
                     for (binding_name, binding_ty) in bindings {
-                        let ty = self.c_type(binding_ty);
+                        let ty = Self::c_type(binding_ty);
                         self.line(&format!(
                             "{} {} = {}.data.{};",
                             ty,
@@ -136,12 +124,8 @@ impl CEmitter {
                     let v = self.emit_expr_inline(val);
                     self.emit_match_if_branch_open(&mut first, &format!("{scrut} == {v}"));
                 }
-                TypedPattern::Wildcard => {
-                    self.line("else {");
-                }
-                _ => {
-                    self.emit_match_fallback_branch_open(&mut first);
-                }
+                TypedPattern::Wildcard => self.line("else {"),
+                _ => self.emit_match_fallback_branch_open(&mut first),
             }
             self.emit_match_result_branch_body(&arm.body, result_var);
         }
@@ -179,7 +163,11 @@ impl CEmitter {
         self.line("}");
     }
 
-    fn emit_block_body_with_result(&mut self, block: &TypedBlock, result_var: Option<&str>) {
+    pub(super) fn emit_block_body_with_result(
+        &mut self,
+        block: &TypedBlock,
+        result_var: Option<&str>,
+    ) {
         for stmt in &block.statements {
             self.emit_statement(stmt);
         }
@@ -190,10 +178,7 @@ impl CEmitter {
                     self.line(&format!("{} = {};", var, val));
                 }
                 _ => {
-                    let s = self.emit_expr_to_stmt(expr);
-                    if !s.is_empty() {
-                        self.line(&s);
-                    }
+                    self.emit_expr_statement(expr);
                 }
             }
         }

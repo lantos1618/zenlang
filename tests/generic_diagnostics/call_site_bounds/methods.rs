@@ -1,9 +1,6 @@
 use super::*;
 
-#[test]
-fn generic_method_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
+const JSON_POINT_PREAMBLE: &str = r#"
 Json: behavior {
     encode: (Self) StaticString
 }
@@ -11,7 +8,13 @@ Json: behavior {
 Point: {
     x: i32
 }
+"#;
 
+#[test]
+fn generic_method_call_site_bound_failures_are_errors() {
+    for (program, param, context, no_encode_context) in [
+        (
+            r#"
 Holder: {
     value: i32
 }
@@ -27,34 +30,12 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic method bound",
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("has no method `encode`")),
-        "generic method bound failure should not also specialize body method errors, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_receiver_method_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "T",
+            "generic method bound",
+            Some("generic method bound"),
+        ),
+        (
+            r#"
 Box<T>: {
     value: T
 }
@@ -70,28 +51,12 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `U`",
-        "generic receiver method bound",
-    );
-}
-
-#[test]
-fn generic_result_enum_method_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "U",
+            "generic receiver method bound",
+            None,
+        ),
+        (
+            r#"
 Result<T, E>:
     Ok(T),
     Err(E)
@@ -108,34 +73,12 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `U`",
-        "generic Result enum method bound",
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("has no method `encode`")),
-        "generic Result enum method bound failure should not also specialize body method errors, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_ufc_function_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "U",
+            "generic Result enum method bound",
+            Some("generic Result enum method bound"),
+        ),
+        (
+            r#"
 as_json<T: Json> = (value: T) StaticString {
     value.encode()
 }
@@ -146,18 +89,15 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic UFC function bound",
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("has no method `encode`")),
-        "generic UFC bound failure should not also specialize body method errors, got {errors:?}"
-    );
+            "T",
+            "generic UFC function bound",
+            Some("generic UFC bound"),
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{JSON_POINT_PREAMBLE}\n{program}"));
+        assert_point_json_bound_failure(&errors, param, context);
+        if let Some(context) = no_encode_context {
+            assert_no_diagnostic_message(&errors, "has no method `encode`", context);
+        }
+    }
 }

@@ -1,38 +1,22 @@
 use super::*;
-use crate::parser::keywords::ParserPatternKeyword;
 
 impl Parser {
-    // ── Patterns ──────────────────────────────────────────────
-
     pub(super) fn parse_pattern(&mut self) -> Result<Pattern, CompileError> {
         self.skip_newlines();
         match self.peek().clone() {
             Token::Identifier(ref name) => {
-                if let Ok(keyword) = name.parse::<ParserPatternKeyword>() {
+                if matches!(name.as_str(), "true" | "false" | "_") {
                     let (_, span) = self.advance();
-                    match keyword {
-                        ParserPatternKeyword::True => Ok(Pattern::BoolTrue { span }),
-                        ParserPatternKeyword::False => Ok(Pattern::BoolFalse { span }),
-                        ParserPatternKeyword::Wildcard => Ok(Pattern::Wildcard { span }),
+                    match name.as_str() {
+                        "true" => Ok(Pattern::BoolTrue { span }),
+                        "false" => Ok(Pattern::BoolFalse { span }),
+                        _ => Ok(Pattern::Wildcard { span }),
                     }
                 } else if first_char_is_upper(name) {
-                    // Enum variant pattern: VariantName or VariantName(binding)
                     let name = name.clone();
                     let (_, span) = self.advance();
 
-                    if matches!(self.peek(), Token::LParen) {
-                        self.advance();
-                        let inner = self.parse_pattern()?;
-                        self.expect(&Token::RParen)?;
-                        // This is a variant pattern — enum name will be inferred by typechecker
-                        Ok(Pattern::Enum {
-                            enum_name: String::new(), // inferred
-                            variant: name,
-                            payload: Some(Box::new(inner)),
-                            span: span.merge(self.prev_span()),
-                        })
-                    } else if matches!(self.peek(), Token::LBrace) && self.is_struct_pattern() {
-                        // Struct destructuring pattern: Name { field1, field2 }
+                    if matches!(self.peek(), Token::LBrace) && self.is_struct_pattern() {
                         self.advance();
                         let mut fields = Vec::new();
                         loop {
@@ -43,9 +27,7 @@ impl Parser {
                             let (field, _) = self.expect_identifier()?;
                             fields.push((field, None));
                             self.skip_newlines();
-                            if matches!(self.peek(), Token::Comma) {
-                                self.advance();
-                            }
+                            self.consume_comma();
                         }
                         self.expect(&Token::RBrace)?;
                         Ok(Pattern::Struct {
@@ -54,21 +36,18 @@ impl Parser {
                             span: span.merge(self.prev_span()),
                         })
                     } else {
-                        // Simple enum variant (no payload)
+                        let payload = self.parse_optional_enum_pattern_payload()?;
                         Ok(Pattern::Enum {
                             enum_name: String::new(),
                             variant: name,
-                            payload: None,
-                            span,
+                            payload,
+                            span: span.merge(self.prev_span()),
                         })
                     }
                 } else {
-                    let (tok, span) = self.advance();
-                    if let Token::Identifier(name) = tok {
-                        Ok(Pattern::Identifier { name, span })
-                    } else {
-                        unreachable!()
-                    }
+                    let name = name.clone();
+                    let (_, span) = self.advance();
+                    Ok(Pattern::Identifier { name, span })
                 }
             }
             Token::Dot => self.parse_shorthand_enum_pattern(),
@@ -86,18 +65,9 @@ impl Parser {
 
     fn parse_shorthand_enum_pattern(&mut self) -> Result<Pattern, CompileError> {
         let (_, dot_span) = self.advance();
-        let (variant, variant_span) = self.expect_identifier()?;
-        let mut span = dot_span.merge(variant_span);
-
-        let payload = if matches!(self.peek(), Token::LParen) {
-            self.advance();
-            let inner = self.parse_pattern()?;
-            let end = self.expect(&Token::RParen)?;
-            span = span.merge(end);
-            Some(Box::new(inner))
-        } else {
-            None
-        };
+        let (variant, _) = self.expect_identifier()?;
+        let payload = self.parse_optional_enum_pattern_payload()?;
+        let span = dot_span.merge(self.prev_span());
 
         Ok(Pattern::Enum {
             enum_name: String::new(),
@@ -105,5 +75,18 @@ impl Parser {
             payload,
             span,
         })
+    }
+
+    fn parse_optional_enum_pattern_payload(
+        &mut self,
+    ) -> Result<Option<Box<Pattern>>, CompileError> {
+        if !matches!(self.peek(), Token::LParen) {
+            return Ok(None);
+        }
+
+        self.advance();
+        let inner = self.parse_pattern()?;
+        self.expect(&Token::RParen)?;
+        Ok(Some(Box::new(inner)))
     }
 }

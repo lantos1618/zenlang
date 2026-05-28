@@ -1,11 +1,10 @@
-use std::process::Command;
+use super::golden_support::checked_source_json;
 
 #[test]
 fn emit_json_hir_outputs_checked_declaration_graph() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("hir_subject.zen");
-    std::fs::write(
-        &zen_path,
+    let json = checked_source_json(
+        "hir",
+        "hir_subject.zen",
         r#"
 Point: {
     x: i32,
@@ -14,23 +13,9 @@ Point: {
 
 main = () i32 { 0 }
 "#,
-    )
-    .expect("write HIR subject");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "hir", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json hir on program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json hir should emit checked HIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        "program input",
     );
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("HIR stdout is json");
     assert_eq!(json["format"], "zen.hir.v0");
     assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");
@@ -61,10 +46,9 @@ main = () i32 { 0 }
 
 #[test]
 fn emit_json_hir_outputs_enum_function_and_global_declarations() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("hir_declarations_subject.zen");
-    std::fs::write(
-        &zen_path,
+    let json = checked_source_json(
+        "hir",
+        "hir_declarations_subject.zen",
         r#"
 Pair: {
     left: i32,
@@ -85,23 +69,9 @@ choose = (candidate: Pair, enabled: bool) MaybePair {
 
 main = () i32 { 0 }
 "#,
-    )
-    .expect("write HIR declarations subject");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "hir", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json hir on declaration-rich program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json hir should emit checked declaration-rich HIR JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        "declaration-rich program input",
     );
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("declaration-rich HIR stdout is json");
     assert_eq!(json["format"], "zen.hir.v0");
     assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");

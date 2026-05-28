@@ -1,5 +1,3 @@
-//! Recover source generic names and arguments from specialized concrete types.
-
 use std::collections::HashMap;
 
 use crate::ast::typed::Type;
@@ -24,76 +22,58 @@ impl TypeChecker {
         let mut candidates = self
             .structs
             .iter()
-            .filter(|(name, info)| {
-                concrete_name != name.as_str()
-                    && self.concrete_type_name_matches_generic(concrete_name, name)
-                    && !info.type_params.is_empty()
-            })
-            .map(|(name, info)| (0u8, name.clone(), info.type_params.clone()))
+            .map(|(name, info)| (0u8, name.as_str(), info.type_params.as_slice()))
             .chain(
                 self.enums
                     .iter()
-                    .filter(|(name, info)| {
-                        concrete_name != name.as_str()
-                            && self.concrete_type_name_matches_generic(concrete_name, name)
-                            && !info.type_params.is_empty()
-                    })
-                    .map(|(name, info)| (1u8, name.clone(), info.type_params.clone())),
+                    .map(|(name, info)| (1u8, name.as_str(), info.type_params.as_slice())),
             )
+            .filter(|(_, name, params)| {
+                concrete_name != *name
+                    && self.concrete_type_name_matches_generic(concrete_name, name)
+                    && !params.is_empty()
+            })
             .collect::<Vec<_>>();
-        candidates.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
+        candidates.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(right.1)));
         for (_, name, params) in candidates {
-            let type_args = self.infer_specialized_type_args(&name, ty, &params);
+            let mut inferred = HashMap::new();
+            let mut conflicts = Vec::new();
+            let expected_type_args: Vec<_> = params
+                .iter()
+                .map(|param| AstType::Named(param.clone()))
+                .collect();
+            self.match_generic_type_with_args(
+                name,
+                &expected_type_args,
+                ty,
+                params,
+                &mut inferred,
+                &mut conflicts,
+            );
+            let type_args: Vec<_> = params
+                .iter()
+                .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
+                .collect();
             if type_args.len() == params.len() {
-                return Some((name, type_args));
+                return Some((name.to_string(), type_args));
             }
         }
 
         None
     }
 
-    pub(crate) fn remembered_specialized_type_args(
-        &self,
-        concrete_name: &str,
-        generic_name: &str,
-    ) -> Option<Vec<AstType>> {
-        let source_name = self.specialized_type_generic_names.get(concrete_name)?;
-        if source_name != generic_name {
-            return None;
-        }
-        let type_args = self.specialized_type_args.get(concrete_name)?;
-        Some(type_args.clone())
-    }
-
-    fn infer_specialized_type_args(
-        &self,
-        generic_name: &str,
-        ty: &Type,
-        params: &[String],
-    ) -> Vec<AstType> {
-        let mut inferred = HashMap::new();
-        let mut conflicts = Vec::new();
-        self.match_generic_type_params(generic_name, ty, params, &mut inferred, &mut conflicts);
-        params
-            .iter()
-            .filter_map(|param| inferred.get(param).map(|ty| self.type_to_ast_ref(ty)))
-            .collect()
-    }
-
     pub(crate) fn type_to_ast_ref(&self, ty: &Type) -> AstType {
-        match ty {
-            Type::Struct { name, .. } | Type::Enum { name, .. } => {
-                if let Some((generic_name, type_args)) = self.generic_type_args_from_type(name, ty)
-                {
-                    AstType::Generic {
-                        name: generic_name,
-                        type_args,
-                    }
-                } else {
-                    type_to_ast(ty)
-                }
-            }
-            _ => type_to_ast(ty),
+        let (Type::Struct { name, .. } | Type::Enum { name, .. }) = ty else {
+            return type_to_ast(ty);
+        };
+
+        if let Some((generic_name, type_args)) = self.generic_type_args_from_type(name, ty) {
+            return AstType::Generic {
+                name: generic_name,
+                type_args,
+            };
         }
+
+        type_to_ast(ty)
     }
 }

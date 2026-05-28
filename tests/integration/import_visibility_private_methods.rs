@@ -2,11 +2,10 @@ use super::*;
 
 #[test]
 fn imported_private_type_impl_methods_are_not_visible() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let model_path = tmp.path().join("model.zen");
-    std::fs::write(
-        &model_path,
-        r#"
+    let message = compile_error_message_for_modules(
+        &[(
+            "model.zen",
+            r#"
 pub Box<T>: {
     value: T
 }
@@ -17,12 +16,7 @@ Box.impl = {
     }
 }
 "#,
-    )
-    .expect("write imported module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+        )],
         r#"
 { Box } = model
 
@@ -31,30 +25,21 @@ main = () i32 {
     box.get<i32>()
 }
 "#,
-    )
-    .expect("write entry module");
-
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject private imported impl methods");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("type `Box_i32` has no method `get`"),
-        "expected private imported impl method diagnostic, panic={message}"
+        "compile_to_c should reject private imported impl methods",
+    );
+    assert_message_contains_any(
+        &message,
+        &["type `Box_i32` has no method `get`"],
+        "expected private imported impl method diagnostic",
     );
 }
 
 #[test]
 fn imported_private_behavior_impl_methods_are_not_directly_visible() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let model_path = tmp.path().join("model.zen");
-    std::fs::write(
-        &model_path,
-        r#"
+    let message = compile_error_message_for_modules(
+        &[(
+            "model.zen",
+            r#"
 Hidden: behavior {
     reveal: (Self) StaticString
 }
@@ -69,12 +54,7 @@ Point.implements(Hidden) {
     }
 }
 "#,
-    )
-    .expect("write imported module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+        )],
         r#"
 { Point } = model
 
@@ -83,19 +63,11 @@ main = () i32 {
     point.reveal()
 }
 "#,
-    )
-    .expect("write entry module");
-
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject private imported behavior impl methods");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("type `Point` has no method `reveal`"),
-        "expected private imported behavior impl method diagnostic, panic={message}"
+        "compile_to_c should reject private imported behavior impl methods",
+    );
+    assert_message_contains_any(
+        &message,
+        &["type `Point` has no method `reveal`"],
+        "expected private imported behavior impl method diagnostic",
     );
 }

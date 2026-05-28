@@ -1,7 +1,5 @@
 use super::AstType;
 
-pub const STATIC_STRING_TYPE_NAME: &str = "StaticString";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltinTypeName {
     I8,
@@ -30,60 +28,35 @@ pub enum BuiltinGenericTypeName {
     Slice,
 }
 
-impl BuiltinTypeName {
-    pub const ALL: &[BuiltinTypeName] = &[
-        BuiltinTypeName::I8,
-        BuiltinTypeName::I16,
-        BuiltinTypeName::I32,
-        BuiltinTypeName::I64,
-        BuiltinTypeName::U8,
-        BuiltinTypeName::U16,
-        BuiltinTypeName::U32,
-        BuiltinTypeName::U64,
-        BuiltinTypeName::Usize,
-        BuiltinTypeName::F32,
-        BuiltinTypeName::F64,
-        BuiltinTypeName::Bool,
-        BuiltinTypeName::Void,
-        BuiltinTypeName::Str,
-        BuiltinTypeName::StaticString,
-        BuiltinTypeName::SelfType,
-    ];
-    const I8_NAME: &'static str = "i8";
-    const I16_NAME: &'static str = "i16";
-    const I32_NAME: &'static str = "i32";
-    const I64_NAME: &'static str = "i64";
-    const U8_NAME: &'static str = "u8";
-    const U16_NAME: &'static str = "u16";
-    const U32_NAME: &'static str = "u32";
-    const U64_NAME: &'static str = "u64";
-    const USIZE_NAME: &'static str = "usize";
-    const F32_NAME: &'static str = "f32";
-    const F64_NAME: &'static str = "f64";
-    const BOOL_NAME: &'static str = "bool";
-    const VOID_NAME: &'static str = "void";
-    const STR_NAME: &'static str = "str";
-    const SELF_NAME: &'static str = "Self";
+const BUILTIN_TYPE_SPELLINGS: &[(BuiltinTypeName, &str)] = &[
+    (BuiltinTypeName::I8, "i8"),
+    (BuiltinTypeName::I16, "i16"),
+    (BuiltinTypeName::I32, "i32"),
+    (BuiltinTypeName::I64, "i64"),
+    (BuiltinTypeName::U8, "u8"),
+    (BuiltinTypeName::U16, "u16"),
+    (BuiltinTypeName::U32, "u32"),
+    (BuiltinTypeName::U64, "u64"),
+    (BuiltinTypeName::Usize, "usize"),
+    (BuiltinTypeName::F32, "f32"),
+    (BuiltinTypeName::F64, "f64"),
+    (BuiltinTypeName::Bool, "bool"),
+    (BuiltinTypeName::Void, "void"),
+    (BuiltinTypeName::Str, "str"),
+    (BuiltinTypeName::StaticString, "StaticString"),
+    (BuiltinTypeName::SelfType, "Self"),
+];
 
+const BUILTIN_GENERIC_TYPE_SPELLINGS: &[(BuiltinGenericTypeName, &str)] = &[
+    (BuiltinGenericTypeName::Ptr, "Ptr"),
+    (BuiltinGenericTypeName::MutPtr, "MutPtr"),
+    (BuiltinGenericTypeName::RawPtr, "RawPtr"),
+    (BuiltinGenericTypeName::Slice, "Slice"),
+];
+
+impl BuiltinTypeName {
     pub fn as_str(self) -> &'static str {
-        match self {
-            Self::I8 => Self::I8_NAME,
-            Self::I16 => Self::I16_NAME,
-            Self::I32 => Self::I32_NAME,
-            Self::I64 => Self::I64_NAME,
-            Self::U8 => Self::U8_NAME,
-            Self::U16 => Self::U16_NAME,
-            Self::U32 => Self::U32_NAME,
-            Self::U64 => Self::U64_NAME,
-            Self::Usize => Self::USIZE_NAME,
-            Self::F32 => Self::F32_NAME,
-            Self::F64 => Self::F64_NAME,
-            Self::Bool => Self::BOOL_NAME,
-            Self::Void => Self::VOID_NAME,
-            Self::Str => Self::STR_NAME,
-            Self::StaticString => STATIC_STRING_TYPE_NAME,
-            Self::SelfType => Self::SELF_NAME,
-        }
+        crate::static_spelling::static_spelling(BUILTIN_TYPE_SPELLINGS, self)
     }
 
     pub fn ast_type(self) -> AstType {
@@ -130,35 +103,14 @@ impl BuiltinTypeName {
 
 crate::static_spelling::impl_static_spelling_display!(
     BuiltinTypeName,
-    as_str = BuiltinTypeName::as_str
+    table = BUILTIN_TYPE_SPELLINGS
 );
 crate::static_spelling::impl_static_spelling_from_str!(
     BuiltinTypeName,
-    variants = BuiltinTypeName::ALL,
-    as_str = BuiltinTypeName::as_str
+    table = BUILTIN_TYPE_SPELLINGS
 );
 
 impl BuiltinGenericTypeName {
-    pub const ALL: &[BuiltinGenericTypeName] = &[
-        BuiltinGenericTypeName::Ptr,
-        BuiltinGenericTypeName::MutPtr,
-        BuiltinGenericTypeName::RawPtr,
-        BuiltinGenericTypeName::Slice,
-    ];
-    const PTR: &'static str = "Ptr";
-    const MUT_PTR: &'static str = "MutPtr";
-    const RAW_PTR: &'static str = "RawPtr";
-    const SLICE: &'static str = "Slice";
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Ptr => Self::PTR,
-            Self::MutPtr => Self::MUT_PTR,
-            Self::RawPtr => Self::RAW_PTR,
-            Self::Slice => Self::SLICE,
-        }
-    }
-
     pub fn ast_type(self, mut type_args: Vec<AstType>) -> Result<AstType, Vec<AstType>> {
         if type_args.len() != 1 {
             return Err(type_args);
@@ -175,10 +127,9 @@ impl BuiltinGenericTypeName {
 
 crate::static_spelling::impl_static_spelling_display!(
     BuiltinGenericTypeName,
-    as_str = BuiltinGenericTypeName::as_str
+    table = BUILTIN_GENERIC_TYPE_SPELLINGS
 );
 crate::static_spelling::impl_static_spelling_from_str!(
     BuiltinGenericTypeName,
-    variants = BuiltinGenericTypeName::ALL,
-    as_str = BuiltinGenericTypeName::as_str
+    table = BUILTIN_GENERIC_TYPE_SPELLINGS
 );

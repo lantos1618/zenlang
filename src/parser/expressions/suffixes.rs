@@ -2,7 +2,7 @@ use super::*;
 
 impl Parser {
     pub(super) fn parse_dot_suffix(&mut self, lhs: Expression) -> Result<Expression, CompileError> {
-        self.advance(); // consume .
+        self.advance();
 
         let (name, name_span) = self.expect_identifier()?;
 
@@ -87,8 +87,31 @@ impl Parser {
         span: Span,
     ) -> Option<Expression> {
         (args.len() == 1).then_some(())?;
-        let control_name = Self::identifier_name(&args[0])?;
-        self.loop_control_invocation(name, control_name, span)
+        self.loop_control_invocation(name, &args[0], span)
+    }
+
+    pub(super) fn parse_function_call_tail(
+        &mut self,
+        name: String,
+        type_args: Vec<AstType>,
+        start_span: Span,
+    ) -> Result<Expression, CompileError> {
+        self.advance();
+        let args = self.parse_arg_list()?;
+        let end = self.expect(&Token::RParen)?;
+        let span = start_span.merge(end);
+        if type_args.is_empty() {
+            if let Some(loop_control) = self.parse_loop_control_function_call(&name, &args, span) {
+                return Ok(loop_control);
+            }
+        }
+        Ok(Expression::FunctionCall {
+            name,
+            module: None,
+            type_args,
+            args,
+            span,
+        })
     }
 
     fn parse_loop_control_method_call(
@@ -99,30 +122,28 @@ impl Parser {
         span: Span,
     ) -> Option<Expression> {
         args.is_empty().then_some(())?;
-        let control_name = Self::identifier_name(receiver)?;
-        self.loop_control_invocation(name, control_name, span)
+        self.loop_control_invocation(name, receiver, span)
     }
 
     fn loop_control_invocation(
         &self,
         action_name: &str,
-        control_name: &str,
+        control: &Expression,
         span: Span,
     ) -> Option<Expression> {
         let action = action_name.parse::<LoopControlAction>().ok()?;
+        let Expression::Identifier {
+            name: control_name, ..
+        } = control
+        else {
+            return None;
+        };
         self.loop_control_label(control_name)
             .map(|target_label| Expression::LoopControl {
                 action,
                 target_label,
                 span,
             })
-    }
-
-    fn identifier_name(expr: &Expression) -> Option<&str> {
-        match expr {
-            Expression::Identifier { name, .. } => Some(name),
-            _ => None,
-        }
     }
 
     pub(super) fn parse_struct_literal(
@@ -143,9 +164,7 @@ impl Parser {
             let value = self.parse_expression()?;
             fields.push((field_name, value));
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
         let end = self.expect(&Token::RBrace)?;
         Ok(Expression::StructLiteral {
@@ -175,7 +194,7 @@ impl Parser {
         })
     }
 
-    fn parse_optional_enum_variant_payload(
+    pub(in crate::parser) fn parse_optional_enum_variant_payload(
         &mut self,
     ) -> Result<Option<Box<Expression>>, CompileError> {
         if !matches!(self.peek(), Token::LParen) {

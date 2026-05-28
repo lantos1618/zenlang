@@ -1,74 +1,24 @@
 use std::fmt;
 
-use super::diagnostic_payload::{raw_slug, DiagnosticFact, RelatedDiagnostic};
-use super::{DiagnosticCategory, DiagnosticCode, DiagnosticPhase, Span};
+use super::{CompilerDiagnosticCode, DiagnosticCategory, DiagnosticPhase, Span};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Severity {
-    Error,
-    Warning,
-    Hint,
-    Info,
-}
-
-impl fmt::Display for Severity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Hint => write!(f, "hint"),
-            Severity::Info => write!(f, "info"),
-        }
-    }
-}
-
-/// A secondary annotation pointing at a span with a message.
 #[derive(Debug, Clone)]
-pub struct Label {
+pub struct RelatedDiagnostic {
     pub span: Span,
     pub message: String,
 }
 
-impl Label {
-    pub fn new(span: Span, message: impl Into<String>) -> Self {
-        Self {
-            span,
-            message: message.into(),
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DiagnosticFact {
+    pub key: String,
+    pub value: String,
 }
 
-/// What kind of context led to this diagnostic.
-#[derive(Debug, Clone, PartialEq)]
-pub enum ContextKind {
-    FeatureGate,
-    InFunction,
-    InModule,
-    InGenericInstantiation,
-    InTraitImpl,
-    InImport,
-    InMacroExpansion,
-}
-
-impl ContextKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::FeatureGate => "feature_gate",
-            Self::InFunction => "in_function",
-            Self::InModule => "in_module",
-            Self::InGenericInstantiation => "in_generic_instantiation",
-            Self::InTraitImpl => "in_trait_impl",
-            Self::InImport => "in_import",
-            Self::InMacroExpansion => "in_macro_expansion",
-        }
-    }
-}
-
-/// A frame in the context stack showing how we reached the error.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContextFrame {
     pub span: Span,
-    pub kind: ContextKind,
+    pub kind: &'static str,
     pub message: String,
 }
 
@@ -78,15 +28,6 @@ pub struct TextEdit {
     pub replacement: String,
 }
 
-impl TextEdit {
-    pub fn new(span: Span, replacement: impl Into<String>) -> Self {
-        Self {
-            span,
-            replacement: replacement.into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct SuggestedFix {
     pub kind: String,
@@ -94,151 +35,142 @@ pub struct SuggestedFix {
     pub edits: Vec<TextEdit>,
 }
 
-impl SuggestedFix {
-    pub fn new(kind: impl Into<String>, title: impl Into<String>, edits: Vec<TextEdit>) -> Self {
-        Self {
-            kind: kind.into(),
-            title: title.into(),
-            edits,
-        }
-    }
-}
-
-/// A single compiler diagnostic shared across all phases.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
-    pub severity: Severity,
-    pub code: String,
-    pub slug: String,
-    pub phase: DiagnosticPhase,
-    pub category: DiagnosticCategory,
-    pub docs_path: String,
+    pub code: CompilerDiagnosticCode,
     pub message: String,
     pub span: Option<Span>,
-    pub labels: Vec<Label>,
-    pub notes: Vec<String>,
-    pub context: Vec<ContextFrame>,
-    pub suggested_fixes: Vec<SuggestedFix>,
-    pub related: Vec<RelatedDiagnostic>,
-    pub facts: Vec<DiagnosticFact>,
+    payload: Box<DiagnosticPayload>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DiagnosticPayload {
+    notes: Vec<String>,
+    context: Vec<ContextFrame>,
+    suggested_fixes: Vec<SuggestedFix>,
+    related: Vec<RelatedDiagnostic>,
+    facts: Vec<DiagnosticFact>,
 }
 
 impl Diagnostic {
-    /// Create an error diagnostic.
-    pub fn error(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
-        Self::raw(Severity::Error, code.into(), message.into(), Some(span))
-    }
-
-    pub fn error_optional(
-        code: impl Into<String>,
-        message: impl Into<String>,
-        span: Option<Span>,
-    ) -> Self {
-        Self::raw(Severity::Error, code.into(), message.into(), span)
-    }
-
     pub fn error_code(
-        code: impl Into<DiagnosticCode>,
+        code: CompilerDiagnosticCode,
         message: impl Into<String>,
         span: Span,
     ) -> Self {
-        Self::from_code(code.into(), message.into(), Some(span))
+        Self::from_code(code, message.into(), Some(span))
     }
 
-    pub fn error_code_optional(
-        code: impl Into<DiagnosticCode>,
-        message: impl Into<String>,
+    pub(super) fn from_code(
+        code: CompilerDiagnosticCode,
+        message: String,
         span: Option<Span>,
     ) -> Self {
-        Self::from_code(code.into(), message.into(), span)
-    }
-
-    fn from_code(code: DiagnosticCode, message: String, span: Option<Span>) -> Self {
-        let descriptor = code.descriptor();
         Self {
-            severity: descriptor.severity,
-            code: descriptor.number,
-            slug: descriptor.slug,
-            phase: descriptor.phase,
-            category: descriptor.category,
-            docs_path: descriptor.docs_path,
-            message,
-            span,
-            labels: Vec::new(),
-            notes: Vec::new(),
-            context: Vec::new(),
-            suggested_fixes: Vec::new(),
-            related: Vec::new(),
-            facts: Vec::new(),
-        }
-    }
-
-    /// Create a warning diagnostic.
-    pub fn warning(code: impl Into<String>, message: impl Into<String>, span: Span) -> Self {
-        Self::raw(Severity::Warning, code.into(), message.into(), Some(span))
-    }
-
-    fn raw(severity: Severity, code: String, message: String, span: Option<Span>) -> Self {
-        Self {
-            severity,
-            slug: raw_slug(&code),
-            phase: DiagnosticPhase::Unknown,
-            category: DiagnosticCategory::Unknown,
-            docs_path: String::new(),
             code,
             message,
             span,
-            labels: Vec::new(),
-            notes: Vec::new(),
-            context: Vec::new(),
-            suggested_fixes: Vec::new(),
-            related: Vec::new(),
-            facts: Vec::new(),
+            payload: Box::default(),
         }
     }
 
-    /// Add a secondary label.
-    pub fn with_label(mut self, span: Span, message: impl Into<String>) -> Self {
-        self.labels.push(Label::new(span, message));
+    pub fn code(&self) -> String {
+        format!("E{:04}", self.code as u16)
+    }
+
+    pub fn slug(&self) -> String {
+        self.code.slug()
+    }
+
+    pub fn phase(&self) -> DiagnosticPhase {
+        self.code.phase()
+    }
+
+    pub fn category(&self) -> DiagnosticCategory {
+        self.code.category()
+    }
+
+    pub fn docs_path(&self) -> &'static str {
+        self.code.docs_path()
+    }
+
+    pub fn notes(&self) -> &[String] {
+        &self.payload.notes
+    }
+
+    pub fn context(&self) -> &[ContextFrame] {
+        &self.payload.context
+    }
+
+    pub fn suggested_fixes(&self) -> &[SuggestedFix] {
+        &self.payload.suggested_fixes
+    }
+
+    pub fn related(&self) -> &[RelatedDiagnostic] {
+        &self.payload.related
+    }
+
+    pub fn facts(&self) -> &[DiagnosticFact] {
+        &self.payload.facts
+    }
+
+    pub fn with_feature_gate_context(
+        mut self,
+        note: impl Into<String>,
+        context: impl Into<String>,
+    ) -> Self {
+        let Some(span) = self.span else {
+            return self;
+        };
+
+        self.payload.notes.push(note.into());
+        self.payload.context.push(ContextFrame {
+            span,
+            kind: "feature_gate",
+            message: context.into(),
+        });
         self
     }
 
-    /// Add a help/note string.
-    pub fn with_note(mut self, note: impl Into<String>) -> Self {
-        self.notes.push(note.into());
-        self
-    }
-
-    /// Add a context frame showing how we reached this diagnostic.
-    pub fn with_context(mut self, frame: ContextFrame) -> Self {
-        self.context.push(frame);
-        self
-    }
-
-    pub fn with_suggested_fix(mut self, fix: SuggestedFix) -> Self {
-        self.suggested_fixes.push(fix);
+    pub fn with_fix(
+        mut self,
+        kind: impl Into<String>,
+        title: impl Into<String>,
+        span: Span,
+        replacement: impl Into<String>,
+    ) -> Self {
+        self.payload.suggested_fixes.push(SuggestedFix {
+            kind: kind.into(),
+            title: title.into(),
+            edits: vec![TextEdit {
+                span,
+                replacement: replacement.into(),
+            }],
+        });
         self
     }
 
     pub fn with_related(mut self, span: Span, message: impl Into<String>) -> Self {
-        self.related.push(RelatedDiagnostic::new(span, message));
+        self.payload.related.push(RelatedDiagnostic {
+            span,
+            message: message.into(),
+        });
         self
     }
 
     pub fn with_fact(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.facts.push(DiagnosticFact::new(key, value));
+        self.payload.facts.push(DiagnosticFact {
+            key: key.into(),
+            value: value.into(),
+        });
         self
-    }
-
-    pub fn is_error(&self) -> bool {
-        self.severity == Severity::Error
     }
 }
 
 impl fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}]: {}", self.severity, self.code, self.message)?;
-        for frame in &self.context {
+        write!(f, "error[{}]: {}", self.code(), self.message)?;
+        for frame in self.context() {
             write!(f, "\n   = {}", frame.message)?;
         }
         Ok(())

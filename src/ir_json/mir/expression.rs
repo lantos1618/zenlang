@@ -5,57 +5,56 @@ use super::schema::MirExpression;
 
 pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
     let mut lowered = MirExpression {
-        kind: mir_expression_kind(expr),
         ty: expr.ty.display_name(),
-        name: None,
-        value: None,
-        op: None,
-        left: None,
-        right: None,
-        target: None,
-        field: None,
-        function: None,
-        match_kind: None,
-        args: Vec::new(),
-        arms: Vec::new(),
+        ..Default::default()
     };
 
-    match &expr.kind {
+    lowered.kind = match &expr.kind {
         TypedExprKind::IntLiteral(value) => {
             lowered.value = Some(serde_json::json!(value));
+            "int"
         }
         TypedExprKind::FloatLiteral(value) => {
             lowered.value = Some(serde_json::json!(value));
+            "float"
         }
         TypedExprKind::StringLiteral(value) => {
             lowered.value = Some(serde_json::json!(value));
+            "static_string"
         }
         TypedExprKind::BoolLiteral(value) => {
             lowered.value = Some(serde_json::json!(value));
+            "bool"
         }
         TypedExprKind::Variable(name) => {
             lowered.name = Some(name.clone());
+            "local"
         }
         TypedExprKind::BinaryOp { op, left, right } => {
             lowered.op = Some(op.symbol());
             lowered.left = Some(Box::new(mir_expression(left)));
             lowered.right = Some(Box::new(mir_expression(right)));
+            "binary"
         }
         TypedExprKind::UnaryOp { op, operand } => {
             lowered.op = Some(op.symbol());
             lowered.target = Some(Box::new(mir_expression(operand)));
+            "unary"
         }
         TypedExprKind::FunctionCall { function, args } => {
             lowered.function = Some(function.clone());
             lowered.args = args.iter().map(mir_expression).collect();
+            "call"
         }
         TypedExprKind::FieldAccess { object, field } => {
             lowered.target = Some(Box::new(mir_expression(object)));
             lowered.field = Some(field.clone());
+            "field"
         }
         TypedExprKind::IndexAccess { object, index } => {
             lowered.target = Some(Box::new(mir_expression(object)));
             lowered.args = vec![mir_expression(index)];
+            "index"
         }
         TypedExprKind::StructLiteral { type_name, fields } => {
             lowered.name = Some(type_name.clone());
@@ -63,6 +62,7 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
                 .iter()
                 .map(|(_, value)| mir_expression(value))
                 .collect();
+            "struct"
         }
         TypedExprKind::EnumVariant {
             type_name,
@@ -73,9 +73,11 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
             if let Some(payload) = payload {
                 lowered.args = vec![mir_expression(payload)];
             }
+            "enum_variant"
         }
         TypedExprKind::ArrayLiteral { elements } => {
             lowered.args = elements.iter().map(mir_expression).collect();
+            "array"
         }
         TypedExprKind::Match {
             scrutinee,
@@ -85,6 +87,7 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
             lowered.target = Some(Box::new(mir_expression(scrutinee)));
             lowered.match_kind = Some(mir_match_kind(kind));
             lowered.arms = arms.iter().map(mir_match_arm).collect();
+            "match"
         }
         TypedExprKind::Cast {
             expr,
@@ -97,23 +100,28 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
                 from_type.display_name(),
                 to_type.display_name()
             ));
+            "cast"
         }
-        TypedExprKind::Ref(inner) | TypedExprKind::MutRef(inner) | TypedExprKind::Deref(inner) => {
+        TypedExprKind::Ref(inner) => {
             lowered.target = Some(Box::new(mir_expression(inner)));
+            "ref"
         }
-        TypedExprKind::Closure { fn_name, .. } => {
-            lowered.function = Some(fn_name.clone());
+        TypedExprKind::MutRef(inner) => {
+            lowered.target = Some(Box::new(mir_expression(inner)));
+            "mut_ref"
+        }
+        TypedExprKind::Deref(inner) => {
+            lowered.target = Some(Box::new(mir_expression(inner)));
+            "deref"
         }
         TypedExprKind::StringInterpolation { parts } => {
             lowered.value = Some(serde_json::json!({ "parts": parts.len() }));
-        }
-        TypedExprKind::Intrinsic { name, args } => {
-            lowered.function = Some(name.clone());
-            lowered.args = args.iter().map(mir_expression).collect();
+            "string_interpolation"
         }
         TypedExprKind::Assign { target, value } => {
             lowered.target = Some(Box::new(mir_expression(target)));
             lowered.value = Some(serde_json::to_value(mir_expression(value)).unwrap_or_default());
+            "assign"
         }
         TypedExprKind::Block(block) => {
             let result = block
@@ -125,13 +133,14 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
                 "has_result": block.expr.is_some(),
                 "result": result,
             }));
+            "block"
         }
         TypedExprKind::LoopControl { action, label } => {
             lowered.op = Some(action.as_str());
             lowered.name = Some(label.clone());
+            "loop_control"
         }
-        TypedExprKind::Break | TypedExprKind::Continue | TypedExprKind::Error => {}
-    }
+    };
 
     lowered
 }
@@ -144,37 +153,5 @@ fn mir_match_kind(kind: &MatchKind) -> &'static str {
         MatchKind::ControlledLoop { .. } => "controlled_loop",
         MatchKind::EnumMatch => "enum",
         MatchKind::ValueMatch => "value",
-    }
-}
-
-fn mir_expression_kind(expr: &TypedExpression) -> &'static str {
-    match &expr.kind {
-        TypedExprKind::IntLiteral(_) => "int",
-        TypedExprKind::FloatLiteral(_) => "float",
-        TypedExprKind::StringLiteral(_) => "static_string",
-        TypedExprKind::BoolLiteral(_) => "bool",
-        TypedExprKind::Variable(_) => "local",
-        TypedExprKind::BinaryOp { .. } => "binary",
-        TypedExprKind::UnaryOp { .. } => "unary",
-        TypedExprKind::FunctionCall { .. } => "call",
-        TypedExprKind::FieldAccess { .. } => "field",
-        TypedExprKind::IndexAccess { .. } => "index",
-        TypedExprKind::StructLiteral { .. } => "struct",
-        TypedExprKind::EnumVariant { .. } => "enum_variant",
-        TypedExprKind::ArrayLiteral { .. } => "array",
-        TypedExprKind::Match { .. } => "match",
-        TypedExprKind::Cast { .. } => "cast",
-        TypedExprKind::Ref(_) => "ref",
-        TypedExprKind::MutRef(_) => "mut_ref",
-        TypedExprKind::Deref(_) => "deref",
-        TypedExprKind::Closure { .. } => "closure",
-        TypedExprKind::StringInterpolation { .. } => "string_interpolation",
-        TypedExprKind::Intrinsic { .. } => "intrinsic",
-        TypedExprKind::Assign { .. } => "assign",
-        TypedExprKind::Block(_) => "block",
-        TypedExprKind::Break => "break",
-        TypedExprKind::Continue => "continue",
-        TypedExprKind::LoopControl { .. } => "loop_control",
-        TypedExprKind::Error => "error",
     }
 }

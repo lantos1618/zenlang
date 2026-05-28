@@ -14,12 +14,10 @@ impl TypeChecker {
             .is_none_or(|ty| self.generic_type_annotation_arities_valid(ty));
         let ret_type = return_type
             .as_ref()
-            .map(|ty| self.resolve_type(ty))
-            .unwrap_or(Type::Void);
+            .map_or(Type::Void, |ty| self.resolve_type(ty));
 
-        let saved_return_type = self.current_return_type.clone();
         let saved_defers = std::mem::take(&mut self.pending_defers);
-        self.current_return_type = Some(ret_type.clone());
+        let saved_return_type = self.current_return_type.replace(ret_type.clone());
 
         let checked = self.with_scope(|checker| {
             let mut typed_params = Vec::new();
@@ -46,36 +44,32 @@ impl TypeChecker {
         };
         let body_block = match typed_body.kind {
             TypedExprKind::Block(block) => block,
-            _ => TypedBlock {
-                ty: typed_body.ty.clone(),
-                span: typed_body.span,
-                statements: Vec::new(),
-                expr: Some(Box::new(typed_body)),
-            },
+            _ => typed_block_from_expr(typed_body),
         };
 
         let result = (|| -> Result<TypedFunction, Diagnostic> {
             if return_annotation_valid && ret_type != Type::Void && ret_type != Type::Never {
                 if let Some(expr) = &body_block.expr {
                     if expr.ty != Type::Never && !self.types_compatible(&ret_type, &expr.ty) {
+                        let (expected, actual) = type_display_pair(&ret_type, &expr.ty);
                         return Err(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E3030,
+                            E3030,
                             format!(
-                                "return type mismatch: expected `{}`, found `{}`",
-                                ret_type.display_name(),
-                                expr.ty.display_name()
+                                "return type mismatch: expected `{expected}`, found `{actual}`"
                             ),
                             expr.span,
                         ));
                     }
                 }
 
-                if !self.block_satisfies_return(&body_block, &ret_type) {
+                let body_satisfies_return = body_block.ty != Type::Void
+                    && self.types_compatible(&ret_type, &body_block.ty)
+                    || self.block_definitely_returns(&body_block);
+                if !body_satisfies_return {
                     return Err(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3031,
+                        E3031,
                         format!(
-                            "function `{}` must return `{}` on all non-error paths",
-                            name,
+                            "function `{name}` must return `{}` on all non-error paths",
                             ret_type.display_name()
                         ),
                         *span,

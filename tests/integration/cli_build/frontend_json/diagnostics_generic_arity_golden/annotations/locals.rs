@@ -16,7 +16,6 @@ main = () i32 {
 "#,
         "generic struct local annotation arity",
         "generic struct local annotation arity diagnostics should not emit dependent-use followups",
-        "tests/fixtures/ir_json/diagnostics_generic_struct_local_annotation_arity.golden.json",
     );
 }
 
@@ -36,7 +35,6 @@ main = () i32 {
 "#,
         "generic struct local annotation missing arguments",
         "generic struct local annotation missing-arguments diagnostics should not emit dependent-use followups",
-        "tests/fixtures/ir_json/diagnostics_generic_struct_local_annotation_missing_args.golden.json",
     );
 }
 
@@ -56,7 +54,6 @@ main = () i32 {
 "#,
         "generic enum local annotation arity",
         "generic enum local annotation arity diagnostics should not emit dependent-use followups",
-        "tests/fixtures/ir_json/diagnostics_generic_enum_local_annotation_arity.golden.json",
     );
 }
 
@@ -76,6 +73,5 @@ main = () i32 {
 "#,
         "generic enum local annotation missing arguments",
         "generic enum local annotation missing-arguments diagnostics should not emit dependent-use followups",
-        "tests/fixtures/ir_json/diagnostics_generic_enum_local_annotation_missing_args.golden.json",
     );
 }

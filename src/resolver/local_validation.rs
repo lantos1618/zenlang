@@ -1,18 +1,15 @@
-use crate::ast::{Param, Pattern, Statement, TypeParam};
+use crate::ast::{Param, Pattern, Statement};
 use crate::error::{Diagnostic, Span};
 
+use super::expression_validation::ExprRefContext;
 use super::symbol_table::ScopeStack;
 use super::{Namespace, Resolver, SymbolTable};
 
 impl Resolver {
     pub(super) fn validate_statement_refs(
         &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
         statement: &Statement,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
+        ctx: &mut ExprRefContext<'_, '_>,
     ) {
         match statement {
             Statement::VarDecl {
@@ -24,75 +21,26 @@ impl Resolver {
                 ..
             } => {
                 if let Some(ty) = ty {
-                    self.validate_type_ref(
-                        table,
-                        type_params,
-                        ty,
-                        statement.span(),
-                        allow_self_type,
-                        diagnostics,
-                    );
+                    self.validate_expr_type_ref(ty, statement.span(), ctx);
                 }
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    value,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                if *constant || *mutable || !locals.is_mutable(name) {
+                self.validate_expr_refs_in(value, ctx);
+                if *constant || *mutable || !ctx.locals.is_mutable(name) {
                     self.define_local_symbol(
-                        table,
+                        ctx.table,
                         name,
                         *mutable,
                         statement.span(),
-                        locals,
-                        diagnostics,
+                        ctx.locals,
+                        ctx.diagnostics,
                     );
                 }
             }
             Statement::Assignment { target, value, .. } => {
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    target,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    value,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
+                self.validate_expr_refs_in(target, ctx);
+                self.validate_expr_refs_in(value, ctx);
             }
             Statement::Expression { expr, .. } => {
-                self.validate_expr_refs(
-                    table,
-                    type_params,
-                    expr,
-                    locals,
-                    allow_self_type,
-                    diagnostics,
-                );
-            }
-            Statement::Block { stmts, .. } => {
-                let block_scope_id = table.new_scope();
-                let mut block_locals = ScopeStack::with_parent(block_scope_id, locals);
-                for statement in stmts {
-                    self.validate_statement_refs(
-                        table,
-                        type_params,
-                        statement,
-                        &mut block_locals,
-                        allow_self_type,
-                        diagnostics,
-                    );
-                }
+                self.validate_expr_refs_in(expr, ctx);
             }
         }
     }
@@ -112,10 +60,9 @@ impl Resolver {
         &self,
         table: &mut SymbolTable,
         params: &[Param],
-        scope_id: u32,
         diagnostics: &mut Vec<Diagnostic>,
     ) -> ScopeStack {
-        let mut locals = ScopeStack::new(scope_id);
+        let mut locals = ScopeStack::new(table.new_scope());
         for param in params {
             self.define_local_symbol(
                 table,
@@ -140,7 +87,7 @@ impl Resolver {
     ) {
         match table.define_local(name, mutable, locals.current_scope_id, span) {
             Ok(_) => locals.insert(name.to_string(), mutable),
-            Err(diagnostic) => diagnostics.push(*diagnostic),
+            Err(diagnostic) => diagnostics.push(diagnostic),
         }
     }
 
@@ -177,15 +124,9 @@ impl Resolver {
             } => {
                 self.bind_pattern_locals(table, payload, locals, diagnostics);
             }
-            Pattern::Or { patterns, .. } => {
-                for pattern in patterns {
-                    self.bind_pattern_locals(table, pattern, locals, diagnostics);
-                }
-            }
             Pattern::Wildcard { .. }
             | Pattern::Literal { .. }
             | Pattern::Enum { payload: None, .. }
-            | Pattern::Range { .. }
             | Pattern::BoolTrue { .. }
             | Pattern::BoolFalse { .. } => {}
         }

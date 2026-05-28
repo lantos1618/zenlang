@@ -1,11 +1,14 @@
 use crate::ast::Expression;
 
-use super::dsl::{BuildTargetDslIdent, BuildTargetDslKind, BuildTargetField};
+use super::dsl::{
+    BuildTargetDslKind, BuildTargetField, BUILDER_ADD_METHOD, BUILDER_IDENT,
+    SUPPORTED_TARGET_KINDS,
+};
 use super::target_fields::{
     common_target_fields, optional_string_field, required_one_of_string_fields,
-    required_string_array_field, required_string_field, TargetCommonFields,
+    required_string_array_field, required_string_field,
 };
-use super::{BuildGraphError, BuildTargetInput, BuildTargetKind};
+use super::{unsupported_build_script, BuildGraphError, BuildTargetInput, BuildTargetKind};
 
 pub(super) fn build_target_from_builder_add(
     expr: &Expression,
@@ -19,10 +22,10 @@ pub(super) fn build_target_from_builder_add(
     else {
         return Ok(None);
     };
-    if method != BuildTargetDslIdent::Add.as_str()
+    if method != BUILDER_ADD_METHOD
         || !matches!(
             receiver.as_ref(),
-            Expression::Identifier { name, .. } if name == BuildTargetDslIdent::Builder.as_str()
+            Expression::Identifier { name, .. } if name == BUILDER_IDENT
         )
     {
         return Ok(None);
@@ -33,62 +36,25 @@ pub(super) fn build_target_from_builder_add(
     let Expression::StructLiteral { name, fields, .. } = arg else {
         return Ok(None);
     };
-    let target = match name.parse::<BuildTargetDslKind>() {
-        Ok(kind @ BuildTargetDslKind::Executable) => {
-            validate_target_fields(kind, fields)?;
-            Some(executable_target_from_fields(kind, fields)?)
-        }
-        Ok(kind @ BuildTargetDslKind::Test) => {
-            validate_target_fields(kind, fields)?;
-            Some(test_target_from_fields(kind, fields)?)
-        }
-        Ok(kind @ BuildTargetDslKind::Library) => {
-            validate_target_fields(kind, fields)?;
-            Some(library_target_from_fields(kind, fields)?)
-        }
-        Err(()) => {
-            return Err(BuildGraphError::UnsupportedBuildScript(format!(
-                "unsupported build target kind `{name}`; supported target kinds are {}",
-                BuildTargetDslKind::supported_display_list()
-            )));
-        }
-    };
-    Ok(target)
+    let kind = name.parse::<BuildTargetDslKind>().map_err(|()| {
+        unsupported_build_script(format!(
+            "unsupported build target kind `{name}`; supported target kinds are {}",
+            SUPPORTED_TARGET_KINDS
+        ))
+    })?;
+    validate_target_fields(kind, fields)?;
+    Ok(Some(match kind {
+        BuildTargetDslKind::Executable => executable_target_from_fields(kind, fields)?,
+        BuildTargetDslKind::Test => test_target_from_fields(kind, fields)?,
+        BuildTargetDslKind::Library => library_target_from_fields(kind, fields)?,
+    }))
 }
 
 fn validate_target_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<(), BuildGraphError> {
-    let allowed = allowed_fields(kind);
-    let mut seen = std::collections::BTreeSet::new();
-    for (name, _) in fields {
-        let field = name.parse::<BuildTargetField>().map_err(|()| {
-            BuildGraphError::UnsupportedBuildScript(format!(
-                "unknown field `{name}` in `{kind}` build target"
-            ))
-        })?;
-        if field.is_package_link_semantics() {
-            return Err(BuildGraphError::UnsupportedBuildScript(format!(
-                "unsupported field `{field}` in `{kind}` build target; package/link semantics are gated"
-            )));
-        }
-        if !allowed.contains(&field) {
-            return Err(BuildGraphError::UnsupportedBuildScript(format!(
-                "unknown field `{name}` in `{kind}` build target"
-            )));
-        }
-        if !seen.insert(field) {
-            return Err(BuildGraphError::UnsupportedBuildScript(format!(
-                "duplicate field `{name}` in `{kind}` build target"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
-    match kind {
+    let allowed: &[BuildTargetField] = match kind {
         BuildTargetDslKind::Executable => &[
             BuildTargetField::Name,
             BuildTargetField::Main,
@@ -110,63 +76,85 @@ fn allowed_fields(kind: BuildTargetDslKind) -> &'static [BuildTargetField] {
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
         ],
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    for (name, _) in fields {
+        let field = name.parse::<BuildTargetField>().map_err(|()| {
+            unsupported_build_script(format!("unknown field `{name}` in `{kind}` build target"))
+        })?;
+        if matches!(field, BuildTargetField::Packages | BuildTargetField::Link) {
+            return Err(unsupported_build_script(format!(
+                "unsupported field `{field}` in `{kind}` build target; package/link semantics are gated"
+            )));
+        }
+        if !allowed.contains(&field) {
+            return Err(unsupported_build_script(format!(
+                "unknown field `{name}` in `{kind}` build target"
+            )));
+        }
+        if !seen.insert(field) {
+            return Err(unsupported_build_script(format!(
+                "duplicate field `{name}` in `{kind}` build target"
+            )));
+        }
     }
+    Ok(())
 }
 
 fn executable_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let (root_source_file, common) = single_source_fields(
+    let root_source_file = required_one_of_string_fields(
         kind,
         fields,
-        &[BuildTargetField::Main, BuildTargetField::RootSourceFile],
+        [BuildTargetField::Main, BuildTargetField::RootSourceFile],
     )?;
+    let (dependencies, features) = common_target_fields(kind, fields)?;
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
 
-    Ok(single_source_target(
-        target_name,
-        BuildTargetKind::Executable {
+    Ok(BuildTargetInput {
+        name: target_name,
+        kind: BuildTargetKind::Executable {
             root_source_file: root_source_file.clone(),
             out_dir,
         },
-        root_source_file,
-        common,
-    ))
+        sources: vec![root_source_file],
+        dependencies,
+        features,
+    })
 }
 
 fn test_target_from_fields(
     kind: BuildTargetDslKind,
     fields: &[(String, Expression)],
 ) -> Result<BuildTargetInput, BuildGraphError> {
-    let (root_source_file, common) = single_source_fields(
+    let root_source_file = required_one_of_string_fields(
         kind,
         fields,
-        &[BuildTargetField::Root, BuildTargetField::RootSourceFile],
+        [BuildTargetField::Root, BuildTargetField::RootSourceFile],
     )?;
+    let (dependencies, features) = common_target_fields(kind, fields)?;
     let target_name = optional_string_field(kind, fields, BuildTargetField::Name)?
-        .unwrap_or_else(|| target_name_from_root(&root_source_file));
+        .unwrap_or_else(|| {
+            std::path::Path::new(&root_source_file)
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .filter(|stem| !stem.is_empty())
+                .unwrap_or("test")
+                .to_string()
+        });
 
-    Ok(single_source_target(
-        target_name,
-        BuildTargetKind::Test {
+    Ok(BuildTargetInput {
+        name: target_name,
+        kind: BuildTargetKind::Test {
             root_source_file: root_source_file.clone(),
         },
-        root_source_file,
-        common,
-    ))
-}
-
-fn single_source_fields(
-    kind: BuildTargetDslKind,
-    fields: &[(String, Expression)],
-    root_fields: &[BuildTargetField],
-) -> Result<(String, TargetCommonFields), BuildGraphError> {
-    Ok((
-        required_one_of_string_fields(kind, fields, root_fields)?,
-        common_target_fields(kind, fields)?,
-    ))
+        sources: vec![root_source_file],
+        dependencies,
+        features,
+    })
 }
 
 fn library_target_from_fields(
@@ -175,9 +163,9 @@ fn library_target_from_fields(
 ) -> Result<BuildTargetInput, BuildGraphError> {
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let exports = required_string_array_field(kind, fields, BuildTargetField::Exports)?;
-    let common = common_target_fields(kind, fields)?;
+    let (dependencies, features) = common_target_fields(kind, fields)?;
     if exports.is_empty() {
-        return Err(BuildGraphError::UnsupportedBuildScript(format!(
+        return Err(unsupported_build_script(format!(
             "field `{}` in `{kind}` build target must contain at least one source",
             BuildTargetField::Exports
         )));
@@ -189,31 +177,7 @@ fn library_target_from_fields(
             exports: exports.clone(),
         },
         sources: exports,
-        dependencies: common.dependencies,
-        features: common.features,
+        dependencies,
+        features,
     })
-}
-
-fn single_source_target(
-    name: String,
-    kind: BuildTargetKind,
-    root_source_file: String,
-    common: TargetCommonFields,
-) -> BuildTargetInput {
-    BuildTargetInput {
-        name,
-        kind,
-        sources: vec![root_source_file],
-        dependencies: common.dependencies,
-        features: common.features,
-    }
-}
-
-fn target_name_from_root(root: &str) -> String {
-    std::path::Path::new(root)
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .filter(|stem| !stem.is_empty())
-        .unwrap_or("test")
-        .to_string()
 }

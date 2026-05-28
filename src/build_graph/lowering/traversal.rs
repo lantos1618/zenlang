@@ -3,11 +3,11 @@ use crate::ast::{Expression, MatchArm, Statement};
 use super::host_effects::{declared_host_effect, host_effect};
 use super::targets::build_target_from_builder_add;
 use super::{
-    BuildGraphError, BuildGraphInput, BuildTargetDslIdent, BuildTargetInput, HostEffect,
+    unsupported_build_script, BuildGraphError, BuildGraphInput, BuildTargetInput, HostEffect,
 };
 
 #[derive(Default)]
-pub(super) struct BuildProgramLowering {
+struct BuildProgramLowering {
     targets: Vec<BuildTargetInput>,
     declared_host_effects: Vec<HostEffect>,
     used_host_effects: Vec<HostEffect>,
@@ -20,24 +20,22 @@ enum BuildTargetAddContext {
     DynamicExpression,
 }
 
+pub(super) fn build_graph_input_from_body(
+    body: &Expression,
+) -> Result<BuildGraphInput, BuildGraphError> {
+    let mut lowering = BuildProgramLowering::default();
+    lowering.collect_expr(body, BuildTargetAddContext::StaticGraphBody);
+    if let Some(error) = lowering.error {
+        return Err(error);
+    }
+    Ok(BuildGraphInput {
+        targets: lowering.targets,
+        declared_host_effects: lowering.declared_host_effects,
+        used_host_effects: lowering.used_host_effects,
+    })
+}
+
 impl BuildProgramLowering {
-    pub(super) fn from_body(body: &Expression) -> Self {
-        let mut lowering = Self::default();
-        lowering.collect_expr(body, BuildTargetAddContext::StaticGraphBody);
-        lowering
-    }
-
-    pub(super) fn into_input(self) -> Result<BuildGraphInput, BuildGraphError> {
-        if let Some(error) = self.error {
-            return Err(error);
-        }
-        Ok(BuildGraphInput {
-            targets: self.targets,
-            declared_host_effects: self.declared_host_effects,
-            used_host_effects: self.used_host_effects,
-        })
-    }
-
     fn collect_expr(&mut self, expr: &Expression, add_context: BuildTargetAddContext) {
         if let Some(effect) = host_effect(expr) {
             self.used_host_effects.push(effect);
@@ -45,96 +43,70 @@ impl BuildProgramLowering {
         if let Some(effect) = declared_host_effect(expr) {
             self.declared_host_effects.push(effect);
         }
-        if add_context == BuildTargetAddContext::DynamicExpression
-            && is_builder_add_call(expr)
-            && self.error.is_none()
-        {
-            self.error = Some(BuildGraphError::UnsupportedBuildScript(
-                "build targets must be added in the deterministic build graph body".to_string(),
-            ));
-        }
-        match build_target_from_builder_add(expr) {
-            Ok(Some(target)) => {
-                if add_context == BuildTargetAddContext::StaticGraphBody {
-                    self.targets.push(target);
-                }
+        match (add_context, build_target_from_builder_add(expr)) {
+            (_, Ok(None)) => {}
+            (BuildTargetAddContext::DynamicExpression, _) => {
+                self.error.get_or_insert_with(|| {
+                    unsupported_build_script("build targets must be added in the deterministic build graph body")
+                });
             }
-            Ok(None) => {}
-            Err(error) => {
-                if self.error.is_none() {
-                    self.error = Some(error);
-                }
+            (BuildTargetAddContext::StaticGraphBody, Ok(Some(target))) => {
+                self.targets.push(target);
+            }
+            (BuildTargetAddContext::StaticGraphBody, Err(error)) => {
+                self.error.get_or_insert(error);
             }
         }
 
         match expr {
-            Expression::BinaryOp { left, right, .. } => {
-                self.collect_expr(left, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(right, BuildTargetAddContext::DynamicExpression);
+            Expression::BinaryOp { left, right, .. }
+            | Expression::IndexAccess {
+                object: left,
+                index: right,
+                ..
+            } => {
+                self.collect_dynamic_expr(left);
+                self.collect_dynamic_expr(right);
             }
-            Expression::UnaryOp { operand, .. } => {
-                self.collect_expr(operand, BuildTargetAddContext::DynamicExpression)
-            }
+            Expression::UnaryOp { operand: child, .. }
+            | Expression::MemberAccess { object: child, .. }
+            | Expression::Loop { body: child, .. }
+            | Expression::Closure { body: child, .. }
+            | Expression::Cast { expr: child, .. }
+            | Expression::Defer { expr: child, .. } => self.collect_dynamic_expr(child),
             Expression::FunctionCall { args, .. }
-            | Expression::ArrayLiteral { elements: args, .. } => {
-                for arg in args {
-                    self.collect_expr(arg, BuildTargetAddContext::DynamicExpression);
-                }
-            }
+            | Expression::ArrayLiteral { elements: args, .. } => self.collect_dynamic_exprs(args),
             Expression::MethodCall { receiver, args, .. } => {
                 self.collect_expr(receiver, add_context);
-                for arg in args {
-                    self.collect_expr(arg, BuildTargetAddContext::DynamicExpression);
-                }
-            }
-            Expression::MemberAccess { object, .. } => {
-                self.collect_expr(object, BuildTargetAddContext::DynamicExpression)
-            }
-            Expression::IndexAccess { object, index, .. } => {
-                self.collect_expr(object, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(index, BuildTargetAddContext::DynamicExpression);
+                self.collect_dynamic_exprs(args);
             }
             Expression::StructLiteral { fields, .. } => {
-                for (_, field) in fields {
-                    self.collect_expr(field, BuildTargetAddContext::DynamicExpression);
-                }
+                self.collect_dynamic_exprs(fields.iter().map(|(_, field)| field));
             }
             Expression::EnumVariant { payload, .. } => {
                 if let Some(payload) = payload {
-                    self.collect_expr(payload, BuildTargetAddContext::DynamicExpression);
+                    self.collect_dynamic_expr(payload);
                 }
             }
             Expression::Match {
                 scrutinee, arms, ..
             } => {
-                self.collect_expr(scrutinee, BuildTargetAddContext::DynamicExpression);
+                self.collect_dynamic_expr(scrutinee);
                 for MatchArm { guard, body, .. } in arms {
-                    if let Some(guard) = guard {
-                        self.collect_expr(guard, BuildTargetAddContext::DynamicExpression);
-                    }
-                    self.collect_expr(body, BuildTargetAddContext::DynamicExpression);
+                    self.collect_dynamic_exprs(guard.iter().chain(std::iter::once(body)));
                 }
             }
-            Expression::WhileLoop {
-                condition, body, ..
-            }
-            | Expression::If {
+            Expression::If {
                 condition,
                 then_body: body,
+                else_body,
                 ..
             } => {
-                self.collect_expr(condition, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(body, BuildTargetAddContext::DynamicExpression);
-                if let Expression::If {
-                    else_body: Some(else_body),
-                    ..
-                } = expr
-                {
-                    self.collect_expr(else_body, BuildTargetAddContext::DynamicExpression);
+                self.collect_dynamic_expr(condition);
+                self.collect_dynamic_expr(body);
+                if let Some(else_body) = else_body {
+                    self.collect_dynamic_expr(else_body);
                 }
-            }
-            Expression::Loop { body, .. } => {
-                self.collect_expr(body, BuildTargetAddContext::DynamicExpression)
             }
             Expression::Block {
                 statements, expr, ..
@@ -146,65 +118,39 @@ impl BuildProgramLowering {
                     self.collect_expr(expr, add_context);
                 }
             }
-            Expression::Closure { body, .. } => {
-                self.collect_expr(body, BuildTargetAddContext::DynamicExpression)
-            }
-            Expression::Cast { expr, .. } | Expression::Defer { expr, .. } => {
-                self.collect_expr(expr, BuildTargetAddContext::DynamicExpression)
-            }
             Expression::StringInterpolation { parts, .. } => {
-                for part in parts {
-                    if let crate::ast::StringPart::Expr(expr) = part {
-                        self.collect_expr(expr, BuildTargetAddContext::DynamicExpression);
-                    }
-                }
-            }
-            Expression::Range { start, end, .. } => {
-                self.collect_expr(start, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(end, BuildTargetAddContext::DynamicExpression);
+                self.collect_dynamic_exprs(parts.iter().filter_map(|part| match part {
+                    crate::ast::StringPart::Expr(expr) => Some(expr),
+                    crate::ast::StringPart::Literal(_) => None,
+                }));
             }
             Expression::IntLiteral { .. }
             | Expression::FloatLiteral { .. }
             | Expression::StringLiteral { .. }
             | Expression::BoolLiteral { .. }
             | Expression::Identifier { .. }
-            | Expression::LoopControl { .. }
-            | Expression::Break { .. }
-            | Expression::Continue { .. }
-            | Expression::Error { .. } => {}
+            | Expression::LoopControl { .. } => {}
         }
     }
 
     fn collect_statement(&mut self, statement: &Statement, add_context: BuildTargetAddContext) {
         match statement {
-            Statement::Expression { expr: value, .. } => {
-                self.collect_expr(value, add_context);
-            }
-            Statement::VarDecl { value, .. } => {
-                self.collect_expr(value, BuildTargetAddContext::DynamicExpression);
-            }
+            Statement::Expression { expr: value, .. } => self.collect_expr(value, add_context),
+            Statement::VarDecl { value, .. } => self.collect_dynamic_expr(value),
             Statement::Assignment { target, value, .. } => {
-                self.collect_expr(target, BuildTargetAddContext::DynamicExpression);
-                self.collect_expr(value, BuildTargetAddContext::DynamicExpression);
-            }
-            Statement::Block { stmts, .. } => {
-                for stmt in stmts {
-                    self.collect_statement(stmt, add_context);
-                }
+                self.collect_dynamic_expr(target);
+                self.collect_dynamic_expr(value);
             }
         }
     }
-}
 
-fn is_builder_add_call(expr: &Expression) -> bool {
-    matches!(
-        expr,
-        Expression::MethodCall { receiver, method, .. }
-            if method == BuildTargetDslIdent::Add.as_str()
-                && matches!(
-                    receiver.as_ref(),
-                    Expression::Identifier { name, .. }
-                        if name == BuildTargetDslIdent::Builder.as_str()
-                )
-    )
+    fn collect_dynamic_expr(&mut self, expr: &Expression) {
+        self.collect_expr(expr, BuildTargetAddContext::DynamicExpression);
+    }
+
+    fn collect_dynamic_exprs<'a>(&mut self, exprs: impl IntoIterator<Item = &'a Expression>) {
+        for expr in exprs {
+            self.collect_dynamic_expr(expr);
+        }
+    }
 }

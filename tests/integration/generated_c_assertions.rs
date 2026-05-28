@@ -36,10 +36,10 @@ int32_t outer_i32(int32_t value) {
     assert_eq!(
         undefined_generated_c_calls(c_source),
         vec![
-            "unwrap_result_Option_i32_StaticString".to_string(),
-            "missing_stmt_i32".to_string(),
-            "missing_i32".to_string(),
-            "id".to_string()
+            "unwrap_result_Option_i32_StaticString",
+            "missing_stmt_i32",
+            "missing_i32",
+            "id"
         ]
     );
 }
@@ -60,5 +60,3 @@ int32_t outer_i32(void) {
 
     assert_c_call_resolves_to_single_definition(c_source, "inner_i32");
 }
-
-// ── Individual test cases ───────────────────────────────────────────

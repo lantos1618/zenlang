@@ -3,6 +3,26 @@ use super::*;
 mod inheritance;
 
 impl TypeChecker {
+    pub(crate) fn behavior_parent_ref(
+        &self,
+        behavior: &str,
+        type_args: &[AstType],
+    ) -> BehaviorParentRef {
+        BehaviorParentRef {
+            behavior: behavior.to_string(),
+            type_args: type_args.to_vec(),
+            key: self.behavior_reference_key(behavior, type_args),
+        }
+    }
+
+    pub(crate) fn behavior_reference_key(&self, behavior: &str, type_args: &[AstType]) -> String {
+        if type_args.is_empty() {
+            behavior.to_string()
+        } else {
+            self.mangle_generic_type_name(behavior, type_args)
+        }
+    }
+
     pub(super) fn check_behavior_requires(
         &mut self,
         type_name: &str,
@@ -10,24 +30,8 @@ impl TypeChecker {
         behavior_type_args: &[AstType],
         span: Span,
     ) {
-        let resolver_required_ref =
-            self.resolver_required_ref_for(type_name, behavior, behavior_type_args);
-        if self.should_skip_missing_resolver_behavior_ref(
-            resolver_required_ref.as_ref(),
-            type_name,
-            &self.resolver_missing_behavior_required_refs,
-        ) {
-            return;
-        }
-        let (behavior, behavior_type_args) =
-            Self::behavior_ref_parts(resolver_required_ref.as_ref(), behavior, behavior_type_args);
-
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6005,
-                format!("undefined type `{}`", type_name),
-                span,
-            ));
+            self.push_error(E6005, format!("undefined type `{}`", type_name), span);
             return;
         }
 
@@ -35,40 +39,21 @@ impl TypeChecker {
             return;
         }
 
-        let Some(_) = self.behavior_type_arg_substitutions(
-            behavior,
-            behavior_type_args,
-            &HashSet::new(),
-            span,
-        ) else {
+        if self
+            .behavior_type_arg_substitutions(behavior, behavior_type_args, &HashSet::new(), span)
+            .is_none()
+        {
             return;
-        };
+        }
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
 
         if !self.type_implements_behavior(type_name, &behavior_key) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6007,
-                format!(
-                    "type `{}` does not implement required behavior `{}`",
-                    type_name, behavior_key
-                ),
+            self.push_error(
+                E6007,
+                format!("type `{type_name}` does not implement required behavior `{behavior_key}`"),
                 span,
-            ));
+            );
         }
-    }
-
-    pub(super) fn resolver_required_ref_for(
-        &mut self,
-        type_name: &str,
-        behavior: &str,
-        behavior_type_args: &[AstType],
-    ) -> Option<BehaviorRefMetadata> {
-        self.resolver_behavior_ref_for(
-            BehaviorRefRole::Required,
-            type_name,
-            behavior,
-            behavior_type_args,
-        )
     }
 
     pub(super) fn check_behavior_extends(
@@ -79,11 +64,7 @@ impl TypeChecker {
         span: Span,
     ) {
         if !self.behaviors.contains_key(behavior) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6006,
-                format!("undefined behavior `{}`", behavior),
-                span,
-            ));
+            self.push_error(E6006, format!("undefined behavior `{}`", behavior), span);
             return;
         }
 
@@ -92,14 +73,12 @@ impl TypeChecker {
             .get(behavior)
             .map(|info| info.type_params.iter().cloned().collect())
             .unwrap_or_default();
-        let Some(_) = self.behavior_type_arg_substitutions(
-            parent,
-            parent_type_args,
-            &scoped_type_params,
-            span,
-        ) else {
+        if self
+            .behavior_type_arg_substitutions(parent, parent_type_args, &scoped_type_params, span)
+            .is_none()
+        {
             return;
-        };
+        }
 
         let parent_ref = self.behavior_parent_ref(parent, parent_type_args);
         let parent_display = behavior_ref_display(parent, parent_type_args);
@@ -111,11 +90,11 @@ impl TypeChecker {
             .iter()
             .any(|existing| existing.key == parent_ref.key)
         {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6011,
+            self.push_error(
+                E6011,
                 format!("duplicate behavior inheritance `{behavior}.extends({parent_display})`"),
                 span,
-            ));
+            );
             return;
         }
 

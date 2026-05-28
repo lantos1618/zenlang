@@ -1,23 +1,12 @@
+use super::super::support::{assert_zen_success, run_zen};
 use crate::support::*;
-use std::process::Command;
 
 #[test]
 fn emit_json_typed_command_outputs_checked_program() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args([
-            "emit-json",
-            "typed",
-            test_dir().join("generic_method.zen").to_str().unwrap(),
-        ])
-        .output()
-        .expect("run zen emit-json typed");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json typed failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    let subject = test_dir().join("generic_method.zen");
+    let args = ["emit-json", "typed", subject.to_str().unwrap()];
+    let output = run_zen(&args);
+    assert_zen_success(&args, &output);
 
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("emit-json typed stdout is json");

@@ -41,20 +41,8 @@ fn visit_target<'a>(
         return Err(BuildGraphError::CyclicTargetDependency(name.to_string()));
     }
 
-    let target =
-        targets_by_name
-            .get(name)
-            .ok_or_else(|| BuildGraphError::UnknownTargetDependency {
-                target: name.to_string(),
-                dependency: name.to_string(),
-            })?;
-    for dependency in target.dependencies() {
-        if !targets_by_name.contains_key(dependency.as_str()) {
-            return Err(BuildGraphError::UnknownTargetDependency {
-                target: target.name().to_string(),
-                dependency: dependency.clone(),
-            });
-        }
+    let target = targets_by_name[name];
+    for dependency in &target.dependencies {
         visit_target(
             dependency.as_str(),
             targets_by_name,
@@ -66,6 +54,6 @@ fn visit_target<'a>(
 
     visiting.remove(name);
     visited.insert(name);
-    ordered.push(*target);
+    ordered.push(target);
     Ok(())
 }

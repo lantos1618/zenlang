@@ -1,17 +1,6 @@
 use super::*;
 
 impl Parser {
-    // ── Struct ────────────────────────────────────────────────
-
-    pub(super) fn parse_struct_def(
-        &mut self,
-        name: String,
-        public: bool,
-        name_span: Span,
-    ) -> Result<Declaration, CompileError> {
-        self.parse_struct_def_with_params(name, Vec::new(), public, name_span)
-    }
-
     pub(super) fn parse_struct_def_with_params(
         &mut self,
         name: String,
@@ -32,14 +21,12 @@ impl Parser {
 
             let field_start = self.peek_span();
 
-            // optional `mut` prefix
             let mutable = self.consume_mutability_keyword();
 
             let (field_name, _) = self.expect_identifier()?;
             self.expect(&Token::Colon)?;
             let ty = self.parse_type()?;
 
-            // optional default
             let default = if matches!(self.peek(), Token::Assign) {
                 self.advance();
                 Some(self.parse_expression()?)
@@ -57,9 +44,7 @@ impl Parser {
             });
 
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
 
         let end = self.expect(&Token::RBrace)?;
@@ -70,17 +55,6 @@ impl Parser {
             public,
             span: name_span.merge(end),
         })
-    }
-
-    // ── Enum ──────────────────────────────────────────────────
-
-    pub(super) fn parse_enum_def(
-        &mut self,
-        name: String,
-        public: bool,
-        name_span: Span,
-    ) -> Result<Declaration, CompileError> {
-        self.parse_enum_def_with_params(name, Vec::new(), public, name_span)
     }
 
     pub(super) fn parse_enum_def_with_params(
@@ -96,18 +70,13 @@ impl Parser {
         let mut variants = Vec::new();
         loop {
             self.skip_newlines();
-            // Check for end of enum (next declaration or EOF)
             match self.peek() {
-                Token::EOF => break,
-                // If we see an identifier that is NOT followed by a comma, newline, (, or EOF
-                // at same indentation level, it's a new declaration
                 Token::Identifier(_) => {}
                 _ => break,
             }
 
             let (var_name, var_span) = self.expect_identifier()?;
 
-            // Optional payload: `Variant(Type)`
             let payload = if matches!(self.peek(), Token::LParen) {
                 self.advance();
                 let ty = self.parse_type()?;
@@ -124,9 +93,7 @@ impl Parser {
             });
 
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            } else {
+            if !self.consume_comma() {
                 break;
             }
         }
@@ -145,8 +112,6 @@ impl Parser {
             span: name_span.merge(end_span),
         })
     }
-
-    // ── Type Params ───────────────────────────────────────────
 
     pub(super) fn parse_type_params(&mut self) -> Result<Vec<TypeParam>, CompileError> {
         self.expect(&Token::Lt)?;
@@ -175,9 +140,7 @@ impl Parser {
                 constraint_type_args,
                 span,
             });
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
         self.expect(&Token::Gt)?;
         Ok(params)

@@ -5,13 +5,9 @@ use serde::Serialize;
 mod expression_parts;
 mod types;
 
-pub use expression_parts::{Capture, MatchKind, TypedMatchArm, TypedPattern, TypedStringPart};
+pub use expression_parts::{MatchKind, TypedMatchArm, TypedPattern, TypedStringPart};
 pub use types::Type;
 
-// ─── Typed AST Nodes ─────────────────────────────────────────────────────────
-// These mirror the untyped AST but every expression carries its resolved Type.
-
-/// A typed expression: the expression kind + its resolved type + span.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedExpression {
     pub kind: TypedExprKind,
@@ -19,14 +15,13 @@ pub struct TypedExpression {
     pub span: Span,
 }
 
-/// Typed expression kinds — mirrors Expression but types are resolved.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedExprKind {
     IntLiteral(i64),
     FloatLiteral(f64),
-    StringLiteral(std::string::String),
+    StringLiteral(String),
     BoolLiteral(bool),
-    Variable(std::string::String),
+    Variable(String),
 
     BinaryOp {
         op: BinaryOp,
@@ -38,17 +33,14 @@ pub enum TypedExprKind {
         operand: Box<TypedExpression>,
     },
 
-    /// All calls are resolved to concrete (mangled) function names.
-    /// No generics, no method lookup — `p.distance(other)` is already
-    /// `FunctionCall { function: "Point_distance", args: [p, other] }`.
     FunctionCall {
-        function: std::string::String,
+        function: String,
         args: Vec<TypedExpression>,
     },
 
     FieldAccess {
         object: Box<TypedExpression>,
-        field: std::string::String,
+        field: String,
     },
 
     IndexAccess {
@@ -57,13 +49,13 @@ pub enum TypedExprKind {
     },
 
     StructLiteral {
-        type_name: std::string::String,
-        fields: Vec<(std::string::String, TypedExpression)>,
+        type_name: String,
+        fields: Vec<(String, TypedExpression)>,
     },
 
     EnumVariant {
-        type_name: std::string::String,
-        variant: std::string::String,
+        type_name: String,
+        variant: String,
         payload: Option<Box<TypedExpression>>,
     },
 
@@ -87,19 +79,8 @@ pub enum TypedExprKind {
     MutRef(Box<TypedExpression>),
     Deref(Box<TypedExpression>),
 
-    Closure {
-        fn_name: std::string::String,
-        env_type: std::string::String,
-        captures: Vec<Capture>,
-    },
-
     StringInterpolation {
         parts: Vec<TypedStringPart>,
-    },
-
-    Intrinsic {
-        name: std::string::String,
-        args: Vec<TypedExpression>,
     },
 
     Assign {
@@ -109,17 +90,11 @@ pub enum TypedExprKind {
 
     Block(TypedBlock),
 
-    Break,
-    Continue,
     LoopControl {
         action: LoopControlAction,
-        label: std::string::String,
+        label: String,
     },
-
-    Error,
 }
-
-// ─── Typed Statements ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedStatement {
@@ -130,15 +105,13 @@ pub struct TypedStatement {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedStatementKind {
     VarDecl {
-        name: std::string::String,
+        name: String,
         ty: Type,
         value: TypedExpression,
         mutable: bool,
     },
     Expression(TypedExpression),
 }
-
-// ─── Typed Blocks ────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedBlock {
@@ -148,11 +121,9 @@ pub struct TypedBlock {
     pub span: Span,
 }
 
-// ─── Typed Declarations ──────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedFunction {
-    pub name: std::string::String,
+    pub name: String,
     pub params: Vec<TypedParam>,
     pub return_type: Type,
     pub body: TypedBlock,
@@ -162,51 +133,44 @@ pub struct TypedFunction {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedParam {
-    pub name: std::string::String,
+    pub name: String,
     pub ty: Type,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedTypeDef {
-    pub name: std::string::String,
+    pub name: String,
     pub kind: TypeDefKind,
-    pub methods: Vec<TypedFunction>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypeDefKind {
-    Struct {
-        fields: Vec<(std::string::String, Type)>,
-    },
-    Enum {
-        variants: Vec<TypedVariant>,
-    },
+    Struct { fields: Vec<(String, Type)> },
+    Enum { variants: Vec<TypedVariant> },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedVariant {
-    pub name: std::string::String,
+    pub name: String,
     pub tag: u32,
-    pub payload: Option<Vec<(std::string::String, Type)>>,
+    pub payload: Option<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedGlobal {
-    pub name: std::string::String,
+    pub name: String,
     pub ty: Type,
     pub value: TypedExpression,
     pub mutable: bool,
     pub span: Span,
 }
 
-// ─── Top-Level Program ───────────────────────────────────────────────────────
-
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedProgram {
     pub functions: Vec<TypedFunction>,
     pub types: Vec<TypedTypeDef>,
     pub globals: Vec<TypedGlobal>,
-    pub entry_point: Option<std::string::String>,
+    pub entry_point: Option<String>,
 }

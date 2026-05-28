@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::ast::{BehaviorMethod, EnumVariant, StructField, TypeParam};
-use crate::error::Diagnostic;
+use crate::error::{CompilerDiagnosticCode::*, Diagnostic};
 
 use super::super::symbol_table::ScopeStack;
 use super::super::{Resolver, SymbolTable};
@@ -20,7 +20,7 @@ impl Resolver {
         for field in fields {
             if !seen_fields.insert(field.name.as_str()) {
                 diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0211,
+                    E0211,
                     format!("duplicate field `{}` for struct `{name}`", field.name),
                     field.span,
                 ));
@@ -83,7 +83,7 @@ impl Resolver {
         for method in methods {
             if !seen_methods.insert(method.name.as_str()) {
                 diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0212,
+                    E0212,
                     format!("duplicate behavior method `{}` in `{name}`", method.name),
                     method.span,
                 ));
@@ -100,8 +100,7 @@ impl Resolver {
                 );
             }
             if let Some(default_body) = &method.default_body {
-                let scope_id = table.new_scope();
-                let mut locals = self.param_locals(table, &method.params, scope_id, diagnostics);
+                let mut locals = self.param_locals(table, &method.params, diagnostics);
                 self.validate_expr_refs(
                     table,
                     type_params,

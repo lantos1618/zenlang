@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resolver_records_behavior_method_signatures() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Serializable: behavior {
     encode: (Self, i32) StaticString
@@ -11,75 +11,49 @@ Serializable: behavior {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Serializable")
-            .expect("behavior symbol")
-            .behavior_method_signatures
+    assert_method_signature_metadata(
+        symbol(&table, Namespace::Behavior, "Serializable")
+            .behavior_method_types
             .as_deref(),
-        Some(
-            &[
-                (
-                    "encode".to_string(),
-                    vec!["Self".to_string(), "i32".to_string()],
-                    "StaticString".to_string()
-                ),
-                ("reset".to_string(), vec![], "void".to_string())
-            ][..]
-        )
+        &[
+            ("encode", &["Self", "i32"], "StaticString"),
+            ("reset", &[], "void"),
+        ],
     );
 }
 
 #[test]
 fn resolver_rejects_duplicate_behavior_method_names() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Serializable: behavior {
     encode: (Self) StaticString
     encode: (Self, i32) StaticString
 }
 "#,
+        "duplicate behavior method names should fail in resolver",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("duplicate behavior method names should fail in resolver");
-
-    assert!(
-        err.iter().any(|d| {
-            d.message
-                .contains("duplicate behavior method `encode` in `Serializable`")
-        }),
-        "expected duplicate behavior method diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "duplicate behavior method `encode` in `Serializable`");
 }
 
 #[test]
 fn resolver_rejects_duplicate_signature_parameter_names() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Json: behavior {
     encode: (value: Self, value: Self) StaticString
 }
 "#,
+        "duplicate behavior method parameter names should fail in resolver",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("duplicate behavior method parameter names should fail in resolver");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("duplicate parameter `value`")),
-        "expected duplicate behavior method parameter diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "duplicate parameter `value`");
 }
 
 #[test]
 fn resolver_records_behavior_function_type_method_signatures() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Mapper: behavior {
     map: (Self, (i32) i32) (i32) i32
@@ -87,26 +61,14 @@ Mapper: behavior {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Mapper")
-            .expect("behavior symbol")
-            .behavior_method_signatures
+    assert_method_signature_metadata(
+        symbol(&table, Namespace::Behavior, "Mapper")
+            .behavior_method_types
             .as_deref(),
-        Some(
-            &[(
-                "map".to_string(),
-                vec!["Self".to_string(), "(i32) i32".to_string()],
-                "(i32) i32".to_string()
-            )][..]
-        )
+        &[("map", &["Self", "(i32) i32"], "(i32) i32")],
     );
     assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Mapper")
-            .expect("behavior symbol")
+        symbol(&table, Namespace::Behavior, "Mapper")
             .behavior_method_types
             .as_deref(),
         Some(
@@ -131,7 +93,7 @@ Mapper: behavior {
 
 #[test]
 fn resolver_records_generic_behavior_method_signatures() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Json<T>: behavior {
     encode: (Self) T
@@ -139,27 +101,17 @@ Json<T>: behavior {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Json")
-            .expect("behavior symbol")
-            .behavior_method_signatures
+    assert_method_signature_metadata(
+        symbol(&table, Namespace::Behavior, "Json")
+            .behavior_method_types
             .as_deref(),
-        Some(
-            &[(
-                "encode".to_string(),
-                vec!["Self".to_string()],
-                "T".to_string()
-            )][..]
-        )
+        &[("encode", &["Self"], "T")],
     );
 }
 
 #[test]
 fn resolver_records_generic_behavior_function_type_method_signatures() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Mapper<T>: behavior {
     map: (Self, (T) T) (T) T
@@ -167,27 +119,17 @@ Mapper<T>: behavior {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Mapper")
-            .expect("behavior symbol")
-            .behavior_method_signatures
+    assert_method_signature_metadata(
+        symbol(&table, Namespace::Behavior, "Mapper")
+            .behavior_method_types
             .as_deref(),
-        Some(
-            &[(
-                "map".to_string(),
-                vec!["Self".to_string(), "(T) T".to_string()],
-                "(T) T".to_string()
-            )][..]
-        )
+        &[("map", &["Self", "(T) T"], "(T) T")],
     );
 }
 
 #[test]
 fn resolver_records_behavior_default_method_body_locals() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Json: behavior {
     stringify: (Self) StaticString {
@@ -198,10 +140,7 @@ Json: behavior {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-    let label = table
-        .lookup_scoped(Namespace::Local, "label")
-        .expect("behavior default body local symbol");
+    let label = scoped_symbol(&table, Namespace::Local, "label");
 
     assert_eq!(label.is_mutable, Some(false));
     assert!(label.scope_id > 0);

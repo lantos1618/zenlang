@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use zen::error::{Diagnostic, FileTable};
-use zen::module_system::ModuleSystem;
 use zen::typechecker::TypeChecker;
 
 pub(crate) fn write_tmp_module(dir: &Path, name: &str, source: &str) -> PathBuf {
@@ -11,9 +10,8 @@ pub(crate) fn write_tmp_module(dir: &Path, name: &str, source: &str) -> PathBuf 
 }
 
 pub(crate) fn frontend_diagnostics(zen_path: &Path) -> Vec<Diagnostic> {
-    let mut files = FileTable::new();
-    let mut module_system = ModuleSystem::new();
-    let graph = match module_system.load_module_graph(zen_path, &mut files) {
+    let mut files = FileTable::default();
+    let graph = match zen::module_system::load_module_graph(zen_path, &mut files) {
         Ok(graph) => graph,
         Err(errs) => return errs.into_iter().map(Diagnostic::from).collect(),
     };
@@ -22,6 +20,26 @@ pub(crate) fn frontend_diagnostics(zen_path: &Path) -> Vec<Diagnostic> {
     checker
         .check_module_graph_entry(&graph)
         .expect_err("frontend diagnostics fixture should fail typechecking")
+}
+
+pub(crate) fn frontend_diagnostics_for_modules(
+    modules: &[(&str, &str)],
+    main: &str,
+) -> Vec<Diagnostic> {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    for (name, source) in modules {
+        write_tmp_module(tmp.path(), name, source);
+    }
+    let main_path = write_tmp_module(tmp.path(), "main.zen", main);
+    frontend_diagnostics(&main_path)
+}
+
+pub(crate) fn frontend_diagnostics_for_module(
+    name: &str,
+    source: &str,
+    main: &str,
+) -> Vec<Diagnostic> {
+    frontend_diagnostics_for_modules(&[(name, source)], main)
 }
 
 pub(crate) fn assert_diagnostic_code_and_message(
@@ -33,7 +51,7 @@ pub(crate) fn assert_diagnostic_code_and_message(
     assert!(
         diagnostics
             .iter()
-            .any(|diagnostic| diagnostic.code == code && diagnostic.message.contains(message)),
+            .any(|diagnostic| diagnostic.code() == code && diagnostic.message.contains(message)),
         "expected {label} diagnostic {code} containing `{message}`, got {diagnostics:?}"
     );
 }
@@ -45,4 +63,14 @@ pub(crate) fn assert_no_diagnostic_message(diagnostics: &[Diagnostic], message: 
             .all(|diagnostic| !diagnostic.message.contains(message)),
         "{label} should not include diagnostic containing `{message}`, got {diagnostics:?}"
     );
+}
+
+pub(crate) fn assert_no_diagnostic_messages(
+    diagnostics: &[Diagnostic],
+    messages: &[&str],
+    label: &str,
+) {
+    for message in messages {
+        assert_no_diagnostic_message(diagnostics, message, label);
+    }
 }

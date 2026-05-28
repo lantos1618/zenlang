@@ -1,46 +1,23 @@
 use std::collections::HashSet;
 
-use crate::ast::{AstType, Expression, TypeParam};
-use crate::error::{Diagnostic, Span};
+use crate::ast::{AstType, Expression};
+use crate::error::{CompilerDiagnosticCode::*, Diagnostic, Span};
 
-use super::super::symbol_table::ScopeStack;
-use super::super::{Namespace, Resolver, SymbolTable};
-
-pub(in crate::resolver) struct StructLiteralRef<'a> {
-    pub name: &'a str,
-    pub type_args: &'a [AstType],
-    pub fields: &'a [(String, Expression)],
-    pub span: Span,
-}
-
-pub(in crate::resolver) struct EnumVariantRef<'a> {
-    pub enum_name: &'a str,
-    pub type_args: &'a [AstType],
-    pub variant: &'a str,
-    pub payload: Option<&'a Expression>,
-    pub span: Span,
-}
+use super::super::{Namespace, Resolver};
+use super::ExprRefContext;
 
 impl Resolver {
     pub(in crate::resolver) fn validate_struct_literal_refs(
         &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
-        literal: StructLiteralRef<'_>,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
+        name: &str,
+        type_args: &[AstType],
+        fields: &[(String, Expression)],
+        span: Span,
+        ctx: &mut ExprRefContext<'_, '_>,
     ) {
-        let StructLiteralRef {
-            name,
-            type_args,
-            fields,
-            span,
-        } = literal;
-
-        if let Some(symbol) = table.lookup(Namespace::Type, name) {
-            if let Some(field_type_names) = symbol.field_type_names.as_ref() {
-                let expected_fields: HashSet<&str> = field_type_names
+        if let Some(symbol) = ctx.table.lookup(Namespace::Type, name) {
+            if let Some(field_types) = symbol.field_types.as_ref() {
+                let expected_fields: HashSet<&str> = field_types
                     .iter()
                     .map(|(field_name, _)| field_name.as_str())
                     .collect();
@@ -48,15 +25,15 @@ impl Resolver {
 
                 for (field_name, _) in fields {
                     if !provided_fields.insert(field_name.as_str()) {
-                        diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E0208,
+                        ctx.diagnostics.push(Diagnostic::error_code(
+                            E0208,
                             format!("duplicate field `{field_name}` for struct `{name}`"),
                             span,
                         ));
                     }
                     if !expected_fields.contains(field_name.as_str()) {
-                        diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E0209,
+                        ctx.diagnostics.push(Diagnostic::error_code(
+                            E0209,
                             format!("unknown field `{field_name}` for struct `{name}`"),
                             span,
                         ));
@@ -65,109 +42,65 @@ impl Resolver {
 
                 for expected_field in expected_fields {
                     if !provided_fields.contains(expected_field) {
-                        diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E0210,
+                        ctx.diagnostics.push(Diagnostic::error_code(
+                            E0210,
                             format!("missing field `{expected_field}` for struct `{name}`"),
                             span,
                         ));
                     }
                 }
             }
-        } else if !self.is_known_type_name(table, type_params, name) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0201,
-                format!("unknown type symbol '{name}'"),
-                span,
-            ));
+        } else if !self.is_known_type_name(ctx.table, ctx.type_params, name) {
+            self.push_unknown_type_symbol(ctx.diagnostics, name, span);
         }
 
-        self.validate_type_arg_refs(
-            table,
-            type_params,
-            type_args,
-            span,
-            allow_self_type,
-            diagnostics,
-        );
+        self.validate_type_arg_refs(type_args, span, ctx);
         for (_, value) in fields {
-            self.validate_expr_refs(
-                table,
-                type_params,
-                value,
-                locals,
-                allow_self_type,
-                diagnostics,
-            );
+            self.validate_expr_refs_in(value, ctx);
         }
     }
 
     pub(in crate::resolver) fn validate_enum_variant_refs(
         &self,
-        table: &mut SymbolTable,
-        type_params: &[TypeParam],
-        variant_ref: EnumVariantRef<'_>,
-        locals: &mut ScopeStack,
-        allow_self_type: bool,
-        diagnostics: &mut Vec<Diagnostic>,
+        enum_name: &str,
+        type_args: &[AstType],
+        variant: &str,
+        payload: Option<&Expression>,
+        span: Span,
+        ctx: &mut ExprRefContext<'_, '_>,
     ) {
-        let EnumVariantRef {
-            enum_name,
-            type_args,
-            variant,
-            payload,
-            span,
-        } = variant_ref;
-
-        if table.lookup(Namespace::Type, enum_name).is_some() {
-            if let Some(variant_symbol) = table.lookup_variant(enum_name, variant) {
+        if ctx.table.lookup(Namespace::Type, enum_name).is_some() {
+            if let Some(variant_symbol) = ctx.table.lookup_variant(enum_name, variant) {
                 match (
-                    variant_symbol.variant_payload_count.unwrap_or(0),
+                    variant_symbol.variant_payload_type.is_some(),
                     payload.is_some(),
                 ) {
-                    (1, false) => diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E0206,
+                    (true, false) => ctx.diagnostics.push(Diagnostic::error_code(
+                        E0206,
                         format!("enum variant `{enum_name}.{variant}` requires a payload"),
                         span,
                     )),
-                    (0, true) => diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E0207,
+                    (false, true) => ctx.diagnostics.push(Diagnostic::error_code(
+                        E0207,
                         format!("enum variant `{enum_name}.{variant}` does not accept a payload"),
                         span,
                     )),
                     _ => {}
                 }
             } else {
-                diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0205,
+                ctx.diagnostics.push(Diagnostic::error_code(
+                    E0205,
                     format!("enum `{enum_name}` has no variant `{variant}`"),
                     span,
                 ));
             }
-        } else if !self.is_known_type_name(table, type_params, enum_name) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0201,
-                format!("unknown type symbol '{enum_name}'"),
-                span,
-            ));
+        } else if !self.is_known_type_name(ctx.table, ctx.type_params, enum_name) {
+            self.push_unknown_type_symbol(ctx.diagnostics, enum_name, span);
         }
 
-        self.validate_type_arg_refs(
-            table,
-            type_params,
-            type_args,
-            span,
-            allow_self_type,
-            diagnostics,
-        );
+        self.validate_type_arg_refs(type_args, span, ctx);
         if let Some(payload) = payload {
-            self.validate_expr_refs(
-                table,
-                type_params,
-                payload,
-                locals,
-                allow_self_type,
-                diagnostics,
-            );
+            self.validate_expr_refs_in(payload, ctx);
         }
     }
 }

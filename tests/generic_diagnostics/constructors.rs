@@ -1,175 +1,101 @@
 use super::*;
 
 #[test]
-fn generic_struct_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+fn generic_constructor_type_arg_arities_are_errors() {
+    for (preamble, use_site, kind, name, found, context, forbidden) in [
+        (
+            BOX,
+            r#"
 main = () i32 {
     box = Box<i32, StaticString> { value: 1 }
     box.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected generic struct arity diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("field `value` for struct `Box`")),
-        "malformed generic struct constructor should not also report field mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_struct_constructor_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            "struct",
+            "Box",
+            2,
+            "generic struct arity",
+            "field `value` for struct `Box`",
+        ),
+        (
+            BOX,
+            r#"
 main = () i32 {
     box = Box { value: 1 }
     box.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected unspecialized generic struct constructor diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("field `value` for struct `Box`")),
-        "malformed generic struct constructor should not also report field mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn nongeneric_struct_constructor_type_args_are_error() {
-    let errors = typecheck_errors(
-        r#"
-Point: {
-    x: i32
-}
-
-main = () i32 {
-    point = Point<i32> { x: 1 }
-    point.x
-}
-"#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("non-generic struct `Point` does not accept type arguments")),
-        "expected non-generic struct constructor type-argument diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("field `x` for struct `Point`")),
-        "malformed non-generic struct constructor should not also report field mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_enum_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Option<T>:
-    None,
-    Some(T)
-
+            "struct",
+            "Box",
+            0,
+            "generic struct missing args",
+            "field `value` for struct `Box`",
+        ),
+        (
+            OPTION,
+            r#"
 main = () i32 {
     value = Option<i32, StaticString>.Some(1)
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic enum `Option` expects 1 type arguments, found 2")),
-        "expected generic enum arity diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("payload for enum variant")),
-        "malformed generic enum constructor should not also report payload mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_enum_constructor_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Option<T>:
-    None,
-    Some(T)
-
+            "enum",
+            "Option",
+            2,
+            "generic enum arity",
+            "payload for enum variant",
+        ),
+        (
+            OPTION,
+            r#"
 main = () i32 {
     value = Option.Some(1)
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic enum `Option` expects 1 type arguments, found 0")),
-        "expected unspecialized generic enum constructor diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("payload for enum variant")),
-        "malformed generic enum constructor should not also report payload mismatch, got {errors:?}"
-    );
+            "enum",
+            "Option",
+            0,
+            "generic enum missing args",
+            "payload for enum variant",
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{preamble}\n{use_site}"));
+        assert_generic_arity_diagnostic(&errors, kind, name, 1, found, context);
+        assert_no_diagnostic_message(&errors, forbidden, "constructor arity");
+    }
 }
 
 #[test]
-fn nongeneric_enum_constructor_type_args_are_error() {
-    let errors = typecheck_errors(
-        r#"
-Status:
-    Ready,
-    Done(i32)
-
+fn nongeneric_constructor_type_args_are_errors() {
+    for (preamble, use_site, kind, name, forbidden) in [
+        (
+            POINT,
+            r#"
+main = () i32 {
+    point = Point<i32> { x: 1 }
+    point.x
+}
+"#,
+            "struct",
+            "Point",
+            "field `x` for struct `Point`",
+        ),
+        (
+            STATUS,
+            r#"
 main = () i32 {
     value = Status<i32>.Done(1)
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("non-generic enum `Status` does not accept type arguments")),
-        "expected non-generic enum constructor type-argument diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("payload for enum variant")),
-        "malformed non-generic enum constructor should not also report payload mismatch, got {errors:?}"
-    );
+            "enum",
+            "Status",
+            "payload for enum variant",
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{preamble}\n{use_site}"));
+        assert_nongeneric_type_args_diagnostic(&errors, kind, name, "constructor type args");
+        assert_no_diagnostic_message(&errors, forbidden, "constructor arity");
+    }
 }

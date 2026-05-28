@@ -1,0 +1,35 @@
+{
+  "format": "zen.diagnostics.v1",
+  "semantic_status": "diagnostic",
+  "files": [
+    {
+      "id": 0,
+      "path": "$TMP/closure_gate.zen"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "E3056",
+      "slug": "type_e3056",
+      "phase": "typechecker",
+      "category": "type",
+      "docs_path": "docs/DIAGNOSTICS.md#type-checking",
+      "message": "closure expressions are gated until closure lowering and ABI are implemented",
+      "span": {
+        "file_id": 0,
+        "path": "$TMP/closure_gate.zen",
+        "start": 25,
+        "end": 63,
+        "line": 3,
+        "column": 9
+      },
+      "labels": [],
+      "notes": [],
+      "context": [],
+      "suggested_fixes": [],
+      "related": [],
+      "facts": []
+    }
+  ]
+}

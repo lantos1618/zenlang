@@ -1,4 +1,8 @@
-use super::{main_source, write_file};
+use super::{
+    assert_path_exists, assert_stdout_contains, assert_test_binary_and_output,
+    assert_zen_failure_contains, assert_zen_success, build_graph_source, run_zen_in, write_file,
+    LIBRARY_SOURCE, LIBRARY_TRUE, MAIN_ZERO,
+};
 use std::path::Path;
 use std::process::Output;
 
@@ -12,6 +16,14 @@ pub(crate) enum GraphOnlyLibrarySource {
     Missing,
     Valid,
     TypeError,
+}
+
+pub(crate) type GraphOnlyProjectWriter = fn(&tempfile::TempDir, GraphOnlyLibrarySource);
+
+pub(crate) enum GraphOnlyLibrarySuccess {
+    Build,
+    Emit,
+    Test,
 }
 
 pub(crate) fn write_graph_only_library_project(
@@ -49,51 +61,80 @@ fn write_graph_only_library_fixture(
         GraphOnlyLibrarySource::Valid | GraphOnlyLibrarySource::TypeError => "lib.zen",
     };
 
+    let library_add = format!(r#"    b.add(Library {{ name: "core", exports: ["{export}"] }})"#);
     write_file(
         tmp,
         "build.zen",
-        &format!(
-            r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-{target_add}
-    b.add(Library {{ name: "core", exports: ["{export}"] }})
-    .Ok(b.config())
-}}
-"#,
-        ),
+        &build_graph_source(&[target_add, &library_add]),
     );
-    write_file(tmp, entry_source, main_source("0").as_str());
+    write_file(tmp, entry_source, MAIN_ZERO);
 
     match source {
         GraphOnlyLibrarySource::Missing => {}
-        GraphOnlyLibrarySource::Valid => write_file(tmp, "lib.zen", function_source("1").as_str()),
-        GraphOnlyLibrarySource::TypeError => {
-            write_file(tmp, "lib.zen", function_source("true").as_str());
-        }
+        GraphOnlyLibrarySource::Valid => write_file(tmp, "lib.zen", LIBRARY_SOURCE),
+        GraphOnlyLibrarySource::TypeError => write_file(tmp, "lib.zen", LIBRARY_TRUE),
     }
 }
 
-pub(crate) fn assert_graph_only_library_build_output(project_dir: &Path) {
-    assert!(
-        project_dir.join("build").join("app").join("app").exists(),
-        "expected executable output to exist"
+pub(crate) fn assert_graph_only_library_command_cases(
+    args: &[&str],
+    write_project: GraphOnlyProjectWriter,
+    command_label: &str,
+    success: GraphOnlyLibrarySuccess,
+) {
+    assert_graph_only_library_rejected(
+        args,
+        write_project,
+        GraphOnlyLibrarySource::Missing,
+        MISSING_LIBRARY_SOURCE_DIAGNOSTIC,
+        command_label,
+    );
+    let (tmp, output) =
+        run_graph_only_library_command(args, write_project, GraphOnlyLibrarySource::Valid);
+
+    assert_zen_success(args, &output);
+    match success {
+        GraphOnlyLibrarySuccess::Build => {
+            assert_path_exists(tmp.path().join("build").join("app").join("app"))
+        }
+        GraphOnlyLibrarySuccess::Emit => {
+            assert_emit_c_source(&output);
+            assert_no_build_dir(tmp.path(), "zen emit build.zen");
+        }
+        GraphOnlyLibrarySuccess::Test => {
+            assert_test_binary_and_output(&tmp, &output, "unit");
+        }
+    }
+    assert_graph_only_library_rejected(
+        args,
+        write_project,
+        GraphOnlyLibrarySource::TypeError,
+        LIBRARY_TYPE_ERROR_DIAGNOSTIC,
+        command_label,
     );
 }
 
-pub(crate) fn assert_graph_only_library_test_output(project_dir: &Path, output: &Output) {
-    assert!(
-        project_dir
-            .join("build")
-            .join("tests")
-            .join("unit")
-            .exists(),
-        "expected test binary output to exist"
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stdout).contains("test unit passed"),
-        "expected test pass output, stdout={}",
-        String::from_utf8_lossy(&output.stdout)
-    );
+fn run_graph_only_library_command(
+    args: &[&str],
+    write_project: GraphOnlyProjectWriter,
+    source: GraphOnlyLibrarySource,
+) -> (tempfile::TempDir, Output) {
+    let tmp = tempfile::tempdir().expect("create temp dir");
+    write_project(&tmp, source);
+    let output = run_zen_in(&tmp, args);
+    (tmp, output)
+}
+
+fn assert_graph_only_library_rejected(
+    args: &[&str],
+    write_project: GraphOnlyProjectWriter,
+    source: GraphOnlyLibrarySource,
+    expected_diagnostic: &str,
+    command_label: &str,
+) {
+    let (tmp, output) = run_graph_only_library_command(args, write_project, source);
+    assert_zen_failure_contains(args, &output, expected_diagnostic);
+    assert_no_build_dir(tmp.path(), command_label);
 }
 
 pub(crate) fn assert_no_build_dir(project_dir: &Path, command_label: &str) {
@@ -104,19 +145,5 @@ pub(crate) fn assert_no_build_dir(project_dir: &Path, command_label: &str) {
 }
 
 pub(crate) fn assert_emit_c_source(output: &Output) {
-    let c_source = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        c_source.contains("int32_t zen_main(void)"),
-        "expected target C source, stdout={c_source}"
-    );
-}
-
-fn function_source(value: &str) -> String {
-    format!(
-        r#"
-value = () i32 {{
-    {value}
-}}
-"#,
-    )
+    assert_stdout_contains(output, "int32_t zen_main(void)", "expected target C source");
 }

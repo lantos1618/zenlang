@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn resolver_accepts_behavior_requires_known_type_and_behavior() {
-    let program = parse_program(
+    resolved_symbols(
         r#"
 Json: behavior {
     stringify: (Self) StaticString
@@ -13,15 +13,11 @@ Point: { x: i32 }
 Point.requires(Json)
 "#,
     );
-
-    Resolver::new()
-        .resolve_program(&program)
-        .expect("known requires assertion should resolve");
 }
 
 #[test]
 fn resolver_rejects_duplicate_behavior_required_edges() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Json: behavior {
     stringify: (Self) StaticString
@@ -32,41 +28,26 @@ Point: { x: i32 }
 Point.requires(Json)
 Point.requires(Json)
 "#,
+        "duplicate behavior requires should fail in resolver",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("duplicate behavior requires should fail in resolver");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("duplicate required behavior `Json`")),
-        "expected duplicate required behavior diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "duplicate required behavior `Json`");
 }
 
 #[test]
 fn resolver_rejects_behavior_requires_unknown_symbols() {
-    let program = parse_program("Missing.requires(Json)");
+    let err = resolver_errors(
+        "Missing.requires(Json)",
+        "unknown requires symbols should fail",
+    );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("unknown requires symbols should fail");
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
-        "expected unknown type diagnostic, got {err:?}"
-    );
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown behavior symbol 'Json'")),
-        "expected unknown behavior diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "unknown type symbol 'Missing'");
+    assert_resolver_error_contains(&err, "unknown behavior symbol 'Json'");
 }
 
 #[test]
 fn resolver_accepts_behavior_extends_known_behaviors() {
-    let program = parse_program(
+    resolved_symbols(
         r#"
 Json: behavior {
     stringify: (Self) StaticString
@@ -79,15 +60,11 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 "#,
     );
-
-    Resolver::new()
-        .resolve_program(&program)
-        .expect("known behavior inheritance should resolve");
 }
 
 #[test]
 fn resolver_rejects_duplicate_behavior_parent_edges() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Json: behavior {
     stringify: (Self) StaticString
@@ -100,34 +77,19 @@ PrettyJson: behavior {
 PrettyJson.extends(Json)
 PrettyJson.extends(Json)
 "#,
+        "duplicate behavior inheritance should fail in resolver",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("duplicate behavior inheritance should fail in resolver");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("duplicate behavior parent `Json`")),
-        "expected duplicate behavior parent diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "duplicate behavior parent `Json`");
 }
 
 #[test]
 fn resolver_rejects_behavior_extends_unknown_symbols() {
-    let program = parse_program("PrettyJson.extends(Json)");
+    let err = resolver_errors(
+        "PrettyJson.extends(Json)",
+        "unknown behavior inheritance symbols should fail",
+    );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("unknown behavior inheritance symbols should fail");
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown behavior symbol 'PrettyJson'")),
-        "expected unknown child behavior diagnostic, got {err:?}"
-    );
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown behavior symbol 'Json'")),
-        "expected unknown parent behavior diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "unknown behavior symbol 'PrettyJson'");
+    assert_resolver_error_contains(&err, "unknown behavior symbol 'Json'");
 }

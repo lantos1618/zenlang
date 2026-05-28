@@ -8,59 +8,41 @@ impl TypeChecker {
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
         let typed_obj = self.check_expr(object)?;
-        if field == "value"
-            && matches!(
-                typed_obj.ty,
-                Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_)
-            )
+        if let ("value", Type::Ptr(inner) | Type::MutPtr(inner) | Type::RawPtr(inner)) =
+            (field, &typed_obj.ty)
         {
-            let inner_ty = match &typed_obj.ty {
-                Type::Ptr(inner) | Type::MutPtr(inner) | Type::RawPtr(inner) => *inner.clone(),
-                _ => Type::Unknown,
-            };
-            return Ok(TypedExpression {
-                kind: TypedExprKind::Deref(Box::new(typed_obj)),
-                ty: inner_ty,
-                span,
-            });
+            let inner_ty = *inner.clone();
+            return typed_ok(TypedExprKind::Deref(Box::new(typed_obj)), inner_ty, span);
         }
 
         match field {
             "addr" => {
                 let ptr_ty = Type::Ptr(Box::new(typed_obj.ty.clone()));
-                Ok(TypedExpression {
-                    kind: TypedExprKind::Ref(Box::new(typed_obj)),
-                    ty: ptr_ty,
-                    span,
-                })
+                typed_ok(TypedExprKind::Ref(Box::new(typed_obj)), ptr_ty, span)
             }
             "ref" => {
                 let ptr_ty = Type::MutPtr(Box::new(typed_obj.ty.clone()));
-                Ok(TypedExpression {
-                    kind: TypedExprKind::MutRef(Box::new(typed_obj)),
-                    ty: ptr_ty,
-                    span,
-                })
+                typed_ok(TypedExprKind::MutRef(Box::new(typed_obj)), ptr_ty, span)
             }
             _ => {
                 let field_type = self.lookup_field_type(&typed_obj.ty, field);
                 if field_type == Type::Unknown {
                     if let Some(type_name) = self.field_access_type_name(&typed_obj.ty) {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E3052,
+                        self.push_error(
+                            E3052,
                             format!("type `{}` has no field `{}`", type_name, field),
                             span,
-                        ));
+                        );
                     }
                 }
-                Ok(TypedExpression {
-                    kind: TypedExprKind::FieldAccess {
+                typed_ok(
+                    TypedExprKind::FieldAccess {
                         object: Box::new(typed_obj),
                         field: field.to_string(),
                     },
-                    ty: field_type,
+                    field_type,
                     span,
-                })
+                )
             }
         }
     }
@@ -80,22 +62,18 @@ impl TypeChecker {
             typed_elems.push(typed);
         }
         if elements.is_empty() {
-            self.diagnostics.push(Diagnostic::warning(
-                "W3045",
-                "cannot infer element type for empty array".to_string(),
-                span,
-            ));
+            self.push_error(E3055, "cannot infer element type for empty array", span);
         }
-        Ok(TypedExpression {
-            kind: TypedExprKind::ArrayLiteral {
+        typed_ok(
+            TypedExprKind::ArrayLiteral {
                 elements: typed_elems,
             },
-            ty: Type::Array {
+            Type::Array {
                 elem: Box::new(elem_type),
                 size: Some(elements.len()),
             },
             span,
-        })
+        )
     }
 
     pub(super) fn check_index_access_expr(
@@ -109,24 +87,22 @@ impl TypeChecker {
         let elem_ty = match &typed_obj.ty {
             Type::Array { elem, .. } | Type::Slice(elem) => *elem.clone(),
             _ => {
-                self.diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E3051,
-                    format!(
-                        "cannot index into non-array type `{}`",
-                        typed_obj.ty.display_name()
-                    ),
+                let ty = typed_obj.ty.display_name();
+                self.push_error(
+                    E3051,
+                    format!("cannot index into non-array type `{ty}`"),
                     span,
-                ));
+                );
                 Type::Unknown
             }
         };
-        Ok(TypedExpression {
-            kind: TypedExprKind::IndexAccess {
+        typed_ok(
+            TypedExprKind::IndexAccess {
                 object: Box::new(typed_obj),
                 index: Box::new(typed_idx),
             },
-            ty: elem_ty,
+            elem_ty,
             span,
-        })
+        )
     }
 }

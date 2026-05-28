@@ -28,16 +28,8 @@ main = () i32 {
         "StaticString",
         "generic method inference conflict",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "generic method inference conflict should not also report argument mismatch, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("return type mismatch")),
-        "generic method inference conflict should not also report return mismatch, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "argument 2", "method inference conflict");
+    assert_no_diagnostic_message(&errors, "return type mismatch", "method inference conflict");
 }
 
 #[test]
@@ -100,14 +92,14 @@ main = () i32 {
         "StaticString",
         "generic Result enum method receiver inference conflict",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 1")),
-        "generic Result enum method inference conflict should not also report argument mismatch, got {errors:?}"
+    assert_no_diagnostic_message(
+        &errors,
+        "argument 1",
+        "Result enum method inference conflict",
     );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("return type mismatch")),
-        "generic Result enum method inference conflict should not also report return mismatch, got {errors:?}"
+    assert_no_diagnostic_message(
+        &errors,
+        "return type mismatch",
+        "Result enum method inference conflict",
     );
 }

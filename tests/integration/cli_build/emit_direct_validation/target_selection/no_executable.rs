@@ -1,13 +1,8 @@
 #[test]
 fn emit_command_build_zen_rejects_graph_without_executable_targets() {
-    let (tmp, output) = super::run_emit_build_zen(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Test { name: "unit", root: "unit.zen" })
-    .Ok(b.config())
-}
-"#,
-        &[("unit.zen", super::main_source("0"))],
+    let (tmp, output) = super::super::run_emit_build_zen(
+        &[r#"    b.add(Test { name: "unit", root: "unit.zen" })"#],
+        &[("unit.zen", super::MAIN_ZERO)],
     );
 
     super::assert_emit_rejected_without_outputs(

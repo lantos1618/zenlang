@@ -4,7 +4,7 @@ use std::process;
 
 use super::{
     executable_build_target, test_build_target, validate_graph_only_library_sources,
-    BuildGraphExecutableTarget, BuildGraphTestTarget,
+    BuildGraphTarget,
 };
 
 struct BuildGraphExecutionContext {
@@ -30,17 +30,12 @@ impl BuildGraphExecutionKind {
     }
 }
 
-pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecutableTarget {
+pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphTarget {
     let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
     let ordered_targets = dependency_ordered_targets(&context.graph);
     let executable_targets: Vec<_> = ordered_targets
         .into_iter()
-        .filter(|target| {
-            matches!(
-                target.kind(),
-                zen::build_graph::BuildTargetKind::Executable { .. }
-            )
-        })
+        .filter(|target| BuildGraphExecutionKind::Executable.includes(&target.kind))
         .collect();
     if executable_targets.len() != 1 {
         eprintln!(
@@ -55,7 +50,7 @@ pub(super) fn single_executable_build_target(path_str: &str) -> BuildGraphExecut
         .expect("one executable target")
 }
 
-pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
+pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTarget> {
     let context = load_execution_context(path_str, BuildGraphExecutionKind::Test);
     validate_graph_only_library_sources(&context.base_dir, &context.graph);
     let ordered_targets = dependency_ordered_targets(&context.graph);
@@ -70,22 +65,18 @@ pub(super) fn test_build_targets(path_str: &str) -> Vec<BuildGraphTestTarget> {
     targets
 }
 
-pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
-    let targets = collect_executable_build_targets(path_str);
+pub(super) fn executable_build_targets(path_str: &str) -> Vec<BuildGraphTarget> {
+    let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
+    validate_graph_only_library_sources(&context.base_dir, &context.graph);
+    let targets: Vec<_> = dependency_ordered_targets(&context.graph)
+        .into_iter()
+        .filter_map(|target| executable_build_target(&context.base_dir, target))
+        .collect();
     if targets.is_empty() {
         eprintln!("build graph execution requires at least one executable target");
         process::exit(1);
     }
     targets
-}
-
-fn collect_executable_build_targets(path_str: &str) -> Vec<BuildGraphExecutableTarget> {
-    let context = load_execution_context(path_str, BuildGraphExecutionKind::Executable);
-    validate_graph_only_library_sources(&context.base_dir, &context.graph);
-    dependency_ordered_targets(&context.graph)
-        .into_iter()
-        .filter_map(|target| executable_build_target(&context.base_dir, target))
-        .collect()
 }
 
 fn load_execution_context(
@@ -120,16 +111,16 @@ fn validate_executed_dependency_targets(
     execution_kind: BuildGraphExecutionKind,
 ) {
     let targets_by_name: HashMap<_, _> = graph
-        .targets()
+        .targets
         .iter()
-        .map(|target| (target.name(), target))
+        .map(|target| (target.name.as_str(), target))
         .collect();
 
     let mut validated_targets = HashSet::new();
     for target in graph
-        .targets()
+        .targets
         .iter()
-        .filter(|target| execution_kind.includes(target.kind()))
+        .filter(|target| execution_kind.includes(&target.kind))
     {
         validate_reachable_dependency_targets(
             target,
@@ -146,34 +137,31 @@ fn validate_reachable_dependency_targets(
     execution_kind: BuildGraphExecutionKind,
     validated_targets: &mut HashSet<String>,
 ) {
-    if !validated_targets.insert(target.name().to_string()) {
+    if !validated_targets.insert(target.name.clone()) {
         return;
     }
 
-    for dependency in target.dependencies() {
+    for dependency in &target.dependencies {
         let Some(dependency_target) = targets_by_name.get(dependency.as_str()) else {
             continue;
         };
-        if execution_kind.includes(dependency_target.kind())
-            || matches!(
-                dependency_target.kind(),
+        if !execution_kind.includes(&dependency_target.kind)
+            && !matches!(
+                &dependency_target.kind,
                 zen::build_graph::BuildTargetKind::Library { .. }
             )
         {
-            validate_reachable_dependency_targets(
-                dependency_target,
-                targets_by_name,
-                execution_kind,
-                validated_targets,
+            eprintln!(
+                "build graph target `{}` depends on gated {} target `{}`",
+                target.name, dependency_target.kind, dependency_target.name
             );
-            continue;
+            process::exit(1);
         }
-        eprintln!(
-            "build graph target `{}` depends on gated {} target `{}`",
-            target.name(),
-            dependency_target.kind(),
-            dependency_target.name()
+        validate_reachable_dependency_targets(
+            dependency_target,
+            targets_by_name,
+            execution_kind,
+            validated_targets,
         );
-        process::exit(1);
     }
 }

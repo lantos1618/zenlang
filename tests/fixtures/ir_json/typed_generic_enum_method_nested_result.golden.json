@@ -1942,17 +1942,11 @@
               {
                 "name": "Some",
                 "tag": 1,
-                "payload": [
-                  [
-                    "payload",
-                    "I32"
-                  ]
-                ]
+                "payload": "I32"
               }
             ]
           }
         },
-        "methods": [],
         "span": {
           "file_id": 0,
           "start": 497,
@@ -1967,41 +1961,30 @@
               {
                 "name": "Ok",
                 "tag": 0,
-                "payload": [
-                  [
-                    "payload",
-                    {
-                      "Enum": {
-                        "name": "Option_i32",
-                        "variants": [
-                          [
-                            "None",
-                            null
-                          ],
-                          [
-                            "Some",
-                            "I32"
-                          ]
-                        ]
-                      }
-                    }
-                  ]
-                ]
+                "payload": {
+                  "Enum": {
+                    "name": "Option_i32",
+                    "variants": [
+                      [
+                        "None",
+                        null
+                      ],
+                      [
+                        "Some",
+                        "I32"
+                      ]
+                    ]
+                  }
+                }
               },
               {
                 "name": "Err",
                 "tag": 1,
-                "payload": [
-                  [
-                    "payload",
-                    "Str"
-                  ]
-                ]
+                "payload": "Str"
               }
             ]
           }
         },
-        "methods": [],
         "span": {
           "file_id": 0,
           "start": 160,

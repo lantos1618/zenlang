@@ -1,31 +1,13 @@
 use super::*;
 
 impl Parser {
-    pub(in crate::parser) fn parse_behavior_impl_block(
-        &mut self,
-        type_name: String,
-        name_span: Span,
-    ) -> Result<Declaration, CompileError> {
-        let (behavior, _, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
-        self.skip_newlines();
-        let (methods, end) = self.parse_impl_block_methods(&[])?;
-        Ok(Declaration::ImplBlock {
-            type_name,
-            behavior: Some(behavior),
-            behavior_type_args,
-            type_args: Vec::new(),
-            methods,
-            span: name_span.merge(end),
-        })
-    }
-
     pub(in crate::parser) fn parse_behavior_impl_block_with_type_params(
         &mut self,
         type_name: String,
         type_params: Vec<TypeParam>,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        let (behavior, _, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
+        let (behavior, behavior_type_args, _) = self.parse_parenthesized_behavior_ref()?;
         self.skip_newlines();
 
         let type_args = type_params
@@ -58,6 +40,6 @@ impl Parser {
         self.skip_newlines();
         let end = self.expect(&Token::RParen)?;
 
-        Ok((behavior, behavior_span, behavior_type_args, end))
+        Ok((behavior, behavior_type_args, behavior_span.merge(end)))
     }
 }

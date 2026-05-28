@@ -3,44 +3,18 @@ mod methods;
 
 use super::*;
 
-pub(super) struct BehaviorImplValidationInput<'a> {
-    pub(super) type_name: &'a str,
-    pub(super) type_args: &'a [AstType],
-    pub(super) behavior: &'a str,
-    pub(super) behavior_type_args: &'a [AstType],
-    pub(super) methods: &'a [Declaration],
-    pub(super) span: Span,
-    pub(super) symbols: Option<&'a SymbolTable>,
-}
-
 impl TypeChecker {
-    pub(super) fn check_behavior_impl(&mut self, input: BehaviorImplValidationInput<'_>) {
-        let BehaviorImplValidationInput {
-            type_name,
-            type_args,
-            behavior,
-            behavior_type_args,
-            methods,
-            span,
-            symbols,
-        } = input;
-        let resolver_impl_ref = self.resolver_impl_ref_for(type_name, behavior, behavior_type_args);
-        if self.should_skip_missing_resolver_behavior_ref(
-            resolver_impl_ref.as_ref(),
-            type_name,
-            &self.resolver_missing_behavior_impl_refs,
-        ) {
-            return;
-        }
-        let (behavior, behavior_type_args) =
-            Self::behavior_ref_parts(resolver_impl_ref.as_ref(), behavior, behavior_type_args);
-
+    pub(super) fn check_behavior_impl(
+        &mut self,
+        type_name: &str,
+        type_args: &[AstType],
+        behavior: &str,
+        behavior_type_args: &[AstType],
+        methods: &[Declaration],
+        span: Span,
+    ) {
         if !self.structs.contains_key(type_name) && !self.enums.contains_key(type_name) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6005,
-                format!("undefined type `{}`", type_name),
-                span,
-            ));
+            self.push_error(E6005, format!("undefined type `{}`", type_name), span);
             return;
         }
 
@@ -70,30 +44,33 @@ impl TypeChecker {
         };
         let behavior_key = self.behavior_reference_key(behavior, behavior_type_args);
 
-        if self
+        let mut overlapping_impl = None;
+        for (_, implemented_behavior) in self
             .behavior_impls
-            .contains(&(type_name.to_string(), behavior_key.clone()))
+            .iter()
+            .filter(|(implemented_type, _)| implemented_type == type_name)
         {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6003,
-                format!(
-                    "duplicate implementation of behavior `{}` for type `{}`",
-                    behavior_key, type_name
-                ),
-                span,
-            ));
-            return;
+            if implemented_behavior == &behavior_key {
+                self.push_error(
+                    E6003,
+                    format!("duplicate implementation of behavior `{behavior_key}` for type `{type_name}`"),
+                    span,
+                );
+                return;
+            }
+            if overlapping_impl.is_none()
+                && (self.behavior_inherits_from(implemented_behavior, &behavior_key)
+                    || self.behavior_inherits_from(&behavior_key, implemented_behavior))
+            {
+                overlapping_impl = Some(implemented_behavior.clone());
+            }
         }
-
-        if let Some(existing) = self.find_overlapping_behavior_impl(type_name, &behavior_key) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E6010,
-                format!(
-                    "overlapping implementations of behaviors `{}` and `{}` for type `{}`",
-                    existing, behavior_key, type_name
-                ),
+        if let Some(existing) = overlapping_impl {
+            self.push_error(
+                E6010,
+                format!("overlapping implementations of behaviors `{existing}` and `{behavior_key}` for type `{type_name}`"),
                 span,
-            ));
+            );
             return;
         }
 
@@ -103,30 +80,19 @@ impl TypeChecker {
             behavior_key.clone(),
             self.behavior_parent_ref(behavior, behavior_type_args),
         );
-        let required_methods =
-            self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new());
-        let mut unmatched_required: VecDeque<String> = required_methods
-            .iter()
-            .map(|required| required.name.clone())
-            .collect();
-        let effective_methods = self.effective_behavior_impl_methods(
-            symbols,
-            type_name,
-            methods,
-            &mut unmatched_required,
+        let required_methods = self.behavior_methods_with_inherited_substituted(
+            behavior,
+            &behavior_substitutions,
+            &mut HashSet::new(),
         );
 
-        self.check_behavior_impl_extra_methods(
-            &behavior_key,
-            &required_methods,
-            &effective_methods,
-        );
-        self.check_behavior_impl_required_methods(
+        self.check_behavior_impl_methods(
             type_name,
             &behavior_key,
             &required_methods,
-            &effective_methods,
+            methods,
             span,
+            &[],
         );
     }
 }

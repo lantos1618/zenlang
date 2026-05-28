@@ -1,26 +1,2 @@
-// Zen Standard Library: Character Utilities (convenience re-export)
-// Re-exports all functions from @std.collections.char
-
-{
-    is_digit,
-    is_alpha,
-    is_alphanumeric,
-    is_whitespace,
-    is_uppercase,
-    is_lowercase,
-    is_hex_digit,
-    is_octal_digit,
-    is_binary_digit,
-    is_control,
-    is_printable,
-    is_punctuation,
-    to_uppercase,
-    to_lowercase,
-    digit_to_int,
-    hex_to_int,
-    NUL,
-    TAB,
-    NEWLINE,
-    CARRIAGE_RETURN,
-    SPACE,
-} = @std.collections.char
+// Parse-only placeholder for @std.char.
+// Promote character APIs only after parser, typechecker, lowering, and docs-truth evidence.

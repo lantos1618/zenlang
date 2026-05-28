@@ -1,5 +1,3 @@
-//! Monomorphization naming helpers for generic type and callable instances.
-
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -7,7 +5,6 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 use super::monomorphize_types::type_mangle_key;
-use super::GenericFunctionTemplate;
 use super::TypeChecker;
 
 impl TypeChecker {
@@ -39,51 +36,26 @@ impl TypeChecker {
         }
     }
 
-    pub(crate) fn generic_type_specialization_key(
+    pub(crate) fn generic_specialization_key(
         &self,
         kind: &str,
         scope: Option<&str>,
         mangled: &str,
     ) -> String {
-        let scope = scope.unwrap_or("local");
-        format!("{kind}:{scope}:{mangled}")
+        format!("{kind}:{}:{mangled}", scope.unwrap_or("local"))
     }
 
-    pub(crate) fn reserve_generic_type_name(
-        &mut self,
-        specialization_key: &str,
-        requested: &str,
-        scope: Option<&str>,
-    ) -> String {
-        reserve_specialization_name(
-            &mut self.specialized_types_seen,
-            &mut self.specialized_type_name_owners,
-            specialization_key,
-            requested,
-            scope,
-        )
-    }
-
-    pub(crate) fn reserved_generic_type_name(
+    pub(crate) fn reserved_or_requested_generic_type_name(
         &self,
         kind: &str,
         scope: Option<&str>,
-        requested: &str,
-    ) -> Option<String> {
-        let key = self.generic_type_specialization_key(kind, scope, requested);
-        self.specialized_types_seen.get(&key).cloned()
-    }
-
-    pub(crate) fn remember_specialized_type_source(
-        &mut self,
-        concrete: &str,
-        generic: &str,
-        type_args: &[AstType],
-    ) {
-        self.specialized_type_generic_names
-            .insert(concrete.to_string(), generic.to_string());
-        self.specialized_type_args
-            .insert(concrete.to_string(), type_args.to_vec());
+        requested: String,
+    ) -> String {
+        let key = self.generic_specialization_key(kind, scope, &requested);
+        self.specialized_types_seen
+            .get(&key)
+            .cloned()
+            .unwrap_or(requested)
     }
 
     pub(crate) fn concrete_type_name_matches_generic(
@@ -91,40 +63,16 @@ impl TypeChecker {
         concrete_name: &str,
         generic_name: &str,
     ) -> bool {
-        super::monomorphize_types::concrete_name_matches_generic(concrete_name, generic_name)
+        concrete_name == generic_name
+            || concrete_name.starts_with(&format!("{generic_name}_"))
             || self
                 .specialized_type_generic_names
                 .get(concrete_name)
                 .is_some_and(|source| source == generic_name)
     }
-
-    pub(crate) fn generic_specialization_key(
-        &self,
-        kind: &str,
-        template: &GenericFunctionTemplate,
-        mangled: &str,
-    ) -> String {
-        let scope = template.specialization_scope.as_deref().unwrap_or("local");
-        format!("{kind}:{scope}:{mangled}")
-    }
-
-    pub(crate) fn reserve_generic_specialization_name(
-        &mut self,
-        specialization_key: &str,
-        requested: &str,
-        scope: Option<&str>,
-    ) -> String {
-        reserve_specialization_name(
-            &mut self.specializations_seen,
-            &mut self.specialization_name_owners,
-            specialization_key,
-            requested,
-            scope,
-        )
-    }
 }
 
-fn reserve_specialization_name(
+pub(in crate::typechecker) fn reserve_specialization_name(
     seen: &mut HashMap<String, String>,
     owners: &mut HashMap<String, String>,
     specialization_key: &str,
@@ -143,10 +91,10 @@ fn reserve_specialization_name(
         mangled = scoped_generic_specialization_name(requested, scope, specialization_key);
         let base = mangled.clone();
         let mut suffix = 2;
-        while let Some(owner) = owners.get(&mangled) {
-            if owner == specialization_key {
-                break;
-            }
+        while owners
+            .get(&mangled)
+            .is_some_and(|owner| owner != specialization_key)
+        {
             mangled = format!("{base}_{suffix}");
             suffix += 1;
         }
@@ -188,11 +136,9 @@ fn ident_fragment(input: &str) -> String {
         })
         .collect();
 
-    let trimmed = output.trim_matches('_');
-    let ident = if trimmed.is_empty() {
-        "module"
-    } else {
-        trimmed
+    let ident = match output.trim_matches('_') {
+        "" => "module",
+        ident => ident,
     };
     if ident.chars().next().is_some_and(|ch| ch.is_ascii_digit()) {
         format!("m{ident}")

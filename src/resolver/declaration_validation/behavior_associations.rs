@@ -1,8 +1,11 @@
-use crate::ast::AstType;
-use crate::error::{Diagnostic, Span, GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE};
+use crate::ast::{behavior_ref_display, type_params_from_names, AstType};
+use crate::error::CompilerDiagnosticCode::*;
+use crate::error::{
+    Diagnostic, Span, GATED_GENERATED_BEHAVIOR_DERIVE_CONTEXT,
+    GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE, GATED_GENERATED_BEHAVIOR_DERIVE_NOTE,
+};
 
-use super::super::metadata_helpers::behavior_ref_display;
-use super::super::{BehaviorRefMetadata, Resolver, SymbolTable};
+use super::super::{BehaviorRefMetadata, Namespace, Resolver, SymbolTable};
 
 impl Resolver {
     pub(super) fn validate_requires_declaration(
@@ -15,18 +18,10 @@ impl Resolver {
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !self.is_known_type_name(table, &[], type_name) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0201,
-                format!("unknown type symbol '{type_name}'"),
-                span,
-            ));
+            self.push_unknown_type_symbol(diagnostics, type_name, span);
         }
         if !self.is_known_behavior_name(table, behavior) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0202,
-                format!("unknown behavior symbol '{behavior}'"),
-                span,
-            ));
+            self.push_unknown_behavior_symbol(diagnostics, behavior, span);
         } else if self.is_known_type_name(table, &[], type_name) {
             let behavior_display = behavior_ref_display(behavior, behavior_type_args);
             if !table.record_behavior_required(
@@ -34,7 +29,7 @@ impl Resolver {
                 BehaviorRefMetadata::new(behavior, behavior_type_args),
             ) {
                 diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0216,
+                    E0216,
                     format!("duplicate required behavior `{behavior_display}` for `{type_name}`"),
                     span,
                 ));
@@ -55,29 +50,24 @@ impl Resolver {
         diagnostics: &mut Vec<Diagnostic>,
     ) {
         if !self.is_known_type_name(table, &[], type_name) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0201,
-                format!("unknown type symbol '{type_name}'"),
-                span,
-            ));
+            self.push_unknown_type_symbol(diagnostics, type_name, span);
         }
         if !self.is_known_behavior_name(table, behavior) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0202,
-                format!("unknown behavior symbol '{behavior}'"),
-                span,
-            ));
+            self.push_unknown_behavior_symbol(diagnostics, behavior, span);
         }
         for type_arg in behavior_type_args {
             self.validate_type_ref(table, &[], type_arg, span, false, diagnostics);
         }
         diagnostics.push(
             Diagnostic::error_code(
-                crate::error::DiagnosticCode::Syntax,
+                crate::error::CompilerDiagnosticCode::E2000,
                 GATED_GENERATED_BEHAVIOR_DERIVE_MESSAGE,
                 span,
             )
-            .with_generated_behavior_derive_gate_context(),
+            .with_feature_gate_context(
+                GATED_GENERATED_BEHAVIOR_DERIVE_NOTE,
+                GATED_GENERATED_BEHAVIOR_DERIVE_CONTEXT,
+            ),
         );
     }
 
@@ -93,20 +83,16 @@ impl Resolver {
         let behavior_known = self.is_known_behavior_name(table, behavior);
         let parent_known = self.is_known_behavior_name(table, parent);
         if !behavior_known {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0202,
-                format!("unknown behavior symbol '{behavior}'"),
-                span,
-            ));
+            self.push_unknown_behavior_symbol(diagnostics, behavior, span);
         }
         if !parent_known {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0202,
-                format!("unknown behavior symbol '{parent}'"),
-                span,
-            ));
+            self.push_unknown_behavior_symbol(diagnostics, parent, span);
         }
-        let behavior_type_params = self.behavior_type_params_for_ref(table, behavior);
+        let behavior_type_params = table
+            .lookup(Namespace::Behavior, behavior)
+            .and_then(|symbol| symbol.type_parameter_names.as_ref())
+            .map(|names| type_params_from_names(names.iter().cloned()))
+            .unwrap_or_default();
         for type_arg in parent_type_args {
             self.validate_type_ref(
                 table,
@@ -124,7 +110,7 @@ impl Resolver {
                 BehaviorRefMetadata::new(parent, parent_type_args),
             ) {
                 diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0215,
+                    E0215,
                     format!("duplicate behavior parent `{parent_display}` for `{behavior}`"),
                     span,
                 ));

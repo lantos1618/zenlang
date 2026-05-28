@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspecialized_c_symbols() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_type_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_type_dependency/main.zen",
         &[
             "typedef struct Holder_i32 Holder_i32;",
             "int32_t Holder_get_i32(Holder_i32 self)",
@@ -16,8 +16,8 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["Holder_T", "T Holder_get"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_worklist_chain/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_worklist_chain/main.zen",
         &[
             "int32_t inner_i32(int32_t value)",
             "int32_t middle_i32(int32_t value)",
@@ -30,8 +30,8 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T inner", "T middle"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_worklist_multi_specialization/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_worklist_multi_specialization/main.zen",
         &[
             "int32_t inner_i32(int32_t value)",
             "bool inner_bool(bool value)",
@@ -53,8 +53,8 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T inner", "T middle", "T outer"],
     );
 
-    let c_source = compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_diamond_same_name/main.zen"),
+    let c_source = assert_fixture_specialization(
+        "multi_file_generic_imported_diamond_same_name/main.zen",
         &[
             "int32_t left_i32(int32_t value)",
             "int32_t right_i32(int32_t value)",
@@ -73,8 +73,8 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
     assert!(right_inner.ends_with("_inner_i32"));
     assert_c_call_resolves_to_single_definition(&c_source, &right_inner);
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_recursive_function/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_recursive_function/main.zen",
         &[
             "int32_t repeat_i32(int32_t value, int32_t remaining)",
             "repeat_i32(value, (remaining - 1LL))",
@@ -84,8 +84,8 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T repeat", "repeat_T"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_transitive_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_transitive_dependency/main.zen",
         &[
             "int32_t inner_i32(int32_t value)",
             "int32_t middle_i32(int32_t value)",
@@ -98,15 +98,15 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T inner", "T middle"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_impl/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_type_impl/main.zen",
         &["int32_t Box_get_i32(Box_i32 self)", "Box_get_i32(box)"],
         &["Box_get_i32"],
         &["Box_T", "T Box_get"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_impl_imported_type_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_type_impl_imported_type_dependency/main.zen",
         &[
             "typedef struct Holder_i32 Holder_i32;",
             "int32_t Holder_get_i32(Holder_i32 self)",
@@ -119,21 +119,10 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["Holder_T", "T Holder_get"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_impl_return_enum_dependency/main.zen"),
-        &[
-            "typedef struct Option_i32 Option_i32;",
-            "Option_i32 Box_wrap_i32(Box_i32 self)",
-            "int32_t Box_value_or_i32(Box_i32 self, int32_t fallback)",
-            "Box_wrap_i32(self)",
-            "Box_value_or_i32(box, 0LL)",
-        ],
-        &["Box_wrap_i32", "Box_value_or_i32"],
-        &["Option_T", "T Box_wrap"],
-    );
+    assert_box_return_enum_dependency("multi_file_type_impl_return_enum_dependency/main.zen");
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_type_method/main.zen",
         &[
             "int32_t Point_keep_i32(Point self, int32_t value)",
             "Point_keep_i32(point, 13LL)",
@@ -142,20 +131,13 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T Point_keep", "Point_keep(point"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method_worklist/main.zen"),
-        &[
-            "int32_t inner_i32(int32_t value)",
-            "int32_t Box_get_inner_i32(Box_i32 self)",
-            "inner_i32(self.value)",
-            "Box_get_inner_i32(box)",
-        ],
-        &["inner_i32", "Box_get_inner_i32"],
+    assert_box_inner_dependency(
+        "multi_file_type_method_worklist/main.zen",
         &["T inner", "inner_T"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method_method_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_type_method_method_dependency/main.zen",
         &[
             "int32_t Box_inner_i32(Box_i32 self)",
             "int32_t Box_get_inner_i32(Box_i32 self)",
@@ -166,33 +148,15 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
         &["T Box_inner"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method_imported_dependency/main.zen"),
-        &[
-            "int32_t inner_i32(int32_t value)",
-            "int32_t Box_get_inner_i32(Box_i32 self)",
-            "inner_i32(self.value)",
-            "Box_get_inner_i32(box)",
-        ],
-        &["inner_i32", "Box_get_inner_i32"],
+    assert_box_inner_dependency(
+        "multi_file_type_method_imported_dependency/main.zen",
         &["T inner"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method_return_enum_dependency/main.zen"),
-        &[
-            "typedef struct Option_i32 Option_i32;",
-            "Option_i32 Box_wrap_i32(Box_i32 self)",
-            "int32_t Box_value_or_i32(Box_i32 self, int32_t fallback)",
-            "Box_wrap_i32(self)",
-            "Box_value_or_i32(box, 0LL)",
-        ],
-        &["Box_wrap_i32", "Box_value_or_i32"],
-        &["Option_T", "T Box_wrap"],
-    );
+    assert_box_return_enum_dependency("multi_file_type_method_return_enum_dependency/main.zen");
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_type_method_nested_result_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_type_method_nested_result_dependency/main.zen",
         &[
             "typedef struct Option_i32 Option_i32;",
             "typedef struct Result_Option_i32_StaticString Result_Option_i32_StaticString;",
@@ -212,26 +176,34 @@ fn multi_file_generic_method_and_worklist_specializations_do_not_emit_unspeciali
 
 fn returned_call_name(c_source: &str, function_name: &str) -> String {
     let signature = format!(" {function_name}(");
-    let mut in_function = false;
-    for line in c_source.lines() {
-        let trimmed = line.trim();
-        if trimmed.ends_with('{') && trimmed.contains(&signature) {
-            in_function = true;
-            continue;
-        }
-        if !in_function {
-            continue;
-        }
-        if trimmed == "}" {
-            break;
-        }
-        if let Some(rest) = trimmed.strip_prefix("return ") {
-            return rest
-                .split('(')
-                .next()
-                .expect("return call should include function name")
-                .to_string();
-        }
-    }
-    panic!("expected return call in generated C function `{function_name}`:\n{c_source}");
+    c_source
+        .lines()
+        .skip_while(|line| {
+            let line = line.trim();
+            !line.ends_with('{') || !line.contains(&signature)
+        })
+        .skip(1)
+        .map(str::trim)
+        .take_while(|line| *line != "}")
+        .find_map(|line| line.strip_prefix("return "))
+        .and_then(|rest| rest.split('(').next())
+        .map(str::to_string)
+        .unwrap_or_else(|| {
+            panic!("expected return call in generated C function `{function_name}`:\n{c_source}")
+        })
+}
+
+fn assert_box_return_enum_dependency(fixture: &str) {
+    assert_fixture_specialization(
+        fixture,
+        &[
+            "typedef struct Option_i32 Option_i32;",
+            "Option_i32 Box_wrap_i32(Box_i32 self)",
+            "int32_t Box_value_or_i32(Box_i32 self, int32_t fallback)",
+            "Box_wrap_i32(self)",
+            "Box_value_or_i32(box, 0LL)",
+        ],
+        &["Box_wrap_i32", "Box_value_or_i32"],
+        &["Option_T", "T Box_wrap"],
+    );
 }

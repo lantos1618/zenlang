@@ -2,20 +2,13 @@ use super::{Type, TypedBlock, TypedExpression};
 use crate::error::Span;
 use serde::Serialize;
 
-/// Sema resolves which kind of control flow `?` represents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum MatchKind {
-    /// `expr ? | true { } | false { }` -> if/else
     ConditionalElse,
-    /// `expr ? | true { }` -> one-shot conditional
     Conditional,
-    /// `expr ? { body }` -> while loop
     WhileLoop,
-    /// `loop((l) { ... })` with generated `l.done()` / `l.next()` labels.
     ControlledLoop { label: std::string::String },
-    /// `enum ? | Variant {} ...` -> switch on tag
     EnumMatch,
-    /// `val ? | X {} | Y {}` -> if/else chain on values
     ValueMatch,
 }
 
@@ -36,13 +29,6 @@ pub enum TypedPattern {
     },
     Wildcard,
     Value(Box<TypedExpression>),
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Capture {
-    pub name: std::string::String,
-    pub ty: Type,
-    pub by_ref: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

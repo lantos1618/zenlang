@@ -1,5 +1,4 @@
 use super::*;
-
 impl TypeChecker {
     pub(in crate::typechecker) fn validate_behavior_extends_cycles(&mut self) {
         let behaviors: Vec<String> = self.behavior_extends.keys().cloned().collect();
@@ -12,16 +11,16 @@ impl TypeChecker {
                     .get(&behavior)
                     .copied()
                     .unwrap_or_else(Span::dummy);
-                self.diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E6008,
+                self.push_error(
+                    E6008,
                     format!("behavior inheritance cycle involving `{}`", behavior),
                     span,
-                ));
+                );
             }
         }
     }
 
-    pub(in crate::typechecker) fn behavior_extends_has_cycle(
+    fn behavior_extends_has_cycle(
         &self,
         behavior: &str,
         visiting: &mut HashSet<String>,
@@ -49,60 +48,28 @@ impl TypeChecker {
         let mut diagnostics = Vec::new();
 
         for behavior in behaviors {
-            let mut seen_behaviors = HashSet::new();
-            let mut seen_methods = HashMap::new();
-            self.collect_behavior_method_coherence_errors(
-                &behavior,
+            let mut seen_methods: HashMap<String, ast::BehaviorMethod> = HashMap::new();
+            for method in self.behavior_methods_with_inherited_substituted(
                 &behavior,
                 &HashMap::new(),
-                &mut seen_behaviors,
-                &mut seen_methods,
-                &mut diagnostics,
-            );
-        }
-
-        self.diagnostics.extend(diagnostics);
-    }
-
-    pub(in crate::typechecker) fn collect_behavior_method_coherence_errors(
-        &self,
-        behavior: &str,
-        root_behavior: &str,
-        substitutions: &HashMap<String, AstType>,
-        seen_behaviors: &mut HashSet<String>,
-        seen_methods: &mut HashMap<String, ast::BehaviorMethod>,
-        diagnostics: &mut Vec<Diagnostic>,
-    ) {
-        if !self.mark_behavior_seen(behavior, substitutions, seen_behaviors) {
-            return;
-        }
-
-        if let Some(parents) = self.behavior_extends.get(behavior) {
-            for parent in parents {
-                let parent_substitutions =
-                    self.behavior_parent_type_param_substitutions(parent, substitutions);
-                self.collect_behavior_method_coherence_errors(
-                    &parent.behavior,
-                    root_behavior,
-                    &parent_substitutions,
-                    seen_behaviors,
-                    seen_methods,
-                    diagnostics,
-                );
-            }
-        }
-
-        if let Some(info) = self.behaviors.get(behavior) {
-            for method in &info.methods {
-                let method = substituted_behavior_method_signature(method, substitutions);
-
+                &mut HashSet::new(),
+            ) {
                 if let Some(previous) = seen_methods.get(&method.name) {
-                    if !behavior_method_signatures_match(previous, &method) {
+                    let signatures_match = previous.return_type == method.return_type
+                        && previous.params.len() == method.params.len()
+                        && previous
+                            .params
+                            .iter()
+                            .zip(&method.params)
+                            .all(|(left, right)| {
+                                left.mutable == right.mutable && left.ty == right.ty
+                            });
+                    if !signatures_match {
                         diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E6009,
+                            E6009,
                             format!(
                                 "conflicting behavior method `{}` inherited by `{}`",
-                                method.name, root_behavior
+                                method.name, behavior
                             ),
                             method.span,
                         ));
@@ -112,6 +79,8 @@ impl TypeChecker {
                 }
             }
         }
+
+        self.diagnostics.extend(diagnostics);
     }
 
     pub(in crate::typechecker) fn type_implements_behavior(
@@ -119,18 +88,12 @@ impl TypeChecker {
         type_name: &str,
         behavior: &str,
     ) -> bool {
-        if self
-            .behavior_impls
-            .contains(&(type_name.to_string(), behavior.to_string()))
-        {
-            return true;
-        }
-
         self.behavior_impls
             .iter()
             .any(|(implemented_type, implemented_behavior)| {
                 implemented_type == type_name
-                    && self.behavior_inherits_from(implemented_behavior, behavior)
+                    && (implemented_behavior == behavior
+                        || self.behavior_inherits_from(implemented_behavior, behavior))
             })
     }
 
@@ -139,40 +102,19 @@ impl TypeChecker {
         behavior: &str,
         parent: &str,
     ) -> bool {
-        self.behavior_inherits_from_inner(behavior, parent, &mut HashSet::new())
+        let mut seen = HashSet::new();
+        seen.insert(behavior.to_string());
+
+        self.behavior_extends_parent_matches(behavior, &HashMap::new(), parent, &mut seen)
+            || self
+                .behavior_refs_by_key
+                .get(behavior)
+                .is_some_and(|behavior_ref| {
+                    self.behavior_ref_parent_matches(behavior_ref, parent, &mut seen)
+                })
     }
 
-    pub(in crate::typechecker) fn behavior_inherits_from_inner(
-        &self,
-        behavior: &str,
-        parent: &str,
-        seen: &mut HashSet<String>,
-    ) -> bool {
-        if !seen.insert(behavior.to_string()) {
-            return false;
-        }
-
-        if self.behavior_extends_parent_matches(behavior, &HashMap::new(), parent, seen) {
-            return true;
-        }
-
-        self.behavior_refs_by_key
-            .get(behavior)
-            .is_some_and(|behavior_ref| {
-                let substitutions = self.behavior_type_param_substitutions(
-                    &behavior_ref.behavior,
-                    &behavior_ref.type_args,
-                );
-                self.behavior_extends_parent_matches(
-                    &behavior_ref.behavior,
-                    &substitutions,
-                    parent,
-                    seen,
-                )
-            })
-    }
-
-    pub(in crate::typechecker) fn behavior_extends_parent_matches(
+    fn behavior_extends_parent_matches(
         &self,
         behavior: &str,
         substitutions: &HashMap<String, AstType>,
@@ -203,6 +145,15 @@ impl TypeChecker {
             return false;
         }
 
+        self.behavior_ref_parent_matches(behavior_ref, parent, seen)
+    }
+
+    fn behavior_ref_parent_matches(
+        &self,
+        behavior_ref: &BehaviorParentRef,
+        parent: &str,
+        seen: &mut HashSet<String>,
+    ) -> bool {
         let substitutions =
             self.behavior_type_param_substitutions(&behavior_ref.behavior, &behavior_ref.type_args);
         self.behavior_extends_parent_matches(&behavior_ref.behavior, &substitutions, parent, seen)

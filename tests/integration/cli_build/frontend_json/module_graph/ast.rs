@@ -1,5 +1,7 @@
 use super::emit_json;
 use super::write_two_module_project;
+use crate::cli_build::frontend_json::golden_support::write_subject;
+use crate::cli_build::support::{assert_zen_failure_contains, assert_zen_success};
 
 #[test]
 fn emit_json_ast_command_outputs_resolved_module_graph() {
@@ -8,12 +10,7 @@ fn emit_json_ast_command_outputs_resolved_module_graph() {
 
     let output = emit_json("ast", &main_path, "resolved module graph");
 
-    assert!(
-        output.status.success(),
-        "zen emit-json ast failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert_zen_success(&["emit-json", "ast", main_path.to_str().unwrap()], &output);
 
     let json: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("emit-json ast stdout is json");
@@ -51,24 +48,21 @@ fn emit_json_ast_command_outputs_resolved_module_graph() {
 #[test]
 fn emit_json_ast_marks_semantically_unchecked_sources_that_typed_json_rejects() {
     let tmp = tempfile::tempdir().expect("create temp dir");
-    let source_path = tmp.path().join("bad_semantics.zen");
-    std::fs::write(
-        &source_path,
+    let source_path = write_subject(
+        &tmp,
+        "bad_semantics.zen",
         r#"
 main = () i32 {
     true
 }
 "#,
-    )
-    .expect("write semantically invalid module");
+    );
 
     let ast_output = emit_json("ast", &source_path, "semantically invalid AST");
 
-    assert!(
-        ast_output.status.success(),
-        "AST JSON remains a tooling view and should emit parse/resolver output: stdout={}, stderr={}",
-        String::from_utf8_lossy(&ast_output.stdout),
-        String::from_utf8_lossy(&ast_output.stderr)
+    assert_zen_success(
+        &["emit-json", "ast", source_path.to_str().unwrap()],
+        &ast_output,
     );
 
     let ast_json: serde_json::Value =
@@ -78,15 +72,9 @@ main = () i32 {
 
     let typed_output = emit_json("typed", &source_path, "semantically invalid typed JSON");
 
-    assert!(
-        !typed_output.status.success(),
-        "typed JSON should reject the same semantic error: stdout={}, stderr={}",
-        String::from_utf8_lossy(&typed_output.stdout),
-        String::from_utf8_lossy(&typed_output.stderr)
-    );
-    assert!(
-        String::from_utf8_lossy(&typed_output.stderr).contains("return type mismatch"),
-        "typed JSON should report the semantic mismatch, stderr={}",
-        String::from_utf8_lossy(&typed_output.stderr)
+    assert_zen_failure_contains(
+        &["emit-json", "typed", source_path.to_str().unwrap()],
+        &typed_output,
+        "return type mismatch",
     );
 }

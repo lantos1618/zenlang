@@ -12,13 +12,13 @@ pub(super) struct MirJsonProgram {
 #[derive(Serialize)]
 pub(super) struct MirFunction {
     pub(super) name: String,
-    pub(super) params: Vec<MirParam>,
+    pub(super) params: Vec<MirNamedType>,
     pub(super) return_type: String,
     pub(super) blocks: Vec<MirBlock>,
 }
 
 #[derive(Serialize)]
-pub(super) struct MirParam {
+pub(super) struct MirNamedType {
     pub(super) name: String,
     pub(super) r#type: String,
 }
@@ -30,7 +30,7 @@ pub(super) struct MirBlock {
     pub(super) terminator: MirTerminator,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(super) struct MirStatement {
     pub(super) kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -43,14 +43,14 @@ pub(super) struct MirStatement {
     pub(super) value: Option<MirExpression>,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(super) struct MirTerminator {
     pub(super) kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) value: Option<MirExpression>,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(super) struct MirExpression {
     pub(super) kind: &'static str,
     #[serde(rename = "type")]
@@ -85,19 +85,12 @@ pub(super) struct MirMatchArm {
     pub(super) body: MirBlock,
 }
 
-#[derive(Serialize)]
+#[derive(Default, Serialize)]
 pub(super) struct MirPattern {
     pub(super) kind: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(super) value: Option<serde_json::Value>,
-    pub(super) bindings: Vec<MirPatternBinding>,
-}
-
-#[derive(Serialize)]
-pub(super) struct MirPatternBinding {
-    pub(super) name: String,
-    #[serde(rename = "type")]
-    pub(super) ty: String,
+    pub(super) bindings: Vec<MirNamedType>,
 }

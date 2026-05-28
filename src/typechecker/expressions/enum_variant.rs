@@ -15,10 +15,9 @@ impl TypeChecker {
         };
         let enum_info = self.enums.get(enum_name).cloned();
         let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
-        let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
-        if let Some(expected) = type_arg_count {
-            self.validate_type_arg_arity("enum", enum_name, expected, type_args, span);
-        }
+        let type_args_valid = type_arg_count.is_none_or(|expected| {
+            self.validate_type_arg_arity("enum", enum_name, expected, type_args, span)
+        });
 
         let (type_name, ty, variant_defs) = if type_args.is_empty() {
             let ty = self.resolve_type(&AstType::Named(enum_name.to_string()));
@@ -45,16 +44,13 @@ impl TypeChecker {
                 std::collections::HashMap::new()
             };
             let requested = self.mangle_generic_type_name(enum_name, type_args);
-            let type_name = enum_info
-                .as_ref()
-                .and_then(|info| {
-                    self.reserved_generic_type_name(
-                        "enum",
-                        info.specialization_scope.as_deref(),
-                        &requested,
-                    )
-                })
-                .unwrap_or(requested);
+            let type_name = self.reserved_or_requested_generic_type_name(
+                "enum",
+                enum_info
+                    .as_ref()
+                    .and_then(|info| info.specialization_scope.as_deref()),
+                requested,
+            );
             let ty = if type_args_valid {
                 self.resolve_type(&AstType::Generic {
                     name: enum_name.to_string(),
@@ -65,73 +61,52 @@ impl TypeChecker {
             };
             (type_name, ty, variant_defs)
         };
-        if self.enums.contains_key(enum_name) && type_args_valid {
+        if enum_info.is_none() {
+            self.push_error(E3064, format!("undefined enum `{enum_name}`"), span);
+        } else if type_args_valid {
             match variant_defs.get(variant) {
                 Some(expected_payload) => match (expected_payload, &typed_payload) {
                     (Some(expected_ast), Some(actual)) => {
                         let expected = expected_ast.clone();
-                        if expected != Type::Unknown
-                            && actual.ty != Type::Unknown
-                            && !self.types_compatible(&expected, &actual.ty)
-                        {
-                            self.diagnostics.push(Diagnostic::error_code(
-                                crate::error::CompilerDiagnosticCode::E3062,
-                                format!(
-                                    "payload for enum variant `{}.{}` expects `{}`, found `{}`",
-                                    enum_name,
-                                    variant,
-                                    expected.display_name(),
-                                    actual.ty.display_name()
-                                ),
+                        if !self.types_compatible(&expected, &actual.ty) {
+                            let (expected, actual_display) =
+                                type_display_pair(&expected, &actual.ty);
+                            self.push_error(
+                                E3062,
+                                format!("payload for enum variant `{enum_name}.{variant}` expects `{expected}`, found `{actual_display}`"),
                                 actual.span,
-                            ));
+                            );
                         }
                     }
-                    (Some(_), None) => {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E3061,
-                            format!(
-                                "enum variant `{}.{}` requires a payload",
-                                enum_name, variant
-                            ),
-                            span,
-                        ));
-                    }
-                    (None, Some(actual)) => {
-                        self.diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E3063,
-                            format!(
-                                "enum variant `{}.{}` does not accept a payload",
-                                enum_name, variant
-                            ),
-                            actual.span,
-                        ));
-                    }
+                    (Some(_), None) => self.push_error(
+                        E3061,
+                        format!("enum variant `{enum_name}.{variant}` requires a payload"),
+                        span,
+                    ),
+                    (None, Some(actual)) => self.push_error(
+                        E3063,
+                        format!("enum variant `{enum_name}.{variant}` does not accept a payload"),
+                        actual.span,
+                    ),
                     (None, None) => {}
                 },
                 None => {
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3060,
-                        format!("enum `{}` has no variant `{}`", enum_name, variant),
+                    self.push_error(
+                        E3060,
+                        format!("enum `{enum_name}` has no variant `{variant}`"),
                         span,
-                    ));
+                    );
                 }
             }
-        } else if !self.enums.contains_key(enum_name) {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E3064,
-                format!("undefined enum `{}`", enum_name),
-                span,
-            ));
         }
-        Ok(TypedExpression {
-            kind: TypedExprKind::EnumVariant {
+        typed_ok(
+            TypedExprKind::EnumVariant {
                 type_name,
                 variant: variant.to_string(),
                 payload: typed_payload,
             },
             ty,
             span,
-        })
+        )
     }
 }

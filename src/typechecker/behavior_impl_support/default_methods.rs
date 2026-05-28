@@ -8,85 +8,62 @@ impl TypeChecker {
         behavior: &str,
         behavior_type_args: &[AstType],
         methods: &[Declaration],
-    ) -> Vec<DefaultBehaviorMethod> {
+    ) -> Vec<Declaration> {
         let behavior_substitutions =
             self.behavior_type_param_substitutions(behavior, behavior_type_args);
-        let type_params = default_behavior_type_params(type_args);
-        self.behavior_methods_for_impl(behavior, &behavior_substitutions, &mut HashSet::new())
-            .iter()
-            .filter(|required| {
-                required.default_body.is_some()
-                    && !self.impl_methods_include_behavior_method(
-                        type_name,
-                        methods,
-                        &required.name,
-                    )
+        let type_params = named_type_arg_params(type_args);
+        self.behavior_methods_with_inherited_substituted(
+            behavior,
+            &behavior_substitutions,
+            &mut HashSet::new(),
+        )
+        .iter()
+        .filter(|required| {
+            !methods
+                .iter()
+                .any(|decl| decl.name() == Some(required.name.as_str()))
+        })
+        .filter_map(|required| {
+            let body = required.default_body.clone()?;
+            Some(Declaration::Function {
+                name: required.name.clone(),
+                type_params: type_params.clone(),
+                params: required
+                    .params
+                    .iter()
+                    .map(|param| Param {
+                        name: param.name.clone(),
+                        ty: concrete_self_ast_type_for_target(&param.ty, type_name, type_args),
+                        mutable: param.mutable,
+                        span: param.span,
+                    })
+                    .collect(),
+                return_type: required
+                    .return_type
+                    .as_ref()
+                    .map(|ty| concrete_self_ast_type_for_target(ty, type_name, type_args)),
+                body,
+                public: true,
+                span: required.span,
             })
-            .filter_map(|required| {
-                let body = required.default_body.clone()?;
-                Some(DefaultBehaviorMethod {
-                    name: required.name.clone(),
-                    type_params: type_params.clone(),
-                    params: required
-                        .params
-                        .iter()
-                        .map(|param| Param {
-                            name: param.name.clone(),
-                            ty: concrete_self_ast_type_for_target(&param.ty, type_name, type_args),
-                            mutable: param.mutable,
-                            span: param.span,
-                        })
-                        .collect(),
-                    return_type: required
-                        .return_type
-                        .as_ref()
-                        .map(|ty| concrete_self_ast_type_for_target(ty, type_name, type_args)),
-                    body,
-                    span: required.span,
-                })
-            })
-            .collect()
+        })
+        .collect()
     }
 
     pub(in crate::typechecker) fn seed_behavior_default_method_signature(
         &mut self,
         type_name: &str,
-        default: &DefaultBehaviorMethod,
+        default: &Declaration,
     ) {
-        let key = Self::method_key(type_name, &default.name);
-        self.methods.insert(
-            key.clone(),
-            func_info_from_ast_signature(
-                key.clone(),
-                &default.type_params,
-                &default.params,
-                &default.return_type,
-            ),
+        let Some(name) = default.name() else {
+            return;
+        };
+        insert_callable_signature(
+            method_signature_key(type_name, name),
+            default,
+            &mut self.methods,
+            &mut self.generic_methods,
         );
-        if let Some(template) = generic_template_from_type_params(
-            &default.type_params,
-            &default.params,
-            &default.return_type,
-            &default.body,
-            default.span,
-        ) {
-            self.generic_methods.insert(key, template);
-        }
-    }
-
-    pub(in crate::typechecker) fn impl_methods_include_behavior_method(
-        &self,
-        type_name: &str,
-        methods: &[Declaration],
-        required_name: &str,
-    ) -> bool {
-        methods
-            .iter()
-            .any(|decl| matches!(decl, Declaration::Function { name, .. } if name == required_name))
-            || (self.resolver_backed_collection
-                && self
-                    .resolver_backed_method_signature(type_name, required_name)
-                    .is_some())
     }
 
     pub(in crate::typechecker) fn behavior_methods_with_inherited_substituted(
@@ -95,15 +72,30 @@ impl TypeChecker {
         substitutions: &HashMap<String, AstType>,
         seen: &mut HashSet<String>,
     ) -> Vec<ast::BehaviorMethod> {
-        if !self.mark_behavior_seen(behavior, substitutions, seen) {
+        let type_args = self
+            .behaviors
+            .get(behavior)
+            .map(|info| {
+                info.type_params
+                    .iter()
+                    .filter_map(|param| substitutions.get(param).cloned())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if !seen.insert(behavior_ref_display(behavior, &type_args)) {
             return Vec::new();
         }
 
         let mut methods = Vec::new();
         if let Some(parents) = self.behavior_extends.get(behavior) {
             for parent in parents {
+                let parent_type_args: Vec<AstType> = parent
+                    .type_args
+                    .iter()
+                    .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
+                    .collect();
                 let parent_substitutions =
-                    self.behavior_parent_type_param_substitutions(parent, substitutions);
+                    self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args);
                 methods.extend(self.behavior_methods_with_inherited_substituted(
                     &parent.behavior,
                     &parent_substitutions,
@@ -119,43 +111,6 @@ impl TypeChecker {
             );
         }
         methods
-    }
-
-    pub(in crate::typechecker) fn behavior_seen_key(
-        &self,
-        behavior: &str,
-        substitutions: &HashMap<String, AstType>,
-    ) -> String {
-        let type_args = self
-            .behaviors
-            .get(behavior)
-            .map(|info| {
-                info.type_params
-                    .iter()
-                    .filter_map(|param| substitutions.get(param).cloned())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        behavior_ref_display(behavior, &type_args)
-    }
-
-    pub(in crate::typechecker) fn mark_behavior_seen(
-        &self,
-        behavior: &str,
-        substitutions: &HashMap<String, AstType>,
-        seen: &mut HashSet<String>,
-    ) -> bool {
-        let behavior_seen_key = self.behavior_seen_key(behavior, substitutions);
-        seen.insert(behavior_seen_key)
-    }
-
-    pub(in crate::typechecker) fn behavior_methods_for_impl(
-        &self,
-        behavior: &str,
-        substitutions: &HashMap<String, AstType>,
-        seen: &mut HashSet<String>,
-    ) -> Vec<ast::BehaviorMethod> {
-        self.behavior_methods_with_inherited_substituted(behavior, substitutions, seen)
     }
 
     pub(in crate::typechecker) fn behavior_type_param_substitutions(
@@ -174,32 +129,4 @@ impl TypeChecker {
             })
             .unwrap_or_default()
     }
-
-    pub(in crate::typechecker) fn behavior_parent_type_param_substitutions(
-        &self,
-        parent: &BehaviorParentRef,
-        substitutions: &HashMap<String, AstType>,
-    ) -> HashMap<String, AstType> {
-        let parent_type_args: Vec<AstType> = parent
-            .type_args
-            .iter()
-            .map(|type_arg| substitute_behavior_ast_type(type_arg, substitutions))
-            .collect();
-        self.behavior_type_param_substitutions(&parent.behavior, &parent_type_args)
-    }
-}
-
-fn default_behavior_type_params(type_args: &[AstType]) -> Vec<ast::TypeParam> {
-    type_args
-        .iter()
-        .filter_map(|arg| match arg {
-            AstType::Named(name) => Some(ast::TypeParam {
-                name: name.clone(),
-                constraint: None,
-                constraint_type_args: Vec::new(),
-                span: Span::dummy(),
-            }),
-            _ => None,
-        })
-        .collect()
 }

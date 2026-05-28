@@ -1,11 +1,10 @@
-use std::process::Command;
+use super::golden_support::checked_source_json;
 
 #[test]
 fn emit_json_layout_outputs_checked_type_layouts() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("layout_subject.zen");
-    std::fs::write(
-        &zen_path,
+    let json = checked_source_json(
+        "layout",
+        "layout_subject.zen",
         r#"
 Point: {
     x: i32,
@@ -14,23 +13,9 @@ Point: {
 
 main = () i32 { 0 }
 "#,
-    )
-    .expect("write layout subject");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "layout", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json layout on program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        "program input",
     );
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("layout stdout is json");
     assert_eq!(json["format"], "zen.layout.v0");
     assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");
@@ -58,10 +43,9 @@ main = () i32 { 0 }
 
 #[test]
 fn emit_json_layout_outputs_compound_type_layout_entries() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let zen_path = tmp.path().join("compound_layout_subject.zen");
-    std::fs::write(
-        &zen_path,
+    let json = checked_source_json(
+        "layout",
+        "compound_layout_subject.zen",
         r#"
 Handles: {
     ptr: Ptr<i32>,
@@ -76,23 +60,9 @@ Choice:
 
 main = () i32 { 0 }
 "#,
-    )
-    .expect("write compound layout subject");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["emit-json", "layout", zen_path.to_str().unwrap()])
-        .output()
-        .expect("run zen emit-json layout on compound program input");
-
-    assert!(
-        output.status.success(),
-        "zen emit-json layout should emit checked compound layout JSON: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        "compound program input",
     );
 
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("compound layout stdout is json");
     assert_eq!(json["format"], "zen.layout.v0");
     assert_eq!(json["schema_version"], 0);
     assert_eq!(json["semantic_status"], "checked");

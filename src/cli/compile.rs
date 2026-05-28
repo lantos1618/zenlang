@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process;
 
-use zen::codegen::c::CBackend;
-use zen::codegen::Backend;
+use zen::codegen::c;
 
 pub(super) fn compile_file_to_c_source(path: &Path) -> String {
     let path_str = path.to_str().unwrap_or_else(|| {
@@ -14,14 +13,7 @@ pub(super) fn compile_file_to_c_source(path: &Path) -> String {
 }
 
 pub(super) fn typed_program_to_c_source(typed: &zen::ast::typed::TypedProgram) -> String {
-    let backend = CBackend;
-    match backend.generate(typed) {
-        Ok(c_source) => c_source,
-        Err(e) => {
-            eprintln!("codegen error: {}", e);
-            process::exit(1);
-        }
-    }
+    c::generate(typed)
 }
 
 pub(super) fn compile_file_to_binary(

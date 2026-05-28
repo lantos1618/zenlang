@@ -18,7 +18,6 @@ main = () i32 {
 "#,
         "closure parameter annotation type-argument arity",
         "closure parameter annotation type-argument arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_closure_param_annotation_type_arg_arity.golden.json",
     );
 }
 
@@ -40,6 +39,5 @@ main = () i32 {
 "#,
         "closure return annotation missing generic arguments",
         "closure return annotation missing-arguments diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_closure_return_annotation_missing_args.golden.json",
     );
 }

@@ -2,27 +2,23 @@ use super::*;
 
 #[test]
 fn resolver_records_enum_variant_names() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Option: Some(i32), None
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Type, "Option")
-            .expect("Option type symbol")
+    assert_string_metadata(
+        symbol(&table, Namespace::Type, "Option")
             .variant_names
             .as_deref(),
-        Some(&["Some".to_string(), "None".to_string()][..])
+        &["Some", "None"],
     );
 }
 
 #[test]
 fn resolver_allows_same_variant_names_in_different_enums() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Option:
     None,
@@ -33,10 +29,6 @@ Maybe:
     Some(bool)
 "#,
     );
-
-    let table = Resolver::new()
-        .resolve_program(&program)
-        .expect("variant names should be scoped to their owner enum");
 
     assert_eq!(
         table
@@ -58,21 +50,14 @@ Maybe:
 
 #[test]
 fn resolver_rejects_duplicate_variant_names_in_same_enum() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Option:
     None,
     None
 "#,
+        "duplicate variant names in one enum should be rejected",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("duplicate variant names in one enum should be rejected");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("duplicate variant symbol 'None'")),
-        "expected duplicate variant diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "duplicate variant symbol 'None'");
 }

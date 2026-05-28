@@ -1,55 +1,35 @@
 use super::assert_typed_golden;
 
 #[test]
-fn emit_json_typed_generic_ufc_dedup_schema_matches_golden() {
-    assert_typed_golden(
-        "generic_ufc_dedup.zen",
-        "tests/fixtures/ir_json/typed_generic_ufc_dedup.golden.json",
-        "generic UFC dedup",
-    );
-}
-
-#[test]
-fn emit_json_typed_generic_ufc_function_schema_matches_golden() {
-    assert_typed_golden(
-        "generic_ufc_function.zen",
-        "tests/fixtures/ir_json/typed_generic_ufc_function.golden.json",
-        "generic UFC function",
-    );
-}
-
-#[test]
-fn emit_json_typed_generic_worklist_dedup_schema_matches_golden() {
-    assert_typed_golden(
-        "generic_worklist_dedup.zen",
-        "tests/fixtures/ir_json/typed_generic_worklist_dedup.golden.json",
-        "generic worklist dedup",
-    );
-}
-
-#[test]
-fn emit_json_typed_generic_recursive_function_schema_matches_golden() {
-    assert_typed_golden(
-        "generic_recursive_function.zen",
-        "tests/fixtures/ir_json/typed_generic_recursive_function.golden.json",
-        "generic recursive function",
-    );
-}
-
-#[test]
-fn emit_json_typed_multi_file_imported_generic_function_return_enum_schema_matches_golden() {
-    assert_typed_golden(
-        "multi_file_imported_generic_function_return_enum_dependency/main.zen",
-        "tests/fixtures/ir_json/typed_multi_file_imported_generic_function_return_enum.golden.json",
-        "multi-file imported generic function return enum",
-    );
-}
-
-#[test]
-fn emit_json_typed_generic_vec_schema_matches_golden() {
-    assert_typed_golden(
-        "generic_vec.zen",
-        "tests/fixtures/ir_json/typed_generic_vec.golden.json",
-        "generic Vec",
-    );
+fn emit_json_typed_generic_value_schemas_match_golden() {
+    for (source, golden_stem, description) in [
+        (
+            "generic_ufc_dedup.zen",
+            "generic_ufc_dedup",
+            "generic UFC dedup",
+        ),
+        (
+            "generic_ufc_function.zen",
+            "generic_ufc_function",
+            "generic UFC function",
+        ),
+        (
+            "generic_worklist_dedup.zen",
+            "generic_worklist_dedup",
+            "generic worklist dedup",
+        ),
+        (
+            "generic_recursive_function.zen",
+            "generic_recursive_function",
+            "generic recursive function",
+        ),
+        (
+            "multi_file_imported_generic_function_return_enum_dependency/main.zen",
+            "multi_file_imported_generic_function_return_enum",
+            "multi-file imported generic function return enum",
+        ),
+        ("generic_vec.zen", "generic_vec", "generic Vec"),
+    ] {
+        assert_typed_golden(source, golden_stem, description);
+    }
 }

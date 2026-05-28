@@ -1,214 +1,119 @@
 use super::*;
 
 impl TypeChecker {
-    #[cfg(test)]
-    pub(super) fn collect_ast_import_declaration_tasks(
-        decls: &[Declaration],
-    ) -> Vec<AstImportDeclarationTask<'_>> {
-        let mut tasks = Vec::new();
+    pub(super) fn collect_declarations(&mut self, decls: &[Declaration]) {
         for decl in decls {
-            Self::push_ast_import_declaration_task(decl, &mut tasks);
+            let Declaration::Behavior {
+                name, type_params, ..
+            } = decl
+            else {
+                continue;
+            };
+            self.validate_generic_bounds(type_params);
+            self.seed_declaration_info(name, decl);
         }
-        tasks
-    }
 
-    pub(super) fn push_ast_import_declaration_task<'a>(
-        decl: &'a Declaration,
-        tasks: &mut Vec<AstImportDeclarationTask<'a>>,
-    ) {
-        if let Declaration::Import {
-            names, module_path, ..
-        } = decl
-        {
-            tasks.push(AstImportDeclarationTask { names, module_path });
+        for decl in decls {
+            let Declaration::BehaviorExtends {
+                behavior,
+                parent,
+                parent_type_args,
+                span,
+            } = decl
+            else {
+                continue;
+            };
+            self.check_behavior_extends(behavior, parent, parent_type_args, *span);
         }
-    }
+        self.validate_behavior_extends_cycles();
+        self.validate_behavior_method_coherence();
 
-    pub(super) fn collect_ast_import_declarations_from_tasks(
-        &mut self,
-        tasks: &[AstImportDeclarationTask<'_>],
-    ) {
-        for task in tasks {
-            for name in task.names {
-                self.imports.insert(name.clone(), task.module_path.to_vec());
+        for decl in decls {
+            if let Some(callable) = decl.as_callable() {
+                let seed_name = match decl {
+                    Declaration::Method { type_name, .. } => type_name,
+                    _ => callable.name,
+                };
+                self.validate_generic_bounds(callable.type_params);
+                self.seed_declaration_info(seed_name, decl);
+                continue;
             }
-        }
-    }
 
-    #[cfg(test)]
-    pub(super) fn collect_impl_block_declaration_tasks(
-        decls: &[Declaration],
-    ) -> Vec<ImplBlockDeclarationTask<'_>> {
-        let mut tasks = Vec::new();
-        for decl in decls {
-            Self::push_impl_block_declaration_task(decl, &mut tasks);
-        }
-        tasks
-    }
-
-    pub(super) fn push_impl_block_declaration_task<'a>(
-        decl: &'a Declaration,
-        tasks: &mut Vec<ImplBlockDeclarationTask<'a>>,
-    ) {
-        if let Declaration::ImplBlock {
-            type_name,
-            type_args,
-            behavior,
-            behavior_type_args,
-            methods,
-            ..
-        } = decl
-        {
-            tasks.push(ImplBlockDeclarationTask {
-                type_name,
-                type_args,
-                behavior: behavior.as_deref(),
-                behavior_type_args,
-                methods,
-            });
-        }
-    }
-
-    pub(super) fn collect_impl_block_declarations_from_tasks(
-        &mut self,
-        tasks: &[ImplBlockDeclarationTask<'_>],
-    ) {
-        for task in tasks {
-            if self.resolver_backed_collection {
-                self.collect_resolver_backed_impl_block_templates(
-                    task.type_name,
-                    task.type_args,
-                    task.behavior,
-                    task.behavior_type_args,
-                    task.methods,
-                );
-            } else {
-                self.collect_ast_impl_block_declaration(
-                    task.type_name,
-                    task.type_args,
-                    task.behavior,
-                    task.behavior_type_args,
-                    task.methods,
-                );
-            }
-        }
-    }
-
-    fn collect_ast_impl_block_declaration(
-        &mut self,
-        type_name: &str,
-        type_args: &[AstType],
-        behavior: Option<&str>,
-        behavior_type_args: &[AstType],
-        methods: &[Declaration],
-    ) {
-        for method in methods {
-            self.collect_impl_method_signature(
-                type_name,
-                type_args,
-                behavior,
-                behavior_type_args,
-                method,
-            );
-        }
-        if let Some(behavior) = behavior {
-            self.collect_behavior_default_method_signatures(
-                type_name,
-                type_args,
-                behavior,
-                behavior_type_args,
-                methods,
-            );
-        }
-    }
-
-    fn collect_resolver_backed_impl_block_templates(
-        &mut self,
-        type_name: &str,
-        type_args: &[AstType],
-        behavior: Option<&str>,
-        behavior_type_args: &[AstType],
-        methods: &[Declaration],
-    ) {
-        for method in methods {
-            self.collect_resolver_backed_impl_method_template(
-                type_name,
-                type_args,
-                behavior,
-                behavior_type_args,
-                method,
-            );
-        }
-    }
-
-    #[cfg(test)]
-    pub(super) fn collect_ast_type_declaration_tasks(
-        decls: &[Declaration],
-    ) -> Vec<AstTypeDeclarationTask<'_>> {
-        let mut tasks = Vec::new();
-        for decl in decls {
-            Self::push_ast_type_declaration_task(decl, &mut tasks);
-        }
-        tasks
-    }
-
-    pub(super) fn push_ast_type_declaration_task<'a>(
-        decl: &'a Declaration,
-        tasks: &mut Vec<AstTypeDeclarationTask<'a>>,
-    ) {
-        match decl {
-            Declaration::Struct {
-                name,
-                type_params,
-                fields,
-                ..
-            } => tasks.push(AstTypeDeclarationTask::Struct {
-                name,
-                type_params,
-                fields,
-            }),
-            Declaration::Enum {
-                name,
-                type_params,
-                variants,
-                ..
-            } => tasks.push(AstTypeDeclarationTask::Enum {
-                name,
-                type_params,
-                variants,
-            }),
-            _ => {}
-        }
-    }
-
-    pub(super) fn collect_ast_type_declarations_from_tasks(
-        &mut self,
-        tasks: &[AstTypeDeclarationTask<'_>],
-    ) {
-        for task in tasks {
-            match task {
-                AstTypeDeclarationTask::Struct {
-                    name,
-                    type_params,
-                    fields,
+            match decl {
+                Declaration::Struct {
+                    name, type_params, ..
+                }
+                | Declaration::Enum {
+                    name, type_params, ..
                 } => {
                     self.validate_generic_bounds(type_params);
-                    self.structs.insert(
-                        (*name).to_string(),
-                        struct_info_from_ast_fields((*name).to_string(), type_params, fields),
-                    );
+                    self.seed_declaration_info(name, decl);
                 }
-                AstTypeDeclarationTask::Enum {
-                    name,
-                    type_params,
-                    variants,
+                Declaration::Import {
+                    names, module_path, ..
                 } => {
-                    self.validate_generic_bounds(type_params);
-                    self.enums.insert(
-                        (*name).to_string(),
-                        enum_info_from_ast_variants((*name).to_string(), type_params, variants),
+                    let root_std_import = matches!(
+                        module_path.as_slice(),
+                        [segment] if matches!(segment.as_str(), crate::root_spelling::STD_ROOT | crate::root_spelling::AT_STD_ROOT)
                     );
+                    for name in names {
+                        self.imports.insert(name.to_string());
+                        if name == "io" && root_std_import {
+                            for function in ["print", "println"] {
+                                let key = format!("io_{function}");
+                                self.functions.insert(
+                                    key,
+                                    FuncInfo {
+                                        params: vec![("message".into(), AstType::Str)],
+                                        return_type: AstType::Void,
+                                        type_params: Vec::new(),
+                                        type_param_bounds: HashMap::new(),
+                                    },
+                                );
+                            }
+                        }
+                    }
                 }
+                Declaration::ImplBlock {
+                    type_name,
+                    type_args,
+                    behavior,
+                    behavior_type_args,
+                    methods,
+                    ..
+                } => {
+                    for method in methods {
+                        let Some(method_decl) = method.as_callable() else {
+                            continue;
+                        };
+                        self.validate_generic_bounds(method_decl.type_params);
+                        let key = behavior_impl_method_signature_key_with_target_args(
+                            type_name,
+                            method_decl.name,
+                            behavior.as_deref(),
+                            behavior_type_args,
+                            type_args,
+                        );
+                        insert_callable_signature(
+                            key,
+                            method,
+                            &mut self.methods,
+                            &mut self.generic_methods,
+                        );
+                    }
+                    if let Some(behavior) = behavior {
+                        for default in self.behavior_default_methods_for_impl(
+                            type_name,
+                            type_args,
+                            behavior,
+                            behavior_type_args,
+                            methods,
+                        ) {
+                            self.seed_behavior_default_method_signature(type_name, &default);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }

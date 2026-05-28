@@ -1,5 +1,5 @@
 use super::*;
-use crate::parser::keywords::ParserModuleRoot;
+use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT};
 
 impl Parser {
     pub(super) fn parse_builtin_module_call_expr(&mut self) -> Result<Expression, CompileError> {
@@ -19,7 +19,7 @@ impl Parser {
 
         Ok(Expression::FunctionCall {
             name: func_name,
-            module: Some(ParserModuleRoot::AtBuiltin.as_str().to_string()),
+            module: Some(AT_BUILTIN_ROOT.to_string()),
             type_args,
             args,
             span: span.merge(end),
@@ -46,7 +46,11 @@ impl Parser {
         }
 
         let func_name = module_parts.pop().unwrap();
-        let module = ParserModuleRoot::AtStd.join_module_parts(&module_parts);
+        let module = if module_parts.is_empty() {
+            AT_STD_ROOT.to_string()
+        } else {
+            format!("{AT_STD_ROOT}.{}", module_parts.join("."))
+        };
 
         if matches!(self.peek(), Token::LParen) {
             self.advance();

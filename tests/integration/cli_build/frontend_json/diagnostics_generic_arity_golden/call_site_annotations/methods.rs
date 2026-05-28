@@ -26,7 +26,6 @@ main = () i32 {
 "#,
         "generic method type-argument annotation arity",
         "generic method type-argument annotation arity diagnostics should not emit argument followups",
-        "tests/fixtures/ir_json/diagnostics_generic_method_type_arg_annotation_arity.golden.json",
     );
 }
 
@@ -50,7 +49,6 @@ main = () i32 {
 "#,
         "non-generic method type arguments",
         "non-generic method type-argument diagnostics should not emit argument followups",
-        "tests/fixtures/ir_json/diagnostics_nongeneric_method_type_args.golden.json",
     );
 }
 
@@ -80,6 +78,5 @@ main = () i32 {
 "#,
         "generic method type-argument annotation missing arguments",
         "generic method type-argument annotation missing-arguments diagnostics should not emit argument followups",
-        "tests/fixtures/ir_json/diagnostics_generic_method_type_arg_annotation_missing_args.golden.json",
     );
 }

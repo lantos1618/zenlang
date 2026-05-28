@@ -1,5 +1,5 @@
 use crate::ast::AstType;
-use crate::error::{Diagnostic, Span};
+use crate::error::Span;
 
 use super::TypeChecker;
 
@@ -10,20 +10,16 @@ impl TypeChecker {
         name: &str,
         type_args: &[AstType],
         span: Span,
-    ) -> bool {
+    ) {
         if type_args.is_empty() {
-            return false;
+            return;
         }
 
-        self.diagnostics.push(Diagnostic::error_code(
+        self.push_error(
             crate::error::CompilerDiagnosticCode::E5002,
-            format!(
-                "non-generic {} `{}` does not accept type arguments",
-                kind, name
-            ),
+            format!("non-generic {kind} `{name}` does not accept type arguments"),
             span,
-        ));
-        true
+        );
     }
 
     pub(in crate::typechecker) fn report_generic_type_arg_arity(
@@ -34,11 +30,11 @@ impl TypeChecker {
         found: usize,
         span: Span,
     ) {
-        self.diagnostics.push(Diagnostic::error_code(
+        self.push_error(
             crate::error::CompilerDiagnosticCode::E5001,
             format!("generic {kind} `{name}` expects {expected} type arguments, found {found}"),
             span,
-        ));
+        );
     }
 
     pub(in crate::typechecker) fn validate_type_arg_arity(
@@ -49,16 +45,15 @@ impl TypeChecker {
         type_args: &[AstType],
         span: Span,
     ) -> bool {
-        if expected == 0 && !type_args.is_empty() {
+        if expected == type_args.len() {
+            return true;
+        }
+
+        if expected == 0 {
             self.reject_nongeneric_type_args(kind, name, type_args, span);
-            return false;
-        }
-
-        if expected != type_args.len() {
+        } else {
             self.report_generic_type_arg_arity(kind, name, expected, type_args.len(), span);
-            return false;
         }
-
-        true
+        false
     }
 }

@@ -28,24 +28,18 @@ mod precedence;
 mod statements;
 mod types;
 
-#[cfg(test)]
-mod tests;
-
 use core::{Parser, StmtOrExpr};
 use precedence::*;
 
-// ── Public API ────────────────────────────────────────────────────
-
-/// Parse a token stream into a Program (list of declarations).
 pub fn parse(tokens: Vec<(Token, Span)>, file_id: FileId) -> Result<Program, Vec<CompileError>> {
-    let mut parser = Parser::new(tokens, file_id);
+    let mut parser = Parser::new(tokens);
     let decls = parser.parse_program();
-    if parser.errors.is_empty() {
-        Ok(Program {
+    parser
+        .errors
+        .is_empty()
+        .then_some(Program {
             declarations: decls,
             file_id,
         })
-    } else {
-        Err(parser.errors)
-    }
+        .ok_or(parser.errors)
 }

@@ -1,4 +1,5 @@
 use super::*;
+use crate::typechecker::literal_coerced_type;
 
 impl TypeChecker {
     pub(super) fn check_struct_literal_expr(
@@ -10,14 +11,13 @@ impl TypeChecker {
     ) -> Result<TypedExpression, Diagnostic> {
         let struct_info = self.structs.get(name).cloned();
         let type_arg_count = struct_info.as_ref().map(|info| info.type_params.len());
-        let type_args_valid = type_arg_count.is_none_or(|expected| expected == type_args.len());
+        let type_args_valid = type_arg_count.is_none_or(|expected| {
+            self.validate_type_arg_arity("struct", name, expected, type_args, span)
+        });
         let type_arg_annotations_valid = type_args
             .iter()
             .all(|type_arg| self.generic_type_annotation_arities_valid(type_arg));
         let constructor_type_args_valid = type_args_valid && type_arg_annotations_valid;
-        if let Some(expected) = type_arg_count {
-            self.validate_type_arg_arity("struct", name, expected, type_args, span);
-        }
 
         let (type_name, ty, field_defs) = if type_args.is_empty() {
             let ty = if type_arg_count.is_some_and(|expected| expected > 0) {
@@ -45,16 +45,13 @@ impl TypeChecker {
                 std::collections::HashMap::new()
             };
             let requested = self.mangle_generic_type_name(name, type_args);
-            let type_name = struct_info
-                .as_ref()
-                .and_then(|info| {
-                    self.reserved_generic_type_name(
-                        "struct",
-                        info.specialization_scope.as_deref(),
-                        &requested,
-                    )
-                })
-                .unwrap_or(requested);
+            let type_name = self.reserved_or_requested_generic_type_name(
+                "struct",
+                struct_info
+                    .as_ref()
+                    .and_then(|info| info.specialization_scope.as_deref()),
+                requested,
+            );
             let ty = if type_args_valid {
                 self.resolve_type(&AstType::Generic {
                     name: name.to_string(),
@@ -70,51 +67,32 @@ impl TypeChecker {
         let default_substitutions = if type_args.is_empty() || !constructor_type_args_valid {
             None
         } else {
-            struct_info.as_ref().and_then(|info| {
-                (info.type_params.len() == type_args.len()).then(|| {
-                    info.type_params
-                        .iter()
-                        .zip(type_args.iter())
-                        .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
-                        .collect::<std::collections::HashMap<_, _>>()
-                })
-            })
+            struct_info
+                .as_ref()
+                .map(|info| self.type_arg_substitutions(&info.type_params, type_args))
         };
 
         for (field_name, field_expr) in fields {
             let typed = self.check_expr(field_expr)?;
 
             if !provided.insert(field_name.as_str()) {
-                self.diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E3034,
+                self.push_error(
+                    E3034,
                     format!("duplicate field `{}` for struct `{}`", field_name, name),
                     typed.span,
-                ));
+                );
             }
 
             if let Some(expected) = field_defs.get(field_name) {
-                if *expected != Type::Unknown
-                    && typed.ty != Type::Unknown
-                    && !self.types_compatible(expected, &typed.ty)
-                {
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3036,
-                        format!(
-                            "field `{}` for struct `{}` expects `{}`, found `{}`",
-                            field_name,
-                            name,
-                            expected.display_name(),
-                            typed.ty.display_name()
-                        ),
-                        typed.span,
-                    ));
+                if !self.types_compatible(expected, &typed.ty) {
+                    self.push_struct_field_type_error(field_name, name, expected, &typed);
                 }
             } else if struct_info.is_some() && constructor_type_args_valid {
-                self.diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E3035,
+                self.push_error(
+                    E3035,
                     format!("unknown field `{}` for struct `{}`", field_name, name),
                     typed.span,
-                ));
+                );
             }
 
             typed_fields.push((field_name.clone(), typed));
@@ -133,48 +111,47 @@ impl TypeChecker {
                         }
                         let typed = typed?;
                         if let Some(expected) = field_defs.get(field_name) {
-                            let actual_ty = if (expected.is_integer()
-                                && matches!(typed.kind, TypedExprKind::IntLiteral(_)))
-                                || (expected.is_float()
-                                    && matches!(typed.kind, TypedExprKind::FloatLiteral(_)))
-                            {
-                                expected.clone()
-                            } else {
-                                typed.ty.clone()
-                            };
+                            let actual_ty = literal_coerced_type(expected, &typed);
                             if !self.types_compatible(expected, &actual_ty) {
-                                self.diagnostics.push(Diagnostic::error_code(
-                                    crate::error::CompilerDiagnosticCode::E3036,
-                                    format!(
-                                        "field `{}` for struct `{}` expects `{}`, found `{}`",
-                                        field_name,
-                                        name,
-                                        expected.display_name(),
-                                        typed.ty.display_name()
-                                    ),
-                                    typed.span,
-                                ));
+                                self.push_struct_field_type_error(
+                                    field_name, name, expected, &typed,
+                                );
                             }
                         }
                         typed_fields.push((field_name.clone(), typed));
                         continue;
                     }
-                    self.diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E3037,
+                    self.push_error(
+                        E3037,
                         format!("missing field `{}` for struct `{}`", field_name, name),
                         span,
-                    ));
+                    );
                 }
             }
         }
 
-        Ok(TypedExpression {
-            kind: TypedExprKind::StructLiteral {
+        typed_ok(
+            TypedExprKind::StructLiteral {
                 type_name,
                 fields: typed_fields,
             },
             ty,
             span,
-        })
+        )
+    }
+
+    fn push_struct_field_type_error(
+        &mut self,
+        field_name: &str,
+        struct_name: &str,
+        expected: &Type,
+        actual: &TypedExpression,
+    ) {
+        let (expected, actual_display) = type_display_pair(expected, &actual.ty);
+        self.push_error(
+            E3036,
+            format!("field `{field_name}` for struct `{struct_name}` expects `{expected}`, found `{actual_display}`"),
+            actual.span,
+        );
     }
 }

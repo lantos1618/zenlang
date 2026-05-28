@@ -23,11 +23,7 @@ main = () i32 { 0 }
 "#,
     );
 
-    assert_layout_matches_fixture(
-        &zen_path,
-        "compound program input",
-        "tests/fixtures/ir_json/layout_compound.golden.json",
-    );
+    assert_layout_matches_fixture(&zen_path, "compound program input", "compound");
 }
 
 #[test]
@@ -46,9 +42,5 @@ main = () i32 { 0 }
 "#,
     );
 
-    assert_layout_matches_fixture(
-        &zen_path,
-        "program input",
-        "tests/fixtures/ir_json/layout_basic.golden.json",
-    );
+    assert_layout_matches_fixture(&zen_path, "program input", "basic");
 }

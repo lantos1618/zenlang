@@ -560,17 +560,11 @@
               {
                 "name": "Some",
                 "tag": 1,
-                "payload": [
-                  [
-                    "payload",
-                    "I32"
-                  ]
-                ]
+                "payload": "I32"
               }
             ]
           }
         },
-        "methods": [],
         "span": {
           "file_id": 0,
           "start": 61,

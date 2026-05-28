@@ -35,11 +35,6 @@
       "size": 16,
       "alignment": 8
     },
-    "String": {
-      "kind": "dynamic_string",
-      "size": 32,
-      "alignment": 8
-    },
     "bool": {
       "kind": "primitive",
       "size": 1,

@@ -5,13 +5,11 @@ use serde::Serialize;
 
 mod support;
 
+pub(crate) use support::type_param_names;
 pub use support::{BehaviorMethod, EnumVariant, StructField, TypeDeclarationKeyword, TypeParam};
 
-/// Declaration — top-level constructs in a Zen program.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Declaration {
-    /// Named function: `add = (a: i32, b: i32) i32 { ... }`
-    /// Generic function: `identity<T> = (value: T) T { ... }`
     Function {
         name: String,
         type_params: Vec<TypeParam>,
@@ -22,7 +20,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Method: `Point.distance = (self: Ptr<Point>, other: Ptr<Point>) f64 { ... }`
     Method {
         type_name: String,
         method_name: String,
@@ -34,7 +31,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Struct definition: `Point: { x: f64, y: f64 }`
     Struct {
         name: String,
         type_params: Vec<TypeParam>,
@@ -43,7 +39,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Enum definition: `Color: Red, Green, Blue`
     Enum {
         name: String,
         type_params: Vec<TypeParam>,
@@ -52,14 +47,12 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Import: `{ io } = std`, `{ Channel } = std.sync.channel`
     Import {
         names: Vec<String>,
         module_path: Vec<String>,
         span: Span,
     },
 
-    /// Behavior (trait) definition: `Serializable: behavior { ... }`
     Behavior {
         name: String,
         type_params: Vec<TypeParam>,
@@ -68,7 +61,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Impl block: `Point.impl = { ... }` or `Collector.implements(ActorBehavior, { ... })`
     ImplBlock {
         type_name: String,
         behavior: Option<String>,
@@ -78,7 +70,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Compile-time behavior assertion: `SensorReading.requires(Serializable)`
     Requires {
         type_name: String,
         behavior: String,
@@ -86,7 +77,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Generated/fallback behavior association: `Point.derive(Json)`
     Derive {
         type_name: String,
         behavior: String,
@@ -94,7 +84,6 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Behavior inheritance: `PrettyPrint.extends(Serializable)`
     BehaviorExtends {
         behavior: String,
         parent: String,
@@ -102,15 +91,57 @@ pub enum Declaration {
         span: Span,
     },
 
-    /// Top-level expression.
-    TopLevelExpr { expr: Expression, span: Span },
+    TopLevelExpr {
+        expr: Expression,
+        span: Span,
+    },
+}
 
-    /// Error recovery node that allows parsing to continue after errors.
-    Error { span: Span },
+pub struct CallableDeclaration<'a> {
+    pub name: &'a str,
+    pub type_params: &'a [TypeParam],
+    pub params: &'a [Param],
+    pub return_type: &'a Option<AstType>,
+    pub body: &'a Expression,
+    pub public: bool,
+    pub span: Span,
 }
 
 impl Declaration {
-    /// Returns the span of this declaration.
+    pub fn as_callable(&self) -> Option<CallableDeclaration<'_>> {
+        match self {
+            Declaration::Function {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                public,
+                span,
+                ..
+            }
+            | Declaration::Method {
+                method_name: name,
+                type_params,
+                params,
+                return_type,
+                body,
+                public,
+                span,
+                ..
+            } => Some(CallableDeclaration {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                public: *public,
+                span: *span,
+            }),
+            _ => None,
+        }
+    }
+
     pub fn span(&self) -> Span {
         match self {
             Declaration::Function { span, .. }
@@ -123,12 +154,10 @@ impl Declaration {
             | Declaration::Requires { span, .. }
             | Declaration::Derive { span, .. }
             | Declaration::BehaviorExtends { span, .. }
-            | Declaration::TopLevelExpr { span, .. }
-            | Declaration::Error { span, .. } => *span,
+            | Declaration::TopLevelExpr { span, .. } => *span,
         }
     }
 
-    /// Returns the name of this declaration, if it has one.
     pub fn name(&self) -> Option<&str> {
         match self {
             Declaration::Function { name, .. }
@@ -140,7 +169,6 @@ impl Declaration {
         }
     }
 
-    /// Whether this declaration is exported from its module.
     pub fn is_public(&self) -> bool {
         match self {
             Declaration::Function { public, .. }

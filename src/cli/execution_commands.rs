@@ -15,19 +15,7 @@ pub(super) fn cmd_test(path_str: &str) {
     }
 
     for target in super::test_build_targets(path_str) {
-        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
-            eprintln!("error creating {}: {}", target.out_dir.display(), err);
-            process::exit(1);
-        }
-
-        let bin_path = super::compile_file_to_binary(
-            target
-                .root_path
-                .to_str()
-                .unwrap_or(&target.root_source_file),
-            Some(&target.out_dir),
-            Some(&target.name),
-        );
+        let bin_path = compile_build_target(&target);
         let run = process::Command::new(&bin_path).status();
         match run {
             Ok(status) if status.success() => {
@@ -45,28 +33,24 @@ pub(super) fn cmd_test(path_str: &str) {
     }
 }
 
-pub(super) fn cmd_run_file(path_str: &str) {
-    if super::is_build_zen_path(path_str) {
-        cmd_build_graph(path_str);
-    } else {
-        super::compile_file_to_binary(path_str, None, None);
+pub(super) fn cmd_build_graph(path_str: &str) {
+    for target in super::executable_build_targets(path_str) {
+        compile_build_target(&target);
     }
 }
 
-pub(super) fn cmd_build_graph(path_str: &str) {
-    for target in super::executable_build_targets(path_str) {
-        if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
-            eprintln!("error creating {}: {}", target.out_dir.display(), err);
-            process::exit(1);
-        }
-
-        super::compile_file_to_binary(
-            target
-                .root_path
-                .to_str()
-                .unwrap_or(&target.root_source_file),
-            Some(&target.out_dir),
-            Some(&target.name),
-        );
+fn compile_build_target(target: &super::BuildGraphTarget) -> std::path::PathBuf {
+    if let Err(err) = std::fs::create_dir_all(&target.out_dir) {
+        eprintln!("error creating {}: {}", target.out_dir.display(), err);
+        process::exit(1);
     }
+
+    super::compile_file_to_binary(
+        target
+            .root_path
+            .to_str()
+            .unwrap_or(&target.root_source_file),
+        Some(&target.out_dir),
+        Some(&target.name),
+    )
 }

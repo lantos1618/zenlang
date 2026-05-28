@@ -1,5 +1,3 @@
-use super::program_globals::push_typed_global;
-use super::program_impl_blocks::impl_self_ast_type;
 use super::*;
 
 impl TypeChecker {
@@ -8,74 +6,49 @@ impl TypeChecker {
         program: &ast::Program,
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         self.collect_declarations(&program.declarations);
-        self.validate_collected_declaration_semantics(&program.declarations, None);
-        self.check_program_after_collection(program)
-    }
-
-    pub(super) fn check_program_after_collection(
-        &mut self,
-        program: &ast::Program,
-    ) -> Result<TypedProgram, Vec<Diagnostic>> {
+        self.validate_collected_declaration_semantics(&program.declarations);
         let mut functions = Vec::new();
         let mut types = Vec::new();
         let mut globals = Vec::new();
         let mut entry_point = None;
 
         for decl in &program.declarations {
+            if let Some(callable) = decl.as_callable() {
+                if callable.type_params.is_empty() {
+                    let (checked_name, self_type) = match decl {
+                        Declaration::Method { type_name, .. } => (
+                            method_signature_key(type_name, callable.name),
+                            Some(self.resolve_type(&AstType::Named(type_name.clone()))),
+                        ),
+                        _ => {
+                            if callable.name == "main" {
+                                entry_point = Some(callable.name.to_string());
+                            }
+                            (callable.name.to_string(), None)
+                        }
+                    };
+                    self.push_checked_function_decl(&mut functions, decl, &checked_name, self_type);
+                }
+                continue;
+            }
+
             match decl {
-                Declaration::Function {
-                    name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span,
-                    ..
-                } => {
-                    if !type_params.is_empty() {
-                        continue;
-                    }
-                    if name == "main" {
-                        entry_point = Some(name.clone());
-                    }
-                    match self.check_function(name, params, return_type, body, span) {
-                        Ok(func) => functions.push(func),
-                        Err(d) => self.diagnostics.push(d),
-                    }
-                }
-                Declaration::Method {
-                    type_name,
-                    method_name,
-                    type_params,
-                    params,
-                    return_type,
-                    body,
-                    span,
-                    ..
-                } => {
-                    if !type_params.is_empty() {
-                        continue;
-                    }
-                    let full_name = Self::method_key(type_name, method_name);
-                    self.current_self_type =
-                        Some(self.resolve_type(&AstType::Named(type_name.clone())));
-                    match self.check_function(&full_name, params, return_type, body, span) {
-                        Ok(func) => functions.push(func),
-                        Err(d) => self.diagnostics.push(d),
-                    }
-                    self.current_self_type = None;
-                }
                 Declaration::Struct {
                     name,
                     type_params,
                     fields,
                     span,
                     ..
-                } => {
-                    if !type_params.is_empty() {
-                        continue;
-                    }
-                    types.push(self.typed_struct_def(name, fields, *span));
+                } if type_params.is_empty() => {
+                    let fields = fields
+                        .iter()
+                        .map(|field| (field.name.clone(), self.resolve_type(&field.ty)))
+                        .collect();
+                    types.push(TypedTypeDef {
+                        name: name.to_string(),
+                        kind: TypeDefKind::Struct { fields },
+                        span: *span,
+                    });
                 }
                 Declaration::Enum {
                     name,
@@ -83,20 +56,55 @@ impl TypeChecker {
                     variants,
                     span,
                     ..
-                } => {
-                    if !type_params.is_empty() {
-                        continue;
-                    }
-                    types.push(self.typed_enum_def(name, variants, *span));
+                } if type_params.is_empty() => {
+                    let variants = variants
+                        .iter()
+                        .enumerate()
+                        .map(|(index, variant)| TypedVariant {
+                            name: variant.name.clone(),
+                            tag: index as u32,
+                            payload: variant.payload.as_ref().map(|ty| self.resolve_type(ty)),
+                        })
+                        .collect();
+                    types.push(TypedTypeDef {
+                        name: name.to_string(),
+                        kind: TypeDefKind::Enum { variants },
+                        span: *span,
+                    });
                 }
                 Declaration::TopLevelExpr { expr, span } => match self.check_expr(expr) {
                     Ok(typed_expr) => {
-                        push_typed_global(&mut globals, typed_expr, *span);
+                        if let TypedExprKind::Block(block) = &typed_expr.kind {
+                            if block.expr.is_none() && block.statements.len() == 1 {
+                                if let TypedStatementKind::VarDecl {
+                                    name,
+                                    ty,
+                                    value,
+                                    mutable,
+                                } = &block.statements[0].kind
+                                {
+                                    globals.push(TypedGlobal {
+                                        name: name.clone(),
+                                        ty: ty.clone(),
+                                        value: value.clone(),
+                                        mutable: *mutable,
+                                        span: *span,
+                                    });
+                                    continue;
+                                }
+                            }
+                        }
+
+                        globals.push(TypedGlobal {
+                            name: "__top_level__".into(),
+                            ty: typed_expr.ty.clone(),
+                            value: typed_expr,
+                            mutable: false,
+                            span: *span,
+                        });
                     }
                     Err(d) => self.diagnostics.push(d),
                 },
-                Declaration::Import { .. } => {}
-                Declaration::Behavior { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
                     type_args,
@@ -105,34 +113,23 @@ impl TypeChecker {
                     methods,
                     ..
                 } => {
+                    let self_type =
+                        self.resolve_type(&concrete_self_target_type(type_name, type_args));
                     for method in methods {
-                        if let Declaration::Function {
-                            name,
-                            type_params,
-                            params,
-                            return_type,
-                            body,
-                            span,
-                            ..
-                        } = method
-                        {
-                            if !type_params.is_empty() {
-                                continue;
-                            }
-                            let full_name = Self::behavior_impl_method_key_with_target_args(
+                        if let Some(method_decl) = method.as_callable() {
+                            let full_name = behavior_impl_method_signature_key_with_target_args(
                                 type_name,
-                                name,
+                                method_decl.name,
                                 behavior.as_deref(),
                                 behavior_type_args,
                                 type_args,
                             );
-                            self.current_self_type =
-                                Some(self.resolve_type(&impl_self_ast_type(type_name, type_args)));
-                            match self.check_function(&full_name, params, return_type, body, span) {
-                                Ok(func) => functions.push(func),
-                                Err(d) => self.diagnostics.push(d),
-                            }
-                            self.current_self_type = None;
+                            self.push_checked_function_decl(
+                                &mut functions,
+                                method,
+                                &full_name,
+                                Some(self_type.clone()),
+                            );
                         }
                     }
 
@@ -144,23 +141,15 @@ impl TypeChecker {
                             behavior_type_args,
                             methods,
                         ) {
-                            if !default.type_params.is_empty() {
-                                continue;
+                            if let Some(default_decl) = default.as_callable() {
+                                let full_name = method_signature_key(type_name, default_decl.name);
+                                self.push_checked_function_decl(
+                                    &mut functions,
+                                    &default,
+                                    &full_name,
+                                    Some(self_type.clone()),
+                                );
                             }
-                            let full_name = Self::method_key(type_name, &default.name);
-                            self.current_self_type =
-                                Some(self.resolve_type(&impl_self_ast_type(type_name, type_args)));
-                            match self.check_function(
-                                &full_name,
-                                &default.params,
-                                &default.return_type,
-                                &default.body,
-                                &default.span,
-                            ) {
-                                Ok(func) => functions.push(func),
-                                Err(d) => self.diagnostics.push(d),
-                            }
-                            self.current_self_type = None;
                         }
                     }
                 }
@@ -168,15 +157,7 @@ impl TypeChecker {
             }
         }
 
-        let errors: Vec<_> = self
-            .diagnostics
-            .iter()
-            .filter(|d| d.is_error())
-            .cloned()
-            .collect();
-        if !errors.is_empty() {
-            return Err(errors);
-        }
+        self.fail_if_errors()?;
 
         functions.append(&mut self.specialized_functions);
         types.append(&mut self.specialized_types);
@@ -189,27 +170,32 @@ impl TypeChecker {
         })
     }
 
-    pub fn check_program_with_symbols(
+    fn push_checked_function_decl(
         &mut self,
-        program: &ast::Program,
-        symbols: &SymbolTable,
-    ) -> Result<TypedProgram, Vec<Diagnostic>> {
-        self.validate_resolver_symbols(program, symbols);
-        if self.diagnostics.iter().any(|diag| diag.is_error()) {
-            return Err(self
-                .diagnostics
-                .iter()
-                .filter(|diag| diag.is_error())
-                .cloned()
-                .collect());
+        functions: &mut Vec<TypedFunction>,
+        decl: &Declaration,
+        checked_name: &str,
+        self_type: Option<Type>,
+    ) {
+        let Some(callable) = decl.as_callable() else {
+            return;
+        };
+        if !callable.type_params.is_empty() {
+            return;
         }
-        self.collect_resolver_imports(symbols);
-        self.collect_declarations_with_symbols(&program.declarations, symbols);
-        self.check_program_after_collection(program)
-    }
-
-    /// Get all diagnostics (errors + warnings).
-    pub fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
+        let saved_self_type = self_type.map(|self_type| self.current_self_type.replace(self_type));
+        match self.check_function(
+            checked_name,
+            callable.params,
+            callable.return_type,
+            callable.body,
+            &callable.span,
+        ) {
+            Ok(function) => functions.push(function),
+            Err(diagnostic) => self.diagnostics.push(diagnostic),
+        }
+        if let Some(saved_self_type) = saved_self_type {
+            self.current_self_type = saved_self_type;
+        }
     }
 }

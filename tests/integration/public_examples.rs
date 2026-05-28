@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
 use tempfile::TempDir;
 
 #[test]
@@ -28,42 +28,23 @@ fn public_project_build_graph_typechecks_through_cli() {
 #[test]
 fn public_project_build_graph_builds_and_tests_through_cli() {
     let project = copy_public_project_example();
-    let build_path = project.path().join("build.zen");
-    let build_path_str = build_path.to_str().expect("utf-8 build path");
 
-    let build = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", build_path_str])
-        .output()
-        .expect("run zen build public project");
-    assert!(
-        build.status.success(),
-        "zen build examples/project/build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&build.stdout),
-        String::from_utf8_lossy(&build.stderr)
+    let build = run_zen(
+        &["build", "build.zen"],
+        project.path(),
+        "build public project",
     );
+    assert_command_success(&build, "zen build examples/project/build.zen");
 
     let binary_path = project.path().join("build").join("myapp");
-    let run = Command::new(&binary_path)
-        .output()
-        .unwrap_or_else(|err| panic!("run public project binary: {err}"));
-    assert!(
-        run.status.success(),
-        "public project binary exited with {}: stdout={}, stderr={}",
-        run.status,
-        String::from_utf8_lossy(&run.stdout),
-        String::from_utf8_lossy(&run.stderr)
-    );
+    assert_binary_runs(&binary_path, project.path(), "public project binary");
 
-    let test = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["test", build_path_str])
-        .output()
-        .expect("run zen test public project");
-    assert!(
-        test.status.success(),
-        "zen test examples/project/build.zen failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&test.stdout),
-        String::from_utf8_lossy(&test.stderr)
+    let test = run_zen(
+        &["test", "build.zen"],
+        project.path(),
+        "test public project",
     );
+    assert_command_success(&test, "zen test examples/project/build.zen");
 }
 
 #[test]
@@ -99,18 +80,12 @@ fn public_runnable_examples_execute_through_cli() {
 }
 
 fn assert_zen_check_succeeds(path: &str) {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", path])
-        .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")))
-        .output()
-        .unwrap_or_else(|err| panic!("run zen check {path}: {err}"));
-
-    assert!(
-        output.status.success(),
-        "zen check {path} failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let output = run_zen(
+        &["check", path],
+        Path::new(env!("CARGO_MANIFEST_DIR")),
+        &format!("check {path}"),
     );
+    assert_command_success(&output, &format!("zen check {path}"));
 }
 
 fn assert_zen_build_succeeds(path: &str) {
@@ -119,17 +94,10 @@ fn assert_zen_build_succeeds(path: &str) {
 
 fn assert_zen_build_and_run_succeeds(path: &str) {
     let built = build_public_example(path);
-    let run = Command::new(&built.binary_path)
-        .current_dir(built.temp_dir.path())
-        .output()
-        .unwrap_or_else(|err| panic!("run compiled public example {path}: {err}"));
-
-    assert!(
-        run.status.success(),
-        "compiled public example {path} exited with {}: stdout={}, stderr={}",
-        run.status,
-        String::from_utf8_lossy(&run.stdout),
-        String::from_utf8_lossy(&run.stderr)
+    assert_binary_runs(
+        &built.binary_path,
+        built.temp_dir.path(),
+        &format!("compiled public example {path}"),
     );
 }
 
@@ -141,18 +109,12 @@ struct BuiltPublicExample {
 fn build_public_example(path: &str) -> BuiltPublicExample {
     let source_path = Path::new(env!("CARGO_MANIFEST_DIR")).join(path);
     let temp_dir = tempfile::tempdir().expect("create temp dir");
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["build", source_path.to_str().expect("utf-8 source path")])
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap_or_else(|err| panic!("run zen build {path}: {err}"));
-
-    assert!(
-        output.status.success(),
-        "zen build {path} failed: stdout={}, stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+    let output = run_zen(
+        &["build", source_path.to_str().expect("utf-8 source path")],
+        temp_dir.path(),
+        &format!("build {path}"),
     );
+    assert_command_success(&output, &format!("zen build {path}"));
 
     let stem = source_path
         .file_stem()
@@ -173,4 +135,29 @@ fn copy_public_project_example() -> TempDir {
             .unwrap_or_else(|err| panic!("copy examples/project/{file_name}: {err}"));
     }
     temp_dir
+}
+
+fn run_zen(args: &[&str], current_dir: &Path, context: &str) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_zen"))
+        .args(args)
+        .current_dir(current_dir)
+        .output()
+        .unwrap_or_else(|err| panic!("run zen {context}: {err}"))
+}
+
+fn assert_binary_runs(binary_path: &Path, current_dir: &Path, context: &str) {
+    let output = Command::new(binary_path)
+        .current_dir(current_dir)
+        .output()
+        .unwrap_or_else(|err| panic!("run {context}: {err}"));
+    assert_command_success(&output, context);
+}
+
+fn assert_command_success(output: &Output, context: &str) {
+    assert!(
+        output.status.success(),
+        "{context} failed: stdout={}, stderr={}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

@@ -1,18 +1,29 @@
-//! Type resolution — AstType → Type, field lookups, and compatibility checks.
-#![allow(clippy::result_large_err)]
-
 use std::collections::HashMap;
 
 use crate::ast::typed::Type;
-use crate::ast::{is_builtin_type_name, AstType};
+use crate::ast::AstType;
 
+use super::monomorphize_types::substitute_ast_type;
 use super::TypeChecker;
 
-mod compatibility;
-
 impl TypeChecker {
-    /// Resolve an AstType to a concrete Type.
     pub(crate) fn resolve_type(&self, ast_ty: &AstType) -> Type {
+        self.resolve_type_with_substitutions(ast_ty, None)
+    }
+
+    pub(crate) fn substitute_type(
+        &self,
+        ast_type: &AstType,
+        substitutions: &HashMap<String, Type>,
+    ) -> Type {
+        self.resolve_type_with_substitutions(ast_type, Some(substitutions))
+    }
+
+    pub(super) fn resolve_type_with_substitutions(
+        &self,
+        ast_ty: &AstType,
+        substitutions: Option<&HashMap<String, Type>>,
+    ) -> Type {
         match ast_ty {
             AstType::I8 => Type::I8,
             AstType::I16 => Type::I16,
@@ -28,90 +39,86 @@ impl TypeChecker {
             AstType::Bool => Type::Bool,
             AstType::Void => Type::Void,
             AstType::Str => Type::Str,
-            AstType::String => Type::String,
-            AstType::Named(name) => self.resolve_named_type(name),
-            AstType::Generic { name, type_args } => self.resolve_generic_type(name, type_args),
-            AstType::Ptr(inner) => Type::Ptr(Box::new(self.resolve_type(inner))),
-            AstType::MutPtr(inner) => Type::MutPtr(Box::new(self.resolve_type(inner))),
-            AstType::RawPtr(inner) => Type::RawPtr(Box::new(self.resolve_type(inner))),
+            AstType::Named(name) => {
+                if let Some(concrete) =
+                    substitutions.and_then(|substitutions| substitutions.get(name))
+                {
+                    concrete.clone()
+                } else if let Some(concrete) = self
+                    .type_substitutions
+                    .iter()
+                    .rev()
+                    .find_map(|subs| subs.get(name))
+                {
+                    concrete.clone()
+                } else if let Some(info) = self.structs.get(name) {
+                    self.resolve_struct_type(name, &info.fields, None)
+                } else if let Some(info) = self.enums.get(name) {
+                    self.resolve_enum_type(name, &info.variants, None)
+                } else {
+                    Type::Named(name.to_string())
+                }
+            }
+            AstType::Generic { name, type_args } => {
+                if let Some(substitutions) = substitutions {
+                    let type_args = type_args
+                        .iter()
+                        .map(|arg| substitute_ast_type(arg, substitutions))
+                        .collect::<Vec<_>>();
+                    self.resolve_generic_type(name, &type_args)
+                } else {
+                    self.resolve_generic_type(name, type_args)
+                }
+            }
+            AstType::Ptr(inner) => Type::Ptr(self.resolve_boxed_type(inner, substitutions)),
+            AstType::MutPtr(inner) => Type::MutPtr(self.resolve_boxed_type(inner, substitutions)),
+            AstType::RawPtr(inner) => Type::RawPtr(self.resolve_boxed_type(inner, substitutions)),
             AstType::Array { elem, size } => Type::Array {
-                elem: Box::new(self.resolve_type(elem)),
+                elem: self.resolve_boxed_type(elem, substitutions),
                 size: *size,
             },
-            AstType::Slice(inner) => Type::Slice(Box::new(self.resolve_type(inner))),
+            AstType::Slice(inner) => Type::Slice(self.resolve_boxed_type(inner, substitutions)),
             AstType::Function { params, ret } => Type::Function {
-                params: params.iter().map(|p| self.resolve_type(p)).collect(),
-                ret: Box::new(self.resolve_type(ret)),
+                params: params
+                    .iter()
+                    .map(|param| self.resolve_type_with_substitutions(param, substitutions))
+                    .collect(),
+                ret: Box::new(self.resolve_type_with_substitutions(ret, substitutions)),
             },
             AstType::SelfType => self.current_self_type.clone().unwrap_or(Type::Unknown),
             AstType::Inferred => Type::Unknown,
         }
     }
 
-    fn resolve_named_type(&self, name: &str) -> Type {
-        if let Some(concrete) = self
-            .type_substitutions
-            .iter()
-            .rev()
-            .find_map(|subs| subs.get(name))
-        {
-            return concrete.clone();
-        }
-        if is_builtin_type_name(name) {
-            return Type::String;
-        }
-        if let Some(info) = self.structs.get(name) {
-            return self.resolve_struct_type(&info.name, &info.fields, None);
-        }
-        if let Some(info) = self.enums.get(name) {
-            return self.resolve_enum_type(&info.name, &info.variants, None);
-        }
-        Type::Named(name.to_string())
+    fn resolve_boxed_type(
+        &self,
+        ast_ty: &AstType,
+        substitutions: Option<&HashMap<String, Type>>,
+    ) -> Box<Type> {
+        Box::new(self.resolve_type_with_substitutions(ast_ty, substitutions))
     }
 
     fn resolve_generic_type(&self, name: &str, type_args: &[AstType]) -> Type {
         let requested = self.mangle_generic_type_name(name, type_args);
         if let Some(info) = self.structs.get(name) {
-            let mangled = self.resolved_generic_type_name(
+            let mangled = self.reserved_or_requested_generic_type_name(
                 "struct",
                 info.specialization_scope.as_deref(),
-                &requested,
+                requested,
             );
-            let substitutions = self.generic_type_substitutions(&info.type_params, type_args);
+            let substitutions = self.type_arg_substitutions(&info.type_params, type_args);
             return self.resolve_struct_type(&mangled, &info.fields, Some(&substitutions));
         }
         if let Some(info) = self.enums.get(name) {
-            let mangled = self.resolved_generic_type_name(
+            let mangled = self.reserved_or_requested_generic_type_name(
                 "enum",
                 info.specialization_scope.as_deref(),
-                &requested,
+                requested,
             );
-            let substitutions = self.generic_type_substitutions(&info.type_params, type_args);
+            let substitutions = self.type_arg_substitutions(&info.type_params, type_args);
             return self.resolve_enum_type(&mangled, &info.variants, Some(&substitutions));
         }
         Type::Named(requested)
-    }
-
-    fn resolved_generic_type_name(
-        &self,
-        kind: &str,
-        specialization_scope: Option<&str>,
-        requested: &str,
-    ) -> String {
-        self.reserved_generic_type_name(kind, specialization_scope, requested)
-            .unwrap_or_else(|| requested.to_string())
-    }
-
-    fn generic_type_substitutions(
-        &self,
-        type_params: &[String],
-        type_args: &[AstType],
-    ) -> HashMap<String, Type> {
-        type_params
-            .iter()
-            .zip(type_args.iter())
-            .map(|(param, arg)| (param.clone(), self.resolve_type(arg)))
-            .collect()
     }
 
     fn resolve_struct_type(
@@ -127,7 +134,7 @@ impl TypeChecker {
                 .map(|(field_name, field_type)| {
                     (
                         field_name.clone(),
-                        self.resolve_aggregate_member_type(field_type, substitutions),
+                        self.resolve_type_with_substitutions(field_type, substitutions),
                     )
                 })
                 .collect(),
@@ -149,49 +156,43 @@ impl TypeChecker {
                         variant_name.clone(),
                         payload
                             .as_ref()
-                            .map(|ty| self.resolve_aggregate_member_type(ty, substitutions)),
+                            .map(|ty| self.resolve_type_with_substitutions(ty, substitutions)),
                     )
                 })
                 .collect(),
         }
     }
 
-    fn resolve_aggregate_member_type(
-        &self,
-        member_type: &AstType,
-        substitutions: Option<&HashMap<String, Type>>,
-    ) -> Type {
-        substitutions.map_or_else(
-            || self.resolve_type(member_type),
-            |substitutions| self.substitute_type(member_type, substitutions),
-        )
-    }
-
     pub(crate) fn lookup_field_type(&self, ty: &Type, field: &str) -> Type {
         match ty {
-            Type::Struct { fields, .. } => {
-                for (name, field_ty) in fields {
-                    if name == field {
-                        return field_ty.clone();
-                    }
-                }
-                Type::Unknown
-            }
-            Type::Named(name) => {
-                if let Some(info) = self.structs.get(name) {
-                    for (fname, ftype) in &info.fields {
-                        if fname == field {
-                            return self.resolve_type(ftype);
-                        }
-                    }
-                }
-                Type::Unknown
-            }
-            Type::Ptr(inner) | Type::MutPtr(inner) => {
-                // Auto-deref through pointers for field access
-                self.lookup_field_type(inner, field)
-            }
+            Type::Struct { fields, .. } => fields
+                .iter()
+                .find_map(|(name, field_ty)| (name == field).then(|| field_ty.clone()))
+                .unwrap_or(Type::Unknown),
+            Type::Named(name) => self
+                .structs
+                .get(name)
+                .and_then(|info| {
+                    info.fields
+                        .iter()
+                        .find_map(|(name, ty)| (name == field).then(|| self.resolve_type(ty)))
+                })
+                .unwrap_or(Type::Unknown),
+            Type::Ptr(inner) | Type::MutPtr(inner) => self.lookup_field_type(inner, field),
             _ => Type::Unknown,
+        }
+    }
+
+    pub(crate) fn types_compatible(&self, expected: &Type, actual: &Type) -> bool {
+        match (expected, actual) {
+            (a, b) if a == b => true,
+            (Type::Unknown | Type::Never, _) | (_, Type::Unknown | Type::Never) => true,
+            (Type::Named(name), ty) | (ty, Type::Named(name)) => {
+                ty.nominal_name().is_some_and(|ty_name| ty_name == name)
+            }
+            (Type::Struct { name: a, .. }, Type::Struct { name: b, .. }) => a == b,
+            (Type::Enum { name: a, .. }, Type::Enum { name: b, .. }) => a == b,
+            _ => false,
         }
     }
 }

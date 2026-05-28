@@ -1,9 +1,10 @@
 use super::assert_behavior_association_diagnostics_golden;
 
 #[test]
-fn emit_json_diagnostics_generic_requires_missing_impl_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+fn emit_json_diagnostics_generic_requires_schemas_match_golden() {
+    for (source, filename, description) in [
+        (
+            r#"
 Point: { x: i32 }
 
 Json<T>: behavior {
@@ -16,16 +17,11 @@ main = () i32 {
     0
 }
 "#,
-        "generic_requires_missing_impl.zen",
-        "tests/fixtures/ir_json/diagnostics_generic_requires_missing_impl.golden.json",
-        "missing generic behavior requires impl",
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_duplicate_generic_requires_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+            "generic_requires_missing_impl.zen",
+            "missing generic behavior requires impl",
+        ),
+        (
+            r#"
 Point: { x: i32 }
 
 Json<T>: behavior {
@@ -43,16 +39,11 @@ main = () i32 {
     0
 }
 "#,
-        "duplicate_generic_requires.zen",
-        "tests/fixtures/ir_json/diagnostics_duplicate_generic_requires.golden.json",
-        "duplicate generic behavior requires",
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_generic_requires_arity_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+            "duplicate_generic_requires.zen",
+            "duplicate generic behavior requires",
+        ),
+        (
+            r#"
 Point: { x: i32 }
 
 Json<T>: behavior {
@@ -65,16 +56,11 @@ main = () i32 {
     0
 }
 "#,
-        "generic_requires_arity.zen",
-        "tests/fixtures/ir_json/diagnostics_generic_requires_arity.golden.json",
-        "generic behavior requires arity",
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_nongeneric_requires_type_args_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+            "generic_requires_arity.zen",
+            "generic behavior requires arity",
+        ),
+        (
+            r#"
 Point: { x: i32 }
 
 Json: behavior {
@@ -87,8 +73,10 @@ main = () i32 {
     0
 }
 "#,
-        "nongeneric_requires_type_args.zen",
-        "tests/fixtures/ir_json/diagnostics_nongeneric_requires_type_args.golden.json",
-        "non-generic behavior requires type arguments",
-    );
+            "nongeneric_requires_type_args.zen",
+            "non-generic behavior requires type arguments",
+        ),
+    ] {
+        assert_behavior_association_diagnostics_golden(source, filename, description);
+    }
 }

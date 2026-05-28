@@ -14,16 +14,9 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
         &["Option_T", "T unwrap_or", "unwrap_or(x"],
     );
 
-    assert_fixture_specialization(
+    assert_option_unwrap_or_method(
         "generic_enum_method.zen",
-        &[
-            "typedef struct Option_i32 Option_i32;",
-            "int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)",
-            "Option_unwrap_or_i32(some, 0LL)",
-            "Option_unwrap_or_i32(none, 55LL)",
-        ],
-        &["Option_unwrap_or_i32"],
-        &["Option_T", "T Option_unwrap_or", "Option_unwrap_or(some"],
+        "Option_unwrap_or_i32(none, 55LL)",
     );
 
     assert_fixture_specialization(
@@ -66,35 +59,14 @@ fn enum_specializations_do_not_emit_unspecialized_c_symbols() {
         &["Result_T", "T unwrap_or", "unwrap_or(err"],
     );
 
-    assert_fixture_specialization(
+    assert_result_unwrap_or_method(
         "generic_result_enum_method.zen",
-        &[
-            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
-            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
-            "Result_unwrap_or_i32_StaticString(ok, 0LL)",
-            "Result_unwrap_or_i32_StaticString(err, 34LL)",
-        ],
-        &["Result_unwrap_or_i32_StaticString"],
-        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
+        "Result_unwrap_or_i32_StaticString(err, 34LL)",
     );
 
-    assert_fixture_specialization(
+    assert_result_unwrap_or_multi_specialization(
         "generic_result_enum_multi_specialization.zen",
-        &[
-            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
-            "typedef struct Result_bool_StaticString Result_bool_StaticString;",
-            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
-            "bool Result_unwrap_or_bool_StaticString(Result_bool_StaticString self, bool fallback)",
-            "Result_unwrap_or_i32_StaticString(ok_int, 0LL)",
-            "Result_unwrap_or_i32_StaticString(err_int, 34LL)",
-            "Result_unwrap_or_bool_StaticString(ok_bool, true)",
-            "Result_unwrap_or_bool_StaticString(err_bool, true)",
-        ],
-        &[
-            "Result_unwrap_or_i32_StaticString",
-            "Result_unwrap_or_bool_StaticString",
-        ],
-        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
+        "Result_unwrap_or_i32_StaticString(err_int, 34LL)",
     );
 
     assert_fixture_specialization(

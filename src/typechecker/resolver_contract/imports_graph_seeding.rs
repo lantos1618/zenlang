@@ -1,5 +1,22 @@
 impl TypeChecker {
-    fn seed_module_graph_import(&mut self, local_name: &str, decl: &Declaration) {
+    pub(in crate::typechecker) fn seed_declaration_info(
+        &mut self,
+        local_name: &str,
+        decl: &Declaration,
+    ) {
+        if let Some(callable) = decl.as_callable() {
+            let key = match decl {
+                Declaration::Method { type_name, .. } => method_signature_key(type_name, callable.name),
+                _ => local_name.to_string(),
+            };
+            if matches!(decl, Declaration::Method { .. }) {
+                insert_callable_signature(key, decl, &mut self.methods, &mut self.generic_methods);
+            } else {
+                insert_callable_signature(key, decl, &mut self.functions, &mut self.generic_functions);
+            }
+            return;
+        }
+
         match decl {
             Declaration::Struct {
                 type_params,
@@ -8,7 +25,7 @@ impl TypeChecker {
             } => {
                 self.structs.insert(
                     local_name.to_string(),
-                    struct_info_from_ast_fields(local_name.to_string(), type_params, fields),
+                    struct_info_from_ast_fields(type_params, fields),
                 );
             }
             Declaration::Enum {
@@ -18,7 +35,7 @@ impl TypeChecker {
             } => {
                 self.enums.insert(
                     local_name.to_string(),
-                    enum_info_from_ast_variants(local_name.to_string(), type_params, variants),
+                    enum_info_from_ast_variants(type_params, variants),
                 );
             }
             Declaration::Behavior {
@@ -28,53 +45,12 @@ impl TypeChecker {
             } => {
                 self.behaviors.insert(
                     local_name.to_string(),
-                    behavior_info_from_ast_methods(local_name.to_string(), type_params, methods),
+                    BehaviorInfo {
+                        type_params: type_param_names(type_params),
+                        type_param_bounds: type_param_bounds(type_params),
+                        methods: methods.to_vec(),
+                    },
                 );
-            }
-            Declaration::Function {
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            } => {
-                self.functions.insert(
-                    local_name.to_string(),
-                    func_info_from_ast_signature(
-                        local_name.to_string(),
-                        type_params,
-                        params,
-                        return_type,
-                    ),
-                );
-                if let Some(template) =
-                    generic_template_from_type_params(type_params, params, return_type, body, *span)
-                {
-                    self.generic_functions
-                        .insert(local_name.to_string(), template);
-                }
-            }
-            Declaration::Method {
-                type_name,
-                method_name,
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            } => {
-                let key = Self::method_key(type_name, method_name);
-                self.methods.insert(
-                    key.clone(),
-                    func_info_from_ast_signature(key.clone(), type_params, params, return_type),
-                );
-                if let Some(template) =
-                    generic_template_from_type_params(type_params, params, return_type, body, *span)
-                {
-                    self.generic_methods.insert(key, template);
-                }
             }
             _ => {}
         }

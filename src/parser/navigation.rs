@@ -2,32 +2,19 @@ use super::*;
 
 impl Parser {
     pub(super) fn peek(&self) -> &Token {
-        self.tokens
-            .get(self.pos)
-            .map(|(t, _)| t)
-            .unwrap_or(&Token::EOF)
+        self.tokens.get(self.pos).map_or(&Token::EOF, |(t, _)| t)
     }
 
     pub(super) fn peek_span(&self) -> Span {
         self.tokens
             .get(self.pos)
-            .map(|(_, s)| *s)
-            .unwrap_or_else(Span::dummy)
+            .map_or_else(Span::dummy, |(_, s)| *s)
     }
 
-    /// Peek at the next non-newline token without consuming.
     pub(super) fn peek_skip_newlines(&self) -> &Token {
-        let mut i = self.pos;
-        loop {
-            match self.tokens.get(i) {
-                Some((Token::Newline, _)) => i += 1,
-                Some((t, _)) => return t,
-                None => return &Token::EOF,
-            }
-        }
+        self.peek_ahead(0)
     }
 
-    /// Look ahead n significant (non-newline) tokens.
     pub(super) fn peek_ahead(&self, n: usize) -> &Token {
         let mut count = 0;
         let mut i = self.pos;
@@ -64,6 +51,14 @@ impl Parser {
         }
     }
 
+    pub(super) fn consume_comma(&mut self) -> bool {
+        if !matches!(self.peek(), Token::Comma) {
+            return false;
+        }
+        self.advance();
+        true
+    }
+
     pub(super) fn expect(&mut self, expected: &Token) -> Result<Span, CompileError> {
         self.skip_newlines();
         let (tok, span) = self.advance();
@@ -77,7 +72,6 @@ impl Parser {
         }
     }
 
-    /// Expect a `>` token, splitting `>>` (ShiftRight) if needed for nested generics.
     pub(super) fn expect_gt(&mut self) -> Result<Span, CompileError> {
         self.skip_newlines();
         let (tok, span) = self
@@ -91,7 +85,6 @@ impl Parser {
                 Ok(span)
             }
             Token::ShiftRight => {
-                // Split `>>` into `>` + `>`: consume first `>`, leave second in stream.
                 let first_span = Span::new(span.file_id, span.start, span.start + 1);
                 let second_span = Span::new(span.file_id, span.start + 1, span.end);
                 self.tokens[self.pos] = (Token::Gt, second_span);
@@ -128,8 +121,6 @@ impl Parser {
         }
     }
 
-    /// Skip newlines only if the next non-newline token is a continuation
-    /// (operator, dot, etc.), preserving newlines that separate statements.
     pub(super) fn skip_newlines_if_continuation(&mut self) {
         if !matches!(self.peek(), Token::Newline) {
             return;

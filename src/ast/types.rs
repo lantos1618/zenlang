@@ -1,24 +1,14 @@
 use crate::error::Span;
 use serde::Serialize;
 
-mod gated;
+use super::declarations::TypeParam;
+
 mod names;
 
-pub use gated::{
-    gated_builtin_type_name, is_builtin_type_name, GatedBuiltinType, ACTOR_REF_TYPE_NAME,
-    ACTOR_TYPE_NAME, ALLOCATOR_TYPE_NAME, ASYNC_EFFECT_TYPE_NAME, DYNAMIC_STRING_TYPE_NAME,
-    MAILBOX_TYPE_NAME, SUPERVISOR_TYPE_NAME, SYNC_EFFECT_TYPE_NAME,
-};
-pub use names::{BuiltinGenericTypeName, BuiltinTypeName, STATIC_STRING_TYPE_NAME};
+pub use names::{BuiltinGenericTypeName, BuiltinTypeName};
 
-/// Parser-level type representation.
-///
-/// These types may be unresolved — `Named("Point")` hasn't been looked up yet,
-/// `Inferred` means the typechecker must figure it out. The typechecker resolves
-/// these into fully concrete `Type` values (see `typed.rs`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum AstType {
-    // Integers
     I8,
     I16,
     I32,
@@ -29,66 +19,49 @@ pub enum AstType {
     U64,
     Usize,
 
-    // Floats
     F32,
     F64,
 
-    // Other primitives
     Bool,
     Void,
 
-    // Strings
-    Str,    // static string view over baked program storage: { ptr, len }
-    String, // allocator-backed dynamic string: { ptr, len, cap, allocator }
+    Str, // static string view over baked program storage: { ptr, len }
 
-    // User-defined / unresolved named type
-    Named(std::string::String),
+    Named(String),
 
-    // Generic type application: `Channel<SensorReading>`, `Result<T, E>`
     Generic {
-        name: std::string::String,
+        name: String,
         type_args: Vec<AstType>,
     },
 
-    // Collections
     Array {
         elem: Box<AstType>,
         size: Option<usize>,
     },
     Slice(Box<AstType>),
 
-    // Pointers
     Ptr(Box<AstType>),
     MutPtr(Box<AstType>),
     RawPtr(Box<AstType>),
 
-    // Function type: `(i32, i32) i32`
     Function {
         params: Vec<AstType>,
         ret: Box<AstType>,
     },
 
-    // Self type — used in method signatures and behavior definitions
     SelfType,
-
-    // Type to be inferred by the typechecker
     Inferred,
 }
 
 impl AstType {
-    /// Returns the span-free name for display/error messages.
-    pub fn display_name(&self) -> std::string::String {
+    pub fn display_name(&self) -> String {
         if let Some(builtin) = BuiltinTypeName::from_ast_type(self) {
             return builtin.to_string();
         }
 
         match self {
-            AstType::String => DYNAMIC_STRING_TYPE_NAME.into(),
             AstType::Named(n) => n.clone(),
-            AstType::Generic { name, type_args } => {
-                let args: Vec<_> = type_args.iter().map(|a| a.display_name()).collect();
-                format!("{}<{}>", name, args.join(", "))
-            }
+            AstType::Generic { name, type_args } => format!("{name}<{}>", type_list(type_args)),
             AstType::Array { elem, size } => match size {
                 Some(n) => format!("[{}; {}]", elem.display_name(), n),
                 None => format!("[{}]", elem.display_name()),
@@ -98,50 +71,102 @@ impl AstType {
             AstType::MutPtr(inner) => format!("MutPtr<{}>", inner.display_name()),
             AstType::RawPtr(inner) => format!("RawPtr<{}>", inner.display_name()),
             AstType::Function { params, ret } => {
-                let ps: Vec<_> = params.iter().map(|p| p.display_name()).collect();
-                format!("({}) {}", ps.join(", "), ret.display_name())
+                format!("({}) {}", type_list(params), ret.display_name())
             }
             AstType::Inferred => "_".into(),
-            AstType::I8
-            | AstType::I16
-            | AstType::I32
-            | AstType::I64
-            | AstType::U8
-            | AstType::U16
-            | AstType::U32
-            | AstType::U64
-            | AstType::Usize
-            | AstType::F32
-            | AstType::F64
-            | AstType::Bool
-            | AstType::Void
-            | AstType::Str
-            | AstType::SelfType => unreachable!("handled by BuiltinTypeName"),
+            _ => unreachable!("handled by BuiltinTypeName"),
         }
     }
-}
 
-pub(crate) fn behavior_type_args_match_target_params(
-    behavior_type_args: &[AstType],
-    target_type_args: &[AstType],
-) -> bool {
-    behavior_type_args == target_type_args && behavior_type_args.iter().all(is_named_type_arg)
+    pub(crate) fn any(&self, predicate: &mut impl FnMut(&AstType) -> bool) -> bool {
+        if predicate(self) {
+            return true;
+        }
+
+        match self {
+            AstType::Generic { type_args, .. } => type_args.iter().any(|arg| arg.any(predicate)),
+            AstType::Array { elem, .. }
+            | AstType::Slice(elem)
+            | AstType::Ptr(elem)
+            | AstType::MutPtr(elem)
+            | AstType::RawPtr(elem) => elem.any(predicate),
+            AstType::Function { params, ret } => {
+                params.iter().any(|param| param.any(predicate)) || ret.any(predicate)
+            }
+            _ => false,
+        }
+    }
 }
 
 pub(crate) fn behavior_ref_display(behavior: &str, type_args: &[AstType]) -> String {
     if type_args.is_empty() {
         behavior.to_string()
     } else {
+        format!("{behavior}<{}>", type_list(type_args))
+    }
+}
+
+pub(crate) fn method_symbol_key(type_name: &str, method_name: &str) -> String {
+    format!("{type_name}.{method_name}")
+}
+
+pub(crate) fn behavior_impl_method_symbol_key(
+    type_name: &str,
+    method_name: &str,
+    behavior: Option<&str>,
+    behavior_type_args: &[AstType],
+    target_type_args: &[AstType],
+) -> String {
+    let key = method_symbol_key(type_name, method_name);
+    let Some(behavior) = behavior else {
+        return key;
+    };
+    if behavior_type_args.is_empty() {
+        return key;
+    }
+
+    if !target_type_args.is_empty()
+        && behavior_type_args == target_type_args
+        && behavior_type_args
+            .iter()
+            .all(|arg| matches!(arg, AstType::Named(_)))
+    {
+        format!("{key}__{behavior}")
+    } else {
         format!(
-            "{}<{}>",
-            behavior,
-            type_args
-                .iter()
-                .map(AstType::display_name)
-                .collect::<Vec<_>>()
-                .join(", ")
+            "{}__{}",
+            key,
+            behavior_ref_symbol_suffix(behavior, behavior_type_args)
         )
     }
+}
+
+fn type_list(types: &[AstType]) -> String {
+    types
+        .iter()
+        .map(AstType::display_name)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+pub(crate) fn behavior_ref_symbol_suffix(behavior: &str, type_args: &[AstType]) -> String {
+    std::iter::once(behavior.to_string())
+        .chain(type_args.iter().map(AstType::display_name))
+        .map(|name| symbol_key_part(&name))
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+pub(crate) fn symbol_key_part(name: &str) -> String {
+    name.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
 }
 
 pub(crate) fn named_type_arg_names(type_args: &[AstType]) -> Vec<String> {
@@ -154,46 +179,26 @@ pub(crate) fn named_type_arg_names(type_args: &[AstType]) -> Vec<String> {
         .collect()
 }
 
-fn is_named_type_arg(type_arg: &AstType) -> bool {
-    matches!(type_arg, AstType::Named(_))
+pub(crate) fn named_type_arg_params(type_args: &[AstType]) -> Vec<TypeParam> {
+    type_params_from_names(named_type_arg_names(type_args))
 }
 
-/// A typed parameter in a function/method/closure signature.
+pub(crate) fn type_params_from_names(names: impl IntoIterator<Item = String>) -> Vec<TypeParam> {
+    names
+        .into_iter()
+        .map(|name| TypeParam {
+            name,
+            constraint: None,
+            constraint_type_args: Vec::new(),
+            span: Span::dummy(),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Param {
-    pub name: std::string::String,
+    pub name: String,
     pub ty: AstType,
     pub mutable: bool,
     pub span: Span,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{behavior_type_args_match_target_params, AstType};
-
-    #[test]
-    fn static_string_display_uses_public_type_name() {
-        assert_eq!(AstType::Str.display_name(), "StaticString");
-    }
-
-    #[test]
-    fn behavior_type_arg_target_param_match_requires_same_named_args() {
-        assert!(behavior_type_args_match_target_params(
-            &[AstType::Named("T".into())],
-            &[AstType::Named("T".into())]
-        ));
-        assert!(behavior_type_args_match_target_params(&[], &[]));
-        assert!(!behavior_type_args_match_target_params(
-            &[AstType::I32],
-            &[AstType::Named("T".into())]
-        ));
-        assert!(!behavior_type_args_match_target_params(
-            &[AstType::Named("E".into())],
-            &[AstType::Named("T".into())]
-        ));
-        assert!(!behavior_type_args_match_target_params(
-            &[AstType::Named("U".into()), AstType::Named("T".into())],
-            &[AstType::Named("T".into()), AstType::Named("U".into())]
-        ));
-    }
 }

@@ -37,19 +37,13 @@ pub enum BuildTargetKind {
     },
 }
 
-impl BuildTargetKind {
-    pub fn diagnostic_name(&self) -> &'static str {
-        match self {
+impl fmt::Display for BuildTargetKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
             Self::Executable { .. } => "executable",
             Self::Test { .. } => "test",
             Self::Library { .. } => "library",
-        }
-    }
-}
-
-impl fmt::Display for BuildTargetKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.diagnostic_name())
+        })
     }
 }
 
@@ -62,9 +56,9 @@ pub enum HostEffect {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BuildGraph {
-    targets: Vec<BuildTarget>,
-    declared_host_effects: Vec<HostEffect>,
-    used_host_effects: Vec<HostEffect>,
+    pub targets: Vec<BuildTarget>,
+    pub declared_host_effects: Vec<HostEffect>,
+    pub used_host_effects: Vec<HostEffect>,
 }
 
 #[derive(Serialize)]
@@ -79,11 +73,11 @@ struct BuildGraphJson<'a> {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BuildTarget {
-    name: String,
-    kind: BuildTargetKind,
-    sources: Vec<String>,
-    dependencies: Vec<String>,
-    features: Vec<String>,
+    pub name: String,
+    pub kind: BuildTargetKind,
+    pub sources: Vec<String>,
+    pub dependencies: Vec<String>,
+    pub features: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,38 +91,6 @@ pub enum BuildGraphError {
     UndeclaredHostEffect(HostEffect),
     MissingBuildFunction,
     UnsupportedBuildScript(String),
-}
-
-impl BuildGraph {
-    pub fn targets(&self) -> &[BuildTarget] {
-        &self.targets
-    }
-}
-
-impl BuildTarget {
-    pub fn is_executable(&self) -> bool {
-        matches!(self.kind, BuildTargetKind::Executable { .. })
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn kind(&self) -> &BuildTargetKind {
-        &self.kind
-    }
-
-    pub fn sources(&self) -> &[String] {
-        &self.sources
-    }
-
-    pub fn dependencies(&self) -> &[String] {
-        &self.dependencies
-    }
-
-    pub fn features(&self) -> &[String] {
-        &self.features
-    }
 }
 
 impl fmt::Display for HostEffect {
@@ -182,8 +144,4 @@ where
         .collect()
 }
 
-include!("build_graph/lowering.rs");
-
-#[cfg(test)]
-#[path = "build_graph/lowering_tests.rs"]
-mod lowering_tests;
+include!("build_graph/lowering/mod.rs");

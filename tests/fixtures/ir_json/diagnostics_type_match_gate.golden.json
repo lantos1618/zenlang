@@ -15,7 +15,7 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "comptime type matching is gated until typed metadata and derive lowering are implemented",
+      "message": "`@builtin.type_match` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
         "path": "$TMP/type_match_gate.zen",

@@ -1,10 +1,8 @@
-use std::process::Command;
+use super::super::support::run_zen;
 
 #[test]
 fn root_usage_lists_supported_and_gated_emit_json_modes() {
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .output()
-        .expect("run zen without args");
+    let output = run_zen(&[]);
 
     assert!(
         !output.status.success(),

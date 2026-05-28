@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn imported_ufc_infers_from_scoped_generic_type_specialization() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_scoped_type_inference/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_scoped_type_inference/main.zen",
         &[
             "typedef struct Box_i32 Box_i32;",
             "typedef struct right_Box_i32 right_Box_i32;",

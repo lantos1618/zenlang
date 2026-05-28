@@ -14,8 +14,8 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 1);
-    assert_eq!(graph.targets()[0].name(), "app");
+    assert_eq!(graph.targets.len(), 1);
+    assert_eq!(graph.targets[0].name.as_str(), "app");
 }
 
 #[test]

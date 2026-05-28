@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
 pub enum TargetYamlError {
@@ -24,24 +24,6 @@ impl std::fmt::Display for TargetYamlError {
 
 impl std::error::Error for TargetYamlError {}
 
-impl From<std::io::Error> for TargetYamlError {
-    fn from(err: std::io::Error) -> Self {
-        Self::Io(err)
-    }
-}
-
-impl From<serde_yaml::Error> for TargetYamlError {
-    fn from(err: serde_yaml::Error) -> Self {
-        Self::Parse(err)
-    }
-}
-
-impl From<serde_json::Error> for TargetYamlError {
-    fn from(err: serde_json::Error) -> Self {
-        Self::Json(err)
-    }
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TargetYamlInput {
@@ -60,34 +42,11 @@ struct TargetYamlInput {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct TargetBackendInput {
-    codegen: TargetBackendCodegen,
+    codegen: String,
     #[serde(default)]
     c_compiler: Option<String>,
     #[serde(default)]
     c_flags: Vec<String>,
-}
-
-#[derive(Debug)]
-enum TargetBackendCodegen {
-    C,
-    Unsupported,
-}
-
-impl TargetBackendCodegen {
-    const C_SPELLING: &'static str = "c";
-}
-
-impl<'de> Deserialize<'de> for TargetBackendCodegen {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let spelling = String::deserialize(deserializer)?;
-        Ok(match spelling.as_str() {
-            Self::C_SPELLING => Self::C,
-            _ => Self::Unsupported,
-        })
-    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
@@ -125,12 +84,8 @@ struct TargetBackendJson {
 }
 
 pub fn target_yaml_file_to_json(path: &Path) -> Result<String, TargetYamlError> {
-    let source = fs::read_to_string(path)?;
-    target_yaml_to_json(&source)
-}
-
-pub fn target_yaml_to_json(source: &str) -> Result<String, TargetYamlError> {
-    let input: TargetYamlInput = serde_yaml::from_str(source)?;
+    let source = fs::read_to_string(path).map_err(TargetYamlError::Io)?;
+    let input: TargetYamlInput = serde_yaml::from_str(&source).map_err(TargetYamlError::Parse)?;
     validate_target_yaml(&input)?;
     let json = TargetJson {
         format: "zen.target.v0",
@@ -141,53 +96,39 @@ pub fn target_yaml_to_json(source: &str) -> Result<String, TargetYamlError> {
             pointer_width: input.pointer_width,
             endianness: input.endianness,
             abi: input.abi,
-            backend: input.backend.map(TargetBackendJson::from),
+            backend: input.backend.map(|backend| TargetBackendJson {
+                codegen: "c",
+                c_compiler: backend.c_compiler,
+                c_flags: backend.c_flags,
+            }),
         },
     };
-    Ok(serde_json::to_string_pretty(&json)?)
+    serde_json::to_string_pretty(&json).map_err(TargetYamlError::Json)
 }
 
-impl From<TargetBackendInput> for TargetBackendJson {
-    fn from(input: TargetBackendInput) -> Self {
-        let codegen = match input.codegen {
-            TargetBackendCodegen::C => TargetBackendCodegen::C_SPELLING,
-            TargetBackendCodegen::Unsupported => {
-                unreachable!("target backend codegen is validated before JSON emission")
-            }
-        };
-        Self {
-            codegen,
-            c_compiler: input.c_compiler,
-            c_flags: input.c_flags,
-        }
-    }
+fn schema_error(message: &'static str) -> TargetYamlError {
+    TargetYamlError::Schema(message.into())
 }
 
 fn validate_target_yaml(input: &TargetYamlInput) -> Result<(), TargetYamlError> {
     if input.layout.is_some() || input.overrides.is_some() {
-        return Err(TargetYamlError::Schema(
-            "target YAML cannot override compiler-owned type layouts".into(),
+        return Err(schema_error(
+            "target YAML cannot override compiler-owned type layouts",
         ));
     }
     if input.triple.trim().is_empty() {
-        return Err(TargetYamlError::Schema(
-            "target YAML `triple` cannot be empty".into(),
-        ));
+        return Err(schema_error("target YAML `triple` cannot be empty"));
     }
     if !matches!(input.pointer_width, 32 | 64) {
-        return Err(TargetYamlError::Schema(
-            "target YAML `pointer_width` must be 32 or 64".into(),
-        ));
+        return Err(schema_error("target YAML `pointer_width` must be 32 or 64"));
     }
     if input.abi.trim().is_empty() {
-        return Err(TargetYamlError::Schema(
-            "target YAML `abi` cannot be empty".into(),
-        ));
+        return Err(schema_error("target YAML `abi` cannot be empty"));
     }
     if let Some(backend) = &input.backend {
-        if matches!(backend.codegen, TargetBackendCodegen::Unsupported) {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.codegen` supports only `c` in this phase".into(),
+        if backend.codegen != "c" {
+            return Err(schema_error(
+                "target YAML `backend.codegen` supports only `c` in this phase",
             ));
         }
         if backend
@@ -195,13 +136,13 @@ fn validate_target_yaml(input: &TargetYamlInput) -> Result<(), TargetYamlError> 
             .as_ref()
             .is_some_and(|compiler| compiler.trim().is_empty())
         {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.c_compiler` cannot be empty".into(),
+            return Err(schema_error(
+                "target YAML `backend.c_compiler` cannot be empty",
             ));
         }
         if backend.c_flags.iter().any(|flag| flag.trim().is_empty()) {
-            return Err(TargetYamlError::Schema(
-                "target YAML `backend.c_flags` entries cannot be empty".into(),
+            return Err(schema_error(
+                "target YAML `backend.c_flags` entries cannot be empty",
             ));
         }
     }

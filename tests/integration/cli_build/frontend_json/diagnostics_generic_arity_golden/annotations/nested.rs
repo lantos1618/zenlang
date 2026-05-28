@@ -15,7 +15,6 @@ call = (f: (Box<i32, StaticString>) i32) i32 {
 "#,
         "function type parameter annotation arity",
         "function type parameter annotation arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_function_type_parameter_annotation_arity.golden.json",
     );
 }
 
@@ -34,7 +33,6 @@ factory = () () Box {
 "#,
         "function type return annotation missing generic arguments",
         "function type return annotation missing-arguments diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_function_type_return_annotation_missing_args.golden.json",
     );
 }
 
@@ -53,7 +51,6 @@ read = (ptr: Ptr<Box<i32, StaticString>>) i32 {
 "#,
         "pointer inner generic annotation arity",
         "pointer inner generic annotation arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_pointer_inner_generic_annotation_arity.golden.json",
     );
 }
 
@@ -72,7 +69,6 @@ read = (slice: Slice<Box>) i32 {
 "#,
         "slice inner generic annotation missing arguments",
         "slice inner generic annotation missing-arguments diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_slice_inner_generic_annotation_missing_args.golden.json",
     );
 }
 
@@ -91,6 +87,5 @@ read = (items: [Box<i32, StaticString>; 1]) i32 {
 "#,
         "array inner generic annotation arity",
         "array inner generic annotation arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_array_inner_generic_annotation_arity.golden.json",
     );
 }

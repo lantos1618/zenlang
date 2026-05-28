@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic/main.zen",
         &[
             "typedef struct Option_i32 Option_i32;",
             "typedef struct Result_i32_StaticString Result_i32_StaticString;",
@@ -23,51 +23,23 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
         ],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_enum_method/main.zen"),
-        &[
-            "typedef struct Option_i32 Option_i32;",
-            "int32_t Option_unwrap_or_i32(Option_i32 self, int32_t fallback)",
-            "Option_unwrap_or_i32(some, 0LL)",
-            "Option_unwrap_or_i32(none, 89LL)",
-        ],
-        &["Option_unwrap_or_i32"],
-        &["Option_T", "T Option_unwrap_or", "Option_unwrap_or(some"],
+    assert_option_unwrap_or_method(
+        "multi_file_generic_enum_method/main.zen",
+        "Option_unwrap_or_i32(none, 89LL)",
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_result_enum_method/main.zen"),
-        &[
-            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
-            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
-            "Result_unwrap_or_i32_StaticString(ok, 0LL)",
-            "Result_unwrap_or_i32_StaticString(err, 144LL)",
-        ],
-        &["Result_unwrap_or_i32_StaticString"],
-        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
+    assert_result_unwrap_or_method(
+        "multi_file_generic_result_enum_method/main.zen",
+        "Result_unwrap_or_i32_StaticString(err, 144LL)",
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_result_enum_multi_specialization/main.zen"),
-        &[
-            "typedef struct Result_i32_StaticString Result_i32_StaticString;",
-            "typedef struct Result_bool_StaticString Result_bool_StaticString;",
-            "int32_t Result_unwrap_or_i32_StaticString(Result_i32_StaticString self, int32_t fallback)",
-            "bool Result_unwrap_or_bool_StaticString(Result_bool_StaticString self, bool fallback)",
-            "Result_unwrap_or_i32_StaticString(ok_int, 0LL)",
-            "Result_unwrap_or_i32_StaticString(err_int, 144LL)",
-            "Result_unwrap_or_bool_StaticString(ok_bool, true)",
-            "Result_unwrap_or_bool_StaticString(err_bool, true)",
-        ],
-        &[
-            "Result_unwrap_or_i32_StaticString",
-            "Result_unwrap_or_bool_StaticString",
-        ],
-        &["Result_T", "T Result_unwrap_or", "Result_unwrap_or(err"],
+    assert_result_unwrap_or_multi_specialization(
+        "multi_file_generic_result_enum_multi_specialization/main.zen",
+        "Result_unwrap_or_i32_StaticString(err_int, 144LL)",
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_imported_generic_function_return_enum_dependency/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_imported_generic_function_return_enum_dependency/main.zen",
         &[
             "typedef struct Option_i32",
             "Option_i32 wrap_i32(int32_t value)",
@@ -79,8 +51,8 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
         &["T wrap", "T unwrap"],
     );
 
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_imported_type_same_name_collision/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_imported_type_same_name_collision/main.zen",
         &[
             "left_i32(1LL)",
             "right_i32(2LL)",
@@ -101,8 +73,8 @@ fn multi_file_generic_enum_specializations_do_not_emit_unspecialized_c_symbols()
 
 #[test]
 fn multi_file_generic_enum_method_worklist_specializations_emit_reachable_methods_once() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_enum_method_worklist/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_enum_method_worklist/main.zen",
         &[
             "typedef struct Option_i32 Option_i32;",
             "typedef struct Option_bool Option_bool;",
@@ -135,8 +107,8 @@ fn multi_file_generic_enum_method_worklist_specializations_emit_reachable_method
 
 #[test]
 fn multi_file_generic_result_error_type_specializations_do_not_collapse() {
-    compile_to_c_with_specialization_check(
-        &test_dir().join("multi_file_generic_result_error_multi_specialization/main.zen"),
+    assert_fixture_specialization(
+        "multi_file_generic_result_error_multi_specialization/main.zen",
         &[
             "typedef struct Result_i32_bool Result_i32_bool;",
             "typedef struct Result_i32_i32 Result_i32_i32;",

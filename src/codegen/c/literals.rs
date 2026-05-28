@@ -6,7 +6,6 @@ impl CEmitter {
         type_name: &str,
         fields: &[(String, TypedExpression)],
     ) -> String {
-        let name = c_ident(type_name);
         let field_strs: Vec<_> = fields
             .iter()
             .map(|(fname, fval)| {
@@ -14,7 +13,7 @@ impl CEmitter {
                 format!(".{} = {}", c_ident(fname), value)
             })
             .collect();
-        format!("({}){{ {} }}", name, field_strs.join(", "))
+        format!("({}){{ {} }}", c_ident(type_name), field_strs.join(", "))
     }
 
     pub(super) fn emit_enum_variant_literal(
@@ -26,9 +25,7 @@ impl CEmitter {
         let name = c_ident(type_name);
         let variant_ident = c_ident(variant);
         match payload {
-            None => {
-                format!("({}){{ .tag = {}_{} }}", name, name, variant_ident)
-            }
+            None => format!("({}){{ .tag = {}_{} }}", name, name, variant_ident),
             Some(value) => {
                 let payload_value = self.emit_expr_inline(value);
                 format!(

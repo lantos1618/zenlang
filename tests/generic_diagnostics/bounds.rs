@@ -1,9 +1,6 @@
 use super::*;
 
-#[test]
-fn generic_struct_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
+const JSON_POINT_PREAMBLE: &str = r#"
 Json: behavior {
     encode: (Self) StaticString
 }
@@ -11,179 +8,99 @@ Json: behavior {
 Point: {
     x: i32
 }
+"#;
 
+#[test]
+fn generic_point_json_bound_failures_are_errors() {
+    for (declaration, use_site, context) in [
+        (
+            r#"
 Box<T: Json>: {
     value: T
 }
-
+"#,
+            r#"
 main = () i32 {
     point = Point { x: 1 }
     box = Box<Point> { value: point }
     box.value.x
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic struct bound",
-    );
-}
-
-#[test]
-fn generic_enum_behavior_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "generic struct bound",
+        ),
+        (
+            r#"
 Option<T: Json>:
     None,
     Some(T)
-
+"#,
+            r#"
 main = () i32 {
     point = Point { x: 1 }
     value = Option<Point>.Some(point)
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic enum bound",
-    );
-}
-
-#[test]
-fn generic_struct_annotation_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "generic enum bound",
+        ),
+        (
+            r#"
 Box<T: Json>: {
     value: T
 }
-
+"#,
+            r#"
 read = (box: Box<Point>) i32 {
     box.value.x
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic struct annotation bound",
-    );
-}
-
-#[test]
-fn generic_enum_annotation_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "generic struct annotation bound",
+        ),
+        (
+            r#"
 Option<T: Json>:
     None,
     Some(T)
-
+"#,
+            r#"
 read = (value: Option<Point>) i32 {
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic enum annotation bound",
-    );
-}
-
-#[test]
-fn generic_struct_local_annotation_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "generic enum annotation bound",
+        ),
+        (
+            r#"
 Box<T: Json>: {
     value: T
 }
-
+"#,
+            r#"
 main = () i32 {
     point = Point { x: 1 }
     box: Box<Point> = Box<Point> { value: point }
     box.value.x
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic struct local annotation bound",
-    );
-}
-
-#[test]
-fn generic_enum_local_annotation_bound_failure_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Json: behavior {
-    encode: (Self) StaticString
-}
-
-Point: {
-    x: i32
-}
-
+            "generic struct local annotation bound",
+        ),
+        (
+            r#"
 Option<T: Json>:
     None,
     Some(T)
-
+"#,
+            r#"
 main = () i32 {
     point = Point { x: 1 }
     value: Option<Point> = Option<Point>.Some(point)
     0
 }
 "#,
-    );
-
-    assert_diagnostic_code_and_message(
-        &errors,
-        "E6004",
-        "type `Point` does not implement behavior `Json` required by `T`",
-        "generic enum local annotation bound",
-    );
+            "generic enum local annotation bound",
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{JSON_POINT_PREAMBLE}\n{declaration}\n{use_site}"));
+        assert_point_json_bound_failure(&errors, "T", context);
+    }
 }

@@ -12,11 +12,11 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 1);
-    let target = &graph.targets()[0];
-    assert_eq!(target.name(), "math");
-    assert_eq!(target.sources(), ["tests/math.zen"]);
-    match target.kind() {
+    assert_eq!(graph.targets.len(), 1);
+    let target = &graph.targets[0];
+    assert_eq!(target.name.as_str(), "math");
+    assert_eq!(target.sources.as_slice(), ["tests/math.zen"]);
+    match &target.kind {
         BuildTargetKind::Test { root_source_file } => {
             assert_eq!(root_source_file, "tests/math.zen");
         }
@@ -36,11 +36,14 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 1);
-    let target = &graph.targets()[0];
-    assert_eq!(target.name(), "core");
-    assert_eq!(target.sources(), ["src/math.zen", "src/strings.zen"]);
-    match target.kind() {
+    assert_eq!(graph.targets.len(), 1);
+    let target = &graph.targets[0];
+    assert_eq!(target.name.as_str(), "core");
+    assert_eq!(
+        target.sources.as_slice(),
+        ["src/math.zen", "src/strings.zen"]
+    );
+    match &target.kind {
         BuildTargetKind::Library { exports } => {
             assert_eq!(
                 exports,
@@ -64,10 +67,10 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     );
     let graph = BuildGraph::from_build_program(&program).expect("lower build graph");
 
-    assert_eq!(graph.targets().len(), 2);
-    assert_eq!(graph.targets()[0].name(), "app");
-    assert_eq!(graph.targets()[0].sources(), ["app.zen"]);
-    match graph.targets()[0].kind() {
+    assert_eq!(graph.targets.len(), 2);
+    assert_eq!(graph.targets[0].name.as_str(), "app");
+    assert_eq!(graph.targets[0].sources.as_slice(), ["app.zen"]);
+    match &graph.targets[0].kind {
         BuildTargetKind::Executable {
             root_source_file,
             out_dir,
@@ -77,9 +80,9 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         }
         other => panic!("expected executable target, got {other:?}"),
     }
-    assert_eq!(graph.targets()[1].name(), "tool");
-    assert_eq!(graph.targets()[1].sources(), ["tool.zen"]);
-    match graph.targets()[1].kind() {
+    assert_eq!(graph.targets[1].name.as_str(), "tool");
+    assert_eq!(graph.targets[1].sources.as_slice(), ["tool.zen"]);
+    match &graph.targets[1].kind {
         BuildTargetKind::Executable {
             root_source_file,
             out_dir,

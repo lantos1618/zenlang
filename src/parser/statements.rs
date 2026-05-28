@@ -1,54 +1,27 @@
 use super::*;
 
-#[derive(Clone, Copy)]
-struct UntypedVarDeclMode {
-    mutable: bool,
-    constant: bool,
-}
-
-impl UntypedVarDeclMode {
-    fn from_token(token: &Token) -> Option<Self> {
-        match token {
-            Token::ConstAssign => Some(Self {
-                mutable: false,
-                constant: true,
-            }),
-            Token::DeclareAssign => Some(Self {
-                mutable: true,
-                constant: false,
-            }),
-            Token::Assign => Some(Self {
-                mutable: false,
-                constant: false,
-            }),
-            _ => None,
-        }
-    }
-}
-
 impl Parser {
-    // ── Statements ────────────────────────────────────────────
-
     pub(super) fn parse_statement_or_expr(&mut self) -> Result<StmtOrExpr, CompileError> {
         self.skip_newlines();
 
-        // Variable declaration: `name := expr` or `name ::= expr` or `name: Type = expr`
         if let Token::Identifier(ref name) = self.peek().clone() {
             let name = name.clone();
 
             let next = self.peek_ahead(1);
-            if let Some(mode) = UntypedVarDeclMode::from_token(next) {
-                let (_, name_span) = self.advance(); // consume name
-                self.advance(); // consume assignment token
-                return self.finish_var_decl(name, name_span, None, mode.mutable, mode.constant);
+            if let Some((mutable, constant)) = match next {
+                Token::ConstAssign => Some((false, true)),
+                Token::DeclareAssign => Some((true, false)),
+                Token::Assign => Some((false, false)),
+                _ => None,
+            } {
+                let (_, name_span) = self.advance();
+                self.advance();
+                return self.finish_var_decl(name, name_span, None, mutable, constant);
             }
 
             if matches!(next, Token::Colon) && self.is_typed_var_decl() {
-                // Could be `name: Type = expr` (typed var decl)
-                // or `name: Type` (type annotation — rare)
-                // Peek further: name : Type = expr
-                let (_, name_span) = self.advance(); // consume name
-                self.advance(); // consume :
+                let (_, name_span) = self.advance();
+                self.advance();
                 let ty = self.parse_type()?;
                 self.skip_newlines();
                 self.expect(&Token::Assign)?;
@@ -56,14 +29,11 @@ impl Parser {
             }
         }
 
-        // Parse as expression, then check for assignment
         let expr = self.parse_expression()?;
 
-        // Check for assignment: `lhs = rhs`
         self.skip_newlines_if_continuation();
         if matches!(self.peek(), Token::Assign) {
-            // This is an assignment to an existing variable/field
-            self.advance(); // consume =
+            self.advance();
             self.skip_newlines();
             let value = self.parse_expression()?;
             let span = expr.span().merge(value.span());
@@ -77,10 +47,8 @@ impl Parser {
         Ok(StmtOrExpr::Expr(expr))
     }
 
-    /// Check if we have `name: Type = expr` pattern.
     fn is_typed_var_decl(&self) -> bool {
-        // We're at `name`, peek_ahead(1) is `:`, check if there's eventually a `=`
-        let mut i = self.pos + 2; // skip name, `:`, now at type
+        let mut i = self.pos + 2;
         let mut depth = 0u32;
         loop {
             match self.tokens.get(i).map(|(t, _)| t) {
@@ -93,9 +61,8 @@ impl Parser {
                     i += 1;
                 }
                 Some(Token::Assign) if depth == 0 => return true,
-                Some(Token::Newline) if depth == 0 => return false,
+                Some(Token::Newline | Token::LBrace) if depth == 0 => return false,
                 Some(Token::EOF) | None => return false,
-                Some(Token::LBrace) if depth == 0 => return false,
                 _ => i += 1,
             }
         }

@@ -9,25 +9,23 @@ pub use tokens::Token;
 
 use crate::error::{CompileError, FileId, Span};
 
-// ── Lexer ─────────────────────────────────────────────────────────
-
 pub struct Lexer {
     source: Vec<char>,
     pos: usize,
     file_id: FileId,
-    /// byte_offsets[i] = byte offset of source char i.
-    /// Sentinel at [source.len()] = total byte length.
     byte_offsets: Vec<u32>,
-    /// Buffered tokens from string interpolation.
     pending: Vec<(Token, Span)>,
 }
 
 impl Lexer {
     pub fn new(source: &str, file_id: FileId) -> Self {
-        let chars: Vec<char> = source.chars().collect();
-        let byte_offsets = Self::build_byte_offsets(source, chars.len());
+        let byte_offsets = source
+            .char_indices()
+            .map(|(byte_idx, _)| byte_idx as u32)
+            .chain(std::iter::once(source.len() as u32))
+            .collect();
         Self {
-            source: chars,
+            source: source.chars().collect(),
             pos: 0,
             file_id,
             byte_offsets,
@@ -35,7 +33,6 @@ impl Lexer {
         }
     }
 
-    /// Tokenise the entire source, returning tokens paired with spans.
     pub fn tokenize(&mut self) -> Result<Vec<(Token, Span)>, CompileError> {
         let mut tokens = Vec::new();
         loop {
@@ -49,24 +46,11 @@ impl Lexer {
         Ok(tokens)
     }
 
-    /// Return the next token (drains pending buffer first).
     pub fn next_token(&mut self) -> Result<(Token, Span), CompileError> {
-        // Drain buffered tokens from string interpolation
         if !self.pending.is_empty() {
             return Ok(self.pending.remove(0));
         }
         self.lex_next()
-    }
-
-    // ── Character helpers ────────────────────────────────────────
-
-    fn build_byte_offsets(source: &str, char_count: usize) -> Vec<u32> {
-        let mut offsets = Vec::with_capacity(char_count + 1);
-        for (byte_idx, _) in source.char_indices() {
-            offsets.push(byte_idx as u32);
-        }
-        offsets.push(source.len() as u32); // sentinel for EOF
-        offsets
     }
 
     fn peek(&self) -> Option<char> {
@@ -97,7 +81,6 @@ impl Lexer {
         Span::new(self.file_id, start, end)
     }
 
-    /// Check whether the source at `self.pos` starts with `s`.
     fn matches(&self, s: &str) -> bool {
         for (i, expected) in s.chars().enumerate() {
             match self.source.get(self.pos + i) {
@@ -109,12 +92,6 @@ impl Lexer {
     }
 }
 
-// ── Convenience function ──────────────────────────────────────────
-
-/// Tokenise source code into a list of (Token, Span) pairs.
 pub fn tokenize(source: &str, file_id: FileId) -> Result<Vec<(Token, Span)>, CompileError> {
     Lexer::new(source, file_id).tokenize()
 }
-
-#[cfg(test)]
-mod tests;

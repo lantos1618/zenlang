@@ -1,20 +1,25 @@
-use super::{executable_target, parse_program, BuildGraph, BuildGraphInput};
+use super::{
+    assert_build_program_error, executable_target, BuildGraph, BuildGraphInput, BuildTargetInput,
+};
+
+fn assert_input_error(targets: Vec<BuildTargetInput>, expected: &str) {
+    let err = BuildGraph::from_input(BuildGraphInput {
+        targets,
+        declared_host_effects: Vec::new(),
+        used_host_effects: Vec::new(),
+    })
+    .expect_err("build graph should fail");
+    assert_eq!(err.to_string(), expected);
+}
 
 #[test]
 fn build_graph_rejects_unknown_target_dependencies() {
     let mut target = executable_target("app", &["src/main.zen"]);
     target.dependencies = vec!["core".to_string()];
 
-    let err = BuildGraph::from_input(BuildGraphInput {
-        targets: vec![target],
-        declared_host_effects: Vec::new(),
-        used_host_effects: Vec::new(),
-    })
-    .expect_err("unknown target dependency should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target `app` depends on unknown target `core`"
+    assert_input_error(
+        vec![target],
+        "build target `app` depends on unknown target `core`",
     );
 }
 
@@ -23,17 +28,7 @@ fn build_graph_rejects_self_target_dependencies() {
     let mut target = executable_target("app", &["src/main.zen"]);
     target.dependencies = vec!["app".to_string()];
 
-    let err = BuildGraph::from_input(BuildGraphInput {
-        targets: vec![target],
-        declared_host_effects: Vec::new(),
-        used_host_effects: Vec::new(),
-    })
-    .expect_err("self target dependency should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target `app` cannot depend on itself"
-    );
+    assert_input_error(vec![target], "build target `app` cannot depend on itself");
 }
 
 #[test]
@@ -43,16 +38,9 @@ fn build_graph_rejects_cyclic_target_dependencies() {
     let mut tool = executable_target("tool", &["src/tool.zen"]);
     tool.dependencies = vec!["app".to_string()];
 
-    let err = BuildGraph::from_input(BuildGraphInput {
-        targets: vec![app, tool],
-        declared_host_effects: Vec::new(),
-        used_host_effects: Vec::new(),
-    })
-    .expect_err("cyclic target dependencies should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target dependency cycle includes `app`"
+    assert_input_error(
+        vec![app, tool],
+        "build target dependency cycle includes `app`",
     );
 }
 
@@ -73,14 +61,14 @@ fn build_graph_orders_targets_before_dependents() {
         .targets_in_dependency_order()
         .expect("dependency order")
         .into_iter()
-        .map(|target| target.name().to_string())
+        .map(|target| target.name.to_string())
         .collect();
     assert_eq!(ordered_names, ["tool", "app"]);
 }
 
 #[test]
 fn build_program_lowering_rejects_cyclic_target_dependencies() {
-    let program = parse_program(
+    assert_build_program_error(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -98,20 +86,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    );
-
-    let err = BuildGraph::from_build_program(&program)
-        .expect_err("cyclic build target dependencies should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target dependency cycle includes `app`"
+        "build target dependency cycle includes `app`",
     );
 }
 
 #[test]
 fn build_program_lowering_rejects_unknown_target_dependencies() {
-    let program = parse_program(
+    assert_build_program_error(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -123,20 +104,13 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    );
-
-    let err = BuildGraph::from_build_program(&program)
-        .expect_err("unknown build target dependency should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target `app` depends on unknown target `core`"
+        "build target `app` depends on unknown target `core`",
     );
 }
 
 #[test]
 fn build_program_lowering_rejects_self_target_dependencies() {
-    let program = parse_program(
+    assert_build_program_error(
         r#"
 build = (b: Builder) Result<BuildConfig, BuildError> {
     b.add(Executable {
@@ -148,13 +122,6 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
     .Ok(b.config())
 }
 "#,
-    );
-
-    let err = BuildGraph::from_build_program(&program)
-        .expect_err("self build target dependency should fail");
-
-    assert_eq!(
-        err.to_string(),
-        "build target `app` cannot depend on itself"
+        "build target `app` cannot depend on itself",
     );
 }

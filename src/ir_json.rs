@@ -5,11 +5,13 @@ mod hir;
 mod layout;
 mod mir;
 
+use crate::ast::behavior_ref_display;
 use crate::ast::typed::TypedProgram;
+use crate::ast::AstType;
 use crate::ast::Program;
 use crate::error::{Diagnostic, FileTable, Span};
-use crate::module_system::{ImportBinding, ResolvedModule, ResolvedModuleGraph};
-use crate::resolver::Symbol;
+use crate::module_system::ResolvedModuleGraph;
+use crate::resolver::{BehaviorMethodTypeMetadata, BehaviorRefMetadata, Symbol};
 
 #[derive(Serialize)]
 struct AstJsonGraph<'a> {
@@ -66,23 +68,33 @@ struct SymbolJson<'a> {
     namespace: String,
     name: &'a str,
     is_public: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     import_source: Option<&'a str>,
-    parameter_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     parameter_names: Option<&'a [String]>,
-    parameter_type_names: Option<&'a [String]>,
-    return_type_name: Option<&'a str>,
-    type_parameter_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parameter_type_names: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    return_type_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     type_parameter_names: Option<&'a [String]>,
-    field_count: Option<usize>,
-    field_type_names: Option<&'a [(String, String)]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    field_type_names: Option<Vec<(String, String)>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     variant_names: Option<&'a [String]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     variant_owner_name: Option<&'a str>,
-    variant_payload_count: Option<usize>,
-    variant_payload_type_name: Option<&'a str>,
-    behavior_method_signatures: Option<&'a [(String, Vec<String>, String)]>,
-    behavior_parent_names: Option<&'a [String]>,
-    behavior_impl_names: Option<&'a [String]>,
-    behavior_required_names: Option<&'a [String]>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    variant_payload_type_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    behavior_method_signatures: Option<Vec<(String, Vec<String>, String)>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    behavior_parent_names: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    behavior_impl_names: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    behavior_required_names: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     is_mutable: Option<bool>,
     scope_id: u32,
     definition_span: Span,
@@ -94,13 +106,23 @@ pub fn ast_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<Stri
         schema_version: 0,
         semantic_status: "unchecked",
         entry_module: graph.entry.0,
-        modules: sorted_graph_modules(graph)
+        modules: graph
+            .sorted_modules()
             .into_iter()
             .map(|module| AstJsonModule {
                 id: module.info.id.0,
                 package_id: module.info.package_id.0,
                 canonical_path: module.info.canonical_path.as_str(),
-                imports: ast_json_imports(&module.imports),
+                imports: module
+                    .imports
+                    .iter()
+                    .map(|import| AstJsonImport {
+                        local_name: import.local_name.as_str(),
+                        source_module: import.source_module.0,
+                        source_symbol: import.source_symbol.as_str(),
+                        span: import.span,
+                    })
+                    .collect(),
                 program: &module.program,
             })
             .collect(),
@@ -114,7 +136,8 @@ pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<
         format: "zen.symbols.v0",
         semantic_status: "resolved",
         entry_module: graph.entry.0,
-        modules: sorted_graph_modules(graph)
+        modules: graph
+            .sorted_modules()
             .into_iter()
             .map(|module| SymbolsJsonModule {
                 id: module.info.id.0,
@@ -126,12 +149,6 @@ pub fn symbols_graph_to_json(graph: &ResolvedModuleGraph) -> serde_json::Result<
     };
 
     serde_json::to_string_pretty(&graph)
-}
-
-fn sorted_graph_modules(graph: &ResolvedModuleGraph) -> Vec<&ResolvedModule> {
-    let mut modules: Vec<_> = graph.modules().values().collect();
-    modules.sort_by_key(|module| module.info.id.0);
-    modules
 }
 
 pub fn typed_program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
@@ -170,36 +187,64 @@ fn symbol_json(symbol: &Symbol) -> SymbolJson<'_> {
         name: symbol.name.as_str(),
         is_public: symbol.is_public,
         import_source: symbol.import_source.as_deref(),
-        parameter_count: symbol.parameter_count,
         parameter_names: symbol.parameter_names.as_deref(),
-        parameter_type_names: symbol.parameter_type_names.as_deref(),
-        return_type_name: symbol.return_type_name.as_deref(),
-        type_parameter_count: symbol.type_parameter_count,
+        parameter_type_names: symbol.parameter_types.as_deref().map(ast_type_names),
+        return_type_name: symbol.return_type.as_ref().map(AstType::display_name),
         type_parameter_names: symbol.type_parameter_names.as_deref(),
-        field_count: symbol.field_count,
-        field_type_names: symbol.field_type_names.as_deref(),
+        field_type_names: symbol.field_types.as_deref().map(field_type_names),
         variant_names: symbol.variant_names.as_deref(),
         variant_owner_name: symbol.variant_owner_name.as_deref(),
-        variant_payload_count: symbol.variant_payload_count,
-        variant_payload_type_name: symbol.variant_payload_type_name.as_deref(),
-        behavior_method_signatures: symbol.behavior_method_signatures.as_deref(),
-        behavior_parent_names: symbol.behavior_parent_names.as_deref(),
-        behavior_impl_names: symbol.behavior_impl_names.as_deref(),
-        behavior_required_names: symbol.behavior_required_names.as_deref(),
+        variant_payload_type_name: symbol
+            .variant_payload_type
+            .as_ref()
+            .map(AstType::display_name),
+        behavior_method_signatures: symbol
+            .behavior_method_types
+            .as_deref()
+            .map(behavior_method_signatures),
+        behavior_parent_names: symbol
+            .behavior_parent_refs
+            .as_deref()
+            .map(behavior_ref_names),
+        behavior_impl_names: symbol.behavior_impl_refs.as_deref().map(behavior_ref_names),
+        behavior_required_names: symbol
+            .behavior_required_refs
+            .as_deref()
+            .map(behavior_ref_names),
         is_mutable: symbol.is_mutable,
         scope_id: symbol.scope_id,
         definition_span: symbol.definition_span,
     }
 }
 
-fn ast_json_imports(imports: &[ImportBinding]) -> Vec<AstJsonImport<'_>> {
-    imports
+fn ast_type_names(types: &[AstType]) -> Vec<String> {
+    types.iter().map(AstType::display_name).collect()
+}
+
+fn field_type_names(fields: &[(String, AstType)]) -> Vec<(String, String)> {
+    fields
         .iter()
-        .map(|import| AstJsonImport {
-            local_name: import.local_name.as_str(),
-            source_module: import.source_module.0,
-            source_symbol: import.source_symbol.as_str(),
-            span: import.span,
+        .map(|(name, ty)| (name.clone(), ty.display_name()))
+        .collect()
+}
+
+fn behavior_method_signatures(
+    methods: &[BehaviorMethodTypeMetadata],
+) -> Vec<(String, Vec<String>, String)> {
+    methods
+        .iter()
+        .map(|method| {
+            (
+                method.name.clone(),
+                ast_type_names(&method.parameter_types),
+                method.return_type.display_name(),
+            )
         })
+        .collect()
+}
+
+fn behavior_ref_names(refs: &[BehaviorRefMetadata]) -> Vec<String> {
+    refs.iter()
+        .map(|behavior| behavior_ref_display(&behavior.name, &behavior.type_args))
         .collect()
 }

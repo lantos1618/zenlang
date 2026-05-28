@@ -1,4 +1,5 @@
 use super::*;
+use crate::typechecker::method_signature_key;
 
 impl TypeChecker {
     pub(super) fn check_call_signature(
@@ -9,39 +10,43 @@ impl TypeChecker {
         args: &[TypedExpression],
         span: &Span,
     ) {
-        if params.len() != args.len() {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E3021,
+        let expected_types = params
+            .iter()
+            .map(|(_, expected)| self.resolve_type(expected))
+            .collect::<Vec<_>>();
+        self.check_call_signature_types(kind, callee, &expected_types, args, span);
+    }
+
+    pub(super) fn check_call_signature_types(
+        &mut self,
+        kind: &str,
+        callee: &str,
+        expected_types: &[Type],
+        args: &[TypedExpression],
+        span: &Span,
+    ) {
+        if expected_types.len() != args.len() {
+            let expected_count = expected_types.len();
+            let actual_count = args.len();
+            self.push_error(
+                E3021,
                 format!(
-                    "{} `{}` expects {} arguments, found {}",
-                    kind,
-                    callee,
-                    params.len(),
-                    args.len()
+                    "{kind} `{callee}` expects {expected_count} arguments, found {actual_count}"
                 ),
                 *span,
-            ));
+            );
             return;
         }
 
-        for (idx, ((_, expected), actual)) in params.iter().zip(args.iter()).enumerate() {
-            let expected = self.resolve_type(expected);
-            if expected == Type::Unknown || actual.ty == Type::Unknown {
-                continue;
-            }
-
-            if !self.types_compatible(&expected, &actual.ty) {
-                self.diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E3022,
-                    format!(
-                        "argument {} for `{}` expects `{}`, found `{}`",
-                        idx + 1,
-                        callee,
-                        expected.display_name(),
-                        actual.ty.display_name()
-                    ),
+        for (idx, (expected, actual)) in expected_types.iter().zip(args.iter()).enumerate() {
+            if !self.types_compatible(expected, &actual.ty) {
+                let position = idx + 1;
+                let (expected, actual_display) = type_display_pair(expected, &actual.ty);
+                self.push_error(
+                    E3022,
+                    format!("argument {position} for `{callee}` expects `{expected}`, found `{actual_display}`"),
                     actual.span,
-                ));
+                );
             }
         }
     }
@@ -55,51 +60,12 @@ impl TypeChecker {
         }
     }
 
-    pub(super) fn generic_base_type_name(&self, concrete_name: &str) -> Option<String> {
-        self.structs
-            .values()
-            .filter(|info| !info.type_params.is_empty())
-            .find(|info| self.concrete_type_name_matches_generic(concrete_name, &info.name))
-            .map(|info| info.name.clone())
-            .or_else(|| {
-                self.enums
-                    .values()
-                    .filter(|info| !info.type_params.is_empty())
-                    .find(|info| self.concrete_type_name_matches_generic(concrete_name, &info.name))
-                    .map(|info| info.name.clone())
-            })
-    }
-
-    pub(super) fn unknown_method_expr(
-        &mut self,
-        type_name: &str,
-        method: &str,
-        typed_args: Vec<TypedExpression>,
-        span: Span,
-    ) -> Result<TypedExpression, Diagnostic> {
-        if !type_name.is_empty() {
-            self.diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E3043,
-                format!("type `{}` has no method `{}`", type_name, method),
-                span,
-            ));
-        }
-        Ok(TypedExpression {
-            kind: TypedExprKind::FunctionCall {
-                function: format!("{}_{}", type_name, method),
-                args: typed_args,
-            },
-            ty: Type::Unknown,
-            span,
-        })
-    }
-
     pub(super) fn behavior_specialized_method_key(
         &self,
         type_name: &str,
         method: &str,
     ) -> Option<String> {
-        let prefix = format!("{}__", Self::method_key(type_name, method));
+        let prefix = format!("{}__", method_signature_key(type_name, method));
         let candidates: Vec<_> = self
             .methods
             .iter()
@@ -121,20 +87,6 @@ impl TypeChecker {
         (matching.len() == 1).then(|| matching[0].0.clone())
     }
 
-    pub(super) fn is_root_std_runtime_call(&self, module: &str, function: &str) -> bool {
-        self.is_root_std_import(module)
-            && crate::typechecker::std_runtime_calls::parse_std_runtime_call(module, function)
-                .is_some()
-    }
-
-    pub(super) fn block_satisfies_return(&self, block: &TypedBlock, ret_type: &Type) -> bool {
-        if block.ty != Type::Void && self.types_compatible(ret_type, &block.ty) {
-            return true;
-        }
-
-        self.block_definitely_returns(block)
-    }
-
     pub(super) fn block_definitely_returns(&self, block: &TypedBlock) -> bool {
         block
             .expr
@@ -146,7 +98,7 @@ impl TypeChecker {
             })
     }
 
-    pub(super) fn expr_definitely_returns(&self, expr: &TypedExpression) -> bool {
+    fn expr_definitely_returns(&self, expr: &TypedExpression) -> bool {
         match &expr.kind {
             TypedExprKind::Block(block) => self.block_definitely_returns(block),
             TypedExprKind::Match { arms, .. } => {

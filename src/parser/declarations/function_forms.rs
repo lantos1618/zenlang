@@ -11,9 +11,7 @@ impl Parser {
         self.expect(&Token::Assign)?;
         self.skip_newlines();
 
-        // Check if this is a function (starts with `(`) or a top-level const expression
         if !matches!(self.peek(), Token::LParen) {
-            // Top-level expression/const: `name = expr`
             let value = self.parse_expression()?;
             let span = name_span.merge(value.span());
             return Ok(Declaration::TopLevelExpr {
@@ -47,7 +45,6 @@ impl Parser {
     pub(in crate::parser) fn parse_function_signature_and_body(
         &mut self,
     ) -> Result<(Vec<Param>, Option<AstType>, Expression), CompileError> {
-        // (params)
         self.expect(&Token::LParen)?;
         let params = self.parse_param_list()?;
         self.expect(&Token::RParen)?;
@@ -56,7 +53,6 @@ impl Parser {
         let return_type = self.parse_optional_return_type_before_block()?;
         self.skip_newlines();
 
-        // body block
         let body = self.parse_block_expression()?;
         Ok((params, return_type, body))
     }
@@ -71,7 +67,6 @@ impl Parser {
             self.skip_newlines();
             let param_start = self.peek_span();
 
-            // Optional `mut` qualifier
             let mutable = self.consume_mutability_keyword();
 
             let (name, _) = self.expect_identifier()?;
@@ -85,47 +80,49 @@ impl Parser {
                 span,
             });
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            } else {
+            if !self.consume_comma() {
                 break;
             }
         }
         Ok(params)
     }
 
-    pub(in crate::parser) fn parse_const_decl(
+    pub(in crate::parser) fn parse_method_declaration(
         &mut self,
-        name: String,
-        name_span: Span,
+        type_name: String,
+        method_name: String,
+        mut type_params: Vec<TypeParam>,
+        public: bool,
+        start_span: Span,
     ) -> Result<Declaration, CompileError> {
-        self.advance(); // consume :=
+        if matches!(self.peek(), Token::Lt) {
+            type_params.extend(self.parse_type_params()?);
+        }
         self.skip_newlines();
-        let value = self.parse_expression()?;
-        let span = name_span.merge(value.span());
-        Ok(Declaration::TopLevelExpr {
-            expr: Expression::Block {
-                statements: vec![Statement::VarDecl {
-                    name,
-                    ty: None,
-                    value,
-                    mutable: false,
-                    constant: true,
-                    span,
-                }],
-                expr: None,
-                span,
-            },
+        self.expect(&Token::Assign)?;
+        self.skip_newlines();
+        let (params, return_type, body) = self.parse_function_signature_and_body()?;
+        let span = start_span.merge(body.span());
+        Ok(Declaration::Method {
+            type_name,
+            method_name,
+            type_params,
+            params,
+            return_type,
+            body,
+            public,
             span,
         })
     }
 
-    pub(in crate::parser) fn parse_var_decl_toplevel(
+    pub(in crate::parser) fn parse_top_level_var_decl(
         &mut self,
         name: String,
         name_span: Span,
+        mutable: bool,
+        constant: bool,
     ) -> Result<Declaration, CompileError> {
-        self.advance(); // consume ::=
+        self.advance();
         self.skip_newlines();
         let value = self.parse_expression()?;
         let span = name_span.merge(value.span());
@@ -135,8 +132,8 @@ impl Parser {
                     name,
                     ty: None,
                     value,
-                    mutable: true,
-                    constant: false,
+                    mutable,
+                    constant,
                     span,
                 }],
                 expr: None,

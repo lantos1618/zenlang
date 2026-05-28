@@ -1,14 +1,9 @@
-use std::path::Path;
 use std::process;
 
 use zen::error::FileTable;
 
 pub(super) fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {
-    let path = Path::new(path_str);
-    if !path.exists() {
-        eprintln!("error: file not found: {}", path_str);
-        process::exit(1);
-    }
+    let path = super::require_existing_path(path_str);
     if !super::is_build_zen_path(path_str) {
         eprintln!("error: emit-json build-graph expects a build.zen file");
         process::exit(1);
@@ -22,8 +17,8 @@ pub(super) fn load_build_graph(path_str: &str) -> zen::build_graph::BuildGraph {
         }
     };
 
-    let mut files = FileTable::new();
-    let file_id = files.add_file(path_str.to_string(), source.clone());
+    let mut files = FileTable::default();
+    let file_id = files.add_file(path_str.to_string(), &source);
     let tokens = match zen::lexer::tokenize(&source, file_id) {
         Ok(tokens) => tokens,
         Err(err) => {

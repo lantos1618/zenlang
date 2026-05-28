@@ -3,18 +3,9 @@ use super::*;
 impl Parser {
     pub(super) fn parse_shorthand_enum_variant_expr(&mut self) -> Result<Expression, CompileError> {
         let (_, dot_span) = self.advance();
-        let (variant, variant_span) = self.expect_identifier()?;
-        let mut span = dot_span.merge(variant_span);
-
-        let payload = if matches!(self.peek(), Token::LParen) {
-            self.advance();
-            let expr = self.parse_expression()?;
-            let end = self.expect(&Token::RParen)?;
-            span = span.merge(end);
-            Some(Box::new(expr))
-        } else {
-            None
-        };
+        let (variant, _) = self.expect_identifier()?;
+        let payload = self.parse_optional_enum_variant_payload()?;
+        let span = dot_span.merge(self.prev_span());
 
         Ok(Expression::EnumVariant {
             enum_name: String::new(),
@@ -29,7 +20,7 @@ impl Parser {
         &mut self,
         scrutinee: Expression,
     ) -> Result<Expression, CompileError> {
-        self.advance(); // consume ?
+        self.advance();
         self.skip_newlines();
 
         if matches!(self.peek(), Token::LBrace) {
@@ -45,12 +36,11 @@ impl Parser {
 
         let mut arms = Vec::new();
         while matches!(self.peek(), Token::Pipe) {
-            self.advance(); // consume |
+            self.advance();
             self.skip_newlines();
 
             let arm_start = self.peek_span();
             let pattern = self.parse_pattern()?;
-            let guard = None;
 
             self.skip_newlines();
             let body = self.parse_block_expression()?;
@@ -58,7 +48,7 @@ impl Parser {
 
             arms.push(MatchArm {
                 pattern,
-                guard,
+                guard: None,
                 body,
                 span: arm_span,
             });
@@ -79,10 +69,10 @@ impl Parser {
     pub(super) fn parse_loop(&mut self, start_span: Span) -> Result<Expression, CompileError> {
         self.skip_newlines();
         if matches!(self.peek(), Token::LParen) {
-            self.advance(); // (
+            self.advance();
             self.skip_newlines();
             if matches!(self.peek(), Token::LParen) {
-                self.advance(); // inner (
+                self.advance();
                 self.skip_newlines();
                 let control = if matches!(self.peek(), Token::RParen) {
                     None
@@ -91,7 +81,7 @@ impl Parser {
                     Some((name, self.fresh_loop_control_label()))
                 };
                 self.skip_newlines();
-                self.expect(&Token::RParen)?; // inner )
+                self.expect(&Token::RParen)?;
                 self.skip_newlines();
                 if let Some((name, label)) = &control {
                     self.loop_controls.push((name.clone(), label.clone()));
@@ -145,15 +135,13 @@ impl Parser {
         let mut parts = Vec::new();
 
         loop {
-            match self.peek() {
-                Token::StringChunk(_) => {
-                    let (tok, _) = self.advance();
-                    if let Token::StringChunk(s) = tok {
-                        parts.push(StringPart::Literal(s));
-                    }
+            match self.peek().clone() {
+                Token::StringChunk(s) => {
+                    self.advance();
+                    parts.push(StringPart::Literal(s));
                 }
                 Token::InterpolationStart => {
-                    self.advance(); // consume ${
+                    self.advance();
                     let expr = self.parse_expression()?;
                     parts.push(StringPart::Expr(expr));
                     match self.peek() {

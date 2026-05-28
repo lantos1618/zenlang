@@ -1,50 +1,39 @@
-use crate::ast::{AstType, Declaration};
-use crate::error::{Diagnostic, Span};
+use crate::ast::{behavior_ref_display, named_type_arg_params, AstType, Declaration};
+use crate::error::{CompilerDiagnosticCode::*, Diagnostic, Span};
 
-use super::super::metadata_helpers::behavior_ref_display;
 use super::super::{BehaviorRefMetadata, Resolver, SymbolTable};
-
-pub(super) struct ImplBlockValidationInput<'a> {
-    pub(super) type_name: &'a str,
-    pub(super) type_args: &'a [AstType],
-    pub(super) behavior: Option<&'a str>,
-    pub(super) behavior_type_args: &'a [AstType],
-    pub(super) methods: &'a [Declaration],
-    pub(super) span: Span,
-}
 
 impl Resolver {
     pub(super) fn validate_impl_block_declaration(
         &self,
         table: &mut SymbolTable,
-        input: ImplBlockValidationInput<'_>,
+        decl: &Declaration,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        let ImplBlockValidationInput {
+        let Declaration::ImplBlock {
             type_name,
             type_args,
             behavior,
             behavior_type_args,
             methods,
             span,
-        } = input;
-
-        let scoped_type_params = target_type_params(type_args);
+            ..
+        } = decl
+        else {
+            return;
+        };
+        let scoped_type_params = named_type_arg_params(type_args);
 
         if !self.is_known_type_name(table, &scoped_type_params, type_name) {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0201,
-                format!("unknown type symbol '{type_name}'"),
-                span,
-            ));
+            self.push_unknown_type_symbol(diagnostics, type_name, *span);
         }
-        if let Some(behavior) = behavior {
+        if let Some(behavior) = behavior.as_deref() {
             self.validate_behavior_impl_declaration(
                 table,
                 type_name,
                 behavior,
                 behavior_type_args,
-                span,
+                *span,
                 diagnostics,
             );
         }
@@ -53,7 +42,7 @@ impl Resolver {
                 table,
                 &scoped_type_params,
                 type_arg,
-                span,
+                *span,
                 false,
                 diagnostics,
             );
@@ -74,11 +63,7 @@ impl Resolver {
     ) {
         let behavior_known = self.is_known_behavior_name(table, behavior);
         if !behavior_known {
-            diagnostics.push(Diagnostic::error_code(
-                crate::error::CompilerDiagnosticCode::E0202,
-                format!("unknown behavior symbol '{behavior}'"),
-                span,
-            ));
+            self.push_unknown_behavior_symbol(diagnostics, behavior, span);
         }
         if self.is_known_type_name(table, &[], type_name) && behavior_known {
             let behavior_display = behavior_ref_display(behavior, behavior_type_args);
@@ -87,7 +72,7 @@ impl Resolver {
                 BehaviorRefMetadata::new(behavior, behavior_type_args),
             ) {
                 diagnostics.push(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E0217,
+                    E0217,
                     format!(
                         "duplicate behavior implementation `{behavior_display}` for `{type_name}`"
                     ),
@@ -103,40 +88,9 @@ impl Resolver {
         method: &Declaration,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        let Declaration::Function {
-            type_params,
-            params,
-            return_type,
-            body,
-            span,
-            ..
-        } = method
-        else {
+        let Some(method) = method.as_callable() else {
             return;
         };
-
-        self.validate_type_param_constraints(table, type_params, true, diagnostics);
-        self.validate_params(table, type_params, params, true, diagnostics);
-        if let Some(return_type) = return_type {
-            self.validate_type_ref(table, type_params, return_type, *span, true, diagnostics);
-        }
-        let scope_id = table.new_scope();
-        let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-        self.validate_expr_refs(table, type_params, body, &mut locals, true, diagnostics);
+        self.validate_callable_declaration_types(table, method, true, diagnostics);
     }
-}
-
-fn target_type_params(type_args: &[AstType]) -> Vec<crate::ast::TypeParam> {
-    type_args
-        .iter()
-        .filter_map(|arg| match arg {
-            AstType::Named(name) => Some(crate::ast::TypeParam {
-                name: name.clone(),
-                constraint: None,
-                constraint_type_args: Vec::new(),
-                span: Span::dummy(),
-            }),
-            _ => None,
-        })
-        .collect()
 }

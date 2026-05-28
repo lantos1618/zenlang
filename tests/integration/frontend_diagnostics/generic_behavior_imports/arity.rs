@@ -1,22 +1,9 @@
-use super::super::*;
+use super::super::support::assert_diagnostic_code_and_message;
+use super::generic_json_diagnostics;
 
 #[test]
 fn imported_generic_behavior_impl_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-"#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let diagnostics = generic_json_diagnostics(
         r#"
 { Json } = traits
 
@@ -34,40 +21,19 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject imported behavior impl arity errors");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("generic behavior `Json` expects 1 type arguments, found 0"),
-        "expected imported behavior impl arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic behavior `Json` expects 1 type arguments, found 0",
+        "imported behavior impl arity",
     );
 }
 
 #[test]
 fn imported_generic_behavior_extends_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-"#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let diagnostics = generic_json_diagnostics(
         r#"
 { Json } = traits
 
@@ -81,40 +47,19 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject imported behavior extends arity errors");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("generic behavior `Json` expects 1 type arguments, found 0"),
-        "expected imported behavior extends arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic behavior `Json` expects 1 type arguments, found 0",
+        "imported behavior extends arity",
     );
 }
 
 #[test]
 fn imported_generic_behavior_requires_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-"#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let diagnostics = generic_json_diagnostics(
         r#"
 { Json } = traits
 
@@ -128,40 +73,19 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject imported behavior requires arity errors");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("generic behavior `Json` expects 1 type arguments, found 2"),
-        "expected imported behavior requires arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic behavior `Json` expects 1 type arguments, found 2",
+        "imported behavior requires arity",
     );
 }
 
 #[test]
 fn imported_generic_behavior_bound_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
-        r#"
-pub Json<T>: behavior {
-    encode: (Self) T
-}
-"#,
-    )
-    .expect("write traits module");
-
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    let diagnostics = generic_json_diagnostics(
         r#"
 { Json } = traits
 
@@ -173,19 +97,12 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let panic = std::panic::catch_unwind(|| compile_to_c(&main_path))
-        .expect_err("compile_to_c should reject imported generic behavior bound arity errors");
-    let message = panic
-        .downcast_ref::<String>()
-        .map(String::as_str)
-        .or_else(|| panic.downcast_ref::<&str>().copied())
-        .unwrap_or("<non-string panic>");
-
-    assert!(
-        message.contains("generic behavior `Json` expects 1 type arguments, found 0"),
-        "expected imported generic behavior bound arity diagnostic, panic={message}"
+    assert_diagnostic_code_and_message(
+        &diagnostics,
+        "E5001",
+        "generic behavior `Json` expects 1 type arguments, found 0",
+        "imported behavior bound arity",
     );
 }

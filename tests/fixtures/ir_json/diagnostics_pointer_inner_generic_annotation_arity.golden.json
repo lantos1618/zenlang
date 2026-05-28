@@ -19,10 +19,10 @@
       "span": {
         "file_id": 0,
         "path": "$TMP/pointer_inner_generic_annotation_arity.zen",
-        "start": 27,
-        "end": 82,
+        "start": 35,
+        "end": 67,
         "line": 6,
-        "column": 1
+        "column": 9
       },
       "labels": [],
       "notes": [],

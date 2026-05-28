@@ -1,24 +1,2 @@
-// Zen Standard Library: AsyncPool
-// Experimental async I/O completion pool facade.
-
-{ compiler } = @std
-
-AsyncPool: {
-    fd: i32
-}
-
-AsyncPool.new = () AsyncPool {
-    AsyncPool { fd: -1 }
-}
-
-AsyncPool.poll = (self: MutPtr<AsyncPool>) void {
-    compiler.trap()
-}
-
-AsyncPool.schedule_read = (self: MutPtr<AsyncPool>, fd: i32, buf_addr: i64, len: usize, offset: i64, callback: (u64, i64) void, user_data: u64) void {
-    compiler.trap()
-}
-
-AsyncPool.wait = (self: MutPtr<AsyncPool>) void {
-    compiler.trap()
-}
+// Parse-only placeholder for @std.memory.async_pool.
+// Promote async pool APIs only after parser, typechecker, lowering, and docs-truth evidence.

@@ -1,23 +1,17 @@
 use super::support::{
-    assert_diagnostic_code_and_message, assert_no_diagnostic_message, frontend_diagnostics,
-    write_tmp_module,
+    assert_diagnostic_code_and_message, assert_no_diagnostic_message,
+    frontend_diagnostics_for_module, frontend_diagnostics_for_modules,
 };
 
 #[test]
 fn imported_generic_function_inference_conflict_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
 pub choose<T> = (left: T, right: T) T {
     left
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { choose } = helpers
 
@@ -27,7 +21,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -44,9 +37,7 @@ main = () i32 {
 
 #[test]
 fn imported_generic_method_inference_conflict_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "boxes.zen",
         r#"
 pub Box<T>: {
@@ -57,10 +48,6 @@ pub Box.choose<T> = (self: Box<T>, other: T) T {
     self.value
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { Box } = boxes
 
@@ -71,7 +58,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -88,19 +74,13 @@ main = () i32 {
 
 #[test]
 fn imported_generic_ufc_explicit_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
 pub take_second<T, U> = (first: T, second: U) U {
     second
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { take_second } = helpers
 
@@ -110,7 +90,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -127,19 +106,13 @@ main = () i32 {
 
 #[test]
 fn imported_nongeneric_ufc_explicit_type_args_are_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
 pub id_i32 = (value: i32) i32 {
     value
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { id_i32 } = helpers
 
@@ -149,7 +122,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -161,30 +133,27 @@ main = () i32 {
 
 #[test]
 fn imported_generic_ufc_behavior_bound_failure_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
-        "traits.zen",
-        r#"
+    let diagnostics = frontend_diagnostics_for_modules(
+        &[
+            (
+                "traits.zen",
+                r#"
 pub Json: behavior {
     encode: (Self) StaticString
 }
 "#,
-    );
-    write_tmp_module(
-        tmp.path(),
-        "helpers.zen",
-        r#"
+            ),
+            (
+                "helpers.zen",
+                r#"
 { Json } = traits
 
 pub as_json<T: Json> = (value: T) StaticString {
     value.encode()
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
+            ),
+        ],
         r#"
 { as_json } = helpers
 
@@ -199,7 +168,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,

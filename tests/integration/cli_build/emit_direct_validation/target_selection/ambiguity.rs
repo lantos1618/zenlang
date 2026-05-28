@@ -1,16 +1,13 @@
 #[test]
 fn emit_command_build_zen_rejects_multiple_executable_targets() {
-    let (tmp, output) = super::run_emit_build_zen(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
+    let (tmp, output) = super::super::run_emit_build_zen(
         &[
-            ("app.zen", super::main_source("0")),
-            ("tool.zen", super::main_source("0")),
+            r#"    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })"#,
+            r#"    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })"#,
+        ],
+        &[
+            ("app.zen", super::MAIN_ZERO),
+            ("tool.zen", super::MAIN_ZERO),
         ],
     );
 
@@ -24,15 +21,12 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn emit_command_build_zen_reports_multi_target_ambiguity_before_missing_executable_source() {
-    let (tmp, output) = super::run_emit_build_zen(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "missing_tool.zen", out_dir: "build/tool/" })
-    .Ok(b.config())
-}
-"#,
-        &[("app.zen", super::main_source("0"))],
+    let (tmp, output) = super::super::run_emit_build_zen(
+        &[
+            r#"    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })"#,
+            r#"    b.add(Executable { name: "tool", main: "missing_tool.zen", out_dir: "build/tool/" })"#,
+        ],
+        &[("app.zen", super::MAIN_ZERO)],
     );
 
     super::assert_emit_rejected_without_outputs(
@@ -50,19 +44,16 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn emit_command_build_zen_reports_multi_target_ambiguity_before_graph_only_library_typechecking() {
-    let (tmp, output) = super::run_emit_build_zen(
-        r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {
-    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })
-    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })
-    b.add(Library { name: "core", exports: ["lib.zen"] })
-    .Ok(b.config())
-}
-"#,
+    let (tmp, output) = super::super::run_emit_build_zen(
         &[
-            ("app.zen", super::main_source("0")),
-            ("tool.zen", super::main_source("0")),
-            ("lib.zen", super::main_source("true")),
+            r#"    b.add(Executable { name: "app", main: "app.zen", out_dir: "build/app/" })"#,
+            r#"    b.add(Executable { name: "tool", main: "tool.zen", out_dir: "build/tool/" })"#,
+            r#"    b.add(Library { name: "core", exports: ["lib.zen"] })"#,
+        ],
+        &[
+            ("app.zen", super::MAIN_ZERO),
+            ("tool.zen", super::MAIN_ZERO),
+            ("lib.zen", super::MAIN_TRUE),
         ],
     );
 

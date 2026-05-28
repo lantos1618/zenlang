@@ -12,11 +12,11 @@ impl TypeChecker {
                 public,
                 ..
             } => {
-                let info = struct_info_from_ast_fields(local_name.to_string(), type_params, fields);
-                dependencies.structs.insert(
-                    local_name.to_string(),
-                    Self::scoped_source_type_info(info, *public, specialization_scope),
-                );
+                let mut info = struct_info_from_ast_fields(type_params, fields);
+                if !*public {
+                    info.specialization_scope = specialization_scope.map(str::to_string);
+                }
+                dependencies.structs.insert(local_name.to_string(), info);
             }
             Declaration::Enum {
                 type_params,
@@ -24,45 +24,13 @@ impl TypeChecker {
                 public,
                 ..
             } => {
-                let info =
-                    enum_info_from_ast_variants(local_name.to_string(), type_params, variants);
-                dependencies.enums.insert(
-                    local_name.to_string(),
-                    Self::scoped_source_type_info(info, *public, specialization_scope),
-                );
+                let mut info = enum_info_from_ast_variants(type_params, variants);
+                if !*public {
+                    info.specialization_scope = specialization_scope.map(str::to_string);
+                }
+                dependencies.enums.insert(local_name.to_string(), info);
             }
             _ => {}
         }
-    }
-
-    fn scoped_source_type_info<T: SourceTypeSpecializationScope>(
-        info: T,
-        public: bool,
-        specialization_scope: Option<&str>,
-    ) -> T {
-        if public {
-            return info;
-        }
-
-        match specialization_scope {
-            Some(scope) => info.with_source_scope(scope.to_string()),
-            None => info,
-        }
-    }
-}
-
-trait SourceTypeSpecializationScope {
-    fn with_source_scope(self, scope: String) -> Self;
-}
-
-impl SourceTypeSpecializationScope for StructInfo {
-    fn with_source_scope(self, scope: String) -> Self {
-        self.with_specialization_scope(scope)
-    }
-}
-
-impl SourceTypeSpecializationScope for EnumInfo {
-    fn with_source_scope(self, scope: String) -> Self {
-        self.with_specialization_scope(scope)
     }
 }

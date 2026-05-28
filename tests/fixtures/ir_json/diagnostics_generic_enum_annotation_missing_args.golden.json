@@ -19,10 +19,10 @@
       "span": {
         "file_id": 0,
         "path": "$TMP/generic_enum_annotation_missing_args.zen",
-        "start": 35,
-        "end": 71,
+        "start": 43,
+        "end": 56,
         "line": 6,
-        "column": 1
+        "column": 9
       },
       "labels": [],
       "notes": [],

@@ -15,7 +15,7 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "syscall0 is gated until host effect declarations and syscall ABI semantics are implemented",
+      "message": "`@builtin.syscall0` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
         "path": "$TMP/syscall_gate.zen",

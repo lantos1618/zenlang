@@ -1,25 +1,6 @@
 use super::*;
-use operators::{c_binary_op, c_unary_op};
 
 impl CEmitter {
-    // ── Block body ────────────────────────────────────────────
-
-    pub(super) fn emit_block_body(&mut self, block: &TypedBlock) {
-        for stmt in &block.statements {
-            self.emit_statement(stmt);
-        }
-        if let Some(ref expr) = block.expr {
-            // Block's trailing expression — if in a function context, this is a return value.
-            // For now, emit it as a standalone expression (the caller wraps it as needed).
-            let val = self.emit_expr_to_stmt(expr);
-            if !val.is_empty() {
-                self.line(&val);
-            }
-        }
-    }
-
-    // ── Statements ────────────────────────────────────────────
-
     pub(super) fn emit_statement(&mut self, stmt: &TypedStatement) {
         match &stmt.kind {
             TypedStatementKind::VarDecl {
@@ -28,31 +9,28 @@ impl CEmitter {
                 value,
                 mutable,
             } => {
-                let c_ty = self.c_type(ty);
+                let c_ty = Self::c_type(ty);
                 let val = self.emit_expr_inline(value);
-                if *mutable {
-                    self.line(&format!("{} {} = {};", c_ty, c_ident(name), val));
-                } else {
-                    self.line(&format!("const {} {} = {};", c_ty, c_ident(name), val));
-                }
+                let qualifier = c_const_qualifier(*mutable);
+                self.line(&format!("{qualifier}{} {} = {};", c_ty, c_ident(name), val));
             }
             TypedStatementKind::Expression(expr) => {
-                let s = self.emit_expr_to_stmt(expr);
-                if !s.is_empty() {
-                    self.line(&s);
-                }
+                self.emit_expr_statement(expr);
             }
         }
     }
 
-    // ── Expressions ───────────────────────────────────────────
+    pub(super) fn emit_expr_statement(&mut self, expr: &TypedExpression) {
+        let stmt = self.emit_expr_to_stmt(expr);
+        if !stmt.is_empty() {
+            self.line(&stmt);
+        }
+    }
 
-    /// Emit an expression as a C statement (with semicolon).
     pub(super) fn emit_expr_to_stmt(&mut self, expr: &TypedExpression) -> String {
         match &expr.kind {
-            // These emit multiple lines — handle specially
             TypedExprKind::Block(block) => {
-                self.emit_block_body(block);
+                self.emit_block_body_with_result(block, None);
                 String::new()
             }
             TypedExprKind::Match {
@@ -62,11 +40,6 @@ impl CEmitter {
             } => {
                 self.emit_match(scrutinee, arms, kind, None);
                 String::new()
-            }
-            TypedExprKind::Break => "break;".into(),
-            TypedExprKind::Continue => "continue;".into(),
-            TypedExprKind::LoopControl { action, label } => {
-                format!("goto {label}_{action};")
             }
             TypedExprKind::Assign { target, value } => {
                 let t = self.emit_expr_inline(target);
@@ -84,34 +57,27 @@ impl CEmitter {
         }
     }
 
-    /// Emit an expression as a C inline expression (no semicolon).
     pub(super) fn emit_expr_inline(&mut self, expr: &TypedExpression) -> String {
         match &expr.kind {
             TypedExprKind::IntLiteral(v) => format!("{}LL", v),
-            TypedExprKind::FloatLiteral(v) => format_float(*v).to_string(),
+            TypedExprKind::FloatLiteral(v) => format_float(*v),
             TypedExprKind::StringLiteral(s) => {
                 let escaped = c_escape_string(s);
                 c_static_str_literal(&escaped)
             }
-            TypedExprKind::BoolLiteral(b) => {
-                if *b {
-                    "true".into()
-                } else {
-                    "false".into()
-                }
-            }
+            TypedExprKind::BoolLiteral(b) => b.to_string(),
             TypedExprKind::Variable(name) => c_ident(name),
 
             TypedExprKind::BinaryOp { op, left, right } => {
                 let l = self.emit_expr_inline(left);
                 let r = self.emit_expr_inline(right);
-                let op_str = c_binary_op(*op);
+                let op_str = op.symbol();
                 format!("({} {} {})", l, op_str, r)
             }
 
             TypedExprKind::UnaryOp { op, operand } => {
                 let o = self.emit_expr_inline(operand);
-                format!("({}{})", c_unary_op(*op), o)
+                format!("({}{})", op.symbol(), o)
             }
 
             TypedExprKind::FunctionCall { function, args } => {
@@ -122,7 +88,6 @@ impl CEmitter {
 
             TypedExprKind::FieldAccess { object, field } => {
                 let obj = self.emit_expr_inline(object);
-                // If object is a pointer, use ->
                 match &object.ty {
                     Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) => {
                         format!("{}->{}", obj, c_ident(field))
@@ -151,15 +116,11 @@ impl CEmitter {
 
             TypedExprKind::Cast { expr, to_type, .. } => {
                 let e = self.emit_expr_inline(expr);
-                let ty = self.c_type(to_type);
+                let ty = Self::c_type(to_type);
                 format!("(({}){})", ty, e)
             }
 
-            TypedExprKind::Ref(inner) => {
-                let e = self.emit_expr_inline(inner);
-                format!("(&{})", e)
-            }
-            TypedExprKind::MutRef(inner) => {
+            TypedExprKind::Ref(inner) | TypedExprKind::MutRef(inner) => {
                 let e = self.emit_expr_inline(inner);
                 format!("(&{})", e)
             }
@@ -170,8 +131,6 @@ impl CEmitter {
 
             TypedExprKind::StringInterpolation { parts } => self.emit_string_interpolation(parts),
 
-            TypedExprKind::Intrinsic { name, args } => self.emit_intrinsic(name, args, &expr.ty),
-
             TypedExprKind::Assign { target, value } => {
                 let t = self.emit_expr_inline(target);
                 let v = self.emit_expr_inline(value);
@@ -179,20 +138,17 @@ impl CEmitter {
             }
 
             TypedExprKind::Block(block) => {
-                // GCC statement expression: ({ stmts; expr; })
-                // For simple blocks with just an expr, inline it
                 if block.statements.is_empty() {
                     if let Some(ref e) = block.expr {
                         return self.emit_expr_inline(e);
                     }
                 }
-                // Complex blocks — use a temp var
                 let tmp = self.fresh_tmp();
-                let ty = self.c_type(&block.ty);
+                let ty = Self::c_type(&block.ty);
                 self.line(&format!("{} {};", ty, tmp));
                 self.line("{");
                 self.indent();
-                self.emit_block_body(block);
+                self.emit_block_body_with_result(block, None);
                 self.dedent();
                 self.line("}");
                 tmp
@@ -203,23 +159,14 @@ impl CEmitter {
                 arms,
                 kind,
             } => {
-                // For inline match, we need a temp variable
                 let tmp = self.fresh_tmp();
-                let ty = self.c_type(&expr.ty);
+                let ty = Self::c_type(&expr.ty);
                 self.line(&format!("{} {};", ty, tmp));
                 self.emit_match(scrutinee, arms, kind, Some(&tmp));
                 tmp
             }
 
-            TypedExprKind::Closure { fn_name, .. } => {
-                // For now, just reference the generated function name
-                c_ident(fn_name)
-            }
-
-            TypedExprKind::Break => "break".into(),
-            TypedExprKind::Continue => "continue".into(),
             TypedExprKind::LoopControl { action, label } => format!("goto {label}_{action}"),
-            TypedExprKind::Error => "/* error */".into(),
         }
     }
 }

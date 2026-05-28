@@ -1,13 +1,11 @@
 use super::support::{
-    assert_diagnostic_code_and_message, assert_no_diagnostic_message, frontend_diagnostics,
-    write_tmp_module,
+    assert_diagnostic_code_and_message, assert_no_diagnostic_messages,
+    frontend_diagnostics_for_module,
 };
 
 #[test]
 fn imported_generic_enum_method_explicit_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "result.zen",
         r#"
 pub Result<T, E>:
@@ -20,10 +18,6 @@ pub Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
         | Err(_) { fallback }
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { Result } = result
 
@@ -33,7 +27,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -41,33 +34,22 @@ main = () i32 {
         "generic method `Result.unwrap_or` expects 2 type arguments, found 1",
         "imported generic method arity",
     );
-    assert_no_diagnostic_message(
+    assert_no_diagnostic_messages(
         &diagnostics,
-        "cannot infer type argument",
-        "imported generic method arity failure",
-    );
-    assert_no_diagnostic_message(
-        &diagnostics,
-        "argument 2",
+        &["cannot infer type argument", "argument 2"],
         "imported generic method arity failure",
     );
 }
 
 #[test]
 fn imported_generic_function_explicit_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
 pub take_second<T, U> = (value: U) U {
     value
 }
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { take_second } = helpers
 
@@ -76,7 +58,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -84,23 +65,16 @@ main = () i32 {
         "generic function `take_second` expects 2 type arguments, found 1",
         "imported generic function arity",
     );
-    assert_no_diagnostic_message(
+    assert_no_diagnostic_messages(
         &diagnostics,
-        "cannot infer type argument",
-        "imported generic function arity failure",
-    );
-    assert_no_diagnostic_message(
-        &diagnostics,
-        "argument 1",
+        &["cannot infer type argument", "argument 1"],
         "imported generic function arity failure",
     );
 }
 
 #[test]
 fn imported_generic_aggregate_constructor_type_arg_arity_is_error() {
-    let tmp = tempfile::tempdir().expect("create temp dir");
-    write_tmp_module(
-        tmp.path(),
+    let diagnostics = frontend_diagnostics_for_module(
         "types.zen",
         r#"
 pub Box<T>: {
@@ -111,10 +85,6 @@ pub Option<T>:
     Some(T),
     None
 "#,
-    );
-    let main_path = write_tmp_module(
-        tmp.path(),
-        "main.zen",
         r#"
 { Box, Option } = types
 
@@ -125,7 +95,6 @@ main = () i32 {
 }
 "#,
     );
-    let diagnostics = frontend_diagnostics(&main_path);
 
     assert_diagnostic_code_and_message(
         &diagnostics,
@@ -139,14 +108,9 @@ main = () i32 {
         "generic enum `Option` expects 1 type arguments, found 2",
         "imported generic enum constructor arity",
     );
-    assert_no_diagnostic_message(
+    assert_no_diagnostic_messages(
         &diagnostics,
-        "field `value` for struct `Box`",
-        "imported generic struct constructor arity failure",
-    );
-    assert_no_diagnostic_message(
-        &diagnostics,
-        "payload for enum variant",
-        "imported generic enum constructor arity failure",
+        &["field `value` for struct `Box`", "payload for enum variant"],
+        "imported generic aggregate constructor arity failure",
     );
 }

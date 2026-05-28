@@ -1,164 +1,114 @@
 use super::*;
 
 #[test]
-fn nested_generic_annotation_inner_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
-Option<T>:
-    None,
-    Some(T)
-
+fn composite_generic_annotation_arities_are_errors() {
+    for (preamble, use_site, kind, name, found, context) in [
+        (
+            BOX_OPTION,
+            r#"
 read = (box: Box<Option<i32, StaticString>>) i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic enum `Option` expects 1 type arguments, found 2")),
-        "expected nested generic annotation inner arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn nested_generic_instantiation_inner_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
-Option<T>:
-    None,
-    Some(T)
-
+            "enum",
+            "Option",
+            2,
+            "nested annotation",
+        ),
+        (
+            BOX_OPTION,
+            r#"
 main = () i32 {
     value = Box<Option<i32, StaticString>> { value: Option<i32>.Some(1) }
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic enum `Option` expects 1 type arguments, found 2")),
-        "expected nested generic instantiation inner arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn function_type_parameter_annotation_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            "enum",
+            "Option",
+            2,
+            "nested instantiation",
+        ),
+        (
+            BOX,
+            r#"
 call = (f: (Box<i32, StaticString>) i32) i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected function type parameter generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn function_type_return_annotation_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            "struct",
+            "Box",
+            2,
+            "function parameter",
+        ),
+        (
+            BOX,
+            r#"
 factory = () () Box {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected function type return generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn pointer_type_inner_generic_annotation_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            "struct",
+            "Box",
+            0,
+            "function return",
+        ),
+        (
+            BOX,
+            r#"
 read = (ptr: Ptr<Box<i32, StaticString>>) i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected pointer inner generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn slice_type_inner_generic_annotation_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            "struct",
+            "Box",
+            2,
+            "pointer inner",
+        ),
+        (
+            BOX,
+            r#"
 read = (slice: Slice<Box>) i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected slice inner generic annotation arity diagnostic, got {errors:?}"
-    );
+            "struct",
+            "Box",
+            0,
+            "slice inner",
+        ),
+        (
+            BOX,
+            r#"
+read = (items: [Box<i32, StaticString>; 1]) i32 {
+    0
+}
+"#,
+            "struct",
+            "Box",
+            2,
+            "array inner",
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{preamble}\n{use_site}"));
+        assert_generic_arity_diagnostic(&errors, kind, name, 1, found, context);
+    }
 }
 
 #[test]
-fn array_type_inner_generic_annotation_arity_is_error() {
+fn empty_array_literal_is_an_error() {
     let errors = typecheck_errors(
         r#"
-Box<T>: {
-    value: T
-}
-
-read = (items: [Box<i32, StaticString>; 1]) i32 {
+main = () i32 {
+    values = []
     0
 }
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected array inner generic annotation arity diagnostic, got {errors:?}"
+    assert_diagnostic_code_and_message(
+        &errors,
+        "E3055",
+        "cannot infer element type for empty array",
+        "empty array literal",
     );
 }

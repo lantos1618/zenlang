@@ -1,9 +1,10 @@
 use super::assert_behavior_association_diagnostics_golden;
 
 #[test]
-fn emit_json_diagnostics_generic_impl_arity_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+fn emit_json_diagnostics_generic_relationship_schemas_match_golden() {
+    for (source, filename, description) in [
+        (
+            r#"
 Point: { x: i32 }
 
 Json<T>: behavior {
@@ -18,16 +19,11 @@ main = () i32 {
     0
 }
 "#,
-        "generic_impl_arity.zen",
-        "tests/fixtures/ir_json/diagnostics_generic_impl_arity.golden.json",
-        "generic behavior impl arity",
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_generic_extends_arity_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+            "generic_impl_arity.zen",
+            "generic behavior impl arity",
+        ),
+        (
+            r#"
 Json<T>: behavior {
     encode: (Self) T
 }
@@ -42,16 +38,11 @@ main = () i32 {
     0
 }
 "#,
-        "generic_extends_arity.zen",
-        "tests/fixtures/ir_json/diagnostics_generic_extends_arity.golden.json",
-        "generic behavior extends arity",
-    );
-}
-
-#[test]
-fn emit_json_diagnostics_duplicate_generic_impl_schema_matches_golden() {
-    assert_behavior_association_diagnostics_golden(
-        r#"
+            "generic_extends_arity.zen",
+            "generic behavior extends arity",
+        ),
+        (
+            r#"
 Point: { x: i32 }
 
 Json<T>: behavior {
@@ -70,8 +61,10 @@ main = () i32 {
     0
 }
 "#,
-        "duplicate_generic_impl.zen",
-        "tests/fixtures/ir_json/diagnostics_duplicate_generic_impl.golden.json",
-        "duplicate generic behavior impl",
-    );
+            "duplicate_generic_impl.zen",
+            "duplicate generic behavior impl",
+        ),
+    ] {
+        assert_behavior_association_diagnostics_golden(source, filename, description);
+    }
 }

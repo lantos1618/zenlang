@@ -1,11 +1,10 @@
 use super::*;
-use crate::parser::keywords::ParserModuleRoot;
+use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT};
 
 impl Parser {
     pub(super) fn parse_import(&mut self) -> Result<Declaration, CompileError> {
         let start = self.peek_span();
 
-        // { name1, name2 }
         self.expect(&Token::LBrace)?;
         let mut names = Vec::new();
         loop {
@@ -16,16 +15,13 @@ impl Parser {
             let (name, _) = self.expect_identifier()?;
             names.push(name);
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
         self.expect(&Token::RBrace)?;
         self.skip_newlines();
         self.expect(&Token::Assign)?;
         self.skip_newlines();
 
-        // module path: std, std.io, @std.io, @builtin
         let module_path = self.parse_module_path()?;
         let span = start.merge(self.prev_span());
 
@@ -42,11 +38,11 @@ impl Parser {
         match self.peek().clone() {
             Token::AtStd => {
                 self.advance();
-                path.push(ParserModuleRoot::AtStd.as_str().to_string());
+                path.push(AT_STD_ROOT.to_string());
             }
             Token::AtBuiltin => {
                 self.advance();
-                path.push(ParserModuleRoot::AtBuiltin.as_str().to_string());
+                path.push(AT_BUILTIN_ROOT.to_string());
             }
             Token::Identifier(name) => {
                 self.advance();

@@ -24,7 +24,7 @@ choose = (candidate: Pair, enabled: bool) MaybePair {
 main = () i32 { 0 }
 "#,
         "hir_declarations_subject.zen",
-        "tests/fixtures/ir_json/hir_declarations.golden.json",
+        "declarations",
         "declaration-rich program",
     );
 }

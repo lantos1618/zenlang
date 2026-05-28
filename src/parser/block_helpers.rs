@@ -44,6 +44,16 @@ impl Parser {
         })
     }
 
+    pub(in crate::parser) fn parse_optional_return_type_before_block(
+        &mut self,
+    ) -> Result<Option<AstType>, CompileError> {
+        if matches!(self.peek(), Token::LBrace) {
+            Ok(None)
+        } else {
+            self.parse_type().map(Some)
+        }
+    }
+
     pub(super) fn is_closure(&self) -> bool {
         let mut i = self.pos + 1;
         let mut depth = 1u32;
@@ -62,7 +72,7 @@ impl Parser {
                         }
                         return matches!(
                             self.tokens.get(i).map(|(t, _)| t),
-                            Some(Token::LBrace) | Some(Token::Identifier(_))
+                            Some(Token::LBrace | Token::Identifier(_))
                         );
                     }
                     i += 1;
@@ -95,16 +105,6 @@ impl Parser {
         })
     }
 
-    pub(in crate::parser) fn parse_optional_return_type_before_block(
-        &mut self,
-    ) -> Result<Option<AstType>, CompileError> {
-        if matches!(self.peek(), Token::LBrace) {
-            Ok(None)
-        } else {
-            self.parse_type().map(Some)
-        }
-    }
-
     pub(super) fn parse_arg_list(&mut self) -> Result<Vec<Expression>, CompileError> {
         let mut args = Vec::new();
         self.skip_newlines();
@@ -115,9 +115,7 @@ impl Parser {
             self.skip_newlines();
             args.push(self.parse_expression()?);
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            } else {
+            if !self.consume_comma() {
                 break;
             }
         }

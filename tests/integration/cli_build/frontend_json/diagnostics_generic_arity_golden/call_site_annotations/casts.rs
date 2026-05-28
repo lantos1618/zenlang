@@ -17,7 +17,6 @@ main = () i32 {
 "#,
         "cast target annotation type-argument arity",
         "cast target annotation type-argument arity diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_cast_target_annotation_type_arg_arity.golden.json",
     );
 }
 
@@ -38,6 +37,5 @@ main = () i32 {
 "#,
         "cast target annotation missing generic arguments",
         "cast target annotation missing-arguments diagnostics should be stable",
-        "tests/fixtures/ir_json/diagnostics_cast_target_annotation_missing_args.golden.json",
     );
 }

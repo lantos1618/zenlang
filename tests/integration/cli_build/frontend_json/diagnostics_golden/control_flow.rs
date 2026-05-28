@@ -10,7 +10,6 @@ main = (flag: bool) i32 {
         | true { 1 }
 }
 "#,
-        "tests/fixtures/ir_json/diagnostics_missing_bool_match_arm.golden.json",
         "missing bool match arm",
         1,
         "missing bool match arm diagnostics should carry one structured fix",

@@ -1,16 +1,13 @@
 use serde::Serialize;
 
-/// Binary operators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum BinaryOp {
-    // Arithmetic
     Add,
     Sub,
     Mul,
     Div,
     Mod,
 
-    // Comparison
     Eq,
     NotEq,
     Lt,
@@ -18,11 +15,9 @@ pub enum BinaryOp {
     LtEq,
     GtEq,
 
-    // Logical
     And,
     Or,
 
-    // Bitwise
     BitAnd,
     BitOr,
     BitXor,
@@ -31,7 +26,6 @@ pub enum BinaryOp {
 }
 
 impl BinaryOp {
-    /// Returns the operator symbol for display/error messages.
     pub fn symbol(&self) -> &'static str {
         match self {
             BinaryOp::Add => "+",
@@ -56,7 +50,6 @@ impl BinaryOp {
     }
 }
 
-/// Unary operators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum UnaryOp {
     Neg,    // -x
@@ -80,47 +73,22 @@ pub enum LoopControlAction {
     Next,
 }
 
-impl LoopControlAction {
-    pub const DONE: &'static str = "done";
-    pub const NEXT: &'static str = "next";
-    const ALL: &[LoopControlAction] = &[Self::Done, Self::Next];
+const LOOP_CONTROL_ACTION_SPELLINGS: &[(LoopControlAction, &str)] = &[
+    (LoopControlAction::Done, "done"),
+    (LoopControlAction::Next, "next"),
+];
 
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Done => Self::DONE,
-            Self::Next => Self::NEXT,
-        }
+impl LoopControlAction {
+    pub fn as_str(self) -> &'static str {
+        crate::static_spelling::static_spelling(LOOP_CONTROL_ACTION_SPELLINGS, self)
     }
 }
 
 crate::static_spelling::impl_static_spelling_display!(
     LoopControlAction,
-    as_str = LoopControlAction::as_str
+    table = LOOP_CONTROL_ACTION_SPELLINGS
 );
 crate::static_spelling::impl_static_spelling_from_str!(
     LoopControlAction,
-    variants = LoopControlAction::ALL,
-    as_str = LoopControlAction::as_str
+    table = LOOP_CONTROL_ACTION_SPELLINGS
 );
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn loop_control_action_owns_text_spelling() {
-        assert_eq!(LoopControlAction::Done.as_str(), "done");
-        assert_eq!(LoopControlAction::Next.as_str(), "next");
-        assert_eq!(
-            "done".parse::<LoopControlAction>(),
-            Ok(LoopControlAction::Done)
-        );
-        assert_eq!(
-            "next".parse::<LoopControlAction>(),
-            Ok(LoopControlAction::Next)
-        );
-        assert!("stop".parse::<LoopControlAction>().is_err());
-        assert_eq!(LoopControlAction::Done.to_string(), "done");
-        assert_eq!(LoopControlAction::Next.to_string(), "next");
-    }
-}

@@ -15,12 +15,7 @@ main = () i32 {
     );
 
     assert_generic_arity_diagnostic(&errors, "function", "pick", 2, 1, "generic function arity");
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("cannot infer type argument")),
-        "explicit generic arity failure should not also report inference, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "cannot infer type argument", "function arity");
 }
 
 #[test]
@@ -43,12 +38,7 @@ main = () i32 {
     );
 
     assert_generic_arity_diagnostic(&errors, "method", "Box.pick", 2, 1, "generic method arity");
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("cannot infer type argument")),
-        "explicit generic method arity failure should not also report inference, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "cannot infer type argument", "method arity");
 }
 
 #[test]
@@ -73,10 +63,7 @@ main = () i32 {
         1,
         "generic function arity",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 1")),
-        "explicit generic arity failure should not also report argument mismatch, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "argument 1", "function arity");
 }
 
 #[test]
@@ -106,8 +93,5 @@ main = () i32 {
         1,
         "generic method arity",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "explicit generic method arity failure should not also report argument mismatch, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "argument 2", "method arity");
 }

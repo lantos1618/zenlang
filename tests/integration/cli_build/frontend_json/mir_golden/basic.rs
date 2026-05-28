@@ -19,7 +19,7 @@ main = () i32 {
 }
 "#,
         "mir_match_subject.zen",
-        "tests/fixtures/ir_json/mir_match_schema.golden.json",
+        "match_schema",
         "match program",
     );
 }
@@ -34,7 +34,7 @@ main = () i32 {
 }
 "#,
         "mir_subject.zen",
-        "tests/fixtures/ir_json/mir_minimal_function.golden.json",
+        "minimal_function",
         "minimal function",
     );
 }

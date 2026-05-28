@@ -1,4 +1,4 @@
-use crate::ast::Declaration;
+use crate::ast::{declarations::CallableDeclaration, Declaration};
 use crate::error::Diagnostic;
 
 use super::symbol_table::ScopeStack;
@@ -15,63 +15,21 @@ impl Resolver {
         decl: &Declaration,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
+        if let Some(callable) = decl.as_callable() {
+            let allow_self_type = match decl {
+                Declaration::Method { type_name, .. } => {
+                    if !self.is_known_type_name(table, &[], type_name) {
+                        self.push_unknown_type_symbol(diagnostics, type_name, callable.span);
+                    }
+                    true
+                }
+                _ => false,
+            };
+            self.validate_callable_declaration_types(table, callable, allow_self_type, diagnostics);
+            return;
+        }
+
         match decl {
-            Declaration::Function {
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            } => {
-                self.validate_type_param_constraints(table, type_params, false, diagnostics);
-                self.validate_params(table, type_params, params, false, diagnostics);
-                if let Some(return_type) = return_type {
-                    self.validate_type_ref(
-                        table,
-                        type_params,
-                        return_type,
-                        *span,
-                        false,
-                        diagnostics,
-                    );
-                }
-                let scope_id = table.new_scope();
-                let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-                self.validate_expr_refs(table, type_params, body, &mut locals, false, diagnostics);
-            }
-            Declaration::Method {
-                type_name,
-                type_params,
-                params,
-                return_type,
-                body,
-                span,
-                ..
-            } => {
-                if !self.is_known_type_name(table, &[], type_name) {
-                    diagnostics.push(Diagnostic::error_code(
-                        crate::error::CompilerDiagnosticCode::E0201,
-                        format!("unknown type symbol '{type_name}'"),
-                        *span,
-                    ));
-                }
-                self.validate_type_param_constraints(table, type_params, true, diagnostics);
-                self.validate_params(table, type_params, params, true, diagnostics);
-                if let Some(return_type) = return_type {
-                    self.validate_type_ref(
-                        table,
-                        type_params,
-                        return_type,
-                        *span,
-                        true,
-                        diagnostics,
-                    );
-                }
-                let scope_id = table.new_scope();
-                let mut locals = self.param_locals(table, params, scope_id, diagnostics);
-                self.validate_expr_refs(table, type_params, body, &mut locals, true, diagnostics);
-            }
             Declaration::Struct {
                 name,
                 type_params,
@@ -95,29 +53,11 @@ impl Resolver {
             } => {
                 self.validate_behavior_declaration(table, name, type_params, methods, diagnostics);
             }
-            Declaration::ImplBlock {
-                type_name,
-                type_args,
-                behavior,
-                behavior_type_args,
-                methods,
-                span,
-                ..
-            } => {
-                self.validate_impl_block_declaration(
-                    table,
-                    impl_blocks::ImplBlockValidationInput {
-                        type_name,
-                        type_args,
-                        behavior: behavior.as_deref(),
-                        behavior_type_args,
-                        methods,
-                        span: *span,
-                    },
-                    diagnostics,
-                );
+            Declaration::ImplBlock { .. } => {
+                self.validate_impl_block_declaration(table, decl, diagnostics);
             }
-            Declaration::Import { .. } | Declaration::Error { .. } => {}
+            Declaration::Import { .. } => {}
+            Declaration::Function { .. } | Declaration::Method { .. } => {}
             Declaration::Requires {
                 type_name,
                 behavior,
@@ -175,5 +115,46 @@ impl Resolver {
                 );
             }
         }
+    }
+
+    fn validate_callable_declaration_types(
+        &self,
+        table: &mut SymbolTable,
+        callable: CallableDeclaration<'_>,
+        allow_self_type: bool,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        self.validate_type_param_constraints(
+            table,
+            callable.type_params,
+            allow_self_type,
+            diagnostics,
+        );
+        self.validate_params(
+            table,
+            callable.type_params,
+            callable.params,
+            allow_self_type,
+            diagnostics,
+        );
+        if let Some(return_type) = callable.return_type {
+            self.validate_type_ref(
+                table,
+                callable.type_params,
+                return_type,
+                callable.span,
+                allow_self_type,
+                diagnostics,
+            );
+        }
+        let mut locals = self.param_locals(table, callable.params, diagnostics);
+        self.validate_expr_refs(
+            table,
+            callable.type_params,
+            callable.body,
+            &mut locals,
+            allow_self_type,
+            diagnostics,
+        );
     }
 }

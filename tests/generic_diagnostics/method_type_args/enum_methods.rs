@@ -29,10 +29,7 @@ main = () i32 {
         2,
         "generic enum method arity",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "malformed generic enum method type arguments should not also report argument mismatch, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "argument 2", "generic enum method arity");
 }
 
 #[test]
@@ -64,14 +61,10 @@ main = () i32 {
         1,
         "generic Result enum method arity",
     );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("cannot infer type argument")),
-        "malformed generic Result enum method type arguments should not also report inference, got {errors:?}"
+    assert_no_diagnostic_message(
+        &errors,
+        "cannot infer type argument",
+        "generic Result enum method arity",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "malformed generic Result enum method type arguments should not also report argument mismatch, got {errors:?}"
-    );
+    assert_no_diagnostic_message(&errors, "argument 2", "generic Result enum method arity");
 }

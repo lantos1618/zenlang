@@ -1,6 +1,5 @@
 use super::*;
 use crate::error::REMOVED_INFIX_AS_CAST_MESSAGE;
-use crate::parser::keywords::ParserPrefixKeyword;
 
 pub(super) enum InfixParse {
     Parsed(Expression),
@@ -16,11 +15,7 @@ impl Parser {
         lhs: Expression,
         min_bp: u8,
     ) -> Result<InfixParse, CompileError> {
-        if matches!(
-            self.peek(),
-            Token::Identifier(name)
-                if matches!(name.parse::<ParserPrefixKeyword>(), Ok(ParserPrefixKeyword::As))
-        ) {
+        if matches!(self.peek(), Token::Identifier(name) if name == "as") {
             if Self::REMOVED_AS_CAST_L_BP < min_bp {
                 return Ok(InfixParse::Stop(lhs));
             }
@@ -48,14 +43,9 @@ impl Parser {
             }));
         }
 
-        let range = match self.peek() {
-            Token::DotDot => Some(false),
-            Token::DotDotEq => Some(true),
-            _ => None,
-        };
-        let Some(inclusive) = range else {
+        if !matches!(self.peek(), Token::DotDot | Token::DotDotEq) {
             return Ok(InfixParse::Continue(lhs));
-        };
+        }
 
         let (l_bp, r_bp) = (3, 4);
         if l_bp < min_bp {
@@ -64,11 +54,9 @@ impl Parser {
         self.advance();
         let rhs = self.parse_expr_bp(r_bp)?;
         let span = lhs.span().merge(rhs.span());
-        Ok(InfixParse::Parsed(Expression::Range {
-            start: Box::new(lhs),
-            end: Box::new(rhs),
-            inclusive,
-            span,
-        }))
+        Err(CompileError::Syntax(
+            "range expressions are not implemented; range typing remains gated".into(),
+            Some(span),
+        ))
     }
 }

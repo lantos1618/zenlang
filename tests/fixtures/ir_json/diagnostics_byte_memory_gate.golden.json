@@ -15,7 +15,7 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "raw memory copy is gated until allocator ownership and effect semantics are implemented",
+      "message": "`@builtin.memcpy` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
         "path": "$TMP/byte_memory_gate.zen",

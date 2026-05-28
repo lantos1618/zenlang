@@ -2,8 +2,6 @@ use super::{Lexer, Token};
 use crate::error::{CompileError, Span};
 
 impl Lexer {
-    /// Lex tokens inside `${...}`, tracking brace depth.
-    /// Pushes all tokens, including the closing `InterpolationEnd`, into `buf`.
     pub(super) fn lex_interpolation_body(
         &mut self,
         buf: &mut Vec<(Token, Span)>,
@@ -23,20 +21,14 @@ impl Lexer {
                 Some('}') => {
                     depth -= 1;
                     if depth == 0 {
-                        let s = self.byte_pos();
-                        self.advance();
-                        buf.push((Token::InterpolationEnd, self.make_span(s, self.byte_pos())));
+                        self.push_current_char_token(buf, Token::InterpolationEnd);
                         return Ok(());
                     }
-                    let s = self.byte_pos();
-                    self.advance();
-                    buf.push((Token::RBrace, self.make_span(s, self.byte_pos())));
+                    self.push_current_char_token(buf, Token::RBrace);
                 }
                 Some('{') => {
                     depth += 1;
-                    let s = self.byte_pos();
-                    self.advance();
-                    buf.push((Token::LBrace, self.make_span(s, self.byte_pos())));
+                    self.push_current_char_token(buf, Token::LBrace);
                 }
                 Some('"') => {
                     let saved_pending = std::mem::take(&mut self.pending);
@@ -59,16 +51,19 @@ impl Lexer {
         }
     }
 
-    /// Lex a single token without calling skip_whitespace first.
-    /// Used inside interpolation bodies where whitespace has already been skipped.
     fn lex_next_no_skip(&mut self) -> Result<(Token, Span), CompileError> {
         let start = self.byte_pos();
 
-        let ch = match self.peek() {
-            Some(c) => c,
-            None => return Ok((Token::EOF, self.make_span(start, start))),
+        let Some(ch) = self.peek() else {
+            return Ok((Token::EOF, self.make_span(start, start)));
         };
 
         self.lex_non_string_token(start, ch)
+    }
+
+    fn push_current_char_token(&mut self, buf: &mut Vec<(Token, Span)>, token: Token) {
+        let start = self.byte_pos();
+        self.advance();
+        buf.push((token, self.make_span(start, self.byte_pos())));
     }
 }

@@ -41,42 +41,26 @@ impl TypeChecker {
                 continue;
             }
 
-            if let Some(parent_decl) = source_module
-                .program
-                .declarations
-                .iter()
-                .find(|decl| decl.name() == Some(parent.as_str()))
-            {
-                self.seed_module_graph_import(parent, parent_decl);
+            let parent_binding = module_declaration(source_module, parent)
+                .map(|decl| (parent.as_str(), source_module, decl))
+                .or_else(|| {
+                    let (source_symbol, parent_module) =
+                        Self::imported_behavior_binding_target(parent, source_module, graph)?;
+                    Some((
+                        source_symbol,
+                        parent_module,
+                        module_declaration(parent_module, source_symbol)?,
+                    ))
+                });
+            if let Some((source_symbol, parent_module, parent_decl)) = parent_binding {
+                self.seed_declaration_info(parent, parent_decl);
                 self.seed_behavior_extends_for_imported_behavior_inner(
                     parent,
-                    parent,
-                    source_module,
+                    source_symbol,
+                    parent_module,
                     graph,
                     seen,
                 );
-            } else if let Some(binding) = source_module
-                .imports
-                .iter()
-                .find(|binding| binding.local_name == *parent)
-            {
-                if let Some(parent_module) = graph.module(binding.source_module) {
-                    if let Some(parent_decl) = parent_module
-                        .program
-                        .declarations
-                        .iter()
-                        .find(|decl| decl.name() == Some(binding.source_symbol.as_str()))
-                    {
-                        self.seed_module_graph_import(parent, parent_decl);
-                        self.seed_behavior_extends_for_imported_behavior_inner(
-                            parent,
-                            binding.source_symbol.as_str(),
-                            parent_module,
-                            graph,
-                            seen,
-                        );
-                    }
-                }
             }
 
             let parent_ref = self.behavior_parent_ref(parent, parent_type_args);

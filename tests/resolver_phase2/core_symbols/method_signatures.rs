@@ -2,26 +2,19 @@ use super::*;
 
 #[test]
 fn resolver_rejects_method_on_unknown_type() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Missing.label = () StaticString { "missing" }
 "#,
+        "method receiver type should be known",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("method receiver type should be known");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
-        "expected unknown method receiver type diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "unknown type symbol 'Missing'");
 }
 
 #[test]
 fn resolver_records_method_signatures_as_value_symbols() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Box<T>: {
     value: T
@@ -33,32 +26,18 @@ Box.get<T> = (self: Box<T>) T {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-    let method = table
-        .lookup(Namespace::Value, "Box.get")
-        .expect("method symbol");
+    let method = symbol(&table, Namespace::Value, "Box.get");
 
-    assert_eq!(method.parameter_count, Some(1));
-    assert_eq!(
-        method.parameter_names.as_deref(),
-        Some(&["self".to_string()][..])
-    );
-    assert_eq!(
-        method.parameter_type_names.as_deref(),
-        Some(&["Box<T>".to_string()][..])
-    );
-    assert_eq!(method.return_type_name.as_deref(), Some("T"));
-    assert_eq!(method.type_parameter_count, Some(1));
-    assert_eq!(
-        method.type_parameter_names.as_deref(),
-        Some(&["T".to_string()][..])
-    );
-    assert_eq!(method.type_parameter_bounds.as_deref(), Some(&[][..]));
+    assert_string_metadata(method.parameter_names.as_deref(), &["self"]);
+    assert_type_metadata(method.parameter_types.as_deref(), &["Box<T>"]);
+    assert_type_name(method.return_type.as_ref(), Some("T"));
+    assert_string_metadata(method.type_parameter_names.as_deref(), &["T"]);
+    assert_type_parameter_bound_metadata(method.type_parameter_bound_refs.as_deref(), &[]);
 }
 
 #[test]
 fn resolver_records_method_function_type_signatures() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Box<T>: {
     value: T
@@ -70,44 +49,23 @@ Box.map<T> = (self: Box<T>, callback: (T) T) (T) T {
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-    let method = table
-        .lookup(Namespace::Value, "Box.map")
-        .expect("method symbol");
+    let method = symbol(&table, Namespace::Value, "Box.map");
 
-    assert_eq!(method.parameter_count, Some(2));
-    assert_eq!(
-        method.parameter_names.as_deref(),
-        Some(&["self".to_string(), "callback".to_string()][..])
-    );
-    assert_eq!(
-        method.parameter_type_names.as_deref(),
-        Some(&["Box<T>".to_string(), "(T) T".to_string()][..])
-    );
-    assert_eq!(method.return_type_name.as_deref(), Some("(T) T"));
-    assert_eq!(method.type_parameter_count, Some(1));
-    assert_eq!(
-        method.type_parameter_names.as_deref(),
-        Some(&["T".to_string()][..])
-    );
-    assert_eq!(method.type_parameter_bounds.as_deref(), Some(&[][..]));
+    assert_string_metadata(method.parameter_names.as_deref(), &["self", "callback"]);
+    assert_type_metadata(method.parameter_types.as_deref(), &["Box<T>", "(T) T"]);
+    assert_type_name(method.return_type.as_ref(), Some("(T) T"));
+    assert_string_metadata(method.type_parameter_names.as_deref(), &["T"]);
+    assert_type_parameter_bound_metadata(method.type_parameter_bound_refs.as_deref(), &[]);
 }
 
 #[test]
 fn resolver_rejects_self_type_outside_method_or_behavior() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 main = (value: Self) i32 { 0 }
 "#,
+        "Self should require a method or behavior context",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("Self should require a method or behavior context");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("Self type is only valid")),
-        "expected invalid Self type diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "Self type is only valid");
 }

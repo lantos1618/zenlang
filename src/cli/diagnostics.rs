@@ -18,11 +18,4 @@ pub(super) fn print_diagnostic(diag: &Diagnostic, files: &FileTable) {
     } else {
         eprintln!("{diag}");
     }
-
-    for label in &diag.labels {
-        let path = files.get_path(label.span.file_id).unwrap_or("<unknown>");
-        if let Some((line, col)) = files.line_col(label.span.file_id, label.span.start) {
-            eprintln!("  --> {}:{}:{}: {}", path, line + 1, col + 1, label.message);
-        }
-    }
 }

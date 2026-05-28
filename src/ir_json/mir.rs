@@ -1,6 +1,6 @@
 use crate::ast::typed::{
-    TypedBlock, TypedFunction, TypedMatchArm, TypedParam, TypedPattern, TypedProgram,
-    TypedStatement, TypedStatementKind,
+    TypedBlock, TypedFunction, TypedMatchArm, TypedPattern, TypedProgram, TypedStatement,
+    TypedStatementKind,
 };
 
 mod expression;
@@ -8,8 +8,8 @@ mod schema;
 
 use expression::mir_expression;
 use schema::{
-    MirBlock, MirFunction, MirJsonProgram, MirMatchArm, MirParam, MirPattern, MirPatternBinding,
-    MirStatement, MirTerminator,
+    MirBlock, MirFunction, MirJsonProgram, MirMatchArm, MirNamedType, MirPattern, MirStatement,
+    MirTerminator,
 };
 
 pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<String> {
@@ -27,16 +27,16 @@ pub(super) fn program_to_json(program: &TypedProgram) -> serde_json::Result<Stri
 fn mir_function(function: &TypedFunction) -> MirFunction {
     MirFunction {
         name: function.name.clone(),
-        params: function.params.iter().map(mir_param).collect(),
+        params: function
+            .params
+            .iter()
+            .map(|param| MirNamedType {
+                name: param.name.clone(),
+                r#type: param.ty.display_name(),
+            })
+            .collect(),
         return_type: function.return_type.display_name(),
         blocks: vec![mir_entry_block(&function.body)],
-    }
-}
-
-fn mir_param(param: &TypedParam) -> MirParam {
-    MirParam {
-        name: param.name.clone(),
-        r#type: param.ty.display_name(),
     }
 }
 
@@ -51,7 +51,7 @@ fn mir_entry_block(body: &TypedBlock) -> MirBlock {
             },
             None => MirTerminator {
                 kind: "return_void",
-                value: None,
+                ..Default::default()
             },
         },
     }
@@ -73,10 +73,8 @@ fn mir_statement(statement: &TypedStatement) -> MirStatement {
         },
         TypedStatementKind::Expression(expr) => MirStatement {
             kind: "expr",
-            name: None,
-            ty: None,
-            mutable: None,
             value: Some(mir_expression(expr)),
+            ..Default::default()
         },
     }
 }
@@ -92,9 +90,8 @@ fn mir_pattern(pattern: &TypedPattern) -> MirPattern {
     match pattern {
         TypedPattern::Bool(value) => MirPattern {
             kind: "bool",
-            name: None,
             value: Some(serde_json::json!(value)),
-            bindings: Vec::new(),
+            ..Default::default()
         },
         TypedPattern::EnumVariant {
             type_name,
@@ -103,26 +100,23 @@ fn mir_pattern(pattern: &TypedPattern) -> MirPattern {
         } => MirPattern {
             kind: "enum_variant",
             name: Some(format!("{type_name}.{variant}")),
-            value: None,
             bindings: bindings
                 .iter()
-                .map(|(name, ty)| MirPatternBinding {
+                .map(|(name, ty)| MirNamedType {
                     name: name.clone(),
-                    ty: ty.display_name(),
+                    r#type: ty.display_name(),
                 })
                 .collect(),
+            ..Default::default()
         },
         TypedPattern::Wildcard => MirPattern {
             kind: "wildcard",
-            name: None,
-            value: None,
-            bindings: Vec::new(),
+            ..Default::default()
         },
         TypedPattern::Value(value) => MirPattern {
             kind: "value",
-            name: None,
             value: Some(serde_json::to_value(mir_expression(value)).unwrap_or_default()),
-            bindings: Vec::new(),
+            ..Default::default()
         },
     }
 }

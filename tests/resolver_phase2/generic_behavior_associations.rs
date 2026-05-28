@@ -1,8 +1,8 @@
 use super::*;
 
 #[test]
-fn resolver_records_behavior_parent_names() {
-    let program = parse_program(
+fn resolver_records_behavior_parent_refs() {
+    let table = resolved_symbols(
         r#"
 Json: behavior {
     encode: (Self) StaticString
@@ -15,21 +15,17 @@ PrettyJson.extends(Json)
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "PrettyJson")
-            .expect("behavior symbol")
-            .behavior_parent_names
+    assert_behavior_refs(
+        symbol(&table, Namespace::Behavior, "PrettyJson")
+            .behavior_parent_refs
             .as_deref(),
-        Some(&["Json".to_string()][..])
+        &[("Json", Vec::new())],
     );
 }
 
 #[test]
-fn resolver_records_behavior_impl_and_requires_names() {
-    let program = parse_program(
+fn resolver_records_behavior_impl_and_requires_refs() {
+    let table = resolved_symbols(
         r#"
 Json<T>: behavior {
     encode: (Self) T
@@ -45,40 +41,21 @@ Point.requires(Json<StaticString>)
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-    let point = table.lookup(Namespace::Type, "Point").expect("Point type");
+    let point = symbol(&table, Namespace::Type, "Point");
 
-    assert_eq!(
-        point.behavior_impl_names.as_deref(),
-        Some(&["Json<StaticString>".to_string()][..])
-    );
-    assert_eq!(
+    assert_behavior_refs(
         point.behavior_impl_refs.as_deref(),
-        Some(
-            &[zen::resolver::BehaviorRefMetadata {
-                name: "Json".to_string(),
-                type_args: vec![zen::ast::AstType::Str],
-            }][..]
-        )
+        &[("Json", vec![zen::ast::AstType::Str])],
     );
-    assert_eq!(
-        point.behavior_required_names.as_deref(),
-        Some(&["Json<StaticString>".to_string()][..])
-    );
-    assert_eq!(
+    assert_behavior_refs(
         point.behavior_required_refs.as_deref(),
-        Some(
-            &[zen::resolver::BehaviorRefMetadata {
-                name: "Json".to_string(),
-                type_args: vec![zen::ast::AstType::Str],
-            }][..]
-        )
+        &[("Json", vec![zen::ast::AstType::Str])],
     );
 }
 
 #[test]
 fn resolver_gates_generated_behavior_derive_association() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Json: behavior {
     encode: (Self) StaticString
@@ -88,24 +65,18 @@ Point: { x: i32 }
 
 Point.derive(Json)
 "#,
+        "generated derive associations should stay gated",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("generated derive associations should stay gated");
-
-    assert!(
-        err.iter().any(|d| {
-            d.message
-                .contains("generated behavior association `Type.derive(...)` is gated")
-        }),
-        "expected generated behavior association gate, got {err:?}"
+    assert_resolver_error_contains(
+        &err,
+        "generated behavior association `Type.derive(...)` is gated",
     );
 }
 
 #[test]
-fn resolver_records_generic_behavior_parent_names() {
-    let program = parse_program(
+fn resolver_records_generic_behavior_parent_refs() {
+    let table = resolved_symbols(
         r#"
 Json<T>: behavior {
     encode: (Self) T
@@ -118,34 +89,16 @@ PrettyJson.extends(Json<StaticString>)
 "#,
     );
 
-    let table = Resolver::new().resolve_program(&program).expect("resolve");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "PrettyJson")
-            .expect("behavior symbol")
-            .behavior_parent_names
-            .as_deref(),
-        Some(&["Json<StaticString>".to_string()][..])
-    );
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "PrettyJson")
-            .expect("behavior symbol")
-            .behavior_parent_refs
-            .as_deref(),
-        Some(
-            &[zen::resolver::BehaviorRefMetadata {
-                name: "Json".to_string(),
-                type_args: vec![zen::ast::AstType::Str],
-            }][..]
-        )
+    let pretty_json = symbol(&table, Namespace::Behavior, "PrettyJson");
+    assert_behavior_refs(
+        pretty_json.behavior_parent_refs.as_deref(),
+        &[("Json", vec![zen::ast::AstType::Str])],
     );
 }
 
 #[test]
 fn resolver_accepts_behavior_parent_type_args_from_child_type_params() {
-    let program = parse_program(
+    let table = resolved_symbols(
         r#"
 Json<T>: behavior {
     encode: (Self) T
@@ -161,28 +114,20 @@ Pretty.extends(Serializable<T>)
 "#,
     );
 
-    let table = Resolver::new()
-        .resolve_program(&program)
-        .expect("generic behavior parent should accept child type parameter args");
-
-    assert_eq!(
-        table
-            .lookup(Namespace::Behavior, "Pretty")
-            .expect("behavior symbol")
+    assert_behavior_refs(
+        symbol(&table, Namespace::Behavior, "Pretty")
             .behavior_parent_refs
             .as_deref(),
-        Some(
-            &[zen::resolver::BehaviorRefMetadata {
-                name: "Serializable".to_string(),
-                type_args: vec![zen::ast::AstType::Named("T".to_string())],
-            }][..]
-        )
+        &[(
+            "Serializable",
+            vec![zen::ast::AstType::Named("T".to_string())],
+        )],
     );
 }
 
 #[test]
 fn resolver_rejects_behavior_parent_type_args_outside_child_type_params() {
-    let program = parse_program(
+    let err = resolver_errors(
         r#"
 Json<T>: behavior {
     encode: (Self) T
@@ -196,15 +141,8 @@ Pretty<T: Json<T>>: behavior {
 
 Pretty.extends(Serializable<U>)
 "#,
+        "unknown parent type arg should fail in resolver",
     );
 
-    let err = Resolver::new()
-        .resolve_program(&program)
-        .expect_err("unknown parent type arg should fail in resolver");
-
-    assert!(
-        err.iter()
-            .any(|d| d.message.contains("unknown type symbol 'U'")),
-        "expected unknown type parameter diagnostic, got {err:?}"
-    );
+    assert_resolver_error_contains(&err, "unknown type symbol 'U'");
 }

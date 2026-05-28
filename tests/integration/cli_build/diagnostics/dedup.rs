@@ -1,11 +1,11 @@
-use std::process::Command;
+use super::super::support::{run_zen_in, write_file};
 
 #[test]
 fn check_command_deduplicates_typechecker_diagnostics() {
     let tmp = tempfile::tempdir().expect("create temp dir");
-    let traits_path = tmp.path().join("traits.zen");
-    std::fs::write(
-        &traits_path,
+    write_file(
+        &tmp,
+        "traits.zen",
         r#"
 pub Json<T>: behavior {
     encode: (Self) T
@@ -15,12 +15,11 @@ pub Point: {
     x: i32
 }
 "#,
-    )
-    .expect("write traits module");
+    );
 
-    let main_path = tmp.path().join("main.zen");
-    std::fs::write(
-        &main_path,
+    write_file(
+        &tmp,
+        "main.zen",
         r#"
 { Json, Point } = traits
 
@@ -30,13 +29,9 @@ main = () i32 {
     0
 }
 "#,
-    )
-    .expect("write entry module");
+    );
 
-    let output = Command::new(env!("CARGO_BIN_EXE_zen"))
-        .args(["check", main_path.to_str().unwrap()])
-        .output()
-        .expect("run zen check");
+    let output = run_zen_in(&tmp, &["check", "main.zen"]);
 
     assert!(
         !output.status.success(),

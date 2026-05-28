@@ -1,13 +1,10 @@
 use super::*;
 
 #[test]
-fn generic_function_type_arg_annotation_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+fn box_call_site_annotation_arities_are_errors() {
+    for (source, found, context, forbidden) in [
+        (
+            r#"
 identity<T> = (value: T) T {
     value
 }
@@ -18,28 +15,12 @@ main = () i32 {
     bad.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected generic function type-argument annotation arity diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 1")),
-        "malformed generic function type argument should not also report argument mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_method_type_arg_annotation_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            2,
+            "generic function type-argument annotation",
+            Some("argument 1"),
+        ),
+        (
+            r#"
 Holder: {
     value: i32
 }
@@ -55,28 +36,12 @@ main = () i32 {
     bad.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected generic method type-argument annotation arity diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "malformed generic method type argument should not also report argument mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn generic_method_type_arg_annotation_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            2,
+            "generic method type-argument annotation",
+            Some("argument 2"),
+        ),
+        (
+            r#"
 Holder: {
     value: i32
 }
@@ -92,28 +57,12 @@ main = () i32 {
     bad.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected generic method type-argument annotation without args diagnostic, got {errors:?}"
-    );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "malformed generic method type argument should not also report argument mismatch, got {errors:?}"
-    );
-}
-
-#[test]
-fn closure_param_annotation_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            0,
+            "generic method type-argument annotation without args",
+            Some("argument 2"),
+        ),
+        (
+            r#"
 main = () i32 {
     f = (box: Box<i32, StaticString>) i32 {
         0
@@ -121,24 +70,12 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected closure parameter generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn closure_return_annotation_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            2,
+            "closure parameter generic annotation",
+            None,
+        ),
+        (
+            r#"
 main = () i32 {
     f = () Box {
         Box<i32> { value: 1 }
@@ -146,60 +83,39 @@ main = () i32 {
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected closure return generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn cast_target_annotation_type_arg_arity_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            0,
+            "closure return generic annotation",
+            None,
+        ),
+        (
+            r#"
 main = () i32 {
     box = Box<i32> { value: 1 }
     bad = cast(box, Box<i32, StaticString>)
     bad.value
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 2")),
-        "expected cast target generic annotation arity diagnostic, got {errors:?}"
-    );
-}
-
-#[test]
-fn cast_target_annotation_without_type_args_is_error() {
-    let errors = typecheck_errors(
-        r#"
-Box<T>: {
-    value: T
-}
-
+            2,
+            "cast target generic annotation",
+            None,
+        ),
+        (
+            r#"
 main = () i32 {
     box = Box<i32> { value: 1 }
     bad = cast(box, Box)
     0
 }
 "#,
-    );
-
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic struct `Box` expects 1 type arguments, found 0")),
-        "expected cast target generic annotation arity diagnostic, got {errors:?}"
-    );
+            0,
+            "cast target generic annotation",
+            None,
+        ),
+    ] {
+        let errors = typecheck_errors(&format!("{BOX}\n{source}"));
+        assert_generic_arity_diagnostic(&errors, "struct", "Box", 1, found, context);
+        if let Some(forbidden) = forbidden {
+            assert_no_diagnostic_message(&errors, forbidden, context);
+        }
+    }
 }

@@ -16,11 +16,10 @@ Missing.implements(Json) {
 "#,
     );
 
-    assert!(
-        errors
-            .iter()
-            .any(|d| d.message.contains("unknown type symbol 'Missing'")),
-        "expected unknown behavior impl target diagnostic, got {errors:?}"
+    assert_diagnostic_message(
+        &errors,
+        "unknown type symbol 'Missing'",
+        "behavior impl target",
     );
 }
 
@@ -44,11 +43,10 @@ Box.implements(Json) {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic type `Box` expects 1 type arguments, found 0")),
-        "expected generic impl target arity diagnostic, got {errors:?}"
+    assert_diagnostic_message(
+        &errors,
+        "generic type `Box` expects 1 type arguments, found 0",
+        "generic impl target arity",
     );
 }
 
@@ -68,11 +66,10 @@ Box.requires(Json)
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| d
-            .message
-            .contains("generic type `Box` expects 1 type arguments, found 0")),
-        "expected generic requires target arity diagnostic, got {errors:?}"
+    assert_diagnostic_message(
+        &errors,
+        "generic type `Box` expects 1 type arguments, found 0",
+        "generic requires target arity",
     );
 }
 
@@ -100,12 +97,10 @@ Point.implements(Json) {
 "#,
     );
 
-    assert!(
-        errors.iter().any(|d| {
-            d.message
-                .contains("method `extra` is not declared by behavior `Json`")
-        }),
-        "expected extra behavior impl method diagnostic, got {errors:?}"
+    assert_diagnostic_message(
+        &errors,
+        "method `extra` is not declared by behavior `Json`",
+        "extra behavior impl method",
     );
 }
 
@@ -133,10 +128,9 @@ Point.implements(Json) {
 "#,
     );
 
-    assert!(
-        errors
-            .iter()
-            .any(|d| { d.message.contains("duplicate value symbol 'Point.to_json'") }),
-        "expected duplicate behavior impl method diagnostic, got {errors:?}"
+    assert_diagnostic_message(
+        &errors,
+        "duplicate value symbol 'Point.to_json'",
+        "duplicate behavior impl method",
     );
 }

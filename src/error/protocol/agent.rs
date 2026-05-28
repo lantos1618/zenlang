@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use super::{
-    location_for_span, protocol_facts, protocol_fixes, ProtocolFact, ProtocolLocation,
+    location_for_span, protocol_fixes, protocol_related, ProtocolFact, ProtocolLocation,
     ProtocolRelated,
 };
 use crate::error::{Diagnostic, FileTable};
@@ -25,34 +25,21 @@ pub struct AgentDiagnostic {
 pub fn diagnostics_for_ai(diagnostics: &[Diagnostic], files: &FileTable) -> Vec<AgentDiagnostic> {
     diagnostics
         .iter()
-        .map(|diagnostic| agent_diagnostic(diagnostic, files))
+        .map(|diagnostic| AgentDiagnostic {
+            severity: "error".to_string(),
+            code: diagnostic.code(),
+            slug: diagnostic.slug(),
+            phase: diagnostic.phase().as_str().to_string(),
+            category: diagnostic.category().as_str().to_string(),
+            docs_path: diagnostic.docs_path().to_string(),
+            message: diagnostic.message.clone(),
+            location: diagnostic
+                .span
+                .and_then(|span| location_for_span(span, files)),
+            notes: diagnostic.notes().to_vec(),
+            suggested_fixes: protocol_fixes(diagnostic, files),
+            related: protocol_related(diagnostic, files),
+            facts: diagnostic.facts().to_vec(),
+        })
         .collect()
-}
-
-fn agent_diagnostic(diagnostic: &Diagnostic, files: &FileTable) -> AgentDiagnostic {
-    AgentDiagnostic {
-        severity: diagnostic.severity.to_string(),
-        code: diagnostic.code.clone(),
-        slug: diagnostic.slug.clone(),
-        phase: diagnostic.phase.as_str().to_string(),
-        category: diagnostic.category.as_str().to_string(),
-        docs_path: diagnostic.docs_path.clone(),
-        message: diagnostic.message.clone(),
-        location: diagnostic
-            .span
-            .and_then(|span| location_for_span(span, files)),
-        notes: diagnostic.notes.clone(),
-        suggested_fixes: protocol_fixes(diagnostic, files),
-        related: diagnostic
-            .related
-            .iter()
-            .filter_map(|related| {
-                location_for_span(related.span, files).map(|location| ProtocolRelated {
-                    location,
-                    message: related.message.clone(),
-                })
-            })
-            .collect(),
-        facts: protocol_facts(diagnostic),
-    }
 }

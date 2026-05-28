@@ -1,28 +1,15 @@
-use super::metadata_helpers::behavior_ref_display;
-
 impl SymbolTable {
     pub(super) fn record_behavior_parent(
         &mut self,
         behavior: &str,
         parent_ref: BehaviorRefMetadata,
     ) -> bool {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == Namespace::Behavior && symbol.name == behavior)
-        {
-            let parent = behavior_ref_display(&parent_ref.name, &parent_ref.type_args);
-            let parents = symbol.behavior_parent_names.get_or_insert_with(Vec::new);
-            if parents.iter().any(|recorded| recorded == &parent) {
-                return false;
-            }
-            parents.push(parent);
-            symbol
-                .behavior_parent_refs
-                .get_or_insert_with(Vec::new)
-                .push(parent_ref);
-        }
-        true
+        self.record_behavior_edge(
+            Namespace::Behavior,
+            behavior,
+            parent_ref,
+            |symbol| &mut symbol.behavior_parent_refs,
+        )
     }
 
     pub(super) fn record_behavior_impl(
@@ -30,23 +17,12 @@ impl SymbolTable {
         type_name: &str,
         behavior_ref: BehaviorRefMetadata,
     ) -> bool {
-        if let Some(symbol) = self
-            .symbols
-            .iter_mut()
-            .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
-        {
-            let behavior = behavior_ref_display(&behavior_ref.name, &behavior_ref.type_args);
-            let impls = symbol.behavior_impl_names.get_or_insert_with(Vec::new);
-            if impls.iter().any(|recorded| recorded == &behavior) {
-                return false;
-            }
-            impls.push(behavior);
-            symbol
-                .behavior_impl_refs
-                .get_or_insert_with(Vec::new)
-                .push(behavior_ref);
-        }
-        true
+        self.record_behavior_edge(
+            Namespace::Type,
+            type_name,
+            behavior_ref,
+            |symbol| &mut symbol.behavior_impl_refs,
+        )
     }
 
     pub(super) fn record_behavior_required(
@@ -54,22 +30,34 @@ impl SymbolTable {
         type_name: &str,
         behavior_ref: BehaviorRefMetadata,
     ) -> bool {
-        if let Some(symbol) = self
+        self.record_behavior_edge(
+            Namespace::Type,
+            type_name,
+            behavior_ref,
+            |symbol| &mut symbol.behavior_required_refs,
+        )
+    }
+
+    fn record_behavior_edge(
+        &mut self,
+        namespace: Namespace,
+        symbol_name: &str,
+        behavior_ref: BehaviorRefMetadata,
+        behavior_refs: impl FnOnce(&mut Symbol) -> &mut Option<Vec<BehaviorRefMetadata>>,
+    ) -> bool {
+        let Some(symbol) = self
             .symbols
             .iter_mut()
-            .find(|symbol| symbol.namespace == Namespace::Type && symbol.name == type_name)
-        {
-            let behavior = behavior_ref_display(&behavior_ref.name, &behavior_ref.type_args);
-            let required = symbol.behavior_required_names.get_or_insert_with(Vec::new);
-            if required.iter().any(|recorded| recorded == &behavior) {
-                return false;
-            }
-            required.push(behavior);
-            symbol
-                .behavior_required_refs
-                .get_or_insert_with(Vec::new)
-                .push(behavior_ref);
+            .find(|symbol| symbol.namespace == namespace && symbol.name == symbol_name)
+        else {
+            return true;
+        };
+
+        let refs = behavior_refs(symbol).get_or_insert_with(Vec::new);
+        if refs.contains(&behavior_ref) {
+            return false;
         }
+        refs.push(behavior_ref);
         true
     }
 }

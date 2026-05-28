@@ -15,7 +15,7 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "enum payload mutation is gated until payload layout size is available from typed layout metadata",
+      "message": "`@builtin.set_payload` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
         "path": "$TMP/enum_payload_gate.zen",

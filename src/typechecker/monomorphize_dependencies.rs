@@ -1,29 +1,23 @@
 use std::collections::HashMap;
 
-use super::{TemplateDependencyEntry, TemplateDependencyState, TypeChecker};
+use super::{TemplateDependencyState, TypeChecker};
 
 fn install_dependency_map<T: Clone>(
     target: &mut HashMap<String, T>,
     dependencies: &HashMap<String, T>,
-) -> Vec<TemplateDependencyEntry<T>> {
+) -> Vec<(String, Option<T>)> {
     dependencies
         .iter()
-        .map(|(name, value)| TemplateDependencyEntry {
-            name: name.clone(),
-            previous: target.insert(name.clone(), value.clone()),
-        })
+        .map(|(name, value)| (name.clone(), target.insert(name.clone(), value.clone())))
         .collect()
 }
 
-fn restore_dependency_map<T>(
-    target: &mut HashMap<String, T>,
-    state: Vec<TemplateDependencyEntry<T>>,
-) {
-    for entry in state {
-        if let Some(previous) = entry.previous {
-            target.insert(entry.name, previous);
+fn restore_dependency_map<T>(target: &mut HashMap<String, T>, state: Vec<(String, Option<T>)>) {
+    for (name, previous) in state {
+        if let Some(previous) = previous {
+            target.insert(name, previous);
         } else {
-            target.remove(&entry.name);
+            target.remove(&name);
         }
     }
 }
@@ -33,18 +27,19 @@ impl TypeChecker {
         &mut self,
         template: &super::GenericFunctionTemplate,
     ) -> TemplateDependencyState {
+        let dependencies = &template.dependencies;
         TemplateDependencyState {
-            structs: install_dependency_map(&mut self.structs, &template.dependency_structs),
-            enums: install_dependency_map(&mut self.enums, &template.dependency_enums),
-            functions: install_dependency_map(&mut self.functions, &template.dependency_functions),
+            structs: install_dependency_map(&mut self.structs, &dependencies.structs),
+            enums: install_dependency_map(&mut self.enums, &dependencies.enums),
+            functions: install_dependency_map(&mut self.functions, &dependencies.functions),
             generic_functions: install_dependency_map(
                 &mut self.generic_functions,
-                &template.dependency_generic_functions,
+                &dependencies.generic_functions,
             ),
-            methods: install_dependency_map(&mut self.methods, &template.dependency_methods),
+            methods: install_dependency_map(&mut self.methods, &dependencies.methods),
             generic_methods: install_dependency_map(
                 &mut self.generic_methods,
-                &template.dependency_generic_methods,
+                &dependencies.generic_methods,
             ),
         }
     }

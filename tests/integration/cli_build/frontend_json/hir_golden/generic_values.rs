@@ -1,109 +1,69 @@
 use super::assert_hir_golden;
 
 #[test]
-fn emit_json_hir_generic_vec_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_vec.zen",
-        "tests/fixtures/ir_json/hir_generic_vec.golden.json",
-        "generic Vec input",
-    );
-}
-
-#[test]
-fn emit_json_hir_generic_function_worklist_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_worklist.zen",
-        "tests/fixtures/ir_json/hir_generic_function_worklist.golden.json",
-        "generic function worklist input",
-    );
-}
-
-#[test]
-fn emit_json_hir_generic_worklist_dedup_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_worklist_dedup.zen",
-        "tests/fixtures/ir_json/hir_generic_worklist_dedup.golden.json",
-        "generic worklist dedup input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_generic_imported_worklist_chain_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_generic_imported_worklist_chain/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_imported_worklist_chain.golden.json",
-        "multi-file imported generic worklist chain input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_generic_imported_worklist_multi_specialization_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_generic_imported_worklist_multi_specialization/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_imported_worklist_multi_specialization.golden.json",
-        "multi-file imported generic worklist multi-specialization input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_generic_imported_diamond_same_name_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_generic_imported_diamond_same_name/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_imported_diamond_same_name.golden.json",
-        "multi-file imported generic diamond same-name input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_generic_imported_type_same_name_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_generic_imported_type_same_name_collision/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_imported_type_same_name.golden.json",
-        "multi-file imported generic type same-name input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_generic_imported_scoped_type_inference_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_generic_imported_scoped_type_inference/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_generic_imported_scoped_type_inference.golden.json",
-        "multi-file imported generic scoped type inference input",
-    );
-}
-
-#[test]
-fn emit_json_hir_multi_file_imported_generic_function_return_enum_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen",
-        "tests/fixtures/ir_json/hir_multi_file_imported_generic_function_return_enum.golden.json",
-        "multi-file imported generic function return enum input",
-    );
-}
-
-#[test]
-fn emit_json_hir_generic_recursive_function_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_recursive_function.zen",
-        "tests/fixtures/ir_json/hir_generic_recursive_function.golden.json",
-        "generic recursive function input",
-    );
-}
-
-#[test]
-fn emit_json_hir_generic_ufc_dedup_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_ufc_dedup.zen",
-        "tests/fixtures/ir_json/hir_generic_ufc_dedup.golden.json",
-        "generic UFC dedup input",
-    );
-}
-
-#[test]
-fn emit_json_hir_generic_ufc_function_schema_matches_golden() {
-    assert_hir_golden(
-        "tests/zen/generic_ufc_function.zen",
-        "tests/fixtures/ir_json/hir_generic_ufc_dedup.golden.json",
-        "generic UFC function input",
-    );
+fn emit_json_hir_generic_value_schemas_match_golden() {
+    for (source, golden_stem, description) in [
+        (
+            "tests/zen/generic_vec.zen",
+            "generic_vec",
+            "generic Vec input",
+        ),
+        (
+            "tests/zen/generic_worklist.zen",
+            "generic_function_worklist",
+            "generic function worklist input",
+        ),
+        (
+            "tests/zen/generic_worklist_dedup.zen",
+            "generic_worklist_dedup",
+            "generic worklist dedup input",
+        ),
+        (
+            "tests/zen/multi_file_generic_imported_worklist_chain/main.zen",
+            "multi_file_generic_imported_worklist_chain",
+            "multi-file imported generic worklist chain input",
+        ),
+        (
+            "tests/zen/multi_file_generic_imported_worklist_multi_specialization/main.zen",
+            "multi_file_generic_imported_worklist_multi_specialization",
+            "multi-file imported generic worklist multi-specialization input",
+        ),
+        (
+            "tests/zen/multi_file_generic_imported_diamond_same_name/main.zen",
+            "multi_file_generic_imported_diamond_same_name",
+            "multi-file imported generic diamond same-name input",
+        ),
+        (
+            "tests/zen/multi_file_generic_imported_type_same_name_collision/main.zen",
+            "multi_file_generic_imported_type_same_name",
+            "multi-file imported generic type same-name input",
+        ),
+        (
+            "tests/zen/multi_file_generic_imported_scoped_type_inference/main.zen",
+            "multi_file_generic_imported_scoped_type_inference",
+            "multi-file imported generic scoped type inference input",
+        ),
+        (
+            "tests/zen/multi_file_imported_generic_function_return_enum_dependency/main.zen",
+            "multi_file_imported_generic_function_return_enum",
+            "multi-file imported generic function return enum input",
+        ),
+        (
+            "tests/zen/generic_recursive_function.zen",
+            "generic_recursive_function",
+            "generic recursive function input",
+        ),
+        (
+            "tests/zen/generic_ufc_dedup.zen",
+            "generic_ufc_dedup",
+            "generic UFC dedup input",
+        ),
+        (
+            "tests/zen/generic_ufc_function.zen",
+            "generic_ufc_dedup",
+            "generic UFC function input",
+        ),
+    ] {
+        assert_hir_golden(source, golden_stem, description);
+    }
 }

@@ -24,14 +24,10 @@ main = () i32 {
         "StaticString",
         "generic function inference conflict",
     );
-    assert!(
-        errors.iter().all(|d| !d.message.contains("argument 2")),
-        "generic function inference conflict should not also report argument mismatch, got {errors:?}"
-    );
-    assert!(
-        errors
-            .iter()
-            .all(|d| !d.message.contains("return type mismatch")),
-        "generic function inference conflict should not also report return mismatch, got {errors:?}"
+    assert_no_diagnostic_message(&errors, "argument 2", "function inference conflict");
+    assert_no_diagnostic_message(
+        &errors,
+        "return type mismatch",
+        "function inference conflict",
     );
 }

@@ -1,14 +1,9 @@
-//! Expression checking — check_function and check_expr.
-#![allow(clippy::result_large_err)]
-
-mod aggregate_constructors;
 mod aggregate_support;
 mod call_support;
 mod call_validation;
 mod control_flow_support;
 mod enum_variant;
 mod function_checking;
-mod gated_methods;
 mod generic_call_validation;
 mod method_call_support;
 mod simple_forms;
@@ -17,37 +12,77 @@ mod struct_literal;
 use crate::ast::expressions::StringPart;
 use crate::ast::typed::*;
 use crate::ast::{AstType, Expression, Param};
+use crate::error::CompilerDiagnosticCode::*;
 use crate::error::{Diagnostic, Span};
 
 use super::monomorphize_inference::InferenceConflict;
-use super::{BehaviorBound, FuncInfo, TypeChecker};
+use super::{type_display_pair, FuncInfo, TypeChecker};
+
+fn typed_expr(kind: TypedExprKind, ty: Type, span: Span) -> TypedExpression {
+    TypedExpression { kind, ty, span }
+}
+
+fn typed_ok(kind: TypedExprKind, ty: Type, span: Span) -> Result<TypedExpression, Diagnostic> {
+    Ok(typed_expr(kind, ty, span))
+}
+
+fn typed_call_expr(
+    function: String,
+    args: Vec<TypedExpression>,
+    ty: Type,
+    span: Span,
+) -> TypedExpression {
+    typed_expr(TypedExprKind::FunctionCall { function, args }, ty, span)
+}
+
+fn typed_block_from_expr(expr: TypedExpression) -> TypedBlock {
+    TypedBlock {
+        ty: expr.ty.clone(),
+        span: expr.span,
+        statements: Vec::new(),
+        expr: Some(Box::new(expr)),
+    }
+}
+
+fn typed_match_expr(
+    scrutinee: TypedExpression,
+    arms: Vec<TypedMatchArm>,
+    kind: MatchKind,
+    ty: Type,
+    span: Span,
+) -> Result<TypedExpression, Diagnostic> {
+    typed_ok(
+        TypedExprKind::Match {
+            scrutinee: Box::new(scrutinee),
+            arms,
+            kind,
+        },
+        ty,
+        span,
+    )
+}
 
 impl TypeChecker {
+    fn check_exprs(&mut self, exprs: &[Expression]) -> Result<Vec<TypedExpression>, Diagnostic> {
+        exprs.iter().map(|expr| self.check_expr(expr)).collect()
+    }
+
     pub(crate) fn check_expr(&mut self, expr: &Expression) -> Result<TypedExpression, Diagnostic> {
         match expr {
-            Expression::IntLiteral { value, span } => Ok(TypedExpression {
-                kind: TypedExprKind::IntLiteral(*value),
-                ty: Type::I32, // default int type
-                span: *span,
-            }),
-
-            Expression::FloatLiteral { value, span } => Ok(TypedExpression {
-                kind: TypedExprKind::FloatLiteral(*value),
-                ty: Type::F64, // default float type
-                span: *span,
-            }),
-
-            Expression::StringLiteral { value, span } => Ok(TypedExpression {
-                kind: TypedExprKind::StringLiteral(value.clone()),
-                ty: Type::Str,
-                span: *span,
-            }),
-
-            Expression::BoolLiteral { value, span } => Ok(TypedExpression {
-                kind: TypedExprKind::BoolLiteral(*value),
-                ty: Type::Bool,
-                span: *span,
-            }),
+            Expression::IntLiteral { value, span } => {
+                typed_ok(TypedExprKind::IntLiteral(*value), Type::I32, *span)
+            }
+            Expression::FloatLiteral { value, span } => {
+                typed_ok(TypedExprKind::FloatLiteral(*value), Type::F64, *span)
+            }
+            Expression::StringLiteral { value, span } => typed_ok(
+                TypedExprKind::StringLiteral(value.clone()),
+                Type::Str,
+                *span,
+            ),
+            Expression::BoolLiteral { value, span } => {
+                typed_ok(TypedExprKind::BoolLiteral(*value), Type::Bool, *span)
+            }
 
             Expression::Identifier { name, span } => self.check_identifier_expr(name, *span),
 
@@ -60,15 +95,15 @@ impl TypeChecker {
                 let left = self.check_expr(left)?;
                 let right = self.check_expr(right)?;
                 let ty = self.check_binary_op(*op, &left.ty, &right.ty, span)?;
-                Ok(TypedExpression {
-                    kind: TypedExprKind::BinaryOp {
+                typed_ok(
+                    TypedExprKind::BinaryOp {
                         op: *op,
                         left: Box::new(left),
                         right: Box::new(right),
                     },
                     ty,
-                    span: *span,
-                })
+                    *span,
+                )
             }
 
             Expression::FunctionCall {
@@ -118,18 +153,6 @@ impl TypeChecker {
                 span,
             } => self.check_block_expr(statements, expr, *span),
 
-            Expression::Break { span } => Ok(TypedExpression {
-                kind: TypedExprKind::Break,
-                ty: Type::Never,
-                span: *span,
-            }),
-
-            Expression::Continue { span } => Ok(TypedExpression {
-                kind: TypedExprKind::Continue,
-                ty: Type::Never,
-                span: *span,
-            }),
-
             Expression::Match {
                 scrutinee,
                 arms,
@@ -143,12 +166,6 @@ impl TypeChecker {
                 span,
             } => self.check_if_expr(condition, then_body, else_body, *span),
 
-            Expression::WhileLoop {
-                condition,
-                body,
-                span,
-            } => self.check_while_loop_expr(condition, body, *span),
-
             Expression::Loop {
                 body,
                 control_label,
@@ -159,14 +176,14 @@ impl TypeChecker {
                 action,
                 target_label,
                 span,
-            } => Ok(TypedExpression {
-                kind: TypedExprKind::LoopControl {
+            } => typed_ok(
+                TypedExprKind::LoopControl {
                     action: *action,
                     label: target_label.clone(),
                 },
-                ty: Type::Never,
-                span: *span,
-            }),
+                Type::Never,
+                *span,
+            ),
 
             Expression::Cast {
                 expr,
@@ -196,33 +213,15 @@ impl TypeChecker {
             Expression::UnaryOp { op, operand, span } => {
                 let typed = self.check_expr(operand)?;
                 let ty = typed.ty.clone();
-                Ok(TypedExpression {
-                    kind: TypedExprKind::UnaryOp {
+                typed_ok(
+                    TypedExprKind::UnaryOp {
                         op: *op,
                         operand: Box::new(typed),
                     },
                     ty,
-                    span: *span,
-                })
-            }
-
-            Expression::Range {
-                start, end, span, ..
-            } => {
-                self.check_expr(start)?;
-                self.check_expr(end)?;
-                Err(Diagnostic::error_code(
-                    crate::error::CompilerDiagnosticCode::E3053,
-                    "range expressions are not implemented; range typing remains gated",
                     *span,
-                ))
+                )
             }
-
-            Expression::Error { span } => Ok(TypedExpression {
-                kind: TypedExprKind::Error,
-                ty: Type::Unknown,
-                span: *span,
-            }),
         }
     }
 }

@@ -5,23 +5,20 @@ pub mod statements;
 pub mod typed;
 pub mod types;
 
-// Re-export the most commonly used types at the `ast` level.
+pub(crate) use declarations::type_param_names;
 pub use declarations::{BehaviorMethod, Declaration, EnumVariant, StructField, TypeParam};
 pub use expressions::{BinaryOp, Expression, MatchArm, StringPart, UnaryOp};
 pub use patterns::Pattern;
 pub use statements::Statement;
 pub(crate) use types::{
-    behavior_ref_display, behavior_type_args_match_target_params, named_type_arg_names,
+    behavior_impl_method_symbol_key, behavior_ref_display, method_symbol_key, named_type_arg_names,
+    named_type_arg_params, symbol_key_part, type_params_from_names,
 };
-pub use types::{
-    gated_builtin_type_name, is_builtin_type_name, AstType, BuiltinGenericTypeName,
-    BuiltinTypeName, Param,
-};
+pub use types::{AstType, BuiltinGenericTypeName, BuiltinTypeName, Param};
 
 use crate::error::FileId;
 use serde::Serialize;
 
-/// Program — the top-level container produced by the parser for a single file.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Program {
     pub declarations: Vec<Declaration>,

@@ -2,10 +2,10 @@ mod impl_blocks;
 
 use super::*;
 use crate::ast::BehaviorMethod;
-use crate::parser::keywords::ParserBehaviorKeyword;
+use crate::parser::keywords::BEHAVIOR_KEYWORD;
 
 type BehaviorMethodSignature = (Vec<Param>, Option<AstType>, Option<Expression>);
-type ParenthesizedBehaviorRef = (String, Span, Vec<AstType>, Span);
+type ParenthesizedBehaviorRef = (String, Vec<AstType>, Span);
 
 impl Parser {
     pub(super) fn parse_behavior_def(
@@ -18,7 +18,7 @@ impl Parser {
         self.expect(&Token::Colon)?;
         self.skip_newlines();
         let (keyword, keyword_span) = self.expect_identifier()?;
-        if keyword.parse::<ParserBehaviorKeyword>() != Ok(ParserBehaviorKeyword::Behavior) {
+        if keyword != BEHAVIOR_KEYWORD {
             return Err(CompileError::Syntax(
                 format!("expected behavior declaration, found `{keyword}`"),
                 Some(keyword_span),
@@ -46,9 +46,7 @@ impl Parser {
                 span: method_start.merge(self.prev_span()),
             });
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
 
         let end = self.expect(&Token::RBrace)?;
@@ -97,9 +95,7 @@ impl Parser {
             });
 
             self.skip_newlines();
-            if matches!(self.peek(), Token::Comma) {
-                self.advance();
-            }
+            self.consume_comma();
         }
         self.expect(&Token::RParen)?;
         self.skip_newlines();
@@ -132,13 +128,13 @@ impl Parser {
         type_name: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        let (behavior, behavior_span, behavior_type_args, end) =
+        let (behavior, behavior_type_args, behavior_span) =
             self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::Requires {
             type_name,
             behavior,
             behavior_type_args,
-            span: name_span.merge(behavior_span).merge(end),
+            span: name_span.merge(behavior_span),
         })
     }
 
@@ -147,13 +143,13 @@ impl Parser {
         type_name: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        let (behavior, behavior_span, behavior_type_args, end) =
+        let (behavior, behavior_type_args, behavior_span) =
             self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::Derive {
             type_name,
             behavior,
             behavior_type_args,
-            span: name_span.merge(behavior_span).merge(end),
+            span: name_span.merge(behavior_span),
         })
     }
 
@@ -162,13 +158,12 @@ impl Parser {
         behavior: String,
         name_span: Span,
     ) -> Result<Declaration, CompileError> {
-        let (parent, parent_span, parent_type_args, end) =
-            self.parse_parenthesized_behavior_ref()?;
+        let (parent, parent_type_args, parent_span) = self.parse_parenthesized_behavior_ref()?;
         Ok(Declaration::BehaviorExtends {
             behavior,
             parent,
             parent_type_args,
-            span: name_span.merge(parent_span).merge(end),
+            span: name_span.merge(parent_span),
         })
     }
 }

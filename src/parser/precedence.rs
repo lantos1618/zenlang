@@ -1,5 +1,8 @@
 use super::*;
 
+pub(super) const POSTFIX_BP: u8 = 23;
+pub(super) const PREFIX_BP: u8 = 21;
+
 pub(super) struct InfixOperator {
     pub op: BinaryOp,
     pub l_bp: u8,
@@ -12,7 +15,6 @@ impl InfixOperator {
     }
 }
 
-/// Infix operator and binding powers for Pratt parsing.
 pub(super) fn infix_operator(token: &Token) -> Option<InfixOperator> {
     match token {
         Token::Or => Some(InfixOperator::new(BinaryOp::Or, 1, 2)),
@@ -37,16 +39,6 @@ pub(super) fn infix_operator(token: &Token) -> Option<InfixOperator> {
     }
 }
 
-/// Postfix binding power for `.`, `[`, `(`.
-pub(super) fn postfix_bp() -> (u8, u8) {
-    (23, 24)
-}
-
-/// Prefix binding power for `-`, `!`, `~`.
-pub(super) fn prefix_bp() -> u8 {
-    21
-}
-
 pub(super) fn first_char_is_upper(s: &str) -> bool {
-    s.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
+    s.chars().next().is_some_and(char::is_uppercase)
 }

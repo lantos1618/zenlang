@@ -3,8 +3,6 @@ use super::*;
 pub(super) struct Parser {
     pub(super) tokens: Vec<(Token, Span)>,
     pub(super) pos: usize,
-    #[allow(dead_code)]
-    file_id: FileId,
     pub(super) errors: Vec<CompileError>,
     pub(super) loop_controls: Vec<(String, String)>,
     next_loop_control_id: usize,
@@ -16,11 +14,10 @@ pub(super) struct ParserCheckpoint {
 }
 
 impl Parser {
-    pub(super) fn new(tokens: Vec<(Token, Span)>, file_id: FileId) -> Self {
+    pub(super) fn new(tokens: Vec<(Token, Span)>) -> Self {
         Self {
             tokens,
             pos: 0,
-            file_id,
             errors: Vec::new(),
             loop_controls: Vec::new(),
             next_loop_control_id: 0,
@@ -31,8 +28,7 @@ impl Parser {
         self.loop_controls
             .iter()
             .rev()
-            .find(|(control_name, _)| control_name == name)
-            .map(|(_, label)| label.clone())
+            .find_map(|(control_name, label)| (control_name == name).then(|| label.clone()))
     }
 
     pub(super) fn fresh_loop_control_label(&mut self) -> String {
@@ -59,14 +55,13 @@ impl Parser {
             let (token, span) = &self.tokens[index];
             match token {
                 Token::Lt => depth += 1,
-                Token::Gt => {
-                    depth = depth.saturating_sub(1);
-                    if depth == 0 {
-                        return self.token_has_attached_generic_suffix(index, *span);
-                    }
-                }
-                Token::ShiftRight => {
-                    depth = depth.saturating_sub(2);
+                Token::Gt | Token::ShiftRight => {
+                    let close_count = if matches!(token, Token::Gt) {
+                        1
+                    } else {
+                        2
+                    };
+                    depth = depth.saturating_sub(close_count);
                     if depth == 0 {
                         return self.token_has_attached_generic_suffix(index, *span);
                     }
@@ -89,7 +84,6 @@ impl Parser {
         }
     }
 
-    /// Skip tokens until we find something that looks like a new declaration.
     pub(super) fn synchronize(&mut self) {
         loop {
             match self.peek() {

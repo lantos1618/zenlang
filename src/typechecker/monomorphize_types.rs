@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use super::ast_type_substitution::substitute_ast_type_names;
 use crate::ast::typed::Type;
-use crate::ast::AstType;
+use crate::ast::{symbol_key_part, AstType};
 
 pub(super) fn type_mangle_key(ty: &Type) -> String {
     if let Some(name) = ty.builtin_source_name() {
         return name.into();
     }
+    if let Some(name) = ty.nominal_name() {
+        return symbol_key_part(name);
+    }
 
     match ty {
-        Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
-            symbol_mangle_key(name)
-        }
         Type::Array { elem, size } => match size {
             Some(size) => format!("array_{}_{}", type_mangle_key(elem), size),
             None => format!("array_{}", type_mangle_key(elem)),
@@ -35,38 +35,6 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
     }
 }
 
-fn symbol_mangle_key(symbol: &str) -> String {
-    let mut out = String::with_capacity(symbol.len());
-    for ch in symbol.chars() {
-        if ch.is_ascii_alphanumeric() || ch == '_' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    out
-}
-
-pub(super) fn concrete_name_matches_generic(concrete_name: &str, generic_name: &str) -> bool {
-    concrete_name == generic_name || concrete_name.starts_with(&format!("{generic_name}_"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{type_mangle_key, type_to_ast, AstType, Type};
-
-    #[test]
-    fn static_string_mangle_uses_public_type_name() {
-        assert_eq!(type_mangle_key(&Type::Str), "StaticString");
-    }
-
-    #[test]
-    fn type_to_ast_preserves_dynamic_string_variant() {
-        assert_eq!(type_to_ast(&Type::String), AstType::String);
-    }
-}
-
-/// Substitute type parameters in an AstType, returning a new AstType.
 pub(super) fn substitute_ast_type(
     ast_type: &AstType,
     substitutions: &HashMap<String, Type>,
@@ -74,7 +42,6 @@ pub(super) fn substitute_ast_type(
     substitute_ast_type_names(ast_type, &|name| substitutions.get(name).map(type_to_ast))
 }
 
-/// Convert a resolved Type back to an AstType (best-effort, for substitution).
 pub(crate) fn type_to_ast(ty: &Type) -> AstType {
     match ty {
         Type::I8 => AstType::I8,
@@ -89,12 +56,11 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
         Type::F32 => AstType::F32,
         Type::F64 => AstType::F64,
         Type::Bool => AstType::Bool,
-        Type::Void => AstType::Void,
+        Type::Void | Type::Never | Type::Unknown => AstType::Void,
         Type::Str => AstType::Str,
-        Type::String => AstType::String,
-        Type::Named(n) => AstType::Named(n.clone()),
-        Type::Struct { name, .. } => AstType::Named(name.clone()),
-        Type::Enum { name, .. } => AstType::Named(name.clone()),
+        Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
+            AstType::Named(name.clone())
+        }
         Type::Ptr(inner) => AstType::Ptr(Box::new(type_to_ast(inner))),
         Type::MutPtr(inner) => AstType::MutPtr(Box::new(type_to_ast(inner))),
         Type::RawPtr(inner) => AstType::RawPtr(Box::new(type_to_ast(inner))),
@@ -107,6 +73,5 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
             params: params.iter().map(type_to_ast).collect(),
             ret: Box::new(type_to_ast(ret)),
         },
-        Type::Never | Type::Unknown => AstType::Void,
     }
 }

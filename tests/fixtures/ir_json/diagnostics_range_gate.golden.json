@@ -10,11 +10,11 @@
   "diagnostics": [
     {
       "severity": "error",
-      "code": "E3053",
-      "slug": "type_e3053",
-      "phase": "typechecker",
-      "category": "type",
-      "docs_path": "docs/DIAGNOSTICS.md#type-checking",
+      "code": "E2000",
+      "slug": "syntax",
+      "phase": "parser",
+      "category": "syntax",
+      "docs_path": "docs/DIAGNOSTICS.md#syntax",
       "message": "range expressions are not implemented; range typing remains gated",
       "span": {
         "file_id": 0,

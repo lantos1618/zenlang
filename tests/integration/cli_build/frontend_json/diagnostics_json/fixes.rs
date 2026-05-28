@@ -13,40 +13,13 @@ main = () i32 {
 
     let diagnostic = &json["diagnostics"][0];
     assert_eq!(diagnostic["code"], "E2000");
-    assert!(
-        diagnostic["message"]
-            .as_str()
-            .expect("diagnostic message")
-            .contains("return keyword has been removed"),
-        "unexpected diagnostic payload: {diagnostic}"
-    );
-
-    let suggestions = diagnostic["suggested_fixes"]
-        .as_array()
-        .expect("diagnostic should carry structured suggested fixes");
-    assert_eq!(
-        suggestions.len(),
-        1,
-        "unexpected suggestions: {suggestions:?}"
-    );
-
-    let fix = &suggestions[0];
+    assert_message_contains(diagnostic, "return keyword has been removed");
+    let (fix, edit) = single_fix_and_edit(diagnostic, "return_keyword.zen");
     assert_eq!(fix["kind"], "replace_removed_return_with_final_expression");
     assert_eq!(
         fix["title"],
         "Remove `return` and use the value as the final expression"
     );
-
-    let edit = &fix["edits"][0];
-    assert_eq!(
-        fix["edits"].as_array().expect("fix edits array").len(),
-        1,
-        "return fix should carry exactly one text edit: {fix}"
-    );
-    assert!(edit["span"]["path"]
-        .as_str()
-        .expect("edit span path")
-        .ends_with("return_keyword.zen"));
     assert_eq!(edit["span"]["start"], return_start);
     assert_eq!(edit["span"]["end"], return_end);
     assert_eq!(edit["span"]["line"], 3);
@@ -68,40 +41,13 @@ main = (x: i32) i64 {
 
     let diagnostic = &json["diagnostics"][0];
     assert_eq!(diagnostic["code"], "E2000");
-    assert!(
-        diagnostic["message"]
-            .as_str()
-            .expect("diagnostic message")
-            .contains("`as` cast syntax has been removed"),
-        "unexpected diagnostic payload: {diagnostic}"
-    );
-
-    let suggestions = diagnostic["suggested_fixes"]
-        .as_array()
-        .expect("diagnostic should carry structured suggested fixes");
-    assert_eq!(
-        suggestions.len(),
-        1,
-        "unexpected suggestions: {suggestions:?}"
-    );
-
-    let fix = &suggestions[0];
+    assert_message_contains(diagnostic, "`as` cast syntax has been removed");
+    let (fix, edit) = single_fix_and_edit(diagnostic, "as_cast.zen");
     assert_eq!(fix["kind"], "replace_infix_as_cast_with_prefix_cast");
     assert_eq!(
         fix["title"],
         "Rewrite infix `as` cast to prefix `cast(value, Type)`"
     );
-
-    let edit = &fix["edits"][0];
-    assert_eq!(
-        fix["edits"].as_array().expect("fix edits array").len(),
-        1,
-        "as-cast fix should carry exactly one text edit: {fix}"
-    );
-    assert!(edit["span"]["path"]
-        .as_str()
-        .expect("edit span path")
-        .ends_with("as_cast.zen"));
     assert_eq!(edit["span"]["start"], expression_start);
     assert_eq!(edit["span"]["end"], expression_end);
     assert_eq!(edit["span"]["line"], 3);
@@ -121,14 +67,28 @@ main = (flag: bool) i32 {
 
     let diagnostic = &json["diagnostics"][0];
     assert_eq!(diagnostic["code"], "E4006");
+    assert_message_contains(diagnostic, "non-exhaustive bool match: missing `false`");
+    let (fix, edit) = single_fix_and_edit(diagnostic, "missing_bool_arm.zen");
+    assert_eq!(fix["kind"], "add_missing_bool_match_arm");
+    assert_eq!(fix["title"], "Add missing bool match arm");
+    assert_eq!(edit["span"]["start"], edit["span"]["end"]);
+    assert_eq!(edit["replacement"], "\n        | false { <expression> }");
+}
+
+fn assert_message_contains(diagnostic: &serde_json::Value, expected: &str) {
     assert!(
         diagnostic["message"]
             .as_str()
             .expect("diagnostic message")
-            .contains("non-exhaustive bool match: missing `false`"),
+            .contains(expected),
         "unexpected diagnostic payload: {diagnostic}"
     );
+}
 
+fn single_fix_and_edit<'a>(
+    diagnostic: &'a serde_json::Value,
+    filename: &str,
+) -> (&'a serde_json::Value, &'a serde_json::Value) {
     let suggestions = diagnostic["suggested_fixes"]
         .as_array()
         .expect("diagnostic should carry structured suggested fixes");
@@ -139,19 +99,16 @@ main = (flag: bool) i32 {
     );
 
     let fix = &suggestions[0];
-    assert_eq!(fix["kind"], "add_missing_bool_match_arm");
-    assert_eq!(fix["title"], "Add missing bool match arm");
-
-    let edit = &fix["edits"][0];
+    let edits = fix["edits"].as_array().expect("fix edits array");
     assert_eq!(
-        fix["edits"].as_array().expect("fix edits array").len(),
+        edits.len(),
         1,
-        "missing bool arm fix should carry exactly one text edit: {fix}"
+        "fix should carry exactly one text edit: {fix}"
     );
+    let edit = &edits[0];
     assert!(edit["span"]["path"]
         .as_str()
         .expect("edit span path")
-        .ends_with("missing_bool_arm.zen"));
-    assert_eq!(edit["span"]["start"], edit["span"]["end"]);
-    assert_eq!(edit["replacement"], "\n        | false { <expression> }");
+        .ends_with(filename));
+    (fix, edit)
 }

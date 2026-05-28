@@ -2,15 +2,12 @@ use super::*;
 use crate::ast::{BuiltinGenericTypeName, BuiltinTypeName};
 
 impl Parser {
-    // ── Types ─────────────────────────────────────────────────
-
     pub(super) fn parse_type(&mut self) -> Result<AstType, CompileError> {
         self.skip_newlines();
         let (tok, span) = self.advance();
         match tok {
             Token::Identifier(name) => self.resolve_type_name(&name),
             Token::LParen => {
-                // Function type: `(i32, i32) i32`
                 let mut params = Vec::new();
                 loop {
                     self.skip_newlines();
@@ -19,16 +16,13 @@ impl Parser {
                     }
                     params.push(self.parse_type()?);
                     self.skip_newlines();
-                    if matches!(self.peek(), Token::Comma) {
-                        self.advance();
-                    }
+                    self.consume_comma();
                 }
                 self.expect(&Token::RParen)?;
                 let ret = Box::new(self.parse_type()?);
                 Ok(AstType::Function { params, ret })
             }
             Token::LBracket => {
-                // Array type: `[i32]` or `[i32; 10]`
                 let elem = Box::new(self.parse_type()?);
                 self.skip_newlines();
                 let size = if matches!(self.peek(), Token::Semicolon) {
