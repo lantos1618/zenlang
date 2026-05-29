@@ -73,7 +73,7 @@ impl TypeChecker {
         };
 
         for (field_name, field_expr) in fields {
-            let typed = self.check_expr(field_expr)?;
+            let mut typed = self.check_expr(field_expr)?;
 
             if !provided.insert(field_name.as_str()) {
                 self.push_error(
@@ -84,8 +84,13 @@ impl TypeChecker {
             }
 
             if let Some(expected) = field_defs.get(field_name) {
-                if !self.types_compatible(expected, &typed.ty) {
+                // An untyped integer/float literal adopts the field's numeric
+                // type (`Vec { len: 0, cap: 4 }` with `i64` fields).
+                let actual_ty = literal_coerced_type(expected, &typed);
+                if !self.types_compatible(expected, &actual_ty) {
                     self.push_struct_field_type_error(field_name, name, expected, &typed);
+                } else {
+                    typed.ty = actual_ty;
                 }
             } else if struct_info.is_some() && constructor_type_args_valid {
                 self.push_error(
