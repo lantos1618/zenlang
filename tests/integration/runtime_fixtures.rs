@@ -49,3 +49,8 @@ fn test_cast() {
 fn test_multiple_defer() {
     run_test("multiple_defer");
 }
+
+#[test]
+fn test_stdlib_random() {
+    run_test("stdlib_random");
+}

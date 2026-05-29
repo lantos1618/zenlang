@@ -1,0 +1,17 @@
+// Exercises the real `std.random` stdlib module (MINSTD / Park-Miller PRNG).
+// The sequence for seed 1 is textbook-known, so the expected output is an
+// independent check that the Zen implementation is correct.
+{ io } = std
+{ Rng, rng_new, rng_next, rng_value, rng_below } = std.random.random
+
+main = () i32 {
+    r0 = rng_new(1)
+    r1 = rng_next(r0)
+    r2 = rng_next(r1)
+    r3 = rng_next(r2)
+    io.println("${cast(rng_value(r1), i32)}")
+    io.println("${cast(rng_value(r2), i32)}")
+    io.println("${cast(rng_value(r3), i32)}")
+    io.println("below100=${cast(rng_below(r3, 100), i32)}")
+    0
+}
