@@ -47,30 +47,12 @@ impl CEmitter {
             }
 
             // -- Bitwise operations ---------------------------------------
-            CIntrinsic::Bswap16 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("__builtin_bswap16({})", val)
-            }
-            CIntrinsic::Bswap32 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("__builtin_bswap32({})", val)
-            }
-            CIntrinsic::Bswap64 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("__builtin_bswap64({})", val)
-            }
-            CIntrinsic::Ctlz => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((uint64_t)__builtin_clzll({}))", val)
-            }
-            CIntrinsic::Cttz => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((uint64_t)__builtin_ctzll({}))", val)
-            }
-            CIntrinsic::Ctpop => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((uint64_t)__builtin_popcountll({}))", val)
-            }
+            CIntrinsic::Bswap16 => format!("__builtin_bswap16({})", self.arg0(args)),
+            CIntrinsic::Bswap32 => format!("__builtin_bswap32({})", self.arg0(args)),
+            CIntrinsic::Bswap64 => format!("__builtin_bswap64({})", self.arg0(args)),
+            CIntrinsic::Ctlz => format!("((uint64_t)__builtin_clzll({}))", self.arg0(args)),
+            CIntrinsic::Cttz => format!("((uint64_t)__builtin_ctzll({}))", self.arg0(args)),
+            CIntrinsic::Ctpop => format!("((uint64_t)__builtin_popcountll({}))", self.arg0(args)),
 
             // -- Overflow-checked arithmetic ------------------------------
             CIntrinsic::AddOverflow => self.emit_overflow_op("add", args),
@@ -78,22 +60,10 @@ impl CEmitter {
             CIntrinsic::MulOverflow => self.emit_overflow_op("mul", args),
 
             // -- Type conversions -----------------------------------------
-            CIntrinsic::TruncF64I64 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((int64_t)({}))", val)
-            }
-            CIntrinsic::TruncF32I32 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((int32_t)({}))", val)
-            }
-            CIntrinsic::SitofpI64F64 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((double)({}))", val)
-            }
-            CIntrinsic::UitofpU64F64 => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((double)({}))", val)
-            }
+            CIntrinsic::TruncF64I64 => format!("((int64_t)({}))", self.arg0(args)),
+            CIntrinsic::TruncF32I32 => format!("((int32_t)({}))", self.arg0(args)),
+            CIntrinsic::SitofpI64F64 => format!("((double)({}))", self.arg0(args)),
+            CIntrinsic::UitofpU64F64 => format!("((double)({}))", self.arg0(args)),
 
             // -- IO (libc wrappers) ---------------------------------------
             CIntrinsic::LibcWrite => {
@@ -111,15 +81,11 @@ impl CEmitter {
 
             // -- String operations ----------------------------------------
             CIntrinsic::Strlen => {
-                let s = self.emit_expr_inline(&args[0]);
                 // A StaticString lowers to `zen_str { ptr, len }`; its length is
                 // known without a libc call.
-                format!("(({}).len)", s)
+                format!("(({}).len)", self.arg0(args))
             }
-            CIntrinsic::StaticStringPtr => {
-                let s = self.emit_expr_inline(&args[0]);
-                format!("((uint8_t*)({}).ptr)", s)
-            }
+            CIntrinsic::StaticStringPtr => format!("((uint8_t*)({}).ptr)", self.arg0(args)),
 
             // -- FFI / dynamic loading ------------------------------------
             CIntrinsic::LoadLibrary => {
@@ -131,15 +97,9 @@ impl CEmitter {
                 let sym = self.emit_expr_inline(&args[1]);
                 format!("dlsym({}, {})", handle, sym)
             }
-            CIntrinsic::UnloadLibrary => {
-                let handle = self.emit_expr_inline(&args[0]);
-                format!("dlclose({})", handle)
-            }
+            CIntrinsic::UnloadLibrary => format!("dlclose({})", self.arg0(args)),
             CIntrinsic::Dlerror => "((uint8_t*)dlerror())".into(),
-            CIntrinsic::CallExternal => {
-                let fptr = self.emit_expr_inline(&args[0]);
-                format!("((int64_t(*)(void))({}))()", fptr)
-            }
+            CIntrinsic::CallExternal => format!("((int64_t(*)(void))({}))()", self.arg0(args)),
 
             // -- Inline C -------------------------------------------------
             CIntrinsic::InlineC => {
@@ -155,8 +115,7 @@ impl CEmitter {
 
             // -- Enum intrinsics ------------------------------------------
             CIntrinsic::Discriminant => {
-                let val = self.emit_expr_inline(&args[0]);
-                format!("((int32_t)(((int32_t*)({}))[0]))", val)
+                format!("((int32_t)(((int32_t*)({}))[0]))", self.arg0(args))
             }
             CIntrinsic::SetDiscriminant => {
                 let ptr = self.emit_expr_inline(&args[0]);
@@ -164,9 +123,8 @@ impl CEmitter {
                 format!("(((int32_t*)({})) [0] = ({}))", ptr, disc)
             }
             CIntrinsic::GetPayload => {
-                let val = self.emit_expr_inline(&args[0]);
                 // Payload sits after the discriminant (4 bytes, aligned)
-                format!("((uint8_t*)({}) + sizeof(int32_t))", val)
+                format!("((uint8_t*)({}) + sizeof(int32_t))", self.arg0(args))
             }
             CIntrinsic::SetPayload => {
                 let ptr = self.emit_expr_inline(&args[0]);
@@ -181,6 +139,12 @@ impl CEmitter {
             }
             _ => unreachable!("syscall intrinsic should be handled before category lowering"),
         }
+    }
+
+    /// Emit the sole operand of a unary intrinsic. Most intrinsics are a
+    /// single-argument C builtin wrapper; this keeps those arms one-liners.
+    fn arg0(&mut self, args: &[TypedExpression]) -> String {
+        self.emit_expr_inline(&args[0])
     }
 
     pub(super) fn emit_overflow_op(&mut self, op: &str, args: &[TypedExpression]) -> String {
