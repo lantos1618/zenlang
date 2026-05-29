@@ -1,5 +1,49 @@
-// Parse-only placeholder for @std.collections.string.
-//
-// Dynamic String is stdlib-owned Zen surface, not a Rust builtin. Restore the
-// implementation here only with allocator, parser, typechecker, build, and
-// docs-truth evidence.
+// Allocator-backed dynamic String: heap u8 buffer built on @builtin.
+// `{ String, string_new, string_from, string_push_byte, string_len,
+//    string_byte_at, string_print, string_free } = std.collections.string`
+
+pub String: { data: RawPtr<u8>, len: i64, cap: i64 }
+
+pub string_new = () String {
+    String { data: @builtin.raw_allocate(8), len: 0, cap: 8 }
+}
+
+// Copy a baked StaticString into a fresh heap String.
+pub string_from = (text: StaticString) String {
+    n = cast(@builtin.strlen(text), i64)
+    p = @builtin.raw_allocate(cast(n, usize))
+    @builtin.memcpy(p, @builtin.static_string_ptr(text), cast(n, usize))
+    String { data: p, len: n, cap: n }
+}
+
+pub string_len = (s: String) i64 {
+    s.len
+}
+
+pub string_byte_at = (s: String, index: i64) u8 {
+    @builtin.load<u8>(@builtin.gep(s.data, index))
+}
+
+pub string_push_byte = (s: String, byte: u8) String {
+    grown = s.len == s.cap ?
+        | true {
+            new_cap = s.cap * 2
+            String {
+                data: @builtin.raw_reallocate(s.data, cast(s.cap, usize), cast(new_cap, usize)),
+                len: s.len,
+                cap: new_cap,
+            }
+        }
+        | false { s }
+    @builtin.store(@builtin.gep(grown.data, grown.len), byte)
+    String { data: grown.data, len: grown.len + 1, cap: grown.cap }
+}
+
+// Write the string's bytes to stdout.
+pub string_print = (s: String) void {
+    @builtin.libc_write(1, s.data, cast(s.len, usize))
+}
+
+pub string_free = (s: String) void {
+    @builtin.raw_deallocate(s.data, cast(s.cap, usize))
+}

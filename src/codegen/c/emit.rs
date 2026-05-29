@@ -11,8 +11,18 @@ impl CEmitter {
             } => {
                 let c_ty = Self::c_type(ty);
                 let val = self.emit_expr_inline(value);
-                let qualifier = c_const_qualifier(*mutable);
-                self.line(&format!("{qualifier}{} {} = {};", c_ty, c_ident(name), val));
+                // For an immutable pointer binding, const the pointer itself
+                // (`T* const p`), not the pointee (`const T* p`) — otherwise
+                // assigning it into a non-const field discards qualifiers.
+                let decl = if !*mutable
+                    && matches!(ty, Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_))
+                {
+                    format!("{} const {} = {};", c_ty, c_ident(name), val)
+                } else {
+                    let qualifier = c_const_qualifier(*mutable);
+                    format!("{qualifier}{} {} = {};", c_ty, c_ident(name), val)
+                };
+                self.line(&decl);
             }
             TypedStatementKind::Expression(expr) => {
                 self.emit_expr_statement(expr);
