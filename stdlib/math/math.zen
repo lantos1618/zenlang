@@ -16,7 +16,7 @@ pub abs<T> = (n: T) T {
 // Factorial (u32 -> u64 to avoid overflow)
 pub factorial = (n: u32) u64 {
     n == 0 ?
-        | true { cast(1, u64) }
+        | true { 1 }
         | false { cast(n, u64) * factorial(n - 1) }
 }
 
