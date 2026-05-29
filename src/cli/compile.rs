@@ -20,6 +20,7 @@ pub(super) fn compile_file_to_binary(
     path_str: &str,
     output_dir: Option<&Path>,
     output_name: Option<&str>,
+    link_libs: &[String],
 ) -> PathBuf {
     let c_source = compile_file_to_c_source(Path::new(path_str));
 
@@ -42,12 +43,19 @@ pub(super) fn compile_file_to_binary(
     println!("  emitted {}", c_path.display());
 
     let cc = std::env::var("CC").unwrap_or_else(|_| "cc".into());
-    let status = process::Command::new(&cc)
-        .arg(&c_path)
-        .arg("-o")
-        .arg(&bin_path)
-        .arg("-lm")
-        .status();
+    let mut command = process::Command::new(&cc);
+    command.arg(&c_path).arg("-o").arg(&bin_path).arg("-lm");
+    // System libraries from build.zen's `link:` field (Zig's linkSystemLibrary
+    // analog): resolve include/lib/rpath flags per library via pkg-config.
+    for lib in link_libs {
+        command.args(link_flags_for_library(lib));
+    }
+    // Escape hatch: extra cc flags (include dirs, `-l`, `-L`, `-include
+    // <header>`) appended verbatim, whitespace-separated. `link:` is preferred.
+    if let Ok(extra) = std::env::var("ZEN_CC_EXTRA") {
+        command.args(extra.split_whitespace());
+    }
+    let status = command.status();
 
     match status {
         Ok(s) if s.success() => {
@@ -64,4 +72,38 @@ pub(super) fn compile_file_to_binary(
             process::exit(1);
         }
     }
+}
+
+/// Resolve the cc flags needed to link one system library named in build.zen's
+/// `link:` field. Prefers pkg-config (`--cflags --libs`, plus an rpath to the
+/// library directory so the binary runs without LD_LIBRARY_PATH); falls back to
+/// a bare `-l<name>` when pkg-config has no entry for it.
+fn link_flags_for_library(lib: &str) -> Vec<String> {
+    let pkg = |args: &[&str]| -> Option<String> {
+        let out = process::Command::new("pkg-config").args(args).output().ok()?;
+        out.status
+            .success()
+            .then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+    };
+
+    let mut flags = Vec::new();
+    // `--exists` succeeds (empty stdout) only when pkg-config knows the library.
+    if pkg(&["--exists", lib]).is_some() {
+        if let Some(cflags) = pkg(&["--cflags", lib]) {
+            flags.extend(cflags.split_whitespace().map(str::to_string));
+        }
+        if let Some(libs) = pkg(&["--libs", lib]) {
+            flags.extend(libs.split_whitespace().map(str::to_string));
+        }
+        if let Some(libdir) = pkg(&["--variable=libdir", lib]) {
+            if !libdir.is_empty() {
+                flags.push(format!("-Wl,-rpath,{libdir}"));
+            }
+        }
+    }
+    if flags.is_empty() {
+        // No pkg-config entry — fall back to a plain link flag.
+        flags.push(format!("-l{lib}"));
+    }
+    flags
 }

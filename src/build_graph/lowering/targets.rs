@@ -5,8 +5,8 @@ use super::dsl::{
     SUPPORTED_TARGET_KINDS,
 };
 use super::target_fields::{
-    common_target_fields, optional_string_field, required_one_of_string_fields,
-    required_string_array_field, required_string_field,
+    common_target_fields, optional_string_array_field, optional_string_field,
+    required_one_of_string_fields, required_string_array_field, required_string_field,
 };
 use super::{unsupported_build_script, BuildGraphError, BuildTargetInput, BuildTargetKind};
 
@@ -62,6 +62,7 @@ fn validate_target_fields(
             BuildTargetField::OutDir,
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
+            BuildTargetField::Link,
         ],
         BuildTargetDslKind::Test => &[
             BuildTargetField::Name,
@@ -82,9 +83,11 @@ fn validate_target_fields(
         let field = name.parse::<BuildTargetField>().map_err(|()| {
             unsupported_build_script(format!("unknown field `{name}` in `{kind}` build target"))
         })?;
-        if matches!(field, BuildTargetField::Packages | BuildTargetField::Link) {
+        // `link` is supported on Executable targets (see the allow-list below);
+        // `packages` remains gated until the package driver exists.
+        if matches!(field, BuildTargetField::Packages) {
             return Err(unsupported_build_script(format!(
-                "unsupported field `{field}` in `{kind}` build target; package/link semantics are gated"
+                "unsupported field `{field}` in `{kind}` build target; package semantics are gated"
             )));
         }
         if !allowed.contains(&field) {
@@ -113,12 +116,15 @@ fn executable_target_from_fields(
     let (dependencies, features) = common_target_fields(kind, fields)?;
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
+    let link =
+        optional_string_array_field(kind, fields, BuildTargetField::Link)?.unwrap_or_default();
 
     Ok(BuildTargetInput {
         name: target_name,
         kind: BuildTargetKind::Executable {
             root_source_file: root_source_file.clone(),
             out_dir,
+            link,
         },
         sources: vec![root_source_file],
         dependencies,

@@ -70,31 +70,45 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 
 #[test]
 fn build_program_lowering_rejects_gated_package_fields() {
-    assert_build_program_lowering_rejects_gated_target_field("packages", r#"["std"]"#);
-}
-
-#[test]
-fn build_program_lowering_rejects_gated_link_fields() {
-    assert_build_program_lowering_rejects_gated_target_field("link", r#"["m"]"#);
-}
-
-fn assert_build_program_lowering_rejects_gated_target_field(field: &str, value: &str) {
     assert_build_program_error(
-        &format!(
         r#"
-build = (b: Builder) Result<BuildConfig, BuildError> {{
-    b.add(Executable {{
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
         name: "app",
         main: "app.zen",
         out_dir: "build/app/",
-        {field}: {value},
-    }})
+        packages: ["std"],
+    })
     .Ok(b.config())
-}}
+}
 "#,
-        ),
-        format!("unsupported field `{field}` in `Executable` build target; package/link semantics are gated")
+        "unsupported field `packages` in `Executable` build target; package semantics are gated",
     );
+}
+
+#[test]
+fn build_program_lowering_accepts_executable_link_libraries() {
+    let program = super::parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        link: ["SDL3", "m"],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = zen::build_graph::BuildGraph::from_build_program(&program)
+        .expect("build program with link should lower");
+    match &graph.targets[0].kind {
+        zen::build_graph::BuildTargetKind::Executable { link, .. } => {
+            assert_eq!(link.as_slice(), ["SDL3", "m"]);
+        }
+        other => panic!("expected executable target, got {other:?}"),
+    }
 }
 
 #[test]

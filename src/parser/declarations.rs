@@ -26,6 +26,13 @@ impl Parser {
             false
         };
 
+        if matches!(self.peek(), Token::Extern) {
+            let extern_span = self.peek_span();
+            self.advance();
+            self.skip_newlines();
+            return self.parse_extern_function(public, extern_span);
+        }
+
         if matches!(self.peek(), Token::LBrace) && self.is_import() {
             return self.parse_import();
         }

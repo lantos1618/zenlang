@@ -5,6 +5,8 @@ pub(super) struct BuildGraphTarget {
     pub(super) root_source_file: String,
     pub(super) root_path: PathBuf,
     pub(super) out_dir: PathBuf,
+    /// System libraries to link (from the `link:` field), e.g. `["SDL3"]`.
+    pub(super) link: Vec<String>,
 }
 
 pub(super) fn test_build_target(
@@ -22,6 +24,7 @@ pub(super) fn test_build_target(
         root_source_file: root_source_file.clone(),
         root_path,
         out_dir: base_dir.join("build").join("tests"),
+        link: Vec::new(),
     })
 }
 
@@ -32,6 +35,7 @@ pub(super) fn executable_build_target(
     let zen::build_graph::BuildTargetKind::Executable {
         root_source_file,
         out_dir,
+        link,
     } = &target.kind
     else {
         return None;
@@ -44,5 +48,6 @@ pub(super) fn executable_build_target(
         root_source_file: root_source_file.clone(),
         root_path,
         out_dir: base_dir.join(out_dir),
+        link: link.clone(),
     })
 }

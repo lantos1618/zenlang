@@ -174,10 +174,21 @@ pub struct TypedGlobal {
     pub span: Span,
 }
 
+/// An `extern` C function: a signature with no Zen body. Codegen emits a C
+/// prototype; the symbol is resolved at link time from a `link:`-ed library.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TypedExternFunction {
+    pub name: String,
+    pub params: Vec<TypedParam>,
+    pub return_type: Type,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TypedProgram {
     pub functions: Vec<TypedFunction>,
     pub types: Vec<TypedTypeDef>,
     pub globals: Vec<TypedGlobal>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extern_functions: Vec<TypedExternFunction>,
     pub entry_point: Option<String>,
 }

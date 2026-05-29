@@ -44,6 +44,7 @@ impl TypeChecker {
                     .map(|ty| concrete_self_ast_type_for_target(ty, type_name, type_args)),
                 body,
                 public: true,
+                external: false,
                 span: required.span,
             })
         })

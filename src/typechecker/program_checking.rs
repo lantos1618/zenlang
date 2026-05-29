@@ -12,10 +12,39 @@ impl TypeChecker {
         self.enter_global_scope();
         let globals = self.register_global_bindings(&program.declarations);
         let mut functions = Vec::new();
+        let mut extern_functions = Vec::new();
         let mut types = Vec::new();
         let mut entry_point = None;
 
         for decl in &program.declarations {
+            // `extern` C functions have no Zen body to check or emit; record a
+            // prototype for codegen and skip the normal callable path.
+            if let Declaration::Function {
+                external: true,
+                name,
+                params,
+                return_type,
+                ..
+            } = decl
+            {
+                extern_functions.push(TypedExternFunction {
+                    name: name.clone(),
+                    params: params
+                        .iter()
+                        .map(|param| TypedParam {
+                            name: param.name.clone(),
+                            ty: self.resolve_type(&param.ty),
+                            span: param.span,
+                        })
+                        .collect(),
+                    return_type: return_type
+                        .as_ref()
+                        .map(|ty| self.resolve_type(ty))
+                        .unwrap_or(Type::Void),
+                });
+                continue;
+            }
+
             if let Some(callable) = decl.as_callable() {
                 if callable.type_params.is_empty() {
                     let (checked_name, self_type) = match decl {
@@ -138,6 +167,7 @@ impl TypeChecker {
             functions,
             types,
             globals,
+            extern_functions,
             entry_point,
         })
     }

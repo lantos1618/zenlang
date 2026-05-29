@@ -44,6 +44,45 @@ impl Parser {
             return_type,
             body,
             public,
+            external: false,
+            span,
+        })
+    }
+
+    /// Parse an `extern` C function declaration: `extern NAME = (params) Ret`
+    /// — a bodyless callable bound to a `link:`-ed library symbol. Stored as a
+    /// `Function` with `external: true` and an empty-block placeholder body.
+    pub(in crate::parser) fn parse_extern_function(
+        &mut self,
+        public: bool,
+        start_span: Span,
+    ) -> Result<Declaration, CompileError> {
+        let (name, _) = self.expect_identifier()?;
+        self.skip_newlines();
+        self.expect(&Token::Assign)?;
+        self.skip_newlines();
+        self.expect(&Token::LParen)?;
+        let params = self.parse_param_list()?;
+        self.expect(&Token::RParen)?;
+        // The return type (if any) sits on the same line; a line break or EOF
+        // means a `void` extern.
+        let return_type = match self.peek() {
+            Token::Newline | Token::EOF => None,
+            _ => Some(self.parse_type()?),
+        };
+        let span = start_span.merge(self.prev_span());
+        Ok(Declaration::Function {
+            name,
+            type_params: Vec::new(),
+            params,
+            return_type,
+            body: Expression::Block {
+                statements: Vec::new(),
+                expr: None,
+                span,
+            },
+            public,
+            external: true,
             span,
         })
     }
