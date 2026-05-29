@@ -61,8 +61,11 @@ impl CEmitter {
         }
 
         // Extern C functions (FFI): emit a prototype; the symbol is resolved at
-        // link time from a `link:`-ed library. The C name is the bare identifier
-        // so it matches the real library symbol.
+        // link time from a `link:`-ed library. A plain identifier passes through
+        // c_func_ident verbatim and matches the real symbol; a name colliding
+        // with a C keyword would be rewritten to `zen_<name>` and fail to link
+        // — harmless, since no C library can export a keyword-named function.
+        // (A clear compile-time guard for that case is a documented follow-up.)
         for ext in &program.extern_functions {
             let ret = Self::c_type(&ext.return_type);
             let name = c_func_ident(&ext.name);
