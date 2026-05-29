@@ -76,6 +76,9 @@ fn normalized_fixture(path: &str) -> String {
 
 fn assert_symbols_fixture_matches(source_path: &str, fixture_path: &str) {
     let actual = normalized_json_for_path("symbols", &fixture(source_path));
+    if super::golden_support::maybe_bless(fixture_path, &actual) {
+        return;
+    }
     let expected = normalized_fixture(fixture_path);
 
     assert_eq!(actual.trim(), expected.trim());

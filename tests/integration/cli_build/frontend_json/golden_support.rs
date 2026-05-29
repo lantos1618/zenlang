@@ -10,6 +10,19 @@ pub(super) fn stage_golden_path(mode: &str, stem: &str) -> String {
     format!("tests/fixtures/ir_json/{mode}_{stem}.golden.json")
 }
 
+/// `BLESS=1 cargo test` regenerates the golden at `golden` with `actual` and
+/// returns true (caller skips its assertion). Standard snapshot-update hook.
+pub(super) fn maybe_bless(golden: &str, actual: &str) -> bool {
+    if std::env::var_os("BLESS").is_none() {
+        return false;
+    }
+    let path = fixture(golden);
+    let mut contents = actual.trim().to_string();
+    contents.push('\n');
+    std::fs::write(&path, contents).unwrap_or_else(|e| panic!("bless {}: {e}", path.display()));
+    true
+}
+
 pub(super) fn assert_stage_golden(
     mode: &str,
     label: &str,
@@ -18,6 +31,9 @@ pub(super) fn assert_stage_golden(
     description: &str,
 ) {
     let actual = emit_checked_json(mode, label, source_path, description);
+    if maybe_bless(golden, &actual) {
+        return;
+    }
     let expected = read_fixture(golden);
 
     assert_eq!(actual.trim(), expected.trim());

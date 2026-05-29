@@ -81,8 +81,6 @@ impl CEmitter {
             self.blank();
         }
 
-        self.emit_io_helpers();
-
         for func in &program.functions {
             self.emit_function(func);
             self.blank();

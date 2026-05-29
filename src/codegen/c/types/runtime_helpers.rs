@@ -29,21 +29,4 @@ impl CEmitter {
         self.line("}");
         self.blank();
     }
-
-    pub(super) fn emit_io_helpers(&mut self) {
-        self.line("static void io_print(zen_str s) {");
-        self.indent();
-        self.line("fwrite(s.ptr, 1, s.len, stdout);");
-        self.dedent();
-        self.line("}");
-        self.blank();
-
-        self.line("static void io_println(zen_str s) {");
-        self.indent();
-        self.line("io_print(s);");
-        self.line("fputc('\\n', stdout);");
-        self.dedent();
-        self.line("}");
-        self.blank();
-    }
 }

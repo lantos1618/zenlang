@@ -66,6 +66,36 @@
         "return_type": "i32"
       },
       {
+        "name": "io_print",
+        "params": [
+          {
+            "name": "message",
+            "type": "StaticString"
+          }
+        ],
+        "return_type": "void"
+      },
+      {
+        "name": "io_println",
+        "params": [
+          {
+            "name": "message",
+            "type": "StaticString"
+          }
+        ],
+        "return_type": "void"
+      },
+      {
+        "name": "io_eprintln",
+        "params": [
+          {
+            "name": "message",
+            "type": "StaticString"
+          }
+        ],
+        "return_type": "void"
+      },
+      {
         "name": "Result.unwrap_or_i32_StaticString",
         "params": [
           {

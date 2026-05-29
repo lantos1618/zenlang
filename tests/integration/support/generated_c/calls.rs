@@ -81,14 +81,18 @@ fn is_untracked_c_call_name(name: &str) -> bool {
             | "if"
             | "malloc"
             | "memcpy"
+            | "memset"
             | "pow"
             | "printf"
+            | "read"
+            | "realloc"
             | "snprintf"
             | "sizeof"
             | "sqrt"
             | "strlen"
             | "switch"
             | "while"
+            | "write"
     )
 }
 

@@ -276,6 +276,237 @@
           }
         }
       ]
+    },
+    {
+      "name": "io_print",
+      "params": [
+        {
+          "name": "message",
+          "type": "StaticString"
+        }
+      ],
+      "return_type": "void",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "intrinsic",
+              "type": "i64",
+              "function": "libc_write",
+              "args": [
+                {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 1
+                },
+                {
+                  "kind": "intrinsic",
+                  "type": "RawPtr<u8>",
+                  "function": "static_string_ptr",
+                  "args": [
+                    {
+                      "kind": "local",
+                      "type": "StaticString",
+                      "name": "message"
+                    }
+                  ]
+                },
+                {
+                  "kind": "intrinsic",
+                  "type": "usize",
+                  "function": "strlen",
+                  "args": [
+                    {
+                      "kind": "local",
+                      "type": "StaticString",
+                      "name": "message"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "io_println",
+      "params": [
+        {
+          "name": "message",
+          "type": "StaticString"
+        }
+      ],
+      "return_type": "void",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "intrinsic",
+                "type": "i64",
+                "function": "libc_write",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 1
+                  },
+                  {
+                    "kind": "intrinsic",
+                    "type": "RawPtr<u8>",
+                    "function": "static_string_ptr",
+                    "args": [
+                      {
+                        "kind": "local",
+                        "type": "StaticString",
+                        "name": "message"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "intrinsic",
+                    "type": "usize",
+                    "function": "strlen",
+                    "args": [
+                      {
+                        "kind": "local",
+                        "type": "StaticString",
+                        "name": "message"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "intrinsic",
+              "type": "i64",
+              "function": "libc_write",
+              "args": [
+                {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 1
+                },
+                {
+                  "kind": "intrinsic",
+                  "type": "RawPtr<u8>",
+                  "function": "static_string_ptr",
+                  "args": [
+                    {
+                      "kind": "static_string",
+                      "type": "StaticString",
+                      "value": "\n"
+                    }
+                  ]
+                },
+                {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "io_eprintln",
+      "params": [
+        {
+          "name": "message",
+          "type": "StaticString"
+        }
+      ],
+      "return_type": "void",
+      "blocks": [
+        {
+          "label": "entry",
+          "statements": [
+            {
+              "kind": "expr",
+              "value": {
+                "kind": "intrinsic",
+                "type": "i64",
+                "function": "libc_write",
+                "args": [
+                  {
+                    "kind": "int",
+                    "type": "i32",
+                    "value": 2
+                  },
+                  {
+                    "kind": "intrinsic",
+                    "type": "RawPtr<u8>",
+                    "function": "static_string_ptr",
+                    "args": [
+                      {
+                        "kind": "local",
+                        "type": "StaticString",
+                        "name": "message"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "intrinsic",
+                    "type": "usize",
+                    "function": "strlen",
+                    "args": [
+                      {
+                        "kind": "local",
+                        "type": "StaticString",
+                        "name": "message"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "terminator": {
+            "kind": "return",
+            "value": {
+              "kind": "intrinsic",
+              "type": "i64",
+              "function": "libc_write",
+              "args": [
+                {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 2
+                },
+                {
+                  "kind": "intrinsic",
+                  "type": "RawPtr<u8>",
+                  "function": "static_string_ptr",
+                  "args": [
+                    {
+                      "kind": "static_string",
+                      "type": "StaticString",
+                      "value": "\n"
+                    }
+                  ]
+                },
+                {
+                  "kind": "int",
+                  "type": "i32",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

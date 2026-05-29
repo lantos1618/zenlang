@@ -256,6 +256,486 @@
         }
       },
       {
+        "name": "io_print",
+        "params": [
+          {
+            "name": "message",
+            "ty": "Str",
+            "span": {
+              "file_id": 0,
+              "start": 74,
+              "end": 95
+            }
+          }
+        ],
+        "return_type": "Void",
+        "body": {
+          "statements": [],
+          "expr": {
+            "kind": {
+              "Intrinsic": {
+                "name": "libc_write",
+                "args": [
+                  {
+                    "kind": {
+                      "IntLiteral": 1
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 128,
+                      "end": 129
+                    }
+                  },
+                  {
+                    "kind": {
+                      "Intrinsic": {
+                        "name": "static_string_ptr",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "message"
+                            },
+                            "ty": "Str",
+                            "span": {
+                              "file_id": 0,
+                              "start": 158,
+                              "end": 165
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "RawPtr": "U8"
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 131,
+                      "end": 166
+                    }
+                  },
+                  {
+                    "kind": {
+                      "Intrinsic": {
+                        "name": "strlen",
+                        "args": [
+                          {
+                            "kind": {
+                              "Variable": "message"
+                            },
+                            "ty": "Str",
+                            "span": {
+                              "file_id": 0,
+                              "start": 184,
+                              "end": 191
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": "Usize",
+                    "span": {
+                      "file_id": 0,
+                      "start": 168,
+                      "end": 192
+                    }
+                  }
+                ]
+              }
+            },
+            "ty": "I64",
+            "span": {
+              "file_id": 0,
+              "start": 108,
+              "end": 193
+            }
+          },
+          "ty": "I64",
+          "span": {
+            "file_id": 0,
+            "start": 102,
+            "end": 195
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 65,
+          "end": 195
+        }
+      },
+      {
+        "name": "io_println",
+        "params": [
+          {
+            "name": "message",
+            "ty": "Str",
+            "span": {
+              "file_id": 0,
+              "start": 207,
+              "end": 228
+            }
+          }
+        ],
+        "return_type": "Void",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "Intrinsic": {
+                      "name": "libc_write",
+                      "args": [
+                        {
+                          "kind": {
+                            "IntLiteral": 1
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 261,
+                            "end": 262
+                          }
+                        },
+                        {
+                          "kind": {
+                            "Intrinsic": {
+                              "name": "static_string_ptr",
+                              "args": [
+                                {
+                                  "kind": {
+                                    "Variable": "message"
+                                  },
+                                  "ty": "Str",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 291,
+                                    "end": 298
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": {
+                            "RawPtr": "U8"
+                          },
+                          "span": {
+                            "file_id": 0,
+                            "start": 264,
+                            "end": 299
+                          }
+                        },
+                        {
+                          "kind": {
+                            "Intrinsic": {
+                              "name": "strlen",
+                              "args": [
+                                {
+                                  "kind": {
+                                    "Variable": "message"
+                                  },
+                                  "ty": "Str",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 317,
+                                    "end": 324
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Usize",
+                          "span": {
+                            "file_id": 0,
+                            "start": 301,
+                            "end": 325
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "I64",
+                  "span": {
+                    "file_id": 0,
+                    "start": 241,
+                    "end": 326
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 241,
+                "end": 326
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "Intrinsic": {
+                "name": "libc_write",
+                "args": [
+                  {
+                    "kind": {
+                      "IntLiteral": 1
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 351,
+                      "end": 352
+                    }
+                  },
+                  {
+                    "kind": {
+                      "Intrinsic": {
+                        "name": "static_string_ptr",
+                        "args": [
+                          {
+                            "kind": {
+                              "StringLiteral": "\n"
+                            },
+                            "ty": "Str",
+                            "span": {
+                              "file_id": 0,
+                              "start": 381,
+                              "end": 385
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "RawPtr": "U8"
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 354,
+                      "end": 386
+                    }
+                  },
+                  {
+                    "kind": {
+                      "IntLiteral": 1
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 388,
+                      "end": 389
+                    }
+                  }
+                ]
+              }
+            },
+            "ty": "I64",
+            "span": {
+              "file_id": 0,
+              "start": 331,
+              "end": 390
+            }
+          },
+          "ty": "I64",
+          "span": {
+            "file_id": 0,
+            "start": 235,
+            "end": 392
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 196,
+          "end": 392
+        }
+      },
+      {
+        "name": "io_eprintln",
+        "params": [
+          {
+            "name": "message",
+            "ty": "Str",
+            "span": {
+              "file_id": 0,
+              "start": 405,
+              "end": 426
+            }
+          }
+        ],
+        "return_type": "Void",
+        "body": {
+          "statements": [
+            {
+              "kind": {
+                "Expression": {
+                  "kind": {
+                    "Intrinsic": {
+                      "name": "libc_write",
+                      "args": [
+                        {
+                          "kind": {
+                            "IntLiteral": 2
+                          },
+                          "ty": "I32",
+                          "span": {
+                            "file_id": 0,
+                            "start": 459,
+                            "end": 460
+                          }
+                        },
+                        {
+                          "kind": {
+                            "Intrinsic": {
+                              "name": "static_string_ptr",
+                              "args": [
+                                {
+                                  "kind": {
+                                    "Variable": "message"
+                                  },
+                                  "ty": "Str",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 489,
+                                    "end": 496
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": {
+                            "RawPtr": "U8"
+                          },
+                          "span": {
+                            "file_id": 0,
+                            "start": 462,
+                            "end": 497
+                          }
+                        },
+                        {
+                          "kind": {
+                            "Intrinsic": {
+                              "name": "strlen",
+                              "args": [
+                                {
+                                  "kind": {
+                                    "Variable": "message"
+                                  },
+                                  "ty": "Str",
+                                  "span": {
+                                    "file_id": 0,
+                                    "start": 515,
+                                    "end": 522
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "ty": "Usize",
+                          "span": {
+                            "file_id": 0,
+                            "start": 499,
+                            "end": 523
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "ty": "I64",
+                  "span": {
+                    "file_id": 0,
+                    "start": 439,
+                    "end": 524
+                  }
+                }
+              },
+              "span": {
+                "file_id": 0,
+                "start": 439,
+                "end": 524
+              }
+            }
+          ],
+          "expr": {
+            "kind": {
+              "Intrinsic": {
+                "name": "libc_write",
+                "args": [
+                  {
+                    "kind": {
+                      "IntLiteral": 2
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 549,
+                      "end": 550
+                    }
+                  },
+                  {
+                    "kind": {
+                      "Intrinsic": {
+                        "name": "static_string_ptr",
+                        "args": [
+                          {
+                            "kind": {
+                              "StringLiteral": "\n"
+                            },
+                            "ty": "Str",
+                            "span": {
+                              "file_id": 0,
+                              "start": 579,
+                              "end": 583
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "ty": {
+                      "RawPtr": "U8"
+                    },
+                    "span": {
+                      "file_id": 0,
+                      "start": 552,
+                      "end": 584
+                    }
+                  },
+                  {
+                    "kind": {
+                      "IntLiteral": 1
+                    },
+                    "ty": "I32",
+                    "span": {
+                      "file_id": 0,
+                      "start": 586,
+                      "end": 587
+                    }
+                  }
+                ]
+              }
+            },
+            "ty": "I64",
+            "span": {
+              "file_id": 0,
+              "start": 529,
+              "end": 588
+            }
+          },
+          "ty": "I64",
+          "span": {
+            "file_id": 0,
+            "start": 433,
+            "end": 590
+          }
+        },
+        "defers": [],
+        "span": {
+          "file_id": 0,
+          "start": 393,
+          "end": 590
+        }
+      },
+      {
         "name": "Box.replace_i32",
         "params": [
           {

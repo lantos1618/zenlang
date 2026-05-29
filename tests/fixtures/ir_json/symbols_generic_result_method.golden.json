@@ -1,43 +1,48 @@
 {
-  "format": "zen.symbols.v0",
-  "semantic_status": "resolved",
   "entry_module": 0,
+  "format": "zen.symbols.v0",
   "modules": [
     {
+      "canonical_path": "generic_result_enum_method.zen",
       "id": 0,
       "package_id": 0,
-      "canonical_path": "generic_result_enum_method.zen",
       "symbols": [
         {
+          "definition_span": {
+            "end": 12,
+            "file_id": 0,
+            "start": 0
+          },
           "id": 0,
-          "namespace": "Module",
+          "is_public": false,
           "name": "std",
-          "is_public": false,
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 0,
-            "end": 12
-          }
+          "namespace": "Module",
+          "scope_id": 0
         },
         {
+          "definition_span": {
+            "end": 12,
+            "file_id": 0,
+            "start": 0
+          },
           "id": 1,
-          "namespace": "Import",
-          "name": "io",
-          "is_public": false,
           "import_source": "std",
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 0,
-            "end": 12
-          }
+          "is_public": false,
+          "name": "io",
+          "namespace": "Import",
+          "scope_id": 0
         },
         {
+          "definition_span": {
+            "end": 49,
+            "file_id": 0,
+            "start": 14
+          },
           "id": 2,
-          "namespace": "Type",
-          "name": "Result",
           "is_public": false,
+          "name": "Result",
+          "namespace": "Type",
+          "scope_id": 0,
           "type_parameter_names": [
             "T",
             "E"
@@ -45,47 +50,46 @@
           "variant_names": [
             "Ok",
             "Err"
-          ],
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 14,
-            "end": 49
-          }
+          ]
         },
         {
+          "definition_span": {
+            "end": 37,
+            "file_id": 0,
+            "start": 32
+          },
           "id": 3,
-          "namespace": "Variant",
+          "is_public": false,
           "name": "Ok",
-          "is_public": false,
-          "variant_owner_name": "Result",
-          "variant_payload_type_name": "T",
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 32,
-            "end": 37
-          }
-        },
-        {
-          "id": 4,
           "namespace": "Variant",
-          "name": "Err",
-          "is_public": false,
-          "variant_owner_name": "Result",
-          "variant_payload_type_name": "E",
           "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 43,
-            "end": 49
-          }
+          "variant_owner_name": "Result",
+          "variant_payload_type_name": "T"
         },
         {
-          "id": 5,
-          "namespace": "Value",
-          "name": "Result.unwrap_or",
+          "definition_span": {
+            "end": 49,
+            "file_id": 0,
+            "start": 43
+          },
+          "id": 4,
           "is_public": false,
+          "name": "Err",
+          "namespace": "Variant",
+          "scope_id": 0,
+          "variant_owner_name": "Result",
+          "variant_payload_type_name": "E"
+        },
+        {
+          "definition_span": {
+            "end": 178,
+            "file_id": 0,
+            "start": 51
+          },
+          "id": 5,
+          "is_public": false,
+          "name": "Result.unwrap_or",
+          "namespace": "Value",
           "parameter_names": [
             "self",
             "fallback"
@@ -95,99 +99,194 @@
             "T"
           ],
           "return_type_name": "T",
+          "scope_id": 0,
           "type_parameter_names": [
             "T",
             "E"
-          ],
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 51,
-            "end": 178
-          }
+          ]
         },
         {
+          "definition_span": {
+            "end": 368,
+            "file_id": 0,
+            "start": 180
+          },
           "id": 6,
-          "namespace": "Value",
-          "name": "main",
           "is_public": false,
+          "name": "main",
+          "namespace": "Value",
           "parameter_names": [],
           "parameter_type_names": [],
           "return_type_name": "i32",
-          "type_parameter_names": [],
           "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 180,
-            "end": 368
-          }
+          "type_parameter_names": []
         },
         {
+          "definition_span": {
+            "end": 195,
+            "file_id": 0,
+            "start": 65
+          },
           "id": 7,
-          "namespace": "Local",
-          "name": "self",
           "is_public": false,
-          "is_mutable": false,
-          "scope_id": 1,
-          "definition_span": {
-            "file_id": 0,
-            "start": 77,
-            "end": 87
-          }
+          "name": "io_print",
+          "namespace": "Value",
+          "parameter_names": [
+            "message"
+          ],
+          "parameter_type_names": [
+            "StaticString"
+          ],
+          "return_type_name": "void",
+          "scope_id": 0,
+          "type_parameter_names": []
         },
         {
+          "definition_span": {
+            "end": 392,
+            "file_id": 0,
+            "start": 196
+          },
           "id": 8,
-          "namespace": "Local",
-          "name": "fallback",
           "is_public": false,
-          "is_mutable": false,
-          "scope_id": 1,
-          "definition_span": {
-            "file_id": 0,
-            "start": 89,
-            "end": 100
-          }
+          "name": "io_println",
+          "namespace": "Value",
+          "parameter_names": [
+            "message"
+          ],
+          "parameter_type_names": [
+            "StaticString"
+          ],
+          "return_type_name": "void",
+          "scope_id": 0,
+          "type_parameter_names": []
         },
         {
+          "definition_span": {
+            "end": 590,
+            "file_id": 0,
+            "start": 393
+          },
           "id": 9,
-          "namespace": "Local",
-          "name": "inner",
           "is_public": false,
-          "is_mutable": false,
-          "scope_id": 3,
-          "definition_span": {
-            "file_id": 0,
-            "start": 130,
-            "end": 135
-          }
+          "name": "io_eprintln",
+          "namespace": "Value",
+          "parameter_names": [
+            "message"
+          ],
+          "parameter_type_names": [
+            "StaticString"
+          ],
+          "return_type_name": "void",
+          "scope_id": 0,
+          "type_parameter_names": []
         },
         {
+          "definition_span": {
+            "end": 87,
+            "file_id": 0,
+            "start": 77
+          },
           "id": 10,
-          "namespace": "Local",
-          "name": "ok",
-          "is_public": false,
           "is_mutable": false,
-          "scope_id": 8,
-          "definition_span": {
-            "file_id": 0,
-            "start": 200,
-            "end": 237
-          }
+          "is_public": false,
+          "name": "self",
+          "namespace": "Local",
+          "scope_id": 1
         },
         {
-          "id": 11,
-          "namespace": "Local",
-          "name": "err",
-          "is_public": false,
-          "is_mutable": false,
-          "scope_id": 8,
           "definition_span": {
+            "end": 100,
             "file_id": 0,
-            "start": 242,
-            "end": 284
-          }
+            "start": 89
+          },
+          "id": 11,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "fallback",
+          "namespace": "Local",
+          "scope_id": 1
+        },
+        {
+          "definition_span": {
+            "end": 135,
+            "file_id": 0,
+            "start": 130
+          },
+          "id": 12,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "inner",
+          "namespace": "Local",
+          "scope_id": 3
+        },
+        {
+          "definition_span": {
+            "end": 237,
+            "file_id": 0,
+            "start": 200
+          },
+          "id": 13,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "ok",
+          "namespace": "Local",
+          "scope_id": 8
+        },
+        {
+          "definition_span": {
+            "end": 284,
+            "file_id": 0,
+            "start": 242
+          },
+          "id": 14,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "err",
+          "namespace": "Local",
+          "scope_id": 8
+        },
+        {
+          "definition_span": {
+            "end": 95,
+            "file_id": 0,
+            "start": 74
+          },
+          "id": 15,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "message",
+          "namespace": "Local",
+          "scope_id": 9
+        },
+        {
+          "definition_span": {
+            "end": 228,
+            "file_id": 0,
+            "start": 207
+          },
+          "id": 16,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "message",
+          "namespace": "Local",
+          "scope_id": 11
+        },
+        {
+          "definition_span": {
+            "end": 426,
+            "file_id": 0,
+            "start": 405
+          },
+          "id": 17,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "message",
+          "namespace": "Local",
+          "scope_id": 13
         }
       ]
     }
-  ]
+  ],
+  "semantic_status": "resolved"
 }

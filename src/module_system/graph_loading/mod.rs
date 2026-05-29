@@ -6,9 +6,13 @@ use crate::error::{CompileError, FileTable, Span};
 use crate::resolver::{Namespace, Resolver, SymbolTable};
 use crate::root_spelling::{AT_BUILTIN_ROOT, AT_STD_ROOT, STD_ROOT};
 
+mod namespace_injection;
+mod namespace_refs;
+
 use super::stdlib_paths::resolve_stdlib_file_path;
 use super::{load_file, package_id_for};
 use super::{ImportBinding, ModuleId, ModuleInfo, ResolvedModule, ResolvedModuleGraph};
+use namespace_injection::inject_stdlib_namespace_functions;
 
 pub fn load_module_graph(
     path: &Path,
@@ -53,7 +57,8 @@ fn load_graph_module(
 
     loading.insert(canonical.clone());
 
-    let program = load_file(path, files)?;
+    let mut program = load_file(path, files)?;
+    inject_stdlib_namespace_functions(&mut program)?;
     let symbols = Resolver.resolve_program(&program).map_err(|diagnostics| {
         diagnostics
             .into_iter()

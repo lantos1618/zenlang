@@ -1,2 +1,12 @@
-// Parse-only placeholder for @std.io.
-// Promote IO APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Zen stdlib: IO on @builtin intrinsics. fd 1=stdout, 2=stderr.
+print = (message: StaticString) void {
+    @builtin.libc_write(1, @builtin.static_string_ptr(message), @builtin.strlen(message))
+}
+println = (message: StaticString) void {
+    @builtin.libc_write(1, @builtin.static_string_ptr(message), @builtin.strlen(message))
+    @builtin.libc_write(1, @builtin.static_string_ptr("\n"), 1)
+}
+eprintln = (message: StaticString) void {
+    @builtin.libc_write(2, @builtin.static_string_ptr(message), @builtin.strlen(message))
+    @builtin.libc_write(2, @builtin.static_string_ptr("\n"), 1)
+}
