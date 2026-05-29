@@ -9,21 +9,6 @@ pub(crate) fn write_single_executable_file_read_graph(tmp: &tempfile::TempDir, f
     );
 }
 
-pub(crate) fn write_multiple_executable_file_read_graph(
-    tmp: &tempfile::TempDir,
-    fallback_arm: &str,
-) {
-    write_file_read_executable_graph(
-        tmp,
-        fallback_arm,
-        "app\ntool\n",
-        &[
-            ("app", "app.zen", "build/app/"),
-            ("tool", "tool.zen", "build/tool/"),
-        ],
-    );
-}
-
 pub(crate) fn write_mixed_target_file_read_graph(tmp: &tempfile::TempDir, fallback_arm: &str) {
     write_file(
         tmp,
