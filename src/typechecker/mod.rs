@@ -22,9 +22,9 @@ mod monomorphize_types;
 mod patterns;
 mod program_checking;
 mod program_module_graph;
+mod import_seeding;
 mod resolve;
 mod resolve_binary_ops;
-mod resolver_contract;
 mod scope_management;
 mod semantic_validation;
 mod statements;
@@ -47,7 +47,7 @@ pub(crate) use environment::{
     GenericFunctionTemplate, SourceModuleDependencies, StructInfo, TemplateDependencyState,
 };
 
-include!("resolver_contract_support.rs");
+include!("info_builders.rs");
 include!("state.rs");
 
 impl TypeChecker {
