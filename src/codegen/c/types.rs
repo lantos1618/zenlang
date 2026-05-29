@@ -55,7 +55,7 @@ impl CEmitter {
             self.blank();
         }
 
-        for typedef in &program.types {
+        for typedef in order_types_by_value_deps(&program.types) {
             self.emit_type_def(typedef);
             self.blank();
         }
@@ -95,7 +95,7 @@ impl CEmitter {
         }
     }
 
-    fn emit_type_def(&mut self, typedef: &TypedTypeDef) {
+    pub(super) fn emit_type_def(&mut self, typedef: &TypedTypeDef) {
         let name = c_ident(&typedef.name);
         match &typedef.kind {
             TypeDefKind::Struct { fields } => {
@@ -149,5 +149,83 @@ impl CEmitter {
                 self.line("};");
             }
         }
+    }
+}
+
+/// Order struct/enum bodies so that a type embedded *by value* in another is
+/// defined first — C requires the complete type for a by-value field. Pointer
+/// fields only need the forward `typedef`, so they create no ordering edge
+/// (and recursive/cyclic pointer types stay legal). A stable topological sort
+/// preserves the original order among independent types; any leftover cycle
+/// (illegal by-value recursion) falls back to declaration order.
+fn order_types_by_value_deps(types: &[TypedTypeDef]) -> Vec<&TypedTypeDef> {
+    use std::collections::{HashMap, HashSet};
+
+    let index: HashMap<&str, usize> = types
+        .iter()
+        .enumerate()
+        .map(|(i, t)| (t.name.as_str(), i))
+        .collect();
+
+    let mut ordered = Vec::with_capacity(types.len());
+    let mut visited = vec![false; types.len()];
+
+    fn visit<'a>(
+        i: usize,
+        types: &'a [TypedTypeDef],
+        index: &HashMap<&str, usize>,
+        visited: &mut [bool],
+        on_stack: &mut HashSet<usize>,
+        ordered: &mut Vec<&'a TypedTypeDef>,
+    ) {
+        if visited[i] || !on_stack.insert(i) {
+            return;
+        }
+        for dep in by_value_deps(&types[i]) {
+            if let Some(&j) = index.get(dep.as_str()) {
+                visit(j, types, index, visited, on_stack, ordered);
+            }
+        }
+        on_stack.remove(&i);
+        if !visited[i] {
+            visited[i] = true;
+            ordered.push(&types[i]);
+        }
+    }
+
+    for i in 0..types.len() {
+        visit(i, types, &index, &mut visited, &mut HashSet::new(), &mut ordered);
+    }
+    ordered
+}
+
+/// Names of types embedded by value (directly or through arrays) in a typedef's
+/// fields — the dependencies whose definitions must precede this one.
+fn by_value_deps(typedef: &TypedTypeDef) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut collect = |ty: &Type| collect_by_value_names(ty, &mut names);
+    match &typedef.kind {
+        TypeDefKind::Struct { fields } => {
+            for (_, ty) in fields {
+                collect(ty);
+            }
+        }
+        TypeDefKind::Enum { variants } => {
+            for payload in variants.iter().filter_map(|v| v.payload.as_ref()) {
+                collect(payload);
+            }
+        }
+    }
+    names
+}
+
+fn collect_by_value_names(ty: &Type, names: &mut Vec<String>) {
+    match ty {
+        Type::Named(name) | Type::Struct { name, .. } | Type::Enum { name, .. } => {
+            names.push(name.clone());
+        }
+        // Arrays embed their element by value; pointers/slices do not.
+        Type::Array { elem, .. } => collect_by_value_names(elem, names),
+        _ => {}
     }
 }
