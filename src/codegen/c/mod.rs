@@ -99,6 +99,25 @@ fn is_c_keyword(s: &str) -> bool {
     )
 }
 
+/// A named C declaration of `ty`. For a function type the declared name must sit
+/// inside the pointer parens (`ret (*name)(params)`); every other type is the
+/// plain `type name`. `name` is run through `c_ident`.
+fn c_declarator(ty: &Type, name: &str) -> String {
+    let ident = c_ident(name);
+    match ty {
+        Type::Function { params, ret } => {
+            let ps: Vec<_> = params.iter().map(CEmitter::c_type).collect();
+            let ps = if ps.is_empty() {
+                "void".to_string()
+            } else {
+                ps.join(", ")
+            };
+            format!("{} (*{})({})", CEmitter::c_type(ret), ident, ps)
+        }
+        _ => format!("{} {}", CEmitter::c_type(ty), ident),
+    }
+}
+
 fn c_func_ident(name: &str) -> String {
     if name == "main" {
         "zen_main".into()

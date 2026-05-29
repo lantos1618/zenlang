@@ -71,11 +71,15 @@ impl CEmitter {
         }
 
         for global in &program.globals {
-            let ty = Self::c_type(&global.ty);
-            let name = c_ident(&global.name);
             let val = self.emit_expr_inline(&global.value);
-            let qualifier = c_const_qualifier(global.mutable);
-            self.line(&format!("{qualifier}{ty} {name} = {val};"));
+            if matches!(global.ty, Type::Function { .. }) {
+                self.line(&format!("{} = {val};", c_declarator(&global.ty, &global.name)));
+            } else {
+                let ty = Self::c_type(&global.ty);
+                let name = c_ident(&global.name);
+                let qualifier = c_const_qualifier(global.mutable);
+                self.line(&format!("{qualifier}{ty} {name} = {val};"));
+            }
         }
         if !program.globals.is_empty() {
             self.blank();
@@ -102,11 +106,7 @@ impl CEmitter {
                 self.line(&format!("struct {} {{", name));
                 self.indent();
                 for (field_name, field_type) in fields {
-                    self.line(&format!(
-                        "{} {};",
-                        Self::c_type(field_type),
-                        c_ident(field_name)
-                    ));
+                    self.line(&format!("{};", c_declarator(field_type, field_name)));
                 }
                 self.dedent();
                 self.line("};");

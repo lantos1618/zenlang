@@ -14,7 +14,11 @@ impl CEmitter {
                 // For an immutable pointer binding, const the pointer itself
                 // (`T* const p`), not the pointee (`const T* p`) — otherwise
                 // assigning it into a non-const field discards qualifiers.
-                let decl = if !*mutable
+                let decl = if matches!(ty, Type::Function { .. }) {
+                    // A function-typed binding needs the function-pointer
+                    // declarator form `ret (*name)(params)`.
+                    format!("{} = {};", c_declarator(ty, name), val)
+                } else if !*mutable
                     && matches!(ty, Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_))
                 {
                     format!("{} const {} = {};", c_ty, c_ident(name), val)

@@ -53,6 +53,15 @@ impl TypeChecker {
                 );
                 (full_name.clone(), Type::Unknown)
             }
+        } else if let Some(Type::Function { params, ret }) =
+            self.lookup_var_info(name).map(|info| info.ty.clone())
+        {
+            // Indirect call through a function-typed local or parameter
+            // (a higher-order callback like `vec_map`'s `f`). Emits as a plain
+            // `f(args)` call against the function-pointer variable in C.
+            self.reject_nongeneric_type_args("function value", name, type_args, span);
+            self.check_call_signature_types("function value", name, &params, &typed_args, &span);
+            (full_name.clone(), *ret)
         } else {
             self.push_error(E3020, format!("undefined function `{}`", name), span);
             (full_name.clone(), Type::Unknown)

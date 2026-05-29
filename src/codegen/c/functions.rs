@@ -73,7 +73,7 @@ impl CEmitter {
         }
         params
             .iter()
-            .map(|p| format!("{} {}", Self::c_type(&p.ty), c_ident(&p.name)))
+            .map(|p| c_declarator(&p.ty, &p.name))
             .collect::<Vec<_>>()
             .join(", ")
     }
