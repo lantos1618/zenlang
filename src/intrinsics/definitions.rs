@@ -127,11 +127,5 @@ pub(super) fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     // -- Comptime type matching (gated) -----------------------------------
     intrinsic!(m, "type_match", () -> AstType::Bool, "Comptime type metadata match", "Comptime");
 
-    // -- Enum intrinsics --------------------------------------------------
-    intrinsic!(m, "discriminant",     ("enum_value" => ptr.clone()) -> AstType::I32, "Reads the discriminant from an enum", "Enum");
-    intrinsic!(m, "set_discriminant", ("enum_ptr" => ptr.clone(), "discriminant" => AstType::I32) -> AstType::Void, "Sets the discriminant of an enum", "Enum");
-    intrinsic!(m, "get_payload",      ("enum_value" => ptr.clone()) -> ptr.clone(), "Returns pointer to enum payload", "Enum");
-    intrinsic!(m, "set_payload",      ("enum_ptr" => ptr.clone(), "payload" => ptr) -> AstType::Void, "Copies payload into enum", "Enum");
-
     m
 }

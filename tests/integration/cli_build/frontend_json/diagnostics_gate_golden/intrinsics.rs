@@ -2,9 +2,11 @@ use super::assert_gate_diagnostics_golden;
 
 #[test]
 fn emit_json_diagnostics_intrinsic_gate_schemas_match_golden() {
-    // Memory/pointer/enum-payload intrinsics are ungated (the compiler owns
-    // them; stdlib builds allocators/collections on top). Still-gated below are
-    // the primitives whose effect/ABI semantics aren't settled yet.
+    // Memory/pointer intrinsics are ungated (the compiler owns them; stdlib
+    // builds allocators/collections on top). Enum construction/matching is
+    // lowered directly to struct `.tag`/`.data` access in codegen, so it needs
+    // no intrinsics. Still-gated below are the primitives whose effect/ABI
+    // semantics aren't settled yet.
     for (filename, source, description) in [
         (
             "atomic_gate.zen",
