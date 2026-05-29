@@ -17,6 +17,11 @@ pub enum Declaration {
         return_type: Option<AstType>,
         body: Expression,
         public: bool,
+        /// An `extern` C function: no Zen body (an empty block placeholder),
+        /// not type-checked or emitted as a definition — codegen emits a C
+        /// prototype and links the symbol from a `link:`-ed library.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        external: bool,
         span: Span,
     },
 

@@ -115,6 +115,7 @@ fn collect_namespace_module(dep: &Program, prefix: &str, out: &mut Vec<Declarati
                 return_type: return_type.clone(),
                 body,
                 public: false,
+                external: false,
                 span: *span,
             });
         }

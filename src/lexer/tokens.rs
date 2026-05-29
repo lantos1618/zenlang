@@ -57,7 +57,8 @@ pub enum Token {
     AtThis,    // @this
     AtExport,  // @export
 
-    Pub, // pub
+    Pub,    // pub
+    Extern, // extern (C FFI function declaration)
 
     Newline,
     EOF,
@@ -121,6 +122,7 @@ impl Token {
     pub(in crate::lexer) fn from_keyword(word: &str) -> Option<Self> {
         match word {
             "pub" => Some(Self::Pub),
+            "extern" => Some(Self::Extern),
             _ => None,
         }
     }

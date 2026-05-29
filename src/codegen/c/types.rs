@@ -60,6 +60,19 @@ impl CEmitter {
             self.blank();
         }
 
+        // Extern C functions (FFI): emit a prototype; the symbol is resolved at
+        // link time from a `link:`-ed library. The C name is the bare identifier
+        // so it matches the real library symbol.
+        for ext in &program.extern_functions {
+            let ret = Self::c_type(&ext.return_type);
+            let name = c_func_ident(&ext.name);
+            let params = self.format_params(&ext.params);
+            self.line(&format!("extern {} {}({});", ret, name, params));
+        }
+        if !program.extern_functions.is_empty() {
+            self.blank();
+        }
+
         for func in &program.functions {
             let ret = Self::c_type(&func.return_type);
             let name = c_func_ident(&func.name);
