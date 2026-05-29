@@ -1,4 +1,38 @@
-// Parse-only placeholder for @std.collections.linkedlist.
-//
-// The previous file was an unparseable sketch, not working stdlib code. Restore
-// LinkedList here only with parser, typechecker, build, and docs-truth evidence.
+// Singly linked list with heap-allocated nodes, via @builtin intrinsics.
+// Each node is one `raw_allocate(sizeof<Node<T>>())` block holding the value and
+// a raw pointer to the next node (null at the tail).
+// `{ LinkedList, list_new, list_push_front, list_head, list_pop_front, list_len } = std.collections.linkedlist`
+
+pub Node<T>: { value: T, next: RawPtr<u8> }
+
+pub LinkedList<T>: { head: RawPtr<u8>, len: i64 }
+
+pub list_new<T> = () LinkedList<T> {
+    LinkedList<T> { head: @builtin.null_ptr(), len: 0 }
+}
+
+pub list_len<T> = (l: LinkedList<T>) i64 {
+    l.len
+}
+
+pub list_is_empty<T> = (l: LinkedList<T>) bool {
+    @builtin.is_null(l.head)
+}
+
+pub list_push_front<T> = (l: LinkedList<T>, value: T) LinkedList<T> {
+    node ::= @builtin.raw_allocate(@builtin.sizeof<Node<T>>())
+    @builtin.store(node, Node<T> { value: value, next: l.head })
+    LinkedList<T> { head: node, len: l.len + 1 }
+}
+
+pub list_head<T> = (l: LinkedList<T>) T {
+    @builtin.load<Node<T>>(l.head).value
+}
+
+// Drop the front node, returning the tail. Reads the value with `list_head`
+// first; frees the popped node so the list does not leak.
+pub list_pop_front<T> = (l: LinkedList<T>) LinkedList<T> {
+    node ::= @builtin.load<Node<T>>(l.head)
+    @builtin.raw_deallocate(l.head, @builtin.sizeof<Node<T>>())
+    LinkedList<T> { head: node.next, len: l.len - 1 }
+}

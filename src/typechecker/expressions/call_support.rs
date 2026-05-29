@@ -94,6 +94,7 @@ impl TypeChecker {
         // Typed memory/type intrinsics: `load<T>(ptr) -> T`, `sizeof<T>() -> usize`.
         if name == "load" && type_args.len() == 1 && typed_args.len() == 1 {
             let ty = self.resolve_type(&type_args[0]);
+            self.ensure_specialized_type_refs_for_type(&ty, span);
             return typed_expr(
                 TypedExprKind::Intrinsic {
                     name: name.to_string(),
@@ -104,11 +105,9 @@ impl TypeChecker {
             );
         }
         if matches!(name, "sizeof" | "alignof") && type_args.len() == 1 {
-            let marker = typed_expr(
-                TypedExprKind::IntLiteral(0),
-                self.resolve_type(&type_args[0]),
-                span,
-            );
+            let ty = self.resolve_type(&type_args[0]);
+            self.ensure_specialized_type_refs_for_type(&ty, span);
+            let marker = typed_expr(TypedExprKind::IntLiteral(0), ty, span);
             return typed_expr(
                 TypedExprKind::Intrinsic {
                     name: name.to_string(),
