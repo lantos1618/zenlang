@@ -11,17 +11,23 @@ impl Parser {
         self.expect(&Token::Assign)?;
         self.skip_newlines();
 
+        // A function literal starts with `(`. Anything else is a module-level
+        // constant binding: `PI = 3.14159` — lowered to a single-statement
+        // `VarDecl` block, the same shape as the `:=` const form.
         if !matches!(self.peek(), Token::LParen) {
             let value = self.parse_expression()?;
             let span = name_span.merge(value.span());
             return Ok(Declaration::TopLevelExpr {
-                expr: Expression::BinaryOp {
-                    op: BinaryOp::Eq,
-                    left: Box::new(Expression::Identifier {
+                expr: Expression::Block {
+                    statements: vec![Statement::VarDecl {
                         name,
-                        span: name_span,
-                    }),
-                    right: Box::new(value),
+                        ty: None,
+                        value,
+                        mutable: false,
+                        constant: true,
+                        span,
+                    }],
+                    expr: None,
                     span,
                 },
                 span,

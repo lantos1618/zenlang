@@ -92,8 +92,9 @@ impl TypeChecker {
                 right,
                 span,
             } => {
-                let left = self.check_expr(left)?;
-                let right = self.check_expr(right)?;
+                let mut left = self.check_expr(left)?;
+                let mut right = self.check_expr(right)?;
+                coerce_binop_numeric_literals(&mut left, &mut right);
                 let ty = self.check_binary_op(*op, &left.ty, &right.ty, span)?;
                 typed_ok(
                     TypedExprKind::BinaryOp {
@@ -224,4 +225,30 @@ impl TypeChecker {
             }
         }
     }
+}
+
+/// An untyped integer/float literal operand adopts the other operand's numeric
+/// type, so `n - 1` (where `n: u32`) type-checks. Only a literal side is retyped.
+fn coerce_binop_numeric_literals(left: &mut TypedExpression, right: &mut TypedExpression) {
+    if matches!(
+        left.kind,
+        TypedExprKind::IntLiteral(_) | TypedExprKind::FloatLiteral(_)
+    ) && is_numeric(&right.ty)
+        && is_numeric(&left.ty)
+        && left.ty != right.ty
+    {
+        left.ty = right.ty.clone();
+    } else if matches!(
+        right.kind,
+        TypedExprKind::IntLiteral(_) | TypedExprKind::FloatLiteral(_)
+    ) && is_numeric(&left.ty)
+        && is_numeric(&right.ty)
+        && left.ty != right.ty
+    {
+        right.ty = left.ty.clone();
+    }
+}
+
+fn is_numeric(ty: &Type) -> bool {
+    ty.is_integer() || ty.is_float()
 }

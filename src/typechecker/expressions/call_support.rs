@@ -34,9 +34,16 @@ impl TypeChecker {
                 self.check_call_signature("method", &full_name, &info.params, &typed_args, &span);
                 (full_name.clone(), self.resolve_type(&info.return_type))
             } else if let Some(info) = self.functions.get(&mangled).cloned() {
-                self.reject_nongeneric_type_args("function", &full_name, type_args, span);
-                self.check_call_signature("function", &mangled, &info.params, &typed_args, &span);
-                (full_name.clone(), self.resolve_type(&info.return_type))
+                // Generic stdlib functions (e.g. `math.max<T>`) specialize via
+                // the same path as ordinary generic calls.
+                self.resolve_callable_call(
+                    "function",
+                    &mangled,
+                    &info,
+                    type_args,
+                    &typed_args,
+                    span,
+                )
             } else {
                 self.reject_nongeneric_type_args("function", &full_name, type_args, span);
                 self.push_error(

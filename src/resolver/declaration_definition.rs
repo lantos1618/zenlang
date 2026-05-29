@@ -136,13 +136,41 @@ impl Resolver {
                     }
                 }
             }
+            // Top-level `name = value` / `name := value` defines a module-level
+            // value symbol so other declarations can reference it.
+            Declaration::TopLevelExpr { expr, span } => {
+                if let Some(name) = top_level_binding_name(expr) {
+                    table.define_value(
+                        name,
+                        false,
+                        resolver_value_signature(&[], &None, &[]),
+                        *span,
+                    )?;
+                }
+            }
             Declaration::Function { .. }
             | Declaration::Method { .. }
             | Declaration::Requires { .. }
             | Declaration::Derive { .. }
-            | Declaration::BehaviorExtends { .. }
-            | Declaration::TopLevelExpr { .. } => {}
+            | Declaration::BehaviorExtends { .. } => {}
         }
         Ok(())
     }
+}
+
+/// The bound name of a top-level binding (`name = value` / `name := value`),
+/// which the parser lowers to a single-statement `VarDecl` block.
+fn top_level_binding_name(expr: &crate::ast::Expression) -> Option<&str> {
+    use crate::ast::{Expression, Statement};
+    if let Expression::Block {
+        statements,
+        expr: None,
+        ..
+    } = expr
+    {
+        if let [Statement::VarDecl { name, .. }] = statements.as_slice() {
+            return Some(name);
+        }
+    }
+    None
 }

@@ -7,9 +7,12 @@ impl TypeChecker {
     ) -> Result<TypedProgram, Vec<Diagnostic>> {
         self.collect_declarations(&program.declarations);
         self.validate_collected_declaration_semantics(&program.declarations);
+        // Collect module-level bindings into a persistent global scope before any
+        // function body is checked, so bodies can reference them.
+        self.enter_global_scope();
+        let globals = self.register_global_bindings(&program.declarations);
         let mut functions = Vec::new();
         let mut types = Vec::new();
-        let mut globals = Vec::new();
         let mut entry_point = None;
 
         for decl in &program.declarations {
@@ -72,39 +75,8 @@ impl TypeChecker {
                         span: *span,
                     });
                 }
-                Declaration::TopLevelExpr { expr, span } => match self.check_expr(expr) {
-                    Ok(typed_expr) => {
-                        if let TypedExprKind::Block(block) = &typed_expr.kind {
-                            if block.expr.is_none() && block.statements.len() == 1 {
-                                if let TypedStatementKind::VarDecl {
-                                    name,
-                                    ty,
-                                    value,
-                                    mutable,
-                                } = &block.statements[0].kind
-                                {
-                                    globals.push(TypedGlobal {
-                                        name: name.clone(),
-                                        ty: ty.clone(),
-                                        value: value.clone(),
-                                        mutable: *mutable,
-                                        span: *span,
-                                    });
-                                    continue;
-                                }
-                            }
-                        }
-
-                        globals.push(TypedGlobal {
-                            name: "__top_level__".into(),
-                            ty: typed_expr.ty.clone(),
-                            value: typed_expr,
-                            mutable: false,
-                            span: *span,
-                        });
-                    }
-                    Err(d) => self.diagnostics.push(d),
-                },
+                // Top-level bindings were already handled by register_global_bindings.
+                Declaration::TopLevelExpr { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
                     type_args,
@@ -168,6 +140,52 @@ impl TypeChecker {
             globals,
             entry_point,
         })
+    }
+
+    /// Check each top-level `name = value` / `name := value` binding, register
+    /// its name in the global scope (so function bodies can reference it), and
+    /// collect it as a `TypedGlobal` for codegen.
+    fn register_global_bindings(&mut self, decls: &[Declaration]) -> Vec<TypedGlobal> {
+        let mut globals = Vec::new();
+        for decl in decls {
+            let Declaration::TopLevelExpr { expr, span } = decl else {
+                continue;
+            };
+            match self.check_expr(expr) {
+                Ok(typed_expr) => {
+                    if let TypedExprKind::Block(block) = &typed_expr.kind {
+                        if block.expr.is_none() && block.statements.len() == 1 {
+                            if let TypedStatementKind::VarDecl {
+                                name,
+                                ty,
+                                value,
+                                mutable,
+                            } = &block.statements[0].kind
+                            {
+                                self.define_var_with_mutability(name, ty.clone(), *mutable);
+                                globals.push(TypedGlobal {
+                                    name: name.clone(),
+                                    ty: ty.clone(),
+                                    value: value.clone(),
+                                    mutable: *mutable,
+                                    span: *span,
+                                });
+                                continue;
+                            }
+                        }
+                    }
+                    globals.push(TypedGlobal {
+                        name: "__top_level__".into(),
+                        ty: typed_expr.ty.clone(),
+                        value: typed_expr,
+                        mutable: false,
+                        span: *span,
+                    });
+                }
+                Err(d) => self.diagnostics.push(d),
+            }
+        }
+        globals
     }
 
     fn push_checked_function_decl(

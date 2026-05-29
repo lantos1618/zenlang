@@ -1,2 +1,67 @@
-// Parse-only placeholder for @std.math.
-// Promote math APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Zen Standard Library: Math Module
+
+// Constants
+PI = 3.14159265358979323846
+E = 2.71828182845904523536
+
+// Integer Math Functions
+
+// Absolute value (generic)
+pub abs<T> = (n: T) T {
+    n < 0 ?
+        | true { -n }
+        | false { n }
+}
+
+// Factorial (u32 -> u64 to avoid overflow)
+pub factorial = (n: u32) u64 {
+    n == 0 ?
+        | true { cast(1, u64) }
+        | false { cast(n, u64) * factorial(n - 1) }
+}
+
+// Check if even
+pub is_even = (n: i32) bool {
+    n % 2 == 0
+}
+
+// Check if odd
+pub is_odd = (n: i32) bool {
+    n % 2 != 0
+}
+
+// Max of two values (generic)
+pub max<T> = (a: T, b: T) T {
+    a > b ?
+        | true { a }
+        | false { b }
+}
+
+// Min of two values (generic)
+pub min<T> = (a: T, b: T) T {
+    a < b ?
+        | true { a }
+        | false { b }
+}
+
+// Clamp value to range
+pub clamp = (n: i32, low: i32, high: i32) i32 {
+    n < low ?
+        | true { low }
+        | false {
+            n > high ?
+                | true { high }
+                | false { n }
+        }
+}
+
+// Integer bounds constants
+I8_MIN = 0 - 128
+I8_MAX = 127
+I16_MIN = 0 - 32768
+I16_MAX = 32767
+I32_MIN = 0 - 2147483648
+I32_MAX = 2147483647
+U8_MAX = 255
+U16_MAX = 65535
+U32_MAX = 4294967295

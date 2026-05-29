@@ -1,0 +1,62 @@
+// Zen Standard Library: Character utilities (ASCII).
+//
+// Pure u8 classification and conversion logic — no intrinsics needed beyond the
+// language itself. Imported as `{ char } = std`; call as `char.is_digit(c)`.
+
+// ── Classification ──────────────────────────────────────────────
+
+pub is_digit = (c: u8) bool {
+    c >= 48 && c <= 57
+}
+
+pub is_alpha = (c: u8) bool {
+    (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
+}
+
+pub is_alphanumeric = (c: u8) bool {
+    is_digit(c) || is_alpha(c)
+}
+
+pub is_whitespace = (c: u8) bool {
+    c == 32 || c == 9 || c == 10 || c == 13
+}
+
+pub is_uppercase = (c: u8) bool {
+    c >= 65 && c <= 90
+}
+
+pub is_lowercase = (c: u8) bool {
+    c >= 97 && c <= 122
+}
+
+pub is_hex_digit = (c: u8) bool {
+    is_digit(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102)
+}
+
+pub is_control = (c: u8) bool {
+    c < 32 || c == 127
+}
+
+pub is_printable = (c: u8) bool {
+    c >= 32 && c <= 126
+}
+
+// ── Conversion ──────────────────────────────────────────────────
+
+pub to_uppercase = (c: u8) u8 {
+    is_lowercase(c) ?
+        | true { c - 32 }
+        | false { c }
+}
+
+pub to_lowercase = (c: u8) u8 {
+    is_uppercase(c) ?
+        | true { c + 32 }
+        | false { c }
+}
+
+pub digit_to_int = (c: u8) i32 {
+    is_digit(c) ?
+        | true { cast(c - 48, i32) }
+        | false { -1 }
+}

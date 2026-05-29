@@ -11,6 +11,12 @@ impl TypeChecker {
         result
     }
 
+    /// Push a persistent global scope (not auto-popped) for module-level
+    /// constant bindings that must outlive individual function-body scopes.
+    pub(crate) fn enter_global_scope(&mut self) {
+        self.scopes.push(HashMap::new());
+    }
+
     pub(crate) fn define_var(&mut self, name: &str, ty: Type) {
         self.define_var_with_mutability(name, ty, false);
     }
