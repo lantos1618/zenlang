@@ -1,4 +1,5 @@
 use super::*;
+use crate::typechecker::literal_coerced_type;
 
 impl TypeChecker {
     pub(super) fn check_enum_variant_expr(
@@ -9,7 +10,7 @@ impl TypeChecker {
         payload: &Option<Box<Expression>>,
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
-        let typed_payload = match payload {
+        let mut typed_payload = match payload {
             Some(p) => Some(Box::new(self.check_expr(p)?)),
             None => None,
         };
@@ -61,6 +62,15 @@ impl TypeChecker {
             };
             (type_name, ty, variant_defs)
         };
+        // An untyped integer/float literal payload adopts the variant's declared
+        // numeric type (`Option<i64>.Some(42)` where `42` parses as `i32`).
+        if type_args_valid {
+            if let (Some(Some(expected)), Some(actual)) =
+                (variant_defs.get(variant), typed_payload.as_mut())
+            {
+                actual.ty = literal_coerced_type(expected, actual);
+            }
+        }
         if enum_info.is_none() {
             self.push_error(E3064, format!("undefined enum `{enum_name}`"), span);
         } else if type_args_valid {

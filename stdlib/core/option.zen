@@ -1,2 +1,19 @@
-// Parse-only placeholder for @std.core.option.
-// Promote Option APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Optional value: `Some(T)` or `None`. The idiomatic result of a lookup that
+// may miss (e.g. `hashmap_get`).
+// `{ Option, option_unwrap_or, option_is_some } = std.core.option`
+
+pub Option<T>:
+    None,
+    Some(T)
+
+pub option_unwrap_or<T> = (value: Option<T>, fallback: T) T {
+    value ?
+        | Some(inner) { inner }
+        | None { fallback }
+}
+
+pub option_is_some<T> = (value: Option<T>) bool {
+    value ?
+        | Some(_) { true }
+        | None { false }
+}
