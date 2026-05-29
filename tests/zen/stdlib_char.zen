@@ -1,0 +1,13 @@
+// End-to-end check that the real std.char stdlib module compiles and runs.
+{ io } = std
+{ is_digit, is_alpha, to_uppercase, to_lowercase, is_hex_digit, digit_to_int } = std.char.char
+
+main = () i32 {
+    io.println("is_digit_7=${is_digit(55)}")
+    io.println("is_alpha_A=${is_alpha(65)}")
+    io.println("upper_a=${cast(to_uppercase(97), i32)}")
+    io.println("lower_Z=${cast(to_lowercase(90), i32)}")
+    io.println("hex_f=${is_hex_digit(102)}")
+    io.println("digit_9=${digit_to_int(57)}")
+    0
+}

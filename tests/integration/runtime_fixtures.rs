@@ -59,3 +59,8 @@ fn test_stdlib_random() {
 fn test_stdlib_bits() {
     run_test("stdlib_bits");
 }
+
+#[test]
+fn test_stdlib_char() {
+    run_test("stdlib_char");
+}
