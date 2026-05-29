@@ -1,0 +1,54 @@
+// Append-only i64->i64 map, heap-backed via @builtin. Linear lookup (recursive).
+// `{ IntMap, intmap_new, intmap_set, intmap_get, intmap_len, intmap_free } = std.collections.intmap
+
+pub IntMap: { keys: RawPtr<u8>, vals: RawPtr<u8>, len: i64, cap: i64 }
+
+slot = (n: i64) i64 { n * 8 }
+
+pub intmap_new = () IntMap {
+    IntMap {
+        keys: @builtin.raw_allocate(cast(slot(8), usize)),
+        vals: @builtin.raw_allocate(cast(slot(8), usize)),
+        len: 0,
+        cap: 8,
+    }
+}
+
+pub intmap_len = (m: IntMap) i64 { m.len }
+
+pub intmap_set = (m: IntMap, key: i64, value: i64) IntMap {
+    grown = m.len == m.cap ?
+        | true {
+            nc = m.cap * 2
+            IntMap {
+                keys: @builtin.raw_reallocate(m.keys, cast(slot(m.cap), usize), cast(slot(nc), usize)),
+                vals: @builtin.raw_reallocate(m.vals, cast(slot(m.cap), usize), cast(slot(nc), usize)),
+                len: m.len,
+                cap: nc,
+            }
+        }
+        | false { m }
+    @builtin.store(@builtin.gep(grown.keys, slot(grown.len)), key)
+    @builtin.store(@builtin.gep(grown.vals, slot(grown.len)), value)
+    IntMap { keys: grown.keys, vals: grown.vals, len: grown.len + 1, cap: grown.cap }
+}
+
+scan = (m: IntMap, key: i64, i: i64) i64 {
+    i >= m.len ?
+        | true { cast(0 - 1, i64) }
+        | false {
+            @builtin.load<i64>(@builtin.gep(m.keys, slot(i))) == key ?
+                | true { @builtin.load<i64>(@builtin.gep(m.vals, slot(i))) }
+                | false { scan(m, key, i + 1) }
+        }
+}
+
+// Returns the value for `key`, or -1 if absent.
+pub intmap_get = (m: IntMap, key: i64) i64 {
+    scan(m, key, 0)
+}
+
+pub intmap_free = (m: IntMap) void {
+    @builtin.raw_deallocate(m.keys, cast(slot(m.cap), usize))
+    @builtin.raw_deallocate(m.vals, cast(slot(m.cap), usize))
+}
