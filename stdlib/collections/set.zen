@@ -1,4 +1,37 @@
-// Parse-only placeholder for @std.collections.set.
-//
-// Restore Set here only with parser, typechecker, build, and docs-truth
-// evidence.
+// Unordered set of `Eq` elements, backed by the heap-node `LinkedList<T>`.
+// Membership uses the element's `Eq.eq`, so insertion is deduplicated.
+// `{ Set, set_new, set_add, set_contains, set_len } = std.collections.set`
+
+{ Eq } = std.core.cmp
+{ LinkedList, Node, list_new, list_push_front, list_len } = std.collections.linkedlist
+
+pub Set<T: Eq>: { items: LinkedList<T> }
+
+pub set_new<T: Eq> = () Set<T> {
+    Set<T> { items: list_new<T>() }
+}
+
+pub set_len<T: Eq> = (s: Set<T>) i64 {
+    list_len<T>(s.items)
+}
+
+contains_from<T: Eq> = (ptr: RawPtr<u8>, target: T) bool {
+    @builtin.is_null(ptr) ?
+        | true { false }
+        | false {
+            node = @builtin.load<Node<T>>(ptr)
+            node.value.eq(target) ?
+                | true { true }
+                | false { contains_from<T>(node.next, target) }
+        }
+}
+
+pub set_contains<T: Eq> = (s: Set<T>, target: T) bool {
+    contains_from<T>(s.items.head, target)
+}
+
+pub set_add<T: Eq> = (s: Set<T>, value: T) Set<T> {
+    set_contains<T>(s, value) ?
+        | true { s }
+        | false { Set<T> { items: list_push_front<T>(s.items, value) } }
+}

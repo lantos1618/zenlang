@@ -160,7 +160,7 @@ impl CEmitter {
                 self.line(&format!("{} {};", ty, tmp));
                 self.line("{");
                 self.indent();
-                self.emit_block_body_with_result(block, None);
+                self.emit_block_body_with_result(block, Some(&tmp));
                 self.dedent();
                 self.line("}");
                 tmp
