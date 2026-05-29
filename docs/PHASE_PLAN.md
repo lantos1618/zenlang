@@ -51,7 +51,38 @@ golden fixtures, and git history.
 - repo hygiene: file-size tests, owned spelling enums, syntax cleanup tests, and docs-truth caps prevent large-file and status-doc regressions.
 
 ## Current Phase
-Phase 5 is in evidence-hardening and cleanup. The generic specialization surfaces are implemented; continue closing proof gaps, keeping generated C consistent, and preventing large-file/slop regressions.
+Phase 5 is in evidence-hardening and cleanup. The generic specialization surfaces are implemented; continue closing proof gaps, keeping generated C consistent, and preventing large-file/slop regressions. Phase 6 (FFI) has begun in parallel — see below.
+
+## Phase 6 — Native FFI (linking C libraries)
+Goal: call C libraries from Zen, declared in the project, mirroring Zig's two
+layers (`linkSystemLibrary` + `extern fn`) and skipping `@cImport`/translate-c
+(embedding a C parser is out of scope).
+
+Landed:
+- **`link:` on `build.zen` Executable** (Zig `linkSystemLibrary` analog): an
+  un-gated DSL field threaded `BuildTargetKind::Executable` → the cc step,
+  resolving each library via pkg-config (`--cflags --libs` + an rpath to its
+  libdir; bare `-l<name>` fallback). `packages:` stays gated.
+- **`extern` C function declarations** (Zig `extern fn` analog):
+  `extern NAME = (params) Ret` — a bodyless callable lowered to a C prototype +
+  direct call with the bare C symbol name; opaque pointers as `RawPtr<u8>`. No
+  header required (the prototypes are ABI-correct on their own).
+- Evidence: `~/sdl3-zen` opens an SDL3 window via native `extern` calls +
+  `link: ["SDL3"]`, no env vars / inline C / header; verified building and
+  running headlessly under `xvfb-run`.
+
+Next (better-than-Zig, not yet built):
+- **ABI-verified extern**: emit a C static type-compat check against the real
+  header so a wrong `extern` signature fails the build instead of becoming
+  runtime UB — closes the silent-mismatch footgun both Zig FFI modes have.
+- **Auto string marshaling**: `extern f = (s: Str)` passes a null-terminated
+  `const char*` (today via `@builtin.static_string_ptr`).
+- **Version-checked link**: `link: [{ name: "SDL3", min: "3.2" }]`.
+- **Effect-tracked FFI** (uniquely-Zen stretch): model `extern` calls in the
+  existing host-effect system so the type system knows a call reaches into C.
+
+Out of scope for Phase 6: a package manager (`packages:` stays gated), and
+`@cImport`-style header translation.
 
 ## Feature Status Confidence
 | Surface | Status | Confidence |
@@ -59,7 +90,8 @@ Phase 5 is in evidence-hardening and cleanup. The generic specialization surface
 | Generic specialization, worklist C output, and resolver replay | implemented | high |
 | Diagnostics JSON, typed/HIR/MIR JSON, and build graph evidence | implemented | high |
 | Behavior declarations, explicit associations, and std facades | experimental | medium |
-| Dev UX, Agent UX, LSP/editor workflows, and package/link driver | planned | medium |
+| FFI: `extern` C functions and `link:` system libraries | implemented | high |
+| Dev UX, Agent UX, LSP/editor workflows, and package driver | planned | medium |
 | Async, typed allocator runtime, raw memory, syscalls, and comptime type matching | gated | high |
 
 ## Anti-Slop Scrub Queue
