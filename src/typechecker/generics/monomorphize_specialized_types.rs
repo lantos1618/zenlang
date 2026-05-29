@@ -4,8 +4,8 @@ use crate::ast::typed::{Type, TypeDefKind, TypedTypeDef};
 use crate::ast::AstType;
 use crate::error::Span;
 
+use super::super::{BehaviorBound, TypeChecker};
 use super::monomorphize_names::reserve_specialization_name;
-use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(crate) fn specialize_generic_struct(
@@ -17,9 +17,14 @@ impl TypeChecker {
         let Some(info) = self.structs.get(name).cloned() else {
             return HashMap::new();
         };
-        let substitutions =
-            self.type_param_substitutions(&info.type_params, type_args, "struct", name, span);
-        self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
+        let substitutions = self.bound_checked_substitutions(
+            &info.type_params,
+            &info.type_param_bounds,
+            "struct",
+            name,
+            type_args,
+            span,
+        );
         let fields: Vec<(String, Type)> = info
             .fields
             .iter()
@@ -34,19 +39,14 @@ impl TypeChecker {
             self.ensure_specialized_type_refs_for_type(field_type, span);
         }
         let field_map = fields.iter().cloned().collect();
-        let (mangled, already_emitted) = self.reserve_specialized_type_definition(
+        self.emit_specialized_type(
             "struct",
             name,
             type_args,
             info.specialization_scope.as_deref(),
+            span,
+            || TypeDefKind::Struct { fields },
         );
-        if !already_emitted {
-            self.specialized_types.push(TypedTypeDef {
-                name: mangled,
-                kind: TypeDefKind::Struct { fields },
-                span,
-            });
-        }
         field_map
     }
 
@@ -59,9 +59,14 @@ impl TypeChecker {
         let Some(info) = self.enums.get(name).cloned() else {
             return HashMap::new();
         };
-        let substitutions =
-            self.type_param_substitutions(&info.type_params, type_args, "enum", name, span);
-        self.check_generic_bounds(&info.type_param_bounds, &substitutions, span);
+        let substitutions = self.bound_checked_substitutions(
+            &info.type_params,
+            &info.type_param_bounds,
+            "enum",
+            name,
+            type_args,
+            span,
+        );
         let variants: Vec<(String, Option<Type>)> = info
             .variants
             .iter()
@@ -78,33 +83,69 @@ impl TypeChecker {
             self.ensure_specialized_type_refs_for_type(payload, span);
         }
         let variant_map = variants.iter().cloned().collect();
-        let (mangled, already_emitted) = self.reserve_specialized_type_definition(
+        self.emit_specialized_type(
             "enum",
             name,
             type_args,
             info.specialization_scope.as_deref(),
+            span,
+            || {
+                let variants = variants
+                    .into_iter()
+                    .enumerate()
+                    .map(
+                        |(tag, (variant_name, payload))| crate::ast::typed::TypedVariant {
+                            name: variant_name,
+                            tag: tag as u32,
+                            payload,
+                        },
+                    )
+                    .collect();
+                TypeDefKind::Enum { variants }
+            },
         );
+        variant_map
+    }
+
+    /// Shared prefix of struct/enum specialization: map type params to the
+    /// concrete args and verify their behavior bounds, returning the
+    /// substitution map both then apply to fields/variants.
+    fn bound_checked_substitutions(
+        &mut self,
+        type_params: &[String],
+        type_param_bounds: &HashMap<String, BehaviorBound>,
+        kind: &str,
+        name: &str,
+        type_args: &[AstType],
+        span: Span,
+    ) -> HashMap<String, Type> {
+        let substitutions = self.type_param_substitutions(type_params, type_args, kind, name, span);
+        self.check_generic_bounds(type_param_bounds, &substitutions, span);
+        substitutions
+    }
+
+    /// Shared tail of struct/enum specialization: reserve the mangled name and,
+    /// if this concrete instantiation hasn't been emitted yet, push its
+    /// definition. `make_kind` builds the (struct- or enum-specific) body and is
+    /// only invoked on first emission.
+    fn emit_specialized_type(
+        &mut self,
+        kind: &str,
+        name: &str,
+        type_args: &[AstType],
+        specialization_scope: Option<&str>,
+        span: Span,
+        make_kind: impl FnOnce() -> TypeDefKind,
+    ) {
+        let (mangled, already_emitted) =
+            self.reserve_specialized_type_definition(kind, name, type_args, specialization_scope);
         if !already_emitted {
-            let typed_variants = variants
-                .into_iter()
-                .enumerate()
-                .map(
-                    |(tag, (variant_name, payload))| crate::ast::typed::TypedVariant {
-                        name: variant_name,
-                        tag: tag as u32,
-                        payload,
-                    },
-                )
-                .collect();
             self.specialized_types.push(TypedTypeDef {
                 name: mangled,
-                kind: TypeDefKind::Enum {
-                    variants: typed_variants,
-                },
+                kind: make_kind(),
                 span,
             });
         }
-        variant_map
     }
 
     fn reserve_specialized_type_definition(
