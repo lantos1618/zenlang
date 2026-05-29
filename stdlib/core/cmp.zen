@@ -1,7 +1,13 @@
 // Comparison behaviors. A type implements `Eq` to be usable as an element of
-// equality-based collections (`Set`, future `HashMap`).
-// `{ Eq } = std.core.cmp`
+// equality-based collections (`Set`); `Hashable` adds the hash needed to be a
+// `HashMap` key.
+// `{ Eq, Hashable } = std.core.cmp`
 
 pub Eq: behavior {
+    eq: (Self, Self) bool
+}
+
+pub Hashable: behavior {
+    hash: (Self) i64
     eq: (Self, Self) bool
 }
