@@ -49,29 +49,12 @@ impl TypeChecker {
                     self.validate_generic_bounds(type_params);
                     self.seed_declaration_info(name, decl);
                 }
-                Declaration::Import {
-                    names, module_path, ..
-                } => {
-                    let root_std_import = matches!(
-                        module_path.as_slice(),
-                        [segment] if matches!(segment.as_str(), crate::root_spelling::STD_ROOT | crate::root_spelling::AT_STD_ROOT)
-                    );
+                Declaration::Import { names, .. } => {
+                    // Real `io_*` (and every other `{ x } = std` namespace) function
+                    // is spliced from stdlib as an actual Zen declaration before this
+                    // runs, so no compiler-side stub seeding is needed.
                     for name in names {
                         self.imports.insert(name.to_string());
-                        if name == "io" && root_std_import {
-                            for function in ["print", "println"] {
-                                let key = format!("io_{function}");
-                                self.functions.insert(
-                                    key,
-                                    FuncInfo {
-                                        params: vec![("message".into(), AstType::Str)],
-                                        return_type: AstType::Void,
-                                        type_params: Vec::new(),
-                                        type_param_bounds: HashMap::new(),
-                                    },
-                                );
-                            }
-                        }
                     }
                 }
                 Declaration::ImplBlock {

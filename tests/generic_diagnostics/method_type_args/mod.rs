@@ -24,38 +24,19 @@ Box.get<T> = (self: Box<T>) T {
 
 #[test]
 fn nongeneric_explicit_type_args_are_errors() {
-    for (source, kind, name, context) in [
-        (
-            format!(
-                r#"{BOX_GET_I32}
+    // The module-function variant (`io.println<i32>`) is covered through the real
+    // frontend by the `nongeneric_module_function_type_args` golden, which splices
+    // the actual `io` module — no compiler-side stub needed here.
+    let source = format!(
+        r#"{BOX_GET_I32}
 main = () i32 {{
     box = Box {{ value: 1 }}
     box.get<i32>()
 }}
 "#,
-            ),
-            "method",
-            "Box.get",
-            "non-generic method type-argument",
-        ),
-        (
-            r#"
-{ io } = std
-
-main = () i32 {
-    io.println<i32>("bad")
-    0
-}
-"#
-            .to_string(),
-            "function",
-            "io.println",
-            "module function type-argument",
-        ),
-    ] {
-        let errors = typecheck_errors(&source);
-        assert_nongeneric_type_args_diagnostic(&errors, kind, name, context);
-    }
+    );
+    let errors = typecheck_errors(&source);
+    assert_nongeneric_type_args_diagnostic(&errors, "method", "Box.get", "non-generic method type-argument");
 }
 
 #[test]
