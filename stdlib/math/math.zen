@@ -55,6 +55,20 @@ pub clamp = (n: i32, low: i32, high: i32) i32 {
         }
 }
 
+// Greatest common divisor (Euclid), on non-negative i64.
+pub gcd = (a: i64, b: i64) i64 {
+    b == 0 ?
+        | true { a }
+        | false { gcd(b, a % b) }
+}
+
+// Integer exponentiation: base^exp for exp >= 0.
+pub pow = (base: i64, exp: i64) i64 {
+    exp == 0 ?
+        | true { cast(1, i64) }
+        | false { base * pow(base, exp - 1) }
+}
+
 // Integer bounds constants
 I8_MIN = 0 - 128
 I8_MAX = 127
