@@ -41,7 +41,13 @@ pub(super) fn inject_stdlib_namespace_functions(
         .collect();
 
     let mut injected = Vec::new();
+    let mut spliced: HashSet<String> = HashSet::new();
     for name in names {
+        // The same namespace may be requested by more than one import
+        // statement (`{ io } = std` twice); splice it only once.
+        if !spliced.insert(name.clone()) {
+            continue;
+        }
         let file = root.join(&name).join(format!("{name}.zen"));
         if !file.exists() {
             continue;
@@ -58,6 +64,22 @@ pub(super) fn inject_stdlib_namespace_functions(
         let dep = parser::parse(tokens, 0)?;
         collect_namespace_module(&dep, &name, &mut injected);
     }
+
+    // A function the program already declares (user-defined, or carried in by
+    // another path) wins over a spliced one — drop the collision rather than
+    // emit a duplicate `<prefix>_<fn>` definition.
+    let existing: HashSet<&str> = program
+        .declarations
+        .iter()
+        .filter_map(|d| match d {
+            Declaration::Function { name, .. } => Some(name.as_str()),
+            _ => None,
+        })
+        .collect();
+    injected.retain(|d| match d {
+        Declaration::Function { name, .. } => !existing.contains(name.as_str()),
+        _ => true,
+    });
 
     program.declarations.append(&mut injected);
     Ok(())

@@ -228,24 +228,27 @@ impl TypeChecker {
 }
 
 /// An untyped integer/float literal operand adopts the other operand's numeric
-/// type, so `n - 1` (where `n: u32`) type-checks. Only a literal side is retyped.
+/// type, so `n - 1` (where `n: u32`) type-checks. Only a literal side is retyped,
+/// and only when the kinds are compatible — a float literal must never silently
+/// become an integer (that would emit a C double where the type says integer),
+/// while an int literal may promote to a float (`1 + 2.5`).
 fn coerce_binop_numeric_literals(left: &mut TypedExpression, right: &mut TypedExpression) {
-    if matches!(
-        left.kind,
-        TypedExprKind::IntLiteral(_) | TypedExprKind::FloatLiteral(_)
-    ) && is_numeric(&right.ty)
-        && is_numeric(&left.ty)
-        && left.ty != right.ty
-    {
+    if literal_adopts(left, &right.ty) {
         left.ty = right.ty.clone();
-    } else if matches!(
-        right.kind,
-        TypedExprKind::IntLiteral(_) | TypedExprKind::FloatLiteral(_)
-    ) && is_numeric(&left.ty)
-        && is_numeric(&right.ty)
-        && left.ty != right.ty
-    {
+    } else if literal_adopts(right, &left.ty) {
         right.ty = left.ty.clone();
+    }
+}
+
+/// Whether `operand` is a numeric literal that may soundly adopt `target`.
+fn literal_adopts(operand: &TypedExpression, target: &Type) -> bool {
+    if !is_numeric(target) || !is_numeric(&operand.ty) || operand.ty == *target {
+        return false;
+    }
+    match operand.kind {
+        TypedExprKind::IntLiteral(_) => true,
+        TypedExprKind::FloatLiteral(_) => target.is_float(),
+        _ => false,
     }
 }
 
