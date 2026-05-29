@@ -64,3 +64,8 @@ fn test_stdlib_bits() {
 fn test_stdlib_char() {
     run_test("stdlib_char");
 }
+
+#[test]
+fn test_stdlib_two_namespaces() {
+    run_test("stdlib_two_namespaces");
+}

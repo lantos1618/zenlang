@@ -1,0 +1,11 @@
+// Regression: two `{ } = std` splice imports must co-resolve (they share the
+// `std` module root, which previously collided with E0200).
+{ io } = std
+{ math } = std
+
+main = () i32 {
+    io.println("max=${math.max(3, 7)}")
+    io.println("min=${math.min(3, 7)}")
+    io.println("gcd=${cast(math.gcd(12, 18), i32)}")
+    0
+}

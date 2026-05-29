@@ -101,7 +101,13 @@ impl Resolver {
                 ..
             } => {
                 let source = module_path.join(".");
-                table.define(Namespace::Module, &source, false, None, *span)?;
+                // Several imports can share a module root (`{ io } = std` and
+                // `{ math } = std`). The module symbol is bookkeeping for the
+                // symbol-table JSON, so define it once and let later imports
+                // from the same root reuse it rather than collide (E0200).
+                if table.lookup(Namespace::Module, &source).is_none() {
+                    table.define(Namespace::Module, &source, false, None, *span)?;
+                }
                 for name in names {
                     table.define(Namespace::Import, name, false, Some(source.clone()), *span)?;
                 }
