@@ -5,7 +5,7 @@ use crate::error::CompileError;
 use crate::root_spelling::{AT_STD_ROOT, STD_ROOT};
 use crate::{lexer, parser};
 
-use super::namespace_refs::rename_expr_refs;
+use super::namespace_refs::rename_function_body;
 use crate::module_system::stdlib_paths::find_stdlib_root;
 
 /// Splice bare `{ io } = std` namespace imports into `program`.
@@ -107,7 +107,7 @@ fn collect_namespace_module(dep: &Program, prefix: &str, out: &mut Vec<Declarati
         } = decl
         {
             let mut body = body.clone();
-            rename_expr_refs(&mut body, &fn_names, prefix);
+            rename_function_body(&mut body, &fn_names, prefix, params);
             out.push(Declaration::Function {
                 name: format!("{prefix}_{name}"),
                 type_params: type_params.clone(),
