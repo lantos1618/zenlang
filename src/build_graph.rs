@@ -28,6 +28,8 @@ pub enum BuildTargetKind {
     Executable {
         root_source_file: String,
         out_dir: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        link: Vec<String>,
     },
     Test {
         root_source_file: String,

@@ -13,6 +13,7 @@ fn parsed_project_build_zen_lowers_to_executable_and_test_graph() {
         BuildTargetKind::Executable {
             root_source_file,
             out_dir,
+            ..
         } => {
             assert_eq!(root_source_file, "main.zen");
             assert_eq!(out_dir, "build/");

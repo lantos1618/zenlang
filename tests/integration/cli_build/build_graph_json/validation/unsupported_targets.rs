@@ -7,9 +7,9 @@ fn emit_json_build_graph_rejects_unsupported_target_kinds() {
 
 #[test]
 fn emit_json_build_graph_rejects_gated_target_fields() {
-    for (field, value) in [("packages", r#"["std"]"#), ("link", r#"["m"]"#)] {
-        assert_emit_json_build_graph_rejects_gated_target_field(field, value);
-    }
+    // `packages` stays gated until the package driver exists; `link` is now
+    // supported (see build_program_lowering_accepts_executable_link_libraries).
+    assert_emit_json_build_graph_rejects_gated_target_field("packages", r#"["std"]"#);
 }
 
 fn assert_emit_json_build_graph_rejects_unsupported_target_kind(target_kind: &str) {
@@ -34,7 +34,7 @@ fn assert_emit_json_build_graph_rejects_gated_target_field(field: &str, value: &
     super::assert_emit_json_build_graph_error_contains(
         &[&target_add],
         &format!(
-            "unsupported field `{field}` in `Executable` build target; package/link semantics are gated"
+            "unsupported field `{field}` in `Executable` build target; package semantics are gated"
         ),
     );
 }

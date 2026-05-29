@@ -74,6 +74,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         BuildTargetKind::Executable {
             root_source_file,
             out_dir,
+            ..
         } => {
             assert_eq!(root_source_file, "app.zen");
             assert_eq!(out_dir, "build/app/");
@@ -86,6 +87,7 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
         BuildTargetKind::Executable {
             root_source_file,
             out_dir,
+            ..
         } => {
             assert_eq!(root_source_file, "tool.zen");
             assert_eq!(out_dir, "build/tool/");

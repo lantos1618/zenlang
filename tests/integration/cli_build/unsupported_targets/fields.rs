@@ -5,13 +5,7 @@ fn build_zen_commands_reject_unsupported_target_fields() {
             (
                 "packages",
                 r#"["std"]"#,
-                "unsupported field `packages` in `Executable` build target; package/link semantics are gated",
-                "gated target field",
-            ),
-            (
-                "link",
-                r#"["m"]"#,
-                "unsupported field `link` in `Executable` build target; package/link semantics are gated",
+                "unsupported field `packages` in `Executable` build target; package semantics are gated",
                 "gated target field",
             ),
             (
