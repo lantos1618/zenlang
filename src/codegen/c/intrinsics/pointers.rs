@@ -16,25 +16,17 @@ impl CIntrinsic {
                 let ptr = emitter.emit_expr_inline(&args[0]);
                 Some(format!("((uintptr_t)({}))", ptr))
             }
-            CIntrinsic::Gep => {
+            // Byte-addressed pointer arithmetic: all three compute
+            // `base + offset` over a uint8_t* view, differing only in name.
+            CIntrinsic::Gep | CIntrinsic::GepStruct | CIntrinsic::RawPtrOffset => {
                 let base = emitter.emit_expr_inline(&args[0]);
                 let offset = emitter.emit_expr_inline(&args[1]);
                 Some(format!("((uint8_t*)({}) + ({}))", base, offset))
             }
-            CIntrinsic::GepStruct => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let idx = emitter.emit_expr_inline(&args[1]);
-                Some(format!("((uint8_t*)({}) + ({}))", ptr, idx))
-            }
-            CIntrinsic::RawPtrOffset => {
-                let ptr = emitter.emit_expr_inline(&args[0]);
-                let offset = emitter.emit_expr_inline(&args[1]);
-                Some(format!("((uint8_t*)({}) + ({}))", ptr, offset))
-            }
             CIntrinsic::RawPtrCast => {
                 let ptr = emitter.emit_expr_inline(&args[0]);
                 let ty = CEmitter::c_type(result_ty);
-                Some(format!("(({})({})", ty, ptr))
+                Some(format!("(({})({}))", ty, ptr))
             }
             CIntrinsic::NullPtr | CIntrinsic::Nullptr => Some("(NULL)".into()),
             CIntrinsic::IsNull => {
