@@ -47,3 +47,19 @@ pub string_print = (s: String) void {
 pub string_free = (s: String) void {
     @builtin.raw_deallocate(s.data, cast(s.cap, usize))
 }
+
+// Concatenate two strings into a fresh heap String.
+pub string_concat = (a: String, b: String) String {
+    total = a.len + b.len
+    p = @builtin.raw_allocate(cast(total, usize))
+    @builtin.memcpy(p, a.data, cast(a.len, usize))
+    @builtin.memcpy(@builtin.gep(p, a.len), b.data, cast(b.len, usize))
+    String { data: p, len: total, cap: total }
+}
+
+// Byte-equality of two strings.
+pub string_eq = (a: String, b: String) bool {
+    a.len == b.len ?
+        | true { @builtin.memcmp(a.data, b.data, cast(a.len, usize)) == 0 }
+        | false { false }
+}
