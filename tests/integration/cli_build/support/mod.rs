@@ -7,7 +7,6 @@ mod file_read_rejections;
 mod gated_dependency_graphs;
 mod graph_only_libraries;
 mod target_metadata_cases;
-mod test_file_read_assertions;
 
 pub(super) use env_read_assertions::*;
 pub(super) use file_read_assertions::*;
@@ -15,7 +14,6 @@ pub(super) use file_read_rejections::*;
 pub(super) use gated_dependency_graphs::*;
 pub(super) use graph_only_libraries::*;
 pub(super) use target_metadata_cases::*;
-pub(super) use test_file_read_assertions::*;
 
 pub(super) const BUILD_ARGS: &[&str] = &["build", "build.zen"];
 pub(super) const DIRECT_ARGS: &[&str] = &["build.zen"];

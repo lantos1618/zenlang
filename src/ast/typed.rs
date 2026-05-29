@@ -38,6 +38,13 @@ pub enum TypedExprKind {
         args: Vec<TypedExpression>,
     },
 
+    /// A compiler intrinsic call (`@builtin.<name>(...)`) lowered directly by
+    /// the C backend. `name` is the bare intrinsic spelling (e.g. `libc_write`).
+    Intrinsic {
+        name: String,
+        args: Vec<TypedExpression>,
+    },
+
     FieldAccess {
         object: Box<TypedExpression>,
         field: String,

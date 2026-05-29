@@ -8,7 +8,6 @@ mod emit_direct;
 mod emit_direct_host_effects;
 mod emit_direct_library_dependencies;
 mod emit_direct_validation;
-mod file_read_host_effects;
 mod frontend_json;
 mod graph_validation;
 mod graph_validation_host_effects;

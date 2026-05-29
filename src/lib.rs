@@ -2,6 +2,7 @@ pub mod ast;
 pub mod build_graph;
 pub mod codegen;
 pub mod error;
+pub mod intrinsics;
 pub mod ir_json;
 pub mod lexer;
 pub mod module_system;

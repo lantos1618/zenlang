@@ -86,6 +86,8 @@ impl CEmitter {
                 format!("{}({})", name, arg_strs.join(", "))
             }
 
+            TypedExprKind::Intrinsic { name, args } => self.emit_intrinsic(name, args, &expr.ty),
+
             TypedExprKind::FieldAccess { object, field } => {
                 let obj = self.emit_expr_inline(object);
                 match &object.ty {

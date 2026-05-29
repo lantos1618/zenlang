@@ -17,14 +17,9 @@ impl TypeChecker {
             .map_or_else(|| name.to_string(), |module| format!("{module}.{name}"));
 
         if module.as_deref() == Some(AT_BUILTIN_ROOT) {
-            self.push_error(
-                E0203,
-                format!(
-                    "`@builtin.{name}` is gated until the Zen stdlib compiler facade defines it"
-                ),
-                span,
+            return Ok(
+                self.check_builtin_intrinsic_call(name, &full_name, type_args, typed_args, span)
             );
-            return Ok(typed_call_expr(full_name, typed_args, Type::Unknown, span));
         }
 
         let (resolved_name, ret_type) = if let Some(info) = self.functions.get(&full_name).cloned()
@@ -57,5 +52,112 @@ impl TypeChecker {
         };
 
         Ok(typed_call_expr(resolved_name, typed_args, ret_type, span))
+    }
+
+    /// Resolve `@builtin.<name>(...)`. The compiler owns the primitives (the
+    /// registry in `crate::intrinsics`); the usable subset lowers to a
+    /// `TypedExprKind::Intrinsic` node the C backend emits directly. Primitives
+    /// whose semantics aren't settled yet (syscalls, atomics, async, comptime
+    /// type-match) stay gated.
+    fn check_builtin_intrinsic_call(
+        &mut self,
+        name: &str,
+        full_name: &str,
+        type_args: &[AstType],
+        typed_args: Vec<TypedExpression>,
+        span: Span,
+    ) -> TypedExpression {
+        let gated = name.starts_with("syscall")
+            || name.starts_with("atomic_")
+            || matches!(
+                name,
+                "fence" | "async_enqueue" | "async_yield" | "type_match"
+            );
+        if gated {
+            self.push_error(
+                E0203,
+                format!(
+                    "`@builtin.{name}` is gated until the Zen stdlib compiler facade defines it"
+                ),
+                span,
+            );
+            return typed_call_expr(full_name.to_string(), typed_args, Type::Unknown, span);
+        }
+
+        // Typed memory/type intrinsics: `load<T>(ptr) -> T`, `sizeof<T>() -> usize`.
+        if name == "load" && type_args.len() == 1 && typed_args.len() == 1 {
+            let ty = self.resolve_type(&type_args[0]);
+            return typed_expr(
+                TypedExprKind::Intrinsic {
+                    name: name.to_string(),
+                    args: typed_args,
+                },
+                ty,
+                span,
+            );
+        }
+        if matches!(name, "sizeof" | "alignof") && type_args.len() == 1 {
+            let marker = typed_expr(
+                TypedExprKind::IntLiteral(0),
+                self.resolve_type(&type_args[0]),
+                span,
+            );
+            return typed_expr(
+                TypedExprKind::Intrinsic {
+                    name: name.to_string(),
+                    args: vec![marker],
+                },
+                Type::Usize,
+                span,
+            );
+        }
+
+        match crate::intrinsics::check_intrinsic_call(name, typed_args.len()) {
+            Some(Ok(ret)) => {
+                let ty = self.resolve_type(&ret);
+                typed_expr(
+                    TypedExprKind::Intrinsic {
+                        name: name.to_string(),
+                        args: typed_args,
+                    },
+                    ty,
+                    span,
+                )
+            }
+            Some(Err(_)) => {
+                let expected = crate::intrinsics::get_intrinsic(name).map_or(0, |i| i.params.len());
+                self.push_error(
+                    E3021,
+                    format!(
+                        "intrinsic `{full_name}` expects {expected} arguments, found {}",
+                        typed_args.len()
+                    ),
+                    span,
+                );
+                typed_expr(
+                    TypedExprKind::Intrinsic {
+                        name: name.to_string(),
+                        args: typed_args,
+                    },
+                    Type::Unknown,
+                    span,
+                )
+            }
+            None => {
+                self.push_error(
+                    E3023,
+                    format!("unknown compiler intrinsic `{full_name}`"),
+                    span,
+                );
+                typed_expr(
+                    TypedExprKind::Intrinsic {
+                        name: name.to_string(),
+                        args: typed_args,
+                    },
+                    Type::Unknown,
+                    span,
+                )
+            }
+        }
     }
 }

@@ -46,6 +46,11 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
             lowered.args = args.iter().map(mir_expression).collect();
             "call"
         }
+        TypedExprKind::Intrinsic { name, args } => {
+            lowered.function = Some(name.clone());
+            lowered.args = args.iter().map(mir_expression).collect();
+            "intrinsic"
+        }
         TypedExprKind::FieldAccess { object, field } => {
             lowered.target = Some(Box::new(mir_expression(object)));
             lowered.field = Some(field.clone());
