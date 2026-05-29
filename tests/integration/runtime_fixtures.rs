@@ -54,3 +54,8 @@ fn test_multiple_defer() {
 fn test_stdlib_random() {
     run_test("stdlib_random");
 }
+
+#[test]
+fn test_stdlib_bits() {
+    run_test("stdlib_bits");
+}

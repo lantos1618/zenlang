@@ -1,0 +1,15 @@
+{ io } = std
+{ count_ones, leading_zeros, trailing_zeros, is_power_of_two } = std.bits.bits
+
+main = () i32 {
+    io.println("ones=${cast(count_ones(255), i32)}")
+    io.println("clz=${cast(leading_zeros(255), i32)}")
+    io.println("ctz=${cast(trailing_zeros(8), i32)}")
+    is_power_of_two(64) ?
+        | true { io.println("64 is pow2") }
+        | false { io.println("64 not pow2") }
+    is_power_of_two(63) ?
+        | true { io.println("63 is pow2") }
+        | false { io.println("63 not pow2") }
+    0
+}

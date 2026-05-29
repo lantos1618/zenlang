@@ -68,10 +68,20 @@ pub(super) fn c_function_head(trimmed: &str) -> Option<(&str, &str)> {
 }
 
 fn is_untracked_c_call_name(name: &str) -> bool {
+    // Compiler builtins (`__builtin_popcountll`, `__builtin_bswap64`, the
+    // overflow-checked arithmetic, trap/unreachable, …) are provided by the C
+    // compiler, never emitted as Zen function definitions.
+    if name.starts_with("__builtin_") {
+        return true;
+    }
     matches!(
         name,
         "abort"
             | "ceil"
+            | "dlclose"
+            | "dlerror"
+            | "dlopen"
+            | "dlsym"
             | "floor"
             | "for"
             | "fprintf"
@@ -80,7 +90,9 @@ fn is_untracked_c_call_name(name: &str) -> bool {
             | "fwrite"
             | "if"
             | "malloc"
+            | "memcmp"
             | "memcpy"
+            | "memmove"
             | "memset"
             | "pow"
             | "printf"
@@ -91,6 +103,7 @@ fn is_untracked_c_call_name(name: &str) -> bool {
             | "sqrt"
             | "strlen"
             | "switch"
+            | "syscall"
             | "while"
             | "write"
     )
