@@ -41,3 +41,25 @@ pub vec_push<T> = (v: Vec<T>, value: T) Vec<T> {
 pub vec_free<T> = (v: Vec<T>) void {
     @builtin.raw_deallocate(v.data, cast(v.cap * elem_size<T>(), usize))
 }
+
+fold_from<T, A> = (v: Vec<T>, acc: A, f: (A, T) A, i: i64) A {
+    i >= v.len ?
+        | true { acc }
+        | false { fold_from<T, A>(v, f(acc, vec_get<T>(v, i)), f, i + 1) }
+}
+
+// Left fold: combine every element into an accumulator with `f`.
+pub vec_fold<T, A> = (v: Vec<T>, init: A, f: (A, T) A) A {
+    fold_from<T, A>(v, init, f, 0)
+}
+
+map_from<T, U> = (v: Vec<T>, out: Vec<U>, f: (T) U, i: i64) Vec<U> {
+    i >= v.len ?
+        | true { out }
+        | false { map_from<T, U>(v, vec_push<U>(out, f(vec_get<T>(v, i))), f, i + 1) }
+}
+
+// Produce a new vector applying `f` to each element.
+pub vec_map<T, U> = (v: Vec<T>, f: (T) U) Vec<U> {
+    map_from<T, U>(v, vec_new<U>(), f, 0)
+}
