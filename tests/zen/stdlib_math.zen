@@ -1,0 +1,13 @@
+// End-to-end check of the std.math module (gcd/lcm/isqrt/sign/abs_diff).
+{ io } = std
+{ math } = std
+
+main = () i32 {
+    io.println("lcm=${cast(math.lcm(4, 6), i32)}")
+    io.println("isqrt25=${cast(math.isqrt(25), i32)}")
+    io.println("isqrt24=${cast(math.isqrt(24), i32)}")
+    io.println("sign_neg=${cast(math.sign(cast(0 - 9, i64)), i32)}")
+    io.println("absdiff=${cast(math.abs_diff(3, 10), i32)}")
+    io.println("gcd=${cast(math.gcd(12, 18), i32)}")
+    0
+}

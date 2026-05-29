@@ -69,3 +69,18 @@ fn test_stdlib_char() {
 fn test_stdlib_two_namespaces() {
     run_test("stdlib_two_namespaces");
 }
+
+#[test]
+fn test_stdlib_math() {
+    run_test("stdlib_math");
+}
+
+#[test]
+fn test_stdlib_geometry() {
+    run_test("stdlib_geometry");
+}
+
+#[test]
+fn test_stdlib_ptr() {
+    run_test("stdlib_ptr");
+}

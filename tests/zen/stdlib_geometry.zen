@@ -1,0 +1,15 @@
+{ io } = std
+{ Vec2, v2, v2_add, v2_sub, v2_scale, v2_dot, v2_len_sq, v2_manhattan } = std.geometry.geometry
+
+main = () i32 {
+    a = v2(3, 4)
+    b = v2(1, 2)
+    sum = v2_add(a, b)
+    io.println("add=(${cast(sum.x, i32)},${cast(sum.y, i32)})")
+    io.println("dot=${cast(v2_dot(a, b), i32)}")
+    io.println("lensq=${cast(v2_len_sq(a), i32)}")
+    io.println("manh=${cast(v2_manhattan(a, b), i32)}")
+    scaled = v2_scale(b, 5)
+    io.println("scale=(${cast(scaled.x, i32)},${cast(scaled.y, i32)})")
+    0
+}

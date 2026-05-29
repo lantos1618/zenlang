@@ -1,0 +1,15 @@
+{ io } = std
+{ i64_alloc, i64_read, i64_write, i64_free } = std.core.ptr
+
+main = () i32 {
+    p = i64_alloc(4)
+    i64_write(p, 0, 10)
+    i64_write(p, 1, 20)
+    i64_write(p, 2, 30)
+    i64_write(p, 3, 40)
+    s = i64_read(p, 0) + i64_read(p, 1) + i64_read(p, 2) + i64_read(p, 3)
+    io.println("sum=${cast(s, i32)}")
+    io.println("cell2=${cast(i64_read(p, 2), i32)}")
+    i64_free(p, 4)
+    0
+}

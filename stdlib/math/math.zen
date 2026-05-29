@@ -69,6 +69,42 @@ pub pow = (base: i64, exp: i64) i64 {
         | false { base * pow(base, exp - 1) }
 }
 
+// Least common multiple of two positive i64 (a/gcd*b avoids overflow vs a*b).
+pub lcm = (a: i64, b: i64) i64 {
+    (a / gcd(a, b)) * b
+}
+
+// Sign of an i64: -1, 0, or 1.
+pub sign = (n: i64) i64 {
+    n > 0 ?
+        | true { cast(1, i64) }
+        | false {
+            n < 0 ?
+                | true { cast(0 - 1, i64) }
+                | false { cast(0, i64) }
+        }
+}
+
+// Absolute difference |a - b| without risking a negative intermediate.
+pub abs_diff = (a: i64, b: i64) i64 {
+    a > b ?
+        | true { a - b }
+        | false { b - a }
+}
+
+// Floor of the integer square root of n >= 0, via Newton's method.
+isqrt_iter = (n: i64, x: i64) i64 {
+    next = (x + n / x) / 2
+    next >= x ?
+        | true { x }
+        | false { isqrt_iter(n, next) }
+}
+pub isqrt = (n: i64) i64 {
+    n < 2 ?
+        | true { n }
+        | false { isqrt_iter(n, n / 2) }
+}
+
 // Integer bounds constants
 I8_MIN = 0 - 128
 I8_MAX = 127
