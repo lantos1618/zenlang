@@ -1,7 +1,7 @@
 use crate::ast::typed::Type;
 use crate::error::Span;
 
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(crate) fn ensure_specialized_type_refs_for_type(&mut self, ty: &Type, span: Span) {

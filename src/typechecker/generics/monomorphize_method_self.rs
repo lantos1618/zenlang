@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(crate) fn generic_method_self_type(
@@ -11,7 +11,7 @@ impl TypeChecker {
         method_name: &str,
         substitutions: &HashMap<String, Type>,
     ) -> Option<Type> {
-        let receiver_name = super::method_signature_receiver_name(method_name)?;
+        let receiver_name = super::super::method_signature_receiver_name(method_name)?;
         let method_params = self
             .generic_methods
             .get(method_name)

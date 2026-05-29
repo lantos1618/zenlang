@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct InferenceConflict {
@@ -41,7 +41,7 @@ impl TypeChecker {
             .is_some_and(|(_, ty)| matches!(ty, AstType::SelfType))
         {
             if let (Some(receiver_name), Some(receiver_ty)) = (
-                super::method_signature_receiver_name(method_name),
+                super::super::method_signature_receiver_name(method_name),
                 arg_types.first(),
             ) {
                 let receiver_type_args: Vec<_> = self

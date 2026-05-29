@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{TemplateDependencyState, TypeChecker};
+use super::super::{TemplateDependencyState, TypeChecker};
 
 fn install_dependency_map<T: Clone>(
     target: &mut HashMap<String, T>,
@@ -25,7 +25,7 @@ fn restore_dependency_map<T>(target: &mut HashMap<String, T>, state: Vec<(String
 impl TypeChecker {
     pub(super) fn install_template_dependencies(
         &mut self,
-        template: &super::GenericFunctionTemplate,
+        template: &super::super::GenericFunctionTemplate,
     ) -> TemplateDependencyState {
         let dependencies = &template.dependencies;
         TemplateDependencyState {

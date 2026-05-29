@@ -5,7 +5,7 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 use super::monomorphize_types::type_mangle_key;
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(crate) fn mangle_generic_type_name(&self, name: &str, type_args: &[AstType]) -> String {

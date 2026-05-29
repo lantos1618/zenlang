@@ -5,7 +5,7 @@ use crate::ast::AstType;
 use crate::error::Span;
 
 use super::monomorphize_names::reserve_specialization_name;
-use super::{quoted_list, GenericFunctionTemplate, TypeChecker};
+use super::super::{quoted_list, GenericFunctionTemplate, TypeChecker};
 
 impl TypeChecker {
     pub(crate) fn specialize_generic_function(

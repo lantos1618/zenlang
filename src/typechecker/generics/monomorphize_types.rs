@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::ast_type_substitution::substitute_ast_type_names;
+use super::super::ast_type_substitution::substitute_ast_type_names;
 use crate::ast::typed::Type;
 use crate::ast::{symbol_key_part, AstType};
 
@@ -35,7 +35,7 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
     }
 }
 
-pub(super) fn substitute_ast_type(
+pub(crate) fn substitute_ast_type(
     ast_type: &AstType,
     substitutions: &HashMap<String, Type>,
 ) -> AstType {

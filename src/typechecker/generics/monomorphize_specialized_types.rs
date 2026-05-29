@@ -5,7 +5,7 @@ use crate::ast::AstType;
 use crate::error::Span;
 
 use super::monomorphize_names::reserve_specialization_name;
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(crate) fn specialize_generic_struct(

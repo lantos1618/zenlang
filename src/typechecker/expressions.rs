@@ -15,7 +15,7 @@ use crate::ast::{AstType, Expression, Param};
 use crate::error::CompilerDiagnosticCode::*;
 use crate::error::{Diagnostic, Span};
 
-use super::monomorphize_inference::InferenceConflict;
+use super::generics::monomorphize_inference::InferenceConflict;
 use super::{type_display_pair, FuncInfo, TypeChecker};
 
 fn typed_expr(kind: TypedExprKind, ty: Type, span: Span) -> TypedExpression {

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
-use super::ast_type_substitution::substitute_ast_type_names;
+use super::super::ast_type_substitution::substitute_ast_type_names;
 use super::monomorphize_inference::InferenceConflict;
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
     pub(super) fn match_generic_type_with_args(

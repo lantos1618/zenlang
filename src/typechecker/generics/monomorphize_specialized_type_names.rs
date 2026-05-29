@@ -4,10 +4,10 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 
 use super::monomorphize_types::type_to_ast;
-use super::TypeChecker;
+use super::super::TypeChecker;
 
 impl TypeChecker {
-    pub(super) fn generic_type_args_from_type(
+    pub(crate) fn generic_type_args_from_type(
         &self,
         concrete_name: &str,
         ty: &Type,
