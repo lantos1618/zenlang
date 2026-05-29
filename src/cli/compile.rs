@@ -42,12 +42,16 @@ pub(super) fn compile_file_to_binary(
     println!("  emitted {}", c_path.display());
 
     let cc = std::env::var("CC").unwrap_or_else(|_| "cc".into());
-    let status = process::Command::new(&cc)
-        .arg(&c_path)
-        .arg("-o")
-        .arg(&bin_path)
-        .arg("-lm")
-        .status();
+    let mut command = process::Command::new(&cc);
+    command.arg(&c_path).arg("-o").arg(&bin_path).arg("-lm");
+    // Extra C-compiler/linker flags (include dirs, `-l<lib>`, `-L`, even
+    // `-include <header>`) for projects binding external C libraries. The Zen
+    // build DSL can't yet express link config, so this env var is the bridge —
+    // whitespace-separated, appended verbatim to the cc command.
+    if let Ok(extra) = std::env::var("ZEN_CC_EXTRA") {
+        command.args(extra.split_whitespace());
+    }
+    let status = command.status();
 
     match status {
         Ok(s) if s.success() => {
