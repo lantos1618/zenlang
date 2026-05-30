@@ -96,7 +96,20 @@ impl CEmitter {
 
             TypedExprKind::FunctionCall { function, args } => {
                 let name = c_func_ident(function);
-                let arg_strs: Vec<_> = args.iter().map(|a| self.emit_expr_inline(a)).collect();
+                let str_args = self.extern_str_args.get(function).cloned();
+                let arg_strs: Vec<_> = args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, a)| {
+                        let emitted = self.emit_expr_inline(a);
+                        // Marshal a `Str` argument to an `@extern` param into a
+                        // null-terminated `const char*` (zen_str.ptr).
+                        match &str_args {
+                            Some(positions) if positions.contains(&i) => format!("({}).ptr", emitted),
+                            _ => emitted,
+                        }
+                    })
+                    .collect();
                 format!("{}({})", name, arg_strs.join(", "))
             }
 

@@ -6,6 +6,8 @@ mod matches;
 mod strings;
 mod types;
 
+use std::collections::{HashMap, HashSet};
+
 use crate::ast::typed::*;
 
 pub fn generate(program: &TypedProgram) -> String {
@@ -18,6 +20,9 @@ struct CEmitter {
     output: String,
     indent: usize,
     tmp_counter: usize,
+    /// For each `@extern` function, the argument positions typed `Str` — their
+    /// arguments are marshaled to a null-terminated `const char*` at call sites.
+    extern_str_args: HashMap<String, HashSet<usize>>,
 }
 
 impl CEmitter {
@@ -26,6 +31,7 @@ impl CEmitter {
             output: String::with_capacity(4096),
             indent: 0,
             tmp_counter: 0,
+            extern_str_args: HashMap::new(),
         }
     }
 

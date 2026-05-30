@@ -69,8 +69,19 @@ impl CEmitter {
         for ext in &program.extern_functions {
             let ret = Self::c_type(&ext.return_type);
             let name = c_func_ident(&ext.name);
-            let params = self.format_params(&ext.params);
+            let params = extern_param_list(&ext.params);
             self.line(&format!("extern {} {}({});", ret, name, params));
+            // Record which args are `Str`, to marshal them to `const char*`.
+            let str_args: HashSet<usize> = ext
+                .params
+                .iter()
+                .enumerate()
+                .filter(|(_, p)| p.ty == Type::Str)
+                .map(|(i, _)| i)
+                .collect();
+            if !str_args.is_empty() {
+                self.extern_str_args.insert(ext.name.clone(), str_args);
+            }
         }
         if !program.extern_functions.is_empty() {
             self.blank();
@@ -166,6 +177,27 @@ impl CEmitter {
             }
         }
     }
+}
+
+/// Format an `@extern` C prototype's parameters. A `Str` parameter becomes a
+/// null-terminated `const char*` (call sites marshal the argument), so the
+/// prototype matches idiomatic C string APIs; all other params use the normal
+/// declarator.
+fn extern_param_list(params: &[TypedParam]) -> String {
+    if params.is_empty() {
+        return "void".into();
+    }
+    params
+        .iter()
+        .map(|p| {
+            if p.ty == Type::Str {
+                format!("const char* {}", c_ident(&p.name))
+            } else {
+                c_declarator(&p.ty, &p.name)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Order struct/enum bodies so that a type embedded *by value* in another is
