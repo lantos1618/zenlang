@@ -1,7 +1,9 @@
-pub Option<T>:
+Option<T>:
     None,
     Some(T)
 
-pub Result<T, E>:
+Result<T, E>:
     Ok(T),
     Err(E)
+
+@export({ Option, Result })

@@ -1,21 +1,23 @@
 { Option, Result } = types
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, StaticString> {
+Box.wrap_result<T> = (self: Box<T>) Result<Option<T>, StaticString> {
     Result<Option<T>, StaticString>.Ok(Option<T>.Some(self.value))
 }
 
-pub unwrap_option<T> = (value: Option<T>, fallback: T) T {
+unwrap_option<T> = (value: Option<T>, fallback: T) T {
     value ?
         | Some(inner) { inner }
         | None { fallback }
 }
 
-pub unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
+unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
     value ?
         | Ok(inner) { inner }
         | Err(_) { fallback }
 }
+
+@export({ Box, unwrap_option, unwrap_result })

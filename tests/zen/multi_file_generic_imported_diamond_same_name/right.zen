@@ -2,6 +2,8 @@ inner<T> = (value: T) i32 {
     29
 }
 
-pub right<T> = (value: T) i32 {
+right<T> = (value: T) i32 {
     inner(value)
 }
+
+@export({ right })

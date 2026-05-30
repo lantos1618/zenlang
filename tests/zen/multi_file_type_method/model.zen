@@ -1,7 +1,9 @@
-pub Point: {
+Point: {
     x: i32
 }
 
-pub Point.keep<T> = (self: Point, value: T) T {
+Point.keep<T> = (self: Point, value: T) T {
     value
 }
+
+@export({ Point })

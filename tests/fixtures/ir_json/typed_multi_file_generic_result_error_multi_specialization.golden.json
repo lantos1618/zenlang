@@ -1169,8 +1169,8 @@
             },
             "span": {
               "file_id": 1,
-              "start": 72,
-              "end": 82
+              "start": 64,
+              "end": 74
             }
           },
           {
@@ -1178,8 +1178,8 @@
             "ty": "Bool",
             "span": {
               "file_id": 1,
-              "start": 84,
-              "end": 95
+              "start": 76,
+              "end": 87
             }
           }
         ],
@@ -1210,8 +1210,8 @@
                   },
                   "span": {
                     "file_id": 1,
-                    "start": 105,
-                    "end": 109
+                    "start": 97,
+                    "end": 101
                   }
                 },
                 "arms": [
@@ -1236,36 +1236,36 @@
                               "ty": "Bool",
                               "span": {
                                 "file_id": 1,
-                                "start": 130,
-                                "end": 138
+                                "start": 122,
+                                "end": 130
                               }
                             },
                             "ty": "Bool",
                             "span": {
                               "file_id": 1,
-                              "start": 128,
-                              "end": 140
+                              "start": 120,
+                              "end": 132
                             }
                           }
                         },
                         "ty": "Bool",
                         "span": {
                           "file_id": 1,
-                          "start": 128,
-                          "end": 140
+                          "start": 120,
+                          "end": 132
                         }
                       },
                       "ty": "Bool",
                       "span": {
                         "file_id": 1,
-                        "start": 128,
-                        "end": 140
+                        "start": 120,
+                        "end": 132
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 122,
-                      "end": 140
+                      "start": 114,
+                      "end": 132
                     }
                   },
                   {
@@ -1294,36 +1294,36 @@
                               "ty": "Bool",
                               "span": {
                                 "file_id": 1,
-                                "start": 164,
-                                "end": 169
+                                "start": 156,
+                                "end": 161
                               }
                             },
                             "ty": "Bool",
                             "span": {
                               "file_id": 1,
-                              "start": 162,
-                              "end": 171
+                              "start": 154,
+                              "end": 163
                             }
                           }
                         },
                         "ty": "Bool",
                         "span": {
                           "file_id": 1,
-                          "start": 162,
-                          "end": 171
+                          "start": 154,
+                          "end": 163
                         }
                       },
                       "ty": "Bool",
                       "span": {
                         "file_id": 1,
-                        "start": 162,
-                        "end": 171
+                        "start": 154,
+                        "end": 163
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 151,
-                      "end": 171
+                      "start": 143,
+                      "end": 163
                     }
                   }
                 ],
@@ -1333,22 +1333,22 @@
             "ty": "Bool",
             "span": {
               "file_id": 1,
-              "start": 105,
-              "end": 171
+              "start": 97,
+              "end": 163
             }
           },
           "ty": "Bool",
           "span": {
             "file_id": 1,
-            "start": 99,
-            "end": 173
+            "start": 91,
+            "end": 165
           }
         },
         "defers": [],
         "span": {
           "file_id": 1,
-          "start": 45,
-          "end": 173
+          "start": 37,
+          "end": 165
         }
       },
       {
@@ -1373,8 +1373,8 @@
             },
             "span": {
               "file_id": 1,
-              "start": 72,
-              "end": 82
+              "start": 64,
+              "end": 74
             }
           },
           {
@@ -1382,8 +1382,8 @@
             "ty": "I32",
             "span": {
               "file_id": 1,
-              "start": 84,
-              "end": 95
+              "start": 76,
+              "end": 87
             }
           }
         ],
@@ -1414,8 +1414,8 @@
                   },
                   "span": {
                     "file_id": 1,
-                    "start": 105,
-                    "end": 109
+                    "start": 97,
+                    "end": 101
                   }
                 },
                 "arms": [
@@ -1440,36 +1440,36 @@
                               "ty": "I32",
                               "span": {
                                 "file_id": 1,
-                                "start": 130,
-                                "end": 138
+                                "start": 122,
+                                "end": 130
                               }
                             },
                             "ty": "I32",
                             "span": {
                               "file_id": 1,
-                              "start": 128,
-                              "end": 140
+                              "start": 120,
+                              "end": 132
                             }
                           }
                         },
                         "ty": "I32",
                         "span": {
                           "file_id": 1,
-                          "start": 128,
-                          "end": 140
+                          "start": 120,
+                          "end": 132
                         }
                       },
                       "ty": "I32",
                       "span": {
                         "file_id": 1,
-                        "start": 128,
-                        "end": 140
+                        "start": 120,
+                        "end": 132
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 122,
-                      "end": 140
+                      "start": 114,
+                      "end": 132
                     }
                   },
                   {
@@ -1498,36 +1498,36 @@
                               "ty": "I32",
                               "span": {
                                 "file_id": 1,
-                                "start": 164,
-                                "end": 169
+                                "start": 156,
+                                "end": 161
                               }
                             },
                             "ty": "I32",
                             "span": {
                               "file_id": 1,
-                              "start": 162,
-                              "end": 171
+                              "start": 154,
+                              "end": 163
                             }
                           }
                         },
                         "ty": "I32",
                         "span": {
                           "file_id": 1,
-                          "start": 162,
-                          "end": 171
+                          "start": 154,
+                          "end": 163
                         }
                       },
                       "ty": "I32",
                       "span": {
                         "file_id": 1,
-                        "start": 162,
-                        "end": 171
+                        "start": 154,
+                        "end": 163
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 151,
-                      "end": 171
+                      "start": 143,
+                      "end": 163
                     }
                   }
                 ],
@@ -1537,22 +1537,22 @@
             "ty": "I32",
             "span": {
               "file_id": 1,
-              "start": 105,
-              "end": 171
+              "start": 97,
+              "end": 163
             }
           },
           "ty": "I32",
           "span": {
             "file_id": 1,
-            "start": 99,
-            "end": 173
+            "start": 91,
+            "end": 165
           }
         },
         "defers": [],
         "span": {
           "file_id": 1,
-          "start": 45,
-          "end": 173
+          "start": 37,
+          "end": 165
         }
       }
     ],

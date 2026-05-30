@@ -1,9 +1,11 @@
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
 Box.impl = {
-    pub get<T> = (self: Box<T>) T {
+    get<T> = (self: Box<T>) T {
         self.value
     }
 }
+
+@export({ Box })

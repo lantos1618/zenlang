@@ -1,8 +1,87 @@
+use std::collections::HashSet;
+
 use super::*;
 use crate::parser::keywords::{BEHAVIOR_KEYWORD, MUT_KEYWORD};
 
 mod function_forms;
 mod generic;
+
+/// Desugar `@export({ ... })` manifests: set the `public` flag on the named
+/// declarations (exporting a type also exports its methods and impl methods),
+/// then drop the `Export` nodes. After this the AST is identical to one written
+/// with per-declaration `pub`, so the whole downstream pipeline (resolver,
+/// import-seeding, codegen, goldens) is unchanged. An exported name that matches
+/// no declaration is an error.
+pub(super) fn apply_export_manifests(
+    decls: &mut Vec<Declaration>,
+    errors: &mut Vec<CompileError>,
+) {
+    let mut exported: HashSet<String> = HashSet::new();
+    let mut export_spans: Vec<(String, Span)> = Vec::new();
+    for decl in decls.iter() {
+        if let Declaration::Export { names, span } = decl {
+            for name in names {
+                exported.insert(name.clone());
+                export_spans.push((name.clone(), *span));
+            }
+        }
+    }
+
+    if exported.is_empty() {
+        return;
+    }
+
+    let mut matched: HashSet<String> = HashSet::new();
+    for decl in decls.iter_mut() {
+        match decl {
+            Declaration::Function { name, public, .. }
+            | Declaration::Struct { name, public, .. }
+            | Declaration::Enum { name, public, .. }
+            | Declaration::Behavior { name, public, .. } => {
+                if exported.contains(name) {
+                    *public = true;
+                    matched.insert(name.clone());
+                }
+            }
+            // Exporting a type exports the methods declared on it.
+            Declaration::Method {
+                type_name, public, ..
+            } => {
+                if exported.contains(type_name) {
+                    *public = true;
+                    matched.insert(type_name.clone());
+                }
+            }
+            // ...and the methods of impl blocks on an exported type.
+            Declaration::ImplBlock {
+                type_name, methods, ..
+            } => {
+                if exported.contains(type_name) {
+                    matched.insert(type_name.clone());
+                    for method in methods.iter_mut() {
+                        match method {
+                            Declaration::Function { public, .. }
+                            | Declaration::Method { public, .. } => *public = true,
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    for (name, span) in export_spans {
+        if !matched.contains(&name) {
+            errors.push(CompileError::Resolution(
+                format!("exported name `{name}` is not defined in this module"),
+                Some(span),
+            ));
+        }
+    }
+
+    decls.retain(|decl| !matches!(decl, Declaration::Export { .. }));
+}
 
 impl Parser {
     pub(super) fn consume_mutability_keyword(&mut self) -> bool {

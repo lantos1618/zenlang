@@ -1,9 +1,11 @@
-pub Result<T, E>:
+Result<T, E>:
     Ok(T),
     Err(E)
 
-pub Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
+Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
     self ?
         | Ok(value) { value }
         | Err(_) { fallback }
 }
+
+@export({ Result })

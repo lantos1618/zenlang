@@ -1,7 +1,9 @@
-pub Holder<T>: {
+Holder<T>: {
     value: T
 }
 
-pub Holder.get<T> = (self: Holder<T>) T {
+Holder.get<T> = (self: Holder<T>) T {
     self.value
 }
+
+@export({ Holder })

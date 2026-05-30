@@ -33,7 +33,8 @@ use precedence::*;
 
 pub fn parse(tokens: Vec<(Token, Span)>, file_id: FileId) -> Result<Program, Vec<CompileError>> {
     let mut parser = Parser::new(tokens);
-    let decls = parser.parse_program();
+    let mut decls = parser.parse_program();
+    declarations::apply_export_manifests(&mut decls, &mut parser.errors);
     parser
         .errors
         .is_empty()

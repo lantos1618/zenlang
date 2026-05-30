@@ -1,12 +1,14 @@
-pub Json: behavior {
+Json: behavior {
     to_json: (Self) StaticString {
         "default-json"
     }
 }
 
-pub Point: {
+Point: {
     x: i32
 }
 
 Point.implements(Json) {
 }
+
+@export({ Json, Point })

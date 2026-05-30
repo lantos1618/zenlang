@@ -1,12 +1,14 @@
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T {
         "imported-default"
     }
 }
 
-pub Point: {
+Point: {
     x: i32
 }
 
 Point.implements(Json<StaticString>) {
 }
+
+@export({ Json, Point })

@@ -12,6 +12,8 @@ inner<T> = (value: T) i32 {
         | Value(_) { 11 }
 }
 
-pub left<T> = (value: T) i32 {
+left<T> = (value: T) i32 {
     inner(value)
 }
+
+@export({ left })

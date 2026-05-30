@@ -843,8 +843,8 @@
             },
             "span": {
               "file_id": 1,
-              "start": 65,
-              "end": 75
+              "start": 57,
+              "end": 67
             }
           },
           {
@@ -852,8 +852,8 @@
             "ty": "I32",
             "span": {
               "file_id": 1,
-              "start": 77,
-              "end": 88
+              "start": 69,
+              "end": 80
             }
           }
         ],
@@ -884,8 +884,8 @@
                   },
                   "span": {
                     "file_id": 1,
-                    "start": 98,
-                    "end": 102
+                    "start": 90,
+                    "end": 94
                   }
                 },
                 "arms": [
@@ -915,36 +915,36 @@
                               "ty": "I32",
                               "span": {
                                 "file_id": 1,
-                                "start": 129,
-                                "end": 134
+                                "start": 121,
+                                "end": 126
                               }
                             },
                             "ty": "I32",
                             "span": {
                               "file_id": 1,
-                              "start": 127,
-                              "end": 136
+                              "start": 119,
+                              "end": 128
                             }
                           }
                         },
                         "ty": "I32",
                         "span": {
                           "file_id": 1,
-                          "start": 127,
-                          "end": 136
+                          "start": 119,
+                          "end": 128
                         }
                       },
                       "ty": "I32",
                       "span": {
                         "file_id": 1,
-                        "start": 127,
-                        "end": 136
+                        "start": 119,
+                        "end": 128
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 115,
-                      "end": 136
+                      "start": 107,
+                      "end": 128
                     }
                   },
                   {
@@ -968,36 +968,36 @@
                               "ty": "I32",
                               "span": {
                                 "file_id": 1,
-                                "start": 154,
-                                "end": 162
+                                "start": 146,
+                                "end": 154
                               }
                             },
                             "ty": "I32",
                             "span": {
                               "file_id": 1,
-                              "start": 152,
-                              "end": 164
+                              "start": 144,
+                              "end": 156
                             }
                           }
                         },
                         "ty": "I32",
                         "span": {
                           "file_id": 1,
-                          "start": 152,
-                          "end": 164
+                          "start": 144,
+                          "end": 156
                         }
                       },
                       "ty": "I32",
                       "span": {
                         "file_id": 1,
-                        "start": 152,
-                        "end": 164
+                        "start": 144,
+                        "end": 156
                       }
                     },
                     "span": {
                       "file_id": 1,
-                      "start": 147,
-                      "end": 164
+                      "start": 139,
+                      "end": 156
                     }
                   }
                 ],
@@ -1007,22 +1007,22 @@
             "ty": "I32",
             "span": {
               "file_id": 1,
-              "start": 98,
-              "end": 164
+              "start": 90,
+              "end": 156
             }
           },
           "ty": "I32",
           "span": {
             "file_id": 1,
-            "start": 92,
-            "end": 166
+            "start": 84,
+            "end": 158
           }
         },
         "defers": [],
         "span": {
           "file_id": 1,
-          "start": 42,
-          "end": 166
+          "start": 34,
+          "end": 158
         }
       }
     ],

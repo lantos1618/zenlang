@@ -1,3 +1,5 @@
-pub Option<T>:
+Option<T>:
     None,
     Some(T)
+
+@export({ Option })

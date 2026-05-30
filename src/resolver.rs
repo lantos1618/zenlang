@@ -47,23 +47,6 @@ impl Resolver {
             }
         }
 
-        // Apply `@export({ ... })` manifests: mark the listed (otherwise
-        // private) symbols public. Runs after all symbols are defined so an
-        // export can name a declaration anywhere in the file.
-        for decl in &program.declarations {
-            if let Declaration::Export { names, span } = decl {
-                for name in names {
-                    if !table.mark_public(name) {
-                        diagnostics.push(Diagnostic::error_code(
-                            crate::error::CompilerDiagnosticCode::E0203,
-                            format!("exported name `{name}` is not defined in this module"),
-                            *span,
-                        ));
-                    }
-                }
-            }
-        }
-
         for decl in &program.declarations {
             self.validate_declaration_types(&mut table, decl, &mut diagnostics);
         }

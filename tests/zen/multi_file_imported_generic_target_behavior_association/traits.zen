@@ -1,8 +1,8 @@
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
@@ -11,3 +11,5 @@ Box<T>.implements(Json<T>) {
         self.value
     }
 }
+
+@export({ Json, Box })

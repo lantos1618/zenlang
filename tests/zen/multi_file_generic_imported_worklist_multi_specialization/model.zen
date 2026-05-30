@@ -6,6 +6,8 @@ middle<T> = (value: T) T {
     inner(value)
 }
 
-pub outer<T> = (value: T) T {
+outer<T> = (value: T) T {
     middle(value)
 }
+
+@export({ outer })

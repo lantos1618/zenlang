@@ -1,12 +1,14 @@
-pub Describe<T>: behavior {
+Describe<T>: behavior {
     describe: (self: Self) StaticString {
         "box"
     }
 }
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
 Box<T>.implements(Describe<T>) {
 }
+
+@export({ Describe, Box })

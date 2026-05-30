@@ -1,19 +1,21 @@
-pub Option<T>:
+Option<T>:
     None,
     Some(T)
 
-pub Result<T, E>:
+Result<T, E>:
     Ok(T),
     Err(E)
 
-pub unwrap_option<T> = (value: Option<T>, fallback: T) T {
+unwrap_option<T> = (value: Option<T>, fallback: T) T {
     value ?
         | Some(inner) { inner }
         | None { fallback }
 }
 
-pub unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
+unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
     value ?
         | Ok(inner) { inner }
         | Err(_) { fallback }
 }
+
+@export({ Option, Result, unwrap_option, unwrap_result })

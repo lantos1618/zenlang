@@ -2,10 +2,12 @@ inner<T> = (value: T) T {
     value
 }
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Box.get_inner<T> = (self: Box<T>) T {
+Box.get_inner<T> = (self: Box<T>) T {
     inner(self.value)
 }
+
+@export({ Box })

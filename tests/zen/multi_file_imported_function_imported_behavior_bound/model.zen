@@ -1,6 +1,6 @@
 { Json } = traits
 
-pub Point: {
+Point: {
     x: i32
 }
 
@@ -10,6 +10,8 @@ Point.implements(Json<i32>) {
     }
 }
 
-pub encode<T: Json<i32>> = (value: T) i32 {
+encode<T: Json<i32>> = (value: T) i32 {
     value.encode()
 }
+
+@export({ Point, encode })

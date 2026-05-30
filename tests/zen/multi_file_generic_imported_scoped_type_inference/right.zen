@@ -20,9 +20,11 @@ Holder.extra<T> = (self: Self) i32 {
     found
 }
 
-pub right<T> = (value: T) i32 {
+right<T> = (value: T) i32 {
     box = Box<T> { value: value, extra: 29 }
     holder = Holder<Box<T>> { value: box }
     checked = box.take_box()
     checked + box.extra() + holder.extra()
 }
+
+@export({ right })

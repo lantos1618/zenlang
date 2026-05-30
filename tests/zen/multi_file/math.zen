@@ -1,7 +1,9 @@
-pub add = (a: i32, b: i32) i32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
 
-pub multiply = (a: i32, b: i32) i32 {
+multiply = (a: i32, b: i32) i32 {
     a * b
 }
+
+@export({ add, multiply })

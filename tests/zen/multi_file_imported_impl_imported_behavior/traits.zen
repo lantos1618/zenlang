@@ -1,9 +1,11 @@
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub PrettyJson: behavior {
+PrettyJson: behavior {
     pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json<StaticString>)
+
+@export({ Json, PrettyJson })

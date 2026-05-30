@@ -1,6 +1,6 @@
 { PrettyJson } = traits
 
-pub Point: {
+Point: {
     x: i32
 }
 
@@ -13,3 +13,5 @@ Point.implements(PrettyJson) {
         "pretty"
     }
 }
+
+@export({ Point })

@@ -22,25 +22,6 @@ impl SymbolTable {
     pub fn symbols(&self) -> &[Symbol] {
         &self.symbols
     }
-
-    /// Mark every exportable symbol with `name` (value/type/behavior) public, as
-    /// named in an `@export({ ... })` manifest. Returns true if at least one
-    /// matching symbol was found.
-    pub fn mark_public(&mut self, name: &str) -> bool {
-        let mut found = false;
-        for symbol in &mut self.symbols {
-            if symbol.name == name
-                && matches!(
-                    symbol.namespace,
-                    Namespace::Value | Namespace::Type | Namespace::Behavior
-                )
-            {
-                symbol.is_public = true;
-                found = true;
-            }
-        }
-        found
-    }
 }
 
 include!("symbol_table/definition_metadata.rs");

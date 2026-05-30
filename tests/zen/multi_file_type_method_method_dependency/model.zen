@@ -1,4 +1,4 @@
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
@@ -6,6 +6,8 @@ Box.inner<T> = (self: Box<T>) T {
     self.value
 }
 
-pub Box.get_inner<T> = (self: Box<T>) T {
+Box.get_inner<T> = (self: Box<T>) T {
     self.inner<T>()
 }
+
+@export({ Box })

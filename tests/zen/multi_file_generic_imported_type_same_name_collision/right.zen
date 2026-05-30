@@ -13,6 +13,8 @@ inner<T> = (value: T) i32 {
         | Extra(found) { found }
 }
 
-pub right<T> = (value: T) i32 {
+right<T> = (value: T) i32 {
     inner(value)
 }
+
+@export({ right })
