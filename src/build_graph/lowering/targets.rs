@@ -5,7 +5,7 @@ use super::dsl::{
     SUPPORTED_TARGET_KINDS,
 };
 use super::target_fields::{
-    common_target_fields, optional_string_array_field, optional_string_field,
+    common_target_fields, optional_link_array_field, optional_string_array_field, optional_string_field,
     required_one_of_string_fields, required_string_array_field, required_string_field,
 };
 use super::{unsupported_build_script, BuildGraphError, BuildTargetInput, BuildTargetKind};
@@ -118,7 +118,7 @@ fn executable_target_from_fields(
     let target_name = required_string_field(kind, fields, BuildTargetField::Name)?;
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
     let link =
-        optional_string_array_field(kind, fields, BuildTargetField::Link)?.unwrap_or_default();
+        optional_link_array_field(kind, fields, BuildTargetField::Link)?.unwrap_or_default();
     let headers =
         optional_string_array_field(kind, fields, BuildTargetField::Headers)?.unwrap_or_default();
 

@@ -112,6 +112,32 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_accepts_structured_link_version_constraints() {
+    let program = super::parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        link: ["m", Lib { name: "sdl3", min: "3.2" }],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = zen::build_graph::BuildGraph::from_build_program(&program)
+        .expect("build program with structured link should lower");
+    match &graph.targets[0].kind {
+        zen::build_graph::BuildTargetKind::Executable { link, .. } => {
+            // `{ name, min }` records normalize to the `"name >= min"` string form.
+            assert_eq!(link.as_slice(), ["m", "sdl3 >= 3.2"]);
+        }
+        other => panic!("expected executable target, got {other:?}"),
+    }
+}
+
+#[test]
 fn build_program_lowering_accepts_executable_headers() {
     let program = super::parse_program(
         r#"

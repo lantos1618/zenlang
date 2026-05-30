@@ -93,6 +93,52 @@ pub(super) fn optional_string_array_field(
     Ok(Some(values))
 }
 
+/// Extract the `link:` array. Each element is either a string (`"sdl3"`,
+/// `"sdl3 >= 3.2"`) or a struct with `name`/optional `min` fields
+/// (`Lib { name: "sdl3", min: "3.2" }`). Structs are normalized to the
+/// `"name >= min"` string form the linker step parses.
+pub(super) fn optional_link_array_field(
+    kind: BuildTargetDslKind,
+    fields: &[(String, Expression)],
+    field: BuildTargetField,
+) -> Result<Option<Vec<String>>, BuildGraphError> {
+    let Some(value) = field_value(fields, field) else {
+        return Ok(None);
+    };
+    let Expression::ArrayLiteral { elements, .. } = value else {
+        return Err(unsupported_build_script(format!(
+            "field `{field}` in `{kind}` build target must be an array"
+        )));
+    };
+    let bad = || {
+        unsupported_build_script(format!(
+            "field `{field}` in `{kind}` build target must be strings or `{{ name, min }}` records"
+        ))
+    };
+    let struct_field = |sf: &[(String, Expression)], key: &str| -> Option<String> {
+        sf.iter().find_map(|(n, v)| match v {
+            Expression::StringLiteral { value, .. } if n == key => Some(value.clone()),
+            _ => None,
+        })
+    };
+
+    let mut out = Vec::with_capacity(elements.len());
+    for element in elements {
+        match element {
+            Expression::StringLiteral { value, .. } => out.push(value.clone()),
+            Expression::StructLiteral { fields: sf, .. } => {
+                let name = struct_field(sf, "name").ok_or_else(bad)?;
+                match struct_field(sf, "min") {
+                    Some(min) => out.push(format!("{name} >= {min}")),
+                    None => out.push(name),
+                }
+            }
+            _ => return Err(bad()),
+        }
+    }
+    Ok(Some(out))
+}
+
 fn field_value(fields: &[(String, Expression)], field: BuildTargetField) -> Option<&Expression> {
     fields
         .iter()
