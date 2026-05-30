@@ -1,26 +1,26 @@
 // FIFO queue over the heap-backed `Vec` (default allocator), with a moving head
-// index so that dequeue is O(1) without shifting elements.
+// index so that dequeue is O(1) without shifting elements. `Vec<T>` defaults its
+// allocator, so this never names it.
 // `{ Queue, queue_new, queue_enqueue, queue_peek, queue_dequeue, queue_len } = std.collections.queue`
 
-{ Mallocator } = std.memory.allocator
 { Vec, vec_new_default, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
-Queue<T>: { items: Vec<T, Mallocator>, head: i64 }
+Queue<T>: { items: Vec<T>, head: i64 }
 
 queue_new<T> = () Queue<T> {
     Queue<T> { items: vec_new_default<T>(), head: 0 }
 }
 
 queue_len<T> = (q: Queue<T>) i64 {
-    vec_len<T, Mallocator>(q.items) - q.head
+    vec_len(q.items) - q.head
 }
 
 queue_enqueue<T> = (q: Queue<T>, value: T) Queue<T> {
-    Queue<T> { items: vec_push<T, Mallocator>(q.items, value), head: q.head }
+    Queue<T> { items: vec_push(q.items, value), head: q.head }
 }
 
 queue_peek<T> = (q: Queue<T>) T {
-    vec_get<T, Mallocator>(q.items, q.head)
+    vec_get(q.items, q.head)
 }
 
 // Advance past the front element. Read it with `queue_peek` first.
@@ -29,7 +29,7 @@ queue_dequeue<T> = (q: Queue<T>) Queue<T> {
 }
 
 queue_free<T> = (q: Queue<T>) void {
-    vec_free<T, Mallocator>(q.items)
+    vec_free(q.items)
 }
 
 @export({ Queue, queue_new, queue_len, queue_enqueue, queue_peek, queue_dequeue, queue_free })

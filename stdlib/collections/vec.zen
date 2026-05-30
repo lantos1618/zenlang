@@ -6,7 +6,7 @@
 
 { Allocator, Mallocator, mallocator } = std.memory.allocator
 
-Vec<T, Alloc: Allocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
+Vec<T, Alloc: Allocator = Mallocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
 
 elem_size<T> = () i64 {
     cast(@builtin.sizeof<T>(), i64)
