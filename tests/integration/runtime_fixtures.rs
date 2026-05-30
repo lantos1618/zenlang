@@ -94,3 +94,8 @@ fn test_export_manifest() {
 fn test_ffi_extern() {
     run_test("ffi_extern");
 }
+
+#[test]
+fn test_stdlib_allocator() {
+    run_test("stdlib_allocator");
+}

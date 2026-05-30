@@ -1,2 +1,32 @@
-// Parse-only placeholder for @std.memory.allocator.
-// Promote allocator APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Typed memory allocator. Collections allocate through an `Allocator` instead
+// of calling `@builtin.raw_allocate` directly, so the allocation strategy
+// (system, arena, pool) is a choice rather than hardcoded malloc. Backed by the
+// compiler's raw-memory @builtins.
+//   { Allocator, Mallocator, mallocator } = std.memory.allocator
+
+Allocator: behavior {
+    alloc: (Self, usize) RawPtr<u8>
+    realloc: (Self, RawPtr<u8>, usize, usize) RawPtr<u8>
+    free: (Self, RawPtr<u8>, usize) void
+}
+
+// The default system allocator: malloc / realloc / free via @builtin.
+Mallocator: { tag: i64 }
+
+Mallocator.implements(Allocator) {
+    alloc = (self: Mallocator, size: usize) RawPtr<u8> {
+        @builtin.raw_allocate(size)
+    }
+    realloc = (self: Mallocator, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        @builtin.raw_reallocate(p, old, new)
+    }
+    free = (self: Mallocator, p: RawPtr<u8>, size: usize) void {
+        @builtin.raw_deallocate(p, size)
+    }
+}
+
+mallocator = () Mallocator {
+    Mallocator { tag: 0 }
+}
+
+@export({ Allocator, Mallocator, Mallocator.alloc, Mallocator.realloc, Mallocator.free, mallocator })

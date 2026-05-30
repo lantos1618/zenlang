@@ -1,0 +1,13 @@
+// The typed Allocator behavior (malloc-backed default) round-trips memory.
+{ io } = std
+{ Allocator, Mallocator, mallocator } = std.memory.allocator
+
+main = () i32 {
+    a = mallocator()
+    p = a.alloc(cast(8, usize))
+    @builtin.store(p, cast(42, i64))
+    v = @builtin.load<i64>(p)
+    a.free(p, cast(8, usize))
+    io.println("alloc=${cast(v, i32)}")
+    0
+}
