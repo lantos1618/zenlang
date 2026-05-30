@@ -1,0 +1,16 @@
+// A Queue user should not have to import the allocator either: the default-
+// allocator Vec underneath gets its Mallocator->Allocator impl seeded
+// transitively through std.collections.queue.
+{ io } = std
+{ Queue, queue_new, queue_enqueue, queue_peek, queue_dequeue, queue_len } = std.collections.queue
+
+main = () i32 {
+    q ::= queue_new<i64>()
+    q = queue_enqueue<i64>(q, 5)
+    q = queue_enqueue<i64>(q, 9)
+    io.println("queue_front=${cast(queue_peek<i64>(q), i32)}")
+    q = queue_dequeue<i64>(q)
+    io.println("queue_front2=${cast(queue_peek<i64>(q), i32)}")
+    io.println("queue_len=${cast(queue_len<i64>(q), i32)}")
+    0
+}
