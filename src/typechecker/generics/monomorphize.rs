@@ -120,6 +120,7 @@ impl TypeChecker {
         name: &str,
         span: Span,
     ) -> HashMap<String, Type> {
+        let type_args = self.fill_type_arg_defaults(name, type_args);
         if type_params.len() != type_args.len() {
             self.report_generic_type_arg_arity(
                 kind,
@@ -130,6 +131,6 @@ impl TypeChecker {
             );
         }
 
-        self.type_arg_substitutions(type_params, type_args)
+        self.type_arg_substitutions(type_params, &type_args)
     }
 }

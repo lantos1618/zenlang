@@ -134,10 +134,17 @@ impl Parser {
             } else {
                 Vec::new()
             };
+            let default = if matches!(self.peek(), Token::Assign) {
+                self.advance();
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
             params.push(TypeParam {
                 name,
                 constraint,
                 constraint_type_args,
+                default,
                 span,
             });
             self.consume_comma();

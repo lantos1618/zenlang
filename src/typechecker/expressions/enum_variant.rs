@@ -14,6 +14,8 @@ impl TypeChecker {
             Some(p) => Some(Box::new(self.check_expr(p)?)),
             None => None,
         };
+        let filled_type_args = self.fill_type_arg_defaults(enum_name, type_args);
+        let type_args = filled_type_args.as_slice();
         let enum_info = self.enums.get(enum_name).cloned();
         let type_arg_count = enum_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| {

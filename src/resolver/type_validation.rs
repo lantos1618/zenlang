@@ -91,6 +91,16 @@ impl Resolver {
                     );
                 }
             }
+            if let Some(default) = &type_param.default {
+                self.validate_type_ref(
+                    table,
+                    type_params,
+                    default,
+                    type_param.span,
+                    allow_self_type,
+                    diagnostics,
+                );
+            }
         }
     }
 

@@ -1,0 +1,13 @@
+// A generic struct with a default type parameter: `Pair<i32>` fills the
+// omitted trailing arg `U` from its default `i64`.
+{ io } = std
+
+Pair<T, U = i64>: { a: T, b: U }
+
+main = () i32 {
+    p ::= Pair<i32> { a: 1, b: 7 }
+    q ::= Pair<i32, i64> { a: 2, b: 9 }
+    io.println("b=${cast(p.b, i32)}")
+    io.println("sum=${cast(p.b + q.b, i32)}")
+    0
+}

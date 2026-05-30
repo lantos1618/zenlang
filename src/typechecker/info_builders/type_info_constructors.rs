@@ -13,6 +13,13 @@ fn type_param_bounds(type_params: &[ast::TypeParam]) -> HashMap<String, Behavior
         .collect()
 }
 
+fn type_param_defaults(type_params: &[ast::TypeParam]) -> HashMap<String, AstType> {
+    type_params
+        .iter()
+        .filter_map(|param| Some((param.name.clone(), param.default.clone()?)))
+        .collect()
+}
+
 fn struct_info_from_ast_fields(
     type_params: &[ast::TypeParam],
     fields: &[StructField],
@@ -29,6 +36,7 @@ fn struct_info_from_ast_fields(
             .collect(),
         type_params: type_param_names(type_params),
         type_param_bounds: type_param_bounds(type_params),
+        type_param_defaults: type_param_defaults(type_params),
     }
 }
 
@@ -44,5 +52,6 @@ fn enum_info_from_ast_variants(
             .collect(),
         type_params: type_param_names(type_params),
         type_param_bounds: type_param_bounds(type_params),
+        type_param_defaults: type_param_defaults(type_params),
     }
 }

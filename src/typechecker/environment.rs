@@ -10,6 +10,9 @@ pub struct StructInfo {
     pub field_defaults: HashMap<String, Expression>,
     pub type_params: Vec<String>,
     pub type_param_bounds: HashMap<String, BehaviorBound>,
+    // Default type for trailing type params, keyed by param name. Lets a
+    // reference omit them: `Vec<i64>` fills `Alloc` from its default.
+    pub type_param_defaults: HashMap<String, AstType>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +21,7 @@ pub struct EnumInfo {
     pub variants: Vec<(String, Option<AstType>)>,
     pub type_params: Vec<String>,
     pub type_param_bounds: HashMap<String, BehaviorBound>,
+    pub type_param_defaults: HashMap<String, AstType>,
 }
 
 #[derive(Debug, Clone)]

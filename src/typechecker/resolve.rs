@@ -99,6 +99,8 @@ impl TypeChecker {
     }
 
     fn resolve_generic_type(&self, name: &str, type_args: &[AstType]) -> Type {
+        let type_args = self.fill_type_arg_defaults(name, type_args);
+        let type_args = type_args.as_slice();
         let requested = self.mangle_generic_type_name(name, type_args);
         if let Some(info) = self.structs.get(name) {
             let mangled = self.reserved_or_requested_generic_type_name(

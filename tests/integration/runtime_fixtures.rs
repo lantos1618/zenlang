@@ -114,3 +114,8 @@ fn test_stdlib_stack_no_alloc_import() {
 fn test_stdlib_queue_no_alloc_import() {
     run_test("stdlib_queue_no_alloc_import");
 }
+
+#[test]
+fn test_default_type_param() {
+    run_test("default_type_param");
+}

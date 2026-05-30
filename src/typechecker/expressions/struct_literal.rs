@@ -9,6 +9,8 @@ impl TypeChecker {
         fields: &[(String, Expression)],
         span: Span,
     ) -> Result<TypedExpression, Diagnostic> {
+        let filled_type_args = self.fill_type_arg_defaults(name, type_args);
+        let type_args = filled_type_args.as_slice();
         let struct_info = self.structs.get(name).cloned();
         let type_arg_count = struct_info.as_ref().map(|info| info.type_params.len());
         let type_args_valid = type_arg_count.is_none_or(|expected| {
