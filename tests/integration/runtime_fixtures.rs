@@ -119,3 +119,8 @@ fn test_stdlib_queue_no_alloc_import() {
 fn test_default_type_param() {
     run_test("default_type_param");
 }
+
+#[test]
+fn test_stdlib_arena() {
+    run_test("stdlib_arena");
+}
