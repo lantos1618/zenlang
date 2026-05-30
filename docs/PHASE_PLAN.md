@@ -82,15 +82,25 @@ Landed:
   `link: ["SDL3"]`, no env vars / inline C / header; verified building and
   running headlessly under `xvfb-run`.
 
-Next (better-than-Zig, not yet built):
-- **ABI-verified extern**: emit a C static type-compat check against the real
-  header so a wrong `extern` signature fails the build instead of becoming
-  runtime UB — closes the silent-mismatch footgun both Zig FFI modes have.
-- **Auto string marshaling**: `extern f = (s: Str)` passes a null-terminated
-  `const char*` (today via `@builtin.static_string_ptr`).
-- **Version-checked link**: `link: [{ name: "SDL3", min: "3.2" }]`.
-- **Effect-tracked FFI** (uniquely-Zen stretch): model `extern` calls in the
-  existing host-effect system so the type system knows a call reaches into C.
+Landed (L3 — better than Zig):
+- **ABI-verified `@extern`**: `headers: ["SDL3/SDL.h"]` on the Executable
+  `#include`s the real header; since codegen emits a prototype per `@extern`,
+  a signature mismatch becomes a C *"conflicting types"* error at build time
+  instead of runtime UB — beating both Zig FFI modes, with no static-assert
+  machinery. Caveat: fits primitive/string signatures; opaque-pointer APIs
+  (modeled as `RawPtr<u8>`) can't be header-checked until Zen has an
+  opaque-C-type, so such projects omit `headers:`.
+- **Auto string marshaling**: a `StaticString` `@extern` param lowers to
+  `const char*` and call sites marshal via `zen_str.ptr` — no
+  `@builtin.static_string_ptr`.
+- **Version-checked `link:`**: `link: ["sdl3 >= 3.2"]` is checked via
+  `pkg-config --atleast-version` up front (`needs version >= X, found Y`).
+
+Next (stretch):
+- **Effect-tracked FFI** (uniquely-Zen): model `@extern` calls in the existing
+  host-effect system so the type system knows a call reaches into C.
+- **Opaque C types**: a Zen way to name `SDL_Window*` so `headers:` ABI-verify
+  covers pointer APIs too.
 
 Out of scope for Phase 6: a package manager (`packages:` stays gated), and
 `@cImport`-style header translation.
