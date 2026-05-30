@@ -63,6 +63,7 @@ fn validate_target_fields(
             BuildTargetField::Dependencies,
             BuildTargetField::Features,
             BuildTargetField::Link,
+            BuildTargetField::Headers,
         ],
         BuildTargetDslKind::Test => &[
             BuildTargetField::Name,
@@ -118,6 +119,8 @@ fn executable_target_from_fields(
     let out_dir = required_string_field(kind, fields, BuildTargetField::OutDir)?;
     let link =
         optional_string_array_field(kind, fields, BuildTargetField::Link)?.unwrap_or_default();
+    let headers =
+        optional_string_array_field(kind, fields, BuildTargetField::Headers)?.unwrap_or_default();
 
     Ok(BuildTargetInput {
         name: target_name,
@@ -125,6 +128,7 @@ fn executable_target_from_fields(
             root_source_file: root_source_file.clone(),
             out_dir,
             link,
+            headers,
         },
         sources: vec![root_source_file],
         dependencies,

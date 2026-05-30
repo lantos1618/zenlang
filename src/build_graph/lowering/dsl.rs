@@ -17,6 +17,7 @@ pub(super) enum BuildTargetField {
     Exports,
     Packages,
     Link,
+    Headers,
 }
 
 pub(in crate::build_graph) const BUILDER_IDENT: &str = "b";
@@ -45,6 +46,7 @@ const TARGET_FIELD_SPELLINGS: &[(BuildTargetField, &str)] = &[
     (BuildTargetField::Exports, "exports"),
     (BuildTargetField::Packages, "packages"),
     (BuildTargetField::Link, "link"),
+    (BuildTargetField::Headers, "headers"),
 ];
 
 impl BuildTargetField {

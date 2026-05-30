@@ -112,6 +112,32 @@ build = (b: Builder) Result<BuildConfig, BuildError> {
 }
 
 #[test]
+fn build_program_lowering_accepts_executable_headers() {
+    let program = super::parse_program(
+        r#"
+build = (b: Builder) Result<BuildConfig, BuildError> {
+    b.add(Executable {
+        name: "app",
+        main: "app.zen",
+        out_dir: "build/app/",
+        link: ["SDL3"],
+        headers: ["SDL3/SDL.h"],
+    })
+    .Ok(b.config())
+}
+"#,
+    );
+    let graph = zen::build_graph::BuildGraph::from_build_program(&program)
+        .expect("build program with headers should lower");
+    match &graph.targets[0].kind {
+        zen::build_graph::BuildTargetKind::Executable { headers, .. } => {
+            assert_eq!(headers.as_slice(), ["SDL3/SDL.h"]);
+        }
+        other => panic!("expected executable target, got {other:?}"),
+    }
+}
+
+#[test]
 fn build_program_lowering_rejects_unsupported_package_targets() {
     assert_build_program_lowering_rejects_unsupported_target_kind("Package");
 }

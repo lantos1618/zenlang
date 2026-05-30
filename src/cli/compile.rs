@@ -21,6 +21,7 @@ pub(super) fn compile_file_to_binary(
     output_dir: Option<&Path>,
     output_name: Option<&str>,
     link_libs: &[String],
+    headers: &[String],
 ) -> PathBuf {
     let c_source = compile_file_to_c_source(Path::new(path_str));
 
@@ -49,6 +50,12 @@ pub(super) fn compile_file_to_binary(
     // analog): resolve include/lib/rpath flags per library via pkg-config.
     for lib in link_libs {
         command.args(link_flags_for_library(lib));
+    }
+    // C headers from `headers:`: force-include each so the emitted @extern
+    // prototypes are checked against the real declarations (ABI verification —
+    // a mismatch is a C "conflicting types" error).
+    for header in headers {
+        command.arg("-include").arg(header);
     }
     // Escape hatch: extra cc flags (include dirs, `-l`, `-L`, `-include
     // <header>`) appended verbatim, whitespace-separated. `link:` is preferred.

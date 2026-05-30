@@ -26,6 +26,7 @@ fn executable_target(name: &str, sources: &[&str]) -> BuildTargetInput {
             root_source_file: "src/main.zen".to_string(),
             out_dir: "build".to_string(),
             link: Vec::new(),
+            headers: Vec::new(),
         },
         sources: sources.iter().map(|source| source.to_string()).collect(),
         dependencies: Vec::new(),

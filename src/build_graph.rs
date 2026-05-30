@@ -30,6 +30,11 @@ pub enum BuildTargetKind {
         out_dir: String,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         link: Vec<String>,
+        /// C headers to force-include — `#include`d into the generated C so the
+        /// emitted `@extern` prototypes are checked against the real library
+        /// declarations (a mismatch becomes a C "conflicting types" error).
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        headers: Vec<String>,
     },
     Test {
         root_source_file: String,

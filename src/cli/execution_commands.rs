@@ -4,7 +4,7 @@ pub(super) fn cmd_build(path_str: &str) {
     if super::is_build_zen_path(path_str) {
         cmd_build_graph(path_str);
     } else {
-        super::compile_file_to_binary(path_str, None, None, &[]);
+        super::compile_file_to_binary(path_str, None, None, &[], &[]);
     }
 }
 
@@ -53,5 +53,6 @@ fn compile_build_target(target: &super::BuildGraphTarget) -> std::path::PathBuf 
         Some(&target.out_dir),
         Some(&target.name),
         &target.link,
+        &target.headers,
     )
 }
