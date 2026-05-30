@@ -1,67 +1,59 @@
-// Generic growable vector, heap-backed via @builtin intrinsics.
-// `{ Vec, vec_new, vec_push, vec_get, vec_len, vec_free } = std.collections.vec`
+// Generic growable vector, allocator-backed. The allocation strategy is the
+// `Alloc` type parameter (any `Allocator`) — system, arena, pool, … — instead
+// of hardcoded malloc. Use `vec_new(allocator)`, or `vec_new_default()` for the
+// system allocator.
+//   { Vec, vec_new, vec_new_default, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
-Vec<T>: { data: RawPtr<u8>, len: i64, cap: i64 }
+{ Allocator, Mallocator, mallocator } = std.memory.allocator
+
+Vec<T, Alloc: Allocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
 
 elem_size<T> = () i64 {
     cast(@builtin.sizeof<T>(), i64)
 }
 
-vec_new<T> = () Vec<T> {
-    Vec<T> {
-        data: @builtin.raw_allocate(@builtin.sizeof<T>() * 4),
+vec_new<T, Alloc: Allocator> = (alloc: Alloc) Vec<T, Alloc> {
+    Vec<T, Alloc> {
+        data: alloc.alloc(cast(elem_size<T>() * 4, usize)),
         len: 0,
         cap: 4,
+        alloc: alloc,
     }
 }
 
-vec_len<T> = (v: Vec<T>) i64 {
+// Convenience: a Vec on the default system allocator.
+vec_new_default<T> = () Vec<T, Mallocator> {
+    vec_new<T, Mallocator>(mallocator())
+}
+
+vec_len<T, Alloc: Allocator> = (v: Vec<T, Alloc>) i64 {
     v.len
 }
 
-vec_get<T> = (v: Vec<T>, index: i64) T {
+vec_get<T, Alloc: Allocator> = (v: Vec<T, Alloc>, index: i64) T {
     @builtin.load<T>(@builtin.gep(v.data, index * elem_size<T>()))
 }
 
-vec_push<T> = (v: Vec<T>, value: T) Vec<T> {
+vec_push<T, Alloc: Allocator> = (v: Vec<T, Alloc>, value: T) Vec<T, Alloc> {
     grown = v.len == v.cap ?
         | true {
             new_cap = v.cap * 2
-            Vec<T> {
-                data: @builtin.raw_reallocate(v.data, cast(v.cap * elem_size<T>(), usize), cast(new_cap * elem_size<T>(), usize)),
+            old_bytes = cast(v.cap * elem_size<T>(), usize)
+            new_bytes = cast(new_cap * elem_size<T>(), usize)
+            Vec<T, Alloc> {
+                data: v.alloc.realloc(v.data, old_bytes, new_bytes),
                 len: v.len,
                 cap: new_cap,
+                alloc: v.alloc,
             }
         }
         | false { v }
     @builtin.store(@builtin.gep(grown.data, grown.len * elem_size<T>()), value)
-    Vec<T> { data: grown.data, len: grown.len + 1, cap: grown.cap }
+    Vec<T, Alloc> { data: grown.data, len: grown.len + 1, cap: grown.cap, alloc: grown.alloc }
 }
 
-vec_free<T> = (v: Vec<T>) void {
-    @builtin.raw_deallocate(v.data, cast(v.cap * elem_size<T>(), usize))
+vec_free<T, Alloc: Allocator> = (v: Vec<T, Alloc>) void {
+    v.alloc.free(v.data, cast(v.cap * elem_size<T>(), usize))
 }
 
-fold_from<T, A> = (v: Vec<T>, acc: A, f: (A, T) A, i: i64) A {
-    i >= v.len ?
-        | true { acc }
-        | false { fold_from<T, A>(v, f(acc, vec_get<T>(v, i)), f, i + 1) }
-}
-
-// Left fold: combine every element into an accumulator with `f`.
-vec_fold<T, A> = (v: Vec<T>, init: A, f: (A, T) A) A {
-    fold_from<T, A>(v, init, f, 0)
-}
-
-map_from<T, U> = (v: Vec<T>, out: Vec<U>, f: (T) U, i: i64) Vec<U> {
-    i >= v.len ?
-        | true { out }
-        | false { map_from<T, U>(v, vec_push<U>(out, f(vec_get<T>(v, i))), f, i + 1) }
-}
-
-// Produce a new vector applying `f` to each element.
-vec_map<T, U> = (v: Vec<T>, f: (T) U) Vec<U> {
-    map_from<T, U>(v, vec_new<U>(), f, 0)
-}
-
-@export({ Vec, vec_new, vec_len, vec_get, vec_push, vec_free, vec_fold, vec_map })
+@export({ Vec, vec_new, vec_new_default, vec_len, vec_get, vec_push, vec_free })

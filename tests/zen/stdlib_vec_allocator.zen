@@ -1,0 +1,45 @@
+// Vec allocates through an Allocator, not hardcoded malloc. A custom counting
+// allocator proves it's actually threaded through (alloc + realloc on growth).
+{ io } = std
+{ Allocator, Mallocator } = std.memory.allocator
+{ Vec, vec_new, vec_new_default, vec_push, vec_get, vec_free } = std.collections.vec
+
+Counter: { hits: RawPtr<u8> }
+Counter.implements(Allocator) {
+    alloc = (self: Counter, size: usize) RawPtr<u8> {
+        @builtin.store(self.hits, @builtin.load<i64>(self.hits) + 1)
+        @builtin.raw_allocate(size)
+    }
+    realloc = (self: Counter, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        @builtin.store(self.hits, @builtin.load<i64>(self.hits) + 1)
+        @builtin.raw_reallocate(p, old, new)
+    }
+    free = (self: Counter, p: RawPtr<u8>, size: usize) void {
+        @builtin.raw_deallocate(p, size)
+    }
+}
+
+main = () i32 {
+    d ::= vec_new_default<i64>()
+    d = vec_push<i64, Mallocator>(d, 10)
+    d = vec_push<i64, Mallocator>(d, 20)
+    io.println("default_sum=${cast(vec_get<i64, Mallocator>(d, 0) + vec_get<i64, Mallocator>(d, 1), i32)}")
+    vec_free<i64, Mallocator>(d)
+
+    hits = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(hits, cast(0, i64))
+    v ::= vec_new<i64, Counter>(Counter { hits: hits })
+    i ::= 0
+    loop((l) {
+        i >= 8 ?
+            | true { l.done() }
+            | false {
+                v = vec_push<i64, Counter>(v, cast(i, i64))
+                i = i + 1
+                l.next()
+            }
+    })
+    io.println("counter_allocs=${cast(@builtin.load<i64>(hits), i32)}")
+    vec_free<i64, Counter>(v)
+    0
+}

@@ -99,3 +99,8 @@ fn test_ffi_extern() {
 fn test_stdlib_allocator() {
     run_test("stdlib_allocator");
 }
+
+#[test]
+fn test_stdlib_vec_allocator() {
+    run_test("stdlib_vec_allocator");
+}
