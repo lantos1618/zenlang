@@ -57,7 +57,7 @@ impl Resolver {
                 self.validate_impl_block_declaration(table, decl, diagnostics);
             }
             Declaration::Import { .. } => {}
-            // `@export` is validated/applied in resolve_program's marking pass.
+            // `@export` is desugared + stripped at parse time; never seen here.
             Declaration::Export { .. } => {}
             Declaration::Function { .. } | Declaration::Method { .. } => {}
             Declaration::Requires {

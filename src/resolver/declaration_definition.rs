@@ -159,7 +159,8 @@ impl Resolver {
             | Declaration::Requires { .. }
             | Declaration::Derive { .. }
             | Declaration::BehaviorExtends { .. }
-            // `@export` is applied as a separate pass in resolve_program.
+            // `@export` is desugared to `public` flags and stripped at parse
+            // time (apply_export_manifests), so it never reaches the resolver.
             | Declaration::Export { .. } => {}
         }
         Ok(())
