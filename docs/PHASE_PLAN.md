@@ -83,24 +83,28 @@ Landed:
   running headlessly under `xvfb-run`.
 
 Landed (L3 — better than Zig):
+- **Opaque `@extern` C types**: `@extern SDL_Window` (no `=`) declares an opaque
+  type, forward-declared `typedef struct N N;` and used behind pointers
+  (`RawPtr<SDL_Window>` → `SDL_Window*`). Lets FFI signatures name the real C
+  types, so `headers:` ABI-verify covers pointer APIs, not just primitives.
 - **ABI-verified `@extern`**: `headers: ["SDL3/SDL.h"]` on the Executable
   `#include`s the real header; since codegen emits a prototype per `@extern`,
   a signature mismatch becomes a C *"conflicting types"* error at build time
   instead of runtime UB — beating both Zig FFI modes, with no static-assert
-  machinery. Caveat: fits primitive/string signatures; opaque-pointer APIs
-  (modeled as `RawPtr<u8>`) can't be header-checked until Zen has an
-  opaque-C-type, so such projects omit `headers:`.
+  machinery. (Caveat: a Zen global must not collide with a header *macro*.)
 - **Auto string marshaling**: a `StaticString` `@extern` param lowers to
   `const char*` and call sites marshal via `zen_str.ptr` — no
   `@builtin.static_string_ptr`.
-- **Version-checked `link:`**: `link: ["sdl3 >= 3.2"]` is checked via
+- **Version-checked `link:`**: `link: ["sdl3 >= 3.2"]` (or
+  `[Lib { name: "sdl3", min: "3.2" }]`) is checked via
   `pkg-config --atleast-version` up front (`needs version >= X, found Y`).
+- Evidence: `~/sdl3-zen` declares SDL_Window/SDL_Renderer opaque, uses
+  `headers: ["SDL3/SDL.h"]` (ABI-verified against the real header) + a marshaled
+  `StaticString` title + version-checked `link:`; builds and runs under xvfb.
 
 Next (stretch):
 - **Effect-tracked FFI** (uniquely-Zen): model `@extern` calls in the existing
   host-effect system so the type system knows a call reaches into C.
-- **Opaque C types**: a Zen way to name `SDL_Window*` so `headers:` ABI-verify
-  covers pointer APIs too.
 
 Out of scope for Phase 6: a package manager (`packages:` stays gated), and
 `@cImport`-style header translation.
