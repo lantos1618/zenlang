@@ -50,6 +50,7 @@ Stdlib anti-slop pass: audit `stdlib/` for stale LLVM-era wording, direct raw-in
 This is a capability index, not a changelog. Granular evidence belongs in tests,
 golden fixtures, and git history.
 
+- Typed allocator (runtime foundation): `stdlib/memory/allocator.zen` is a real `Allocator` behavior (`alloc`/`realloc`/`free`) with a malloc-backed `Mallocator` default over the raw-memory `@builtin`s. `Vec` is `Vec<T, Alloc: Allocator>` — it allocates through the allocator, not hardcoded `@builtin.raw_allocate` (Stack/Queue pin the default). Proven by `stdlib_vec_allocator` (a counting allocator reports `counter_allocs=2`). Known gap: a generic behavior bound's impl isn't seeded transitively, so a program using Stack/Queue must also import `{ Allocator, Mallocator }`. "Type knownness" is now resolver-only (the typechecker's duplicate `E0201` was removed as redundant).
 - Phase 0 truth gates: README, contributor docs, stdlib, CI, release, old-spec quarantine, and docs shape are guarded by `tests/docs_truth`.
 - Phase 1 frontend and C-backend baseline: syntax and C execution are covered by `docs/V1_SPEC.md`, `tests/zen`, integration tests, and generated-C checks.
 - generic specialization: functions, structs, enums, methods, recursive worklists, imports, nested `Result<Option<T>, StaticString>`, and generated-C consistency are covered by executable and JSON-golden integration tests.
