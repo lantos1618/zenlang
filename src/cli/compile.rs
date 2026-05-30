@@ -82,16 +82,38 @@ pub(super) fn compile_file_to_binary(
 }
 
 /// Resolve the cc flags needed to link one system library named in build.zen's
-/// `link:` field. Prefers pkg-config (`--cflags --libs`, plus an rpath to the
-/// library directory so the binary runs without LD_LIBRARY_PATH); falls back to
-/// a bare `-l<name>` when pkg-config has no entry for it.
-fn link_flags_for_library(lib: &str) -> Vec<String> {
+/// `link:` field. An entry may carry a minimum-version constraint
+/// (`"SDL3 >= 3.2"`), which is checked against pkg-config up front with a clear
+/// error. Prefers pkg-config (`--cflags --libs`, plus an rpath to the library
+/// directory so the binary runs without LD_LIBRARY_PATH); falls back to a bare
+/// `-l<name>` when pkg-config has no entry for it.
+fn link_flags_for_library(entry: &str) -> Vec<String> {
+    // Split an optional `>= <version>` constraint off the library name.
+    let (lib, min_version) = match entry.split_once(">=") {
+        Some((name, ver)) => (name.trim(), Some(ver.trim())),
+        None => (entry.trim(), None),
+    };
+
     let pkg = |args: &[&str]| -> Option<String> {
         let out = process::Command::new("pkg-config").args(args).output().ok()?;
         out.status
             .success()
             .then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
     };
+
+    if let Some(min) = min_version {
+        let ok = process::Command::new("pkg-config")
+            .arg(format!("--atleast-version={min}"))
+            .arg(lib)
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if !ok {
+            let found = pkg(&["--modversion", lib]).unwrap_or_else(|| "not installed".into());
+            eprintln!("  link error: `{lib}` needs version >= {min}, found {found}");
+            process::exit(1);
+        }
+    }
 
     let mut flags = Vec::new();
     // `--exists` succeeds (empty stdout) only when pkg-config knows the library.
