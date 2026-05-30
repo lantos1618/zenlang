@@ -55,5 +55,7 @@ impl TypeChecker {
                 graph,
             );
         }
+
+        self.seed_transitive_behavior_impls(entry, graph);
     }
 }

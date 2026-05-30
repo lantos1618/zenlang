@@ -1,0 +1,14 @@
+// A Stack user should NOT have to import the allocator. Stack is built on the
+// default-allocator Vec; the Mallocator->Allocator impl must be seeded
+// transitively through std.collections.stack, not by this entry file.
+{ io } = std
+{ Stack, stack_new, stack_push, stack_peek, stack_len } = std.collections.stack
+
+main = () i32 {
+    s ::= stack_new<i64>()
+    s = stack_push<i64>(s, 3)
+    s = stack_push<i64>(s, 7)
+    io.println("stack_top=${cast(stack_peek<i64>(s), i32)}")
+    io.println("stack_len=${cast(stack_len<i64>(s), i32)}")
+    0
+}

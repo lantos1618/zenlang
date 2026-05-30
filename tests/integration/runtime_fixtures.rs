@@ -104,3 +104,13 @@ fn test_stdlib_allocator() {
 fn test_stdlib_vec_allocator() {
     run_test("stdlib_vec_allocator");
 }
+
+#[test]
+fn test_stdlib_stack_no_alloc_import() {
+    run_test("stdlib_stack_no_alloc_import");
+}
+
+#[test]
+fn test_stdlib_queue_no_alloc_import() {
+    run_test("stdlib_queue_no_alloc_import");
+}
