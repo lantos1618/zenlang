@@ -6,4 +6,4 @@ Holder.get<T> = (self: Holder<T>) T {
     self.value
 }
 
-@export({ Holder })
+@export({ Holder, Holder.get })

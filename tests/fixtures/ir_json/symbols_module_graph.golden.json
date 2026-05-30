@@ -1,66 +1,70 @@
 {
-  "format": "zen.symbols.v0",
-  "semantic_status": "resolved",
   "entry_module": 0,
+  "format": "zen.symbols.v0",
   "modules": [
     {
+      "canonical_path": "main.zen",
       "id": 0,
       "package_id": 0,
-      "canonical_path": "main.zen",
       "symbols": [
         {
+          "definition_span": {
+            "end": 15,
+            "file_id": 0,
+            "start": 1
+          },
           "id": 0,
-          "namespace": "Module",
+          "is_public": false,
           "name": "math",
-          "is_public": false,
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 1,
-            "end": 15
-          }
+          "namespace": "Module",
+          "scope_id": 0
         },
         {
+          "definition_span": {
+            "end": 15,
+            "file_id": 0,
+            "start": 1
+          },
           "id": 1,
-          "namespace": "Import",
-          "name": "add",
-          "is_public": false,
           "import_source": "math",
-          "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 1,
-            "end": 15
-          }
+          "is_public": false,
+          "name": "add",
+          "namespace": "Import",
+          "scope_id": 0
         },
         {
+          "definition_span": {
+            "end": 50,
+            "file_id": 0,
+            "start": 17
+          },
           "id": 2,
-          "namespace": "Value",
-          "name": "main",
           "is_public": false,
+          "name": "main",
+          "namespace": "Value",
           "parameter_names": [],
           "parameter_type_names": [],
           "return_type_name": "i32",
-          "type_parameter_names": [],
           "scope_id": 0,
-          "definition_span": {
-            "file_id": 0,
-            "start": 17,
-            "end": 50
-          }
+          "type_parameter_names": []
         }
       ]
     },
     {
+      "canonical_path": "math.zen",
       "id": 1,
       "package_id": 0,
-      "canonical_path": "math.zen",
       "symbols": [
         {
+          "definition_span": {
+            "end": 41,
+            "file_id": 1,
+            "start": 1
+          },
           "id": 0,
-          "namespace": "Value",
-          "name": "add",
           "is_public": true,
+          "name": "add",
+          "namespace": "Value",
           "parameter_names": [
             "a",
             "b"
@@ -70,41 +74,37 @@
             "i32"
           ],
           "return_type_name": "i32",
-          "type_parameter_names": [],
           "scope_id": 0,
-          "definition_span": {
-            "file_id": 1,
-            "start": 5,
-            "end": 45
-          }
+          "type_parameter_names": []
         },
         {
+          "definition_span": {
+            "end": 14,
+            "file_id": 1,
+            "start": 8
+          },
           "id": 1,
-          "namespace": "Local",
-          "name": "a",
-          "is_public": false,
           "is_mutable": false,
-          "scope_id": 1,
-          "definition_span": {
-            "file_id": 1,
-            "start": 12,
-            "end": 18
-          }
+          "is_public": false,
+          "name": "a",
+          "namespace": "Local",
+          "scope_id": 1
         },
         {
-          "id": 2,
-          "namespace": "Local",
-          "name": "b",
-          "is_public": false,
-          "is_mutable": false,
-          "scope_id": 1,
           "definition_span": {
+            "end": 22,
             "file_id": 1,
-            "start": 20,
-            "end": 26
-          }
+            "start": 16
+          },
+          "id": 2,
+          "is_mutable": false,
+          "is_public": false,
+          "name": "b",
+          "namespace": "Local",
+          "scope_id": 1
         }
       ]
     }
-  ]
+  ],
+  "semantic_status": "resolved"
 }

@@ -22,6 +22,17 @@ docs, tests, and commits only.
 - `Type.implements(Behavior)` covers non-generic explicit behavior associations
   until the solver supports advanced forms.
 - Dev UX and Agent UX are product requirements, not polish.
+- Keyword-free surface: Zen has NO hard keywords (`from_keyword` returns `None`
+  for everything; guarded by `zen_has_no_hard_keywords`). All "magic" is an
+  `@`-directive (`@std`/`@builtin`/`@this`/`@export`/`@extern`) or a sigil
+  (`=`, `::=`, `?`, `:`, `<>`, `.`). One way to do each thing.
+- Visibility: everything is private by default; the public surface is declared
+  by one `@export({ Name, Type.method })` manifest per module (methods exported
+  individually by dotted name, so per-method privacy is preserved). Desugared to
+  the `public` flag at parse time, so the rest of the pipeline is unchanged.
+  There is no `pub` keyword.
+- FFI: `@extern Name = (params) Ret` declares a C function; `link: [..]` on a
+  build.zen `Executable` links the library (pkg-config-resolved).
 
 ## Dev UX And Agent UX Track
 MoonBit-style toolchain integration is the benchmark: compiler, build graph, package surface, language server, VS Code extension, web/editor entry point, and machine-readable outputs should feel coherent.

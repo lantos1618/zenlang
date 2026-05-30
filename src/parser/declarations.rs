@@ -43,22 +43,32 @@ pub(super) fn apply_export_manifests(
                     matched.insert(name.clone());
                 }
             }
-            // Exporting a type exports the methods declared on it.
+            // A method is exported by its dotted name: `@export({ Box.get })`.
             Declaration::Method {
-                type_name, public, ..
+                type_name,
+                method_name,
+                public,
+                ..
             } => {
-                if exported.contains(type_name) {
+                let key = format!("{type_name}.{method_name}");
+                if exported.contains(&key) {
                     *public = true;
-                    matched.insert(type_name.clone());
+                    matched.insert(key);
                 }
             }
-            // ...and the methods of impl blocks on an exported type.
+            // Methods inside an impl block are exported the same way, by
+            // `Type.method`. Privacy is per-method: an unlisted method stays
+            // private even when its type is exported.
             Declaration::ImplBlock {
                 type_name, methods, ..
             } => {
-                if exported.contains(type_name) {
-                    matched.insert(type_name.clone());
-                    for method in methods.iter_mut() {
+                for method in methods.iter_mut() {
+                    let Some(mname) = method.name().map(str::to_string) else {
+                        continue;
+                    };
+                    let key = format!("{type_name}.{mname}");
+                    if exported.contains(&key) {
+                        matched.insert(key);
                         match method {
                             Declaration::Function { public, .. }
                             | Declaration::Method { public, .. } => *public = true,
@@ -101,13 +111,9 @@ impl Parser {
             return self.parse_export_manifest();
         }
 
-        let public = if matches!(self.peek(), Token::Pub) {
-            self.advance();
-            self.skip_newlines();
-            true
-        } else {
-            false
-        };
+        // Everything is private by default; visibility is granted only by an
+        // `@export({ ... })` manifest (desugared in apply_export_manifests).
+        let public = false;
 
         if matches!(self.peek(), Token::AtExtern) {
             let extern_span = self.peek_span();
@@ -177,7 +183,14 @@ impl Parser {
             if matches!(self.peek(), Token::RBrace) {
                 break;
             }
-            let (name, _) = self.expect_identifier()?;
+            // An export entry is a bare name (`Point`) or a dotted method ref
+            // (`Box.get`) — methods are exported individually.
+            let (mut name, _) = self.expect_identifier()?;
+            if matches!(self.peek(), Token::Dot) {
+                self.advance();
+                let (method, _) = self.expect_identifier()?;
+                name = format!("{name}.{method}");
+            }
             names.push(name);
             self.skip_newlines();
             if !self.consume_comma() {

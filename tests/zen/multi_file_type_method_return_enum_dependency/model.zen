@@ -15,4 +15,4 @@ Box.value_or<T> = (self: Box<T>, fallback: T) T {
         | None { fallback }
 }
 
-@export({ Box })
+@export({ Box, Box.wrap, Box.value_or })

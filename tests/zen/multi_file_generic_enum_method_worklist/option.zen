@@ -12,4 +12,4 @@ Option.value_or<T> = (self: Self, fallback: T) T {
     self.unwrap_or<T>(fallback)
 }
 
-@export({ Option })
+@export({ Option, Option.unwrap_or, Option.value_or })

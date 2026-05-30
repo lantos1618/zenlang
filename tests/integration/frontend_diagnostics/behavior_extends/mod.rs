@@ -2,19 +2,21 @@ mod inherited_requirements;
 mod overlaps;
 
 const JSON_PRETTY_TRAITS: &str = r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub PrettyJson: behavior {
+PrettyJson: behavior {
     pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json<StaticString>)
+@export({ Json, PrettyJson })
 "#;
 
 const GENERIC_JSON_TRAIT: &str = r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
+@export({ Json })
 "#;

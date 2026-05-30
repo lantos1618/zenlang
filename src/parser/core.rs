@@ -91,7 +91,11 @@ impl Parser {
                 Token::Newline => {
                     self.advance();
                     match self.peek() {
-                        Token::Identifier(_) | Token::Pub | Token::LBrace | Token::EOF => return,
+                        Token::Identifier(_)
+                        | Token::AtExport
+                        | Token::AtExtern
+                        | Token::LBrace
+                        | Token::EOF => return,
                         _ => {}
                     }
                 }

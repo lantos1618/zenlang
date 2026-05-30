@@ -46,11 +46,12 @@ fn imported_behavior_extends_imported_parent_requires_parent_methods() {
                 r#"
 { Json } = base
 
-pub PrettyJson: behavior {
+PrettyJson: behavior {
     pretty: (Self) StaticString
 }
 
 PrettyJson.extends(Json<StaticString>)
+@export({ PrettyJson })
 "#,
             ),
         ],
@@ -86,20 +87,21 @@ fn imported_behavior_extends_requires_transitive_parent_methods() {
     let diagnostics = frontend_diagnostics_for_module(
         "traits.zen",
         r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub PrettyJson: behavior {
+PrettyJson: behavior {
     pretty: (Self) StaticString
 }
 
-pub FancyJson: behavior {
+FancyJson: behavior {
     fancy: (Self) StaticString
 }
 
 PrettyJson.extends(Json<StaticString>)
 FancyJson.extends(PrettyJson)
+@export({ Json, PrettyJson, FancyJson })
 "#,
         r#"
 { FancyJson } = traits

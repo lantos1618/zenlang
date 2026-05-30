@@ -10,4 +10,4 @@ Box.get_inner<T> = (self: Box<T>) T {
     self.inner<T>()
 }
 
-@export({ Box })
+@export({ Box, Box.get_inner })

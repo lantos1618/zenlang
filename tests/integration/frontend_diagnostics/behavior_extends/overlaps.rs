@@ -48,20 +48,21 @@ fn imported_behavior_extends_transitive_parent_impl_overlap_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "traits.zen",
         r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub CompactJson: behavior {
+CompactJson: behavior {
     compact: (Self) StaticString
 }
 
-pub PrettyJson: behavior {
+PrettyJson: behavior {
     pretty: (Self) StaticString
 }
 
 CompactJson.extends(Json<StaticString>)
 PrettyJson.extends(CompactJson)
+@export({ Json, CompactJson, PrettyJson })
 "#,
         r#"
 { Json, PrettyJson } = traits

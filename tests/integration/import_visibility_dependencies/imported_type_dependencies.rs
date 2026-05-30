@@ -7,13 +7,14 @@ fn imported_type_impl_imported_type_dependencies_are_not_directly_visible() {
             (
                 "helper.zen",
                 r#"
-pub Holder<T>: {
+Holder<T>: {
     value: T
 }
 
-pub Holder.get<T> = (self: Holder<T>) T {
+Holder.get<T> = (self: Holder<T>) T {
     self.value
 }
+@export({ Holder, Holder.get })
 "#,
             ),
             (
@@ -21,16 +22,17 @@ pub Holder.get<T> = (self: Holder<T>) T {
                 r#"
 { Holder } = helper
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
 Box.impl = {
-    pub get_held<T> = (self: Box<T>) T {
+    get_held<T> = (self: Box<T>) T {
         holder = Holder<T> { value: self.value }
         holder.get<T>()
     }
 }
+@export({ Box, Box.get_held })
 "#,
             ),
         ],
@@ -63,13 +65,14 @@ fn imported_generic_function_imported_type_dependencies_are_not_directly_visible
             (
                 "helper.zen",
                 r#"
-pub Holder<T>: {
+Holder<T>: {
     value: T
 }
 
-pub Holder.get<T> = (self: Holder<T>) T {
+Holder.get<T> = (self: Holder<T>) T {
     self.value
 }
+@export({ Holder, Holder.get })
 "#,
             ),
             (
@@ -77,10 +80,11 @@ pub Holder.get<T> = (self: Holder<T>) T {
                 r#"
 { Holder } = helper
 
-pub get_held<T> = (value: T) T {
+get_held<T> = (value: T) T {
     holder = Holder<T> { value: value }
     holder.get<T>()
 }
+@export({ get_held })
 "#,
             ),
         ],

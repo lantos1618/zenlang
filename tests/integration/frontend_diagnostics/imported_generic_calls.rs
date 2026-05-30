@@ -8,9 +8,10 @@ fn imported_generic_function_inference_conflict_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
-pub choose<T> = (left: T, right: T) T {
+choose<T> = (left: T, right: T) T {
     left
 }
+@export({ choose })
 "#,
         r#"
 { choose } = helpers
@@ -40,13 +41,14 @@ fn imported_generic_method_inference_conflict_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "boxes.zen",
         r#"
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Box.choose<T> = (self: Box<T>, other: T) T {
+Box.choose<T> = (self: Box<T>, other: T) T {
     self.value
 }
+@export({ Box, Box.choose })
 "#,
         r#"
 { Box } = boxes
@@ -77,9 +79,10 @@ fn imported_generic_ufc_explicit_type_arg_arity_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
-pub take_second<T, U> = (first: T, second: U) U {
+take_second<T, U> = (first: T, second: U) U {
     second
 }
+@export({ take_second })
 "#,
         r#"
 { take_second } = helpers
@@ -109,9 +112,10 @@ fn imported_nongeneric_ufc_explicit_type_args_are_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
-pub id_i32 = (value: i32) i32 {
+id_i32 = (value: i32) i32 {
     value
 }
+@export({ id_i32 })
 "#,
         r#"
 { id_i32 } = helpers
@@ -138,9 +142,10 @@ fn imported_generic_ufc_behavior_bound_failure_is_error() {
             (
                 "traits.zen",
                 r#"
-pub Json: behavior {
+Json: behavior {
     encode: (Self) StaticString
 }
+@export({ Json })
 "#,
             ),
             (
@@ -148,9 +153,10 @@ pub Json: behavior {
                 r#"
 { Json } = traits
 
-pub as_json<T: Json> = (value: T) StaticString {
+as_json<T: Json> = (value: T) StaticString {
     value.encode()
 }
+@export({ as_json })
 "#,
             ),
         ],

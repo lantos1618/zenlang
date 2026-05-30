@@ -11,4 +11,4 @@ Box.impl = {
     }
 }
 
-@export({ Box })
+@export({ Box, Box.get_held })

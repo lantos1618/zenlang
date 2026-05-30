@@ -8,4 +8,4 @@ Option.unwrap_or<T> = (self: Self, fallback: T) T {
         | None { fallback }
 }
 
-@export({ Option })
+@export({ Option, Option.unwrap_or })

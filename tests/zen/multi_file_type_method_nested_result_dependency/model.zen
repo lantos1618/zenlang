@@ -20,4 +20,4 @@ unwrap_result<T, E> = (value: Result<T, E>, fallback: T) T {
         | Err(_) { fallback }
 }
 
-@export({ Box, unwrap_option, unwrap_result })
+@export({ Box, Box.wrap_result, unwrap_option, unwrap_result })

@@ -8,4 +8,4 @@ Box.get_inner<T> = (self: Box<T>) T {
     inner(self.value)
 }
 
-@export({ Box })
+@export({ Box, Box.get_inner })

@@ -15,9 +15,10 @@ fn write_subject(tmp: &tempfile::TempDir) -> std::path::PathBuf {
         tmp,
         "math.zen",
         r#"
-pub add = (a: i32, b: i32) i32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
+@export({ add })
 "#,
     );
 

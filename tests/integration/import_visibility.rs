@@ -10,13 +10,14 @@ inner<T> = (value: T) T {
     value
 }
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Box.get_inner<T> = (self: Box<T>) T {
+Box.get_inner<T> = (self: Box<T>) T {
     inner(self.value)
 }
+@export({ Box, Box.get_inner })
 "#,
         )],
         r#"
@@ -41,7 +42,7 @@ fn imported_type_method_dependencies_are_not_directly_visible() {
         &[(
             "model.zen",
             r#"
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
@@ -49,9 +50,10 @@ Box.inner<T> = (self: Box<T>) T {
     self.value
 }
 
-pub Box.get_inner<T> = (self: Box<T>) T {
+Box.get_inner<T> = (self: Box<T>) T {
     self.inner<T>()
 }
+@export({ Box, Box.get_inner })
 "#,
         )],
         r#"
@@ -81,9 +83,10 @@ fn imported_type_method_imported_dependencies_are_not_directly_visible() {
             (
                 "helper.zen",
                 r#"
-pub inner<T> = (value: T) T {
+inner<T> = (value: T) T {
     value
 }
+@export({ inner })
 "#,
             ),
             (
@@ -91,13 +94,14 @@ pub inner<T> = (value: T) T {
                 r#"
 { inner } = helper
 
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Box.get_inner<T> = (self: Box<T>) T {
+Box.get_inner<T> = (self: Box<T>) T {
     inner(self.value)
 }
+@export({ Box, Box.get_inner })
 "#,
             ),
         ],

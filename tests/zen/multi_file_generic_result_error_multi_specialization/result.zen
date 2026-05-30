@@ -8,4 +8,4 @@ Result.unwrap_err<T, E> = (self: Self, fallback: E) E {
         | Err(error) { error }
 }
 
-@export({ Result })
+@export({ Result, Result.unwrap_err })

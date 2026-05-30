@@ -6,7 +6,7 @@ fn imported_private_type_impl_methods_are_not_visible() {
         &[(
             "model.zen",
             r#"
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
@@ -15,6 +15,7 @@ Box.impl = {
         self.value
     }
 }
+@export({ Box })
 "#,
         )],
         r#"
@@ -44,7 +45,7 @@ Hidden: behavior {
     reveal: (Self) StaticString
 }
 
-pub Point: {
+Point: {
     x: i32
 }
 
@@ -53,6 +54,7 @@ Point.implements(Hidden) {
         "hidden"
     }
 }
+@export({ Point })
 "#,
         )],
         r#"

@@ -6,4 +6,4 @@ Point.keep<T> = (self: Point, value: T) T {
     value
 }
 
-@export({ Point })
+@export({ Point, Point.keep })

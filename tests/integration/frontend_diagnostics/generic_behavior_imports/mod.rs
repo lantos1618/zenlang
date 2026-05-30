@@ -6,9 +6,10 @@ use super::support::frontend_diagnostics_for_module;
 use zen::error::Diagnostic;
 
 const GENERIC_JSON_TRAIT: &str = r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
+@export({ Json })
 "#;
 
 fn generic_json_diagnostics(main: &str) -> Vec<Diagnostic> {

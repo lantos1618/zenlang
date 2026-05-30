@@ -58,8 +58,6 @@ pub enum Token {
     AtExport,  // @export
     AtExtern,  // @extern (C FFI function declaration)
 
-    Pub, // pub
-
     Newline,
     EOF,
 }
@@ -119,11 +117,12 @@ impl Token {
             .find_map(|(spelling, token)| (*spelling == ch).then(|| token.clone()))
     }
 
-    pub(in crate::lexer) fn from_keyword(word: &str) -> Option<Self> {
-        match word {
-            "pub" => Some(Self::Pub),
-            _ => None,
-        }
+    /// Zen has no hard keywords — every "magic" word is an `@`-directive
+    /// (`@std`/`@builtin`/`@this`/`@export`/`@extern`) or a sigil, so a bare
+    /// word is always an identifier. Kept as the single guard point for that
+    /// invariant (see the keyword-free test).
+    pub(in crate::lexer) fn from_keyword(_word: &str) -> Option<Self> {
+        None
     }
 
     pub(in crate::lexer) fn from_at_name(word: &str) -> Option<Self> {
@@ -134,6 +133,32 @@ impl Token {
             "export" => Some(Self::AtExport),
             "extern" => Some(Self::AtExtern),
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Token;
+
+    /// Zen invariant: there are NO hard keywords. Every reserved/"magic" word is
+    /// an `@`-directive or a sigil, so any bare word lexes as an identifier.
+    /// `from_keyword` must return `None` for everything — including words that
+    /// are keywords in other languages and the ones Zen itself once reserved
+    /// (`pub`, `extern`, now `@export`/`@extern`).
+    #[test]
+    fn zen_has_no_hard_keywords() {
+        for word in [
+            "pub", "extern", "fn", "let", "const", "mut", "if", "else", "match",
+            "loop", "return", "struct", "enum", "behavior", "impl", "type",
+            "import", "export", "use", "mod", "pub_", "true", "false", "self",
+            "this", "and", "or", "not", "while", "for", "in", "defer", "cast",
+        ] {
+            assert_eq!(
+                Token::from_keyword(word),
+                None,
+                "`{word}` must lex as an identifier — Zen is keyword-free",
+            );
         }
     }
 }

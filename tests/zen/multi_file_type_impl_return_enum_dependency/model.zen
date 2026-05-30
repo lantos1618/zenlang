@@ -17,4 +17,4 @@ Box.impl = {
     }
 }
 
-@export({ Box })
+@export({ Box, Box.wrap, Box.value_or })

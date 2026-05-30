@@ -31,13 +31,14 @@ fn integration_frontend_helper_reports_imported_module_type_diagnostics() {
         &[(
             "math.zen",
             r#"
-pub add = (a: i32, b: i32) i32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
 
-pub broken = () i32 {
+broken = () i32 {
     true
 }
+@export({ add, broken })
 "#,
         )],
         r#"

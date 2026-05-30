@@ -40,12 +40,13 @@ Point: { y: i32 }
 fn resolver_records_public_visibility_for_exported_declarations() {
     let table = resolved_symbols(
         r#"
-pub PublicPoint: { x: i32 }
+PublicPoint: { x: i32 }
 PrivatePoint: { x: i32 }
-pub Json<T>: behavior { encode: (Self) T }
+Json<T>: behavior { encode: (Self) T }
 InternalJson: behavior { encode: (Self) i32 }
-pub exported = () i32 { 1 }
+exported = () i32 { 1 }
 internal = () i32 { 2 }
+@export({ PublicPoint, Json, exported })
 "#,
     );
 

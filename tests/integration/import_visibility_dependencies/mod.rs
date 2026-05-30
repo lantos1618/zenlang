@@ -12,9 +12,10 @@ inner<T> = (value: T) T {
     value
 }
 
-pub middle<T> = (value: T) T {
+middle<T> = (value: T) T {
     inner(value)
 }
+@export({ middle })
 "#,
             ),
             (
@@ -22,9 +23,10 @@ pub middle<T> = (value: T) T {
                 r#"
 { middle } = helper
 
-pub outer<T> = (value: T) T {
+outer<T> = (value: T) T {
     middle(value)
 }
+@export({ outer })
 "#,
             ),
         ],
@@ -53,13 +55,14 @@ fn imported_function_signature_type_dependencies_are_not_directly_visible() {
         &[(
             "model.zen",
             r#"
-pub Point: {
+Point: {
     x: i32
 }
 
-pub make_point = () Point {
+make_point = () Point {
     Point { x: 109 }
 }
+@export({ Point, make_point })
 "#,
         )],
         r#"

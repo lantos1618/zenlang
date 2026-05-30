@@ -26,13 +26,14 @@ fn check_command_reports_imported_module_resolver_diagnostics() {
         &tmp,
         "math.zen",
         r#"
-pub add = (a: i32, b: i32) i32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
 
-pub broken = () i32 {
+broken = () i32 {
     missing_dep_local
 }
+@export({ add, broken })
 "#,
     );
 

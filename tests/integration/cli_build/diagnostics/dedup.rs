@@ -7,13 +7,14 @@ fn check_command_deduplicates_typechecker_diagnostics() {
         &tmp,
         "traits.zen",
         r#"
-pub Json<T>: behavior {
+Json<T>: behavior {
     encode: (Self) T
 }
 
-pub Point: {
+Point: {
     x: i32
 }
+@export({ Json, Point })
 "#,
     );
 

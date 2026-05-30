@@ -2,7 +2,7 @@
 //
 // Shows how to organize reusable functions in a separate file.
 
-pub clamp = (value: i32, lo: i32, hi: i32) i32 {
+clamp = (value: i32, lo: i32, hi: i32) i32 {
     lower = value < lo ?
         | true { lo }
         | false { value }
@@ -11,12 +11,14 @@ pub clamp = (value: i32, lo: i32, hi: i32) i32 {
         | false { lower }
 }
 
-pub factorial = (n: i32) i32 {
+factorial = (n: i32) i32 {
     n <= 1 ?
         | true { 1 }
         | false { n * factorial(n - 1) }
 }
 
-pub is_even = (n: i32) bool {
+is_even = (n: i32) bool {
     n % 2 == 0
 }
+
+@export({ clamp, factorial, is_even })

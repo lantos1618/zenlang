@@ -10,9 +10,10 @@ fn write_two_module_project(tmp: &tempfile::TempDir) -> PathBuf {
         tmp,
         "math.zen",
         r#"
-pub add = (a: i32, b: i32) i32 {
+add = (a: i32, b: i32) i32 {
     a + b
 }
+@export({ add })
 "#,
     );
 

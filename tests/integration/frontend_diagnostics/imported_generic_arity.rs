@@ -8,15 +8,16 @@ fn imported_generic_enum_method_explicit_type_arg_arity_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "result.zen",
         r#"
-pub Result<T, E>:
+Result<T, E>:
     Ok(T),
     Err(E)
 
-pub Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
+Result.unwrap_or<T, E> = (self: Self, fallback: T) T {
     self ?
         | Ok(value) { value }
         | Err(_) { fallback }
 }
+@export({ Result, Result.unwrap_or })
 "#,
         r#"
 { Result } = result
@@ -46,9 +47,10 @@ fn imported_generic_function_explicit_type_arg_arity_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "helpers.zen",
         r#"
-pub take_second<T, U> = (value: U) U {
+take_second<T, U> = (value: U) U {
     value
 }
+@export({ take_second })
 "#,
         r#"
 { take_second } = helpers
@@ -77,13 +79,14 @@ fn imported_generic_aggregate_constructor_type_arg_arity_is_error() {
     let diagnostics = frontend_diagnostics_for_module(
         "types.zen",
         r#"
-pub Box<T>: {
+Box<T>: {
     value: T
 }
 
-pub Option<T>:
+Option<T>:
     Some(T),
     None
+@export({ Box, Option })
 "#,
         r#"
 { Box, Option } = types
