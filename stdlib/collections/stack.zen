@@ -3,30 +3,32 @@
 
 { Vec, vec_new, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
-pub Stack<T>: { items: Vec<T> }
+Stack<T>: { items: Vec<T> }
 
-pub stack_new<T> = () Stack<T> {
+stack_new<T> = () Stack<T> {
     Stack<T> { items: vec_new<T>() }
 }
 
-pub stack_len<T> = (s: Stack<T>) i64 {
+stack_len<T> = (s: Stack<T>) i64 {
     vec_len<T>(s.items)
 }
 
-pub stack_push<T> = (s: Stack<T>, value: T) Stack<T> {
+stack_push<T> = (s: Stack<T>, value: T) Stack<T> {
     Stack<T> { items: vec_push<T>(s.items, value) }
 }
 
-pub stack_peek<T> = (s: Stack<T>) T {
+stack_peek<T> = (s: Stack<T>) T {
     vec_get<T>(s.items, vec_len<T>(s.items) - 1)
 }
 
 // Drop the top element. The popped value is read with `stack_peek` first; this
 // shrinks the logical length without reallocating.
-pub stack_pop<T> = (s: Stack<T>) Stack<T> {
+stack_pop<T> = (s: Stack<T>) Stack<T> {
     Stack<T> { items: Vec<T> { data: s.items.data, len: s.items.len - 1, cap: s.items.cap } }
 }
 
-pub stack_free<T> = (s: Stack<T>) void {
+stack_free<T> = (s: Stack<T>) void {
     vec_free<T>(s.items)
 }
+
+@export({ Stack, stack_new, stack_len, stack_push, stack_peek, stack_pop, stack_free })

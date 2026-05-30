@@ -4,29 +4,31 @@
 
 { Vec, vec_new, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
-pub Queue<T>: { items: Vec<T>, head: i64 }
+Queue<T>: { items: Vec<T>, head: i64 }
 
-pub queue_new<T> = () Queue<T> {
+queue_new<T> = () Queue<T> {
     Queue<T> { items: vec_new<T>(), head: 0 }
 }
 
-pub queue_len<T> = (q: Queue<T>) i64 {
+queue_len<T> = (q: Queue<T>) i64 {
     vec_len<T>(q.items) - q.head
 }
 
-pub queue_enqueue<T> = (q: Queue<T>, value: T) Queue<T> {
+queue_enqueue<T> = (q: Queue<T>, value: T) Queue<T> {
     Queue<T> { items: vec_push<T>(q.items, value), head: q.head }
 }
 
-pub queue_peek<T> = (q: Queue<T>) T {
+queue_peek<T> = (q: Queue<T>) T {
     vec_get<T>(q.items, q.head)
 }
 
 // Advance past the front element. Read it with `queue_peek` first.
-pub queue_dequeue<T> = (q: Queue<T>) Queue<T> {
+queue_dequeue<T> = (q: Queue<T>) Queue<T> {
     Queue<T> { items: q.items, head: q.head + 1 }
 }
 
-pub queue_free<T> = (q: Queue<T>) void {
+queue_free<T> = (q: Queue<T>) void {
     vec_free<T>(q.items)
 }
+
+@export({ Queue, queue_new, queue_len, queue_enqueue, queue_peek, queue_dequeue, queue_free })

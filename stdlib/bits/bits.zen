@@ -3,26 +3,28 @@
 // module is the stdlib surface programs call. `{ .. } = std.bits.bits`.
 
 // Number of set bits (population count).
-pub count_ones = (x: u64) u64 {
+count_ones = (x: u64) u64 {
     @builtin.ctpop(x)
 }
 
 // Number of leading zero bits (from the most-significant end of a u64).
-pub leading_zeros = (x: u64) u64 {
+leading_zeros = (x: u64) u64 {
     @builtin.ctlz(x)
 }
 
 // Number of trailing zero bits (from the least-significant end).
-pub trailing_zeros = (x: u64) u64 {
+trailing_zeros = (x: u64) u64 {
     @builtin.cttz(x)
 }
 
 // Reverse the byte order of a 64-bit value.
-pub byte_swap = (x: u64) u64 {
+byte_swap = (x: u64) u64 {
     @builtin.bswap64(x)
 }
 
 // True when x is a power of two (exactly one bit set).
-pub is_power_of_two = (x: u64) bool {
+is_power_of_two = (x: u64) bool {
     @builtin.ctpop(x) == 1
 }
+
+@export({ count_ones, leading_zeros, trailing_zeros, byte_swap, is_power_of_two })

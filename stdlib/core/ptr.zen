@@ -8,21 +8,23 @@ cell_size = () i64 {
 }
 
 // Allocate a buffer holding `count` i64 cells.
-pub i64_alloc = (count: i64) RawPtr<u8> {
+i64_alloc = (count: i64) RawPtr<u8> {
     @builtin.raw_allocate(cast(count * cell_size(), usize))
 }
 
 // Read the i64 stored in cell `index`.
-pub i64_read = (p: RawPtr<u8>, index: i64) i64 {
+i64_read = (p: RawPtr<u8>, index: i64) i64 {
     @builtin.load<i64>(@builtin.gep(p, index * cell_size()))
 }
 
 // Write `value` into cell `index`.
-pub i64_write = (p: RawPtr<u8>, index: i64, value: i64) void {
+i64_write = (p: RawPtr<u8>, index: i64, value: i64) void {
     @builtin.store(@builtin.gep(p, index * cell_size()), value)
 }
 
 // Free a buffer previously allocated for `count` cells.
-pub i64_free = (p: RawPtr<u8>, count: i64) void {
+i64_free = (p: RawPtr<u8>, count: i64) void {
     @builtin.raw_deallocate(p, cast(count * cell_size(), usize))
 }
+
+@export({ i64_alloc, i64_read, i64_write, i64_free })

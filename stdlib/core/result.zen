@@ -2,18 +2,20 @@
 // that can fail with an error value.
 // `{ Result, result_unwrap_or, result_is_ok } = std.core.result`
 
-pub Result<T, E>:
+Result<T, E>:
     Ok(T),
     Err(E)
 
-pub result_unwrap_or<T, E> = (value: Result<T, E>, fallback: T) T {
+result_unwrap_or<T, E> = (value: Result<T, E>, fallback: T) T {
     value ?
         | Ok(inner) { inner }
         | Err(_) { fallback }
 }
 
-pub result_is_ok<T, E> = (value: Result<T, E>) bool {
+result_is_ok<T, E> = (value: Result<T, E>) bool {
     value ?
         | Ok(_) { true }
         | Err(_) { false }
 }
+
+@export({ Result, result_unwrap_or, result_is_ok })

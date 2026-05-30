@@ -3,11 +3,13 @@
 // `HashMap` key.
 // `{ Eq, Hashable } = std.core.cmp`
 
-pub Eq: behavior {
+Eq: behavior {
     eq: (Self, Self) bool
 }
 
-pub Hashable: behavior {
+Hashable: behavior {
     hash: (Self) i64
     eq: (Self, Self) bool
 }
+
+@export({ Eq, Hashable })

@@ -7,7 +7,7 @@
 // 3.6e13, well within i64, so there is no overflow or undefined behaviour. The
 // modulus 2147483647 is prime, giving a full period over [1, 2147483646].
 
-pub Rng: { state: i64 }
+Rng: { state: i64 }
 
 MODULUS = cast(2147483647, i64)
 MULTIPLIER = cast(16807, i64)
@@ -15,7 +15,7 @@ MULTIPLIER = cast(16807, i64)
 // Seed the generator. The state must be a non-zero value in
 // [1, MODULUS - 1] (a zero state would make the sequence stick at 0), so we
 // fold the seed into range and bump 0 to 1. Pass a non-negative seed.
-pub rng_new = (seed: i64) Rng {
+rng_new = (seed: i64) Rng {
     s = seed % MODULUS
     s == 0 ?
         | true { Rng { state: 1 } }
@@ -23,16 +23,18 @@ pub rng_new = (seed: i64) Rng {
 }
 
 // Advance to the next state.
-pub rng_next = (r: Rng) Rng {
+rng_next = (r: Rng) Rng {
     Rng { state: (MULTIPLIER * r.state) % MODULUS }
 }
 
 // The current raw state, in [1, MODULUS - 1].
-pub rng_value = (r: Rng) i64 {
+rng_value = (r: Rng) i64 {
     r.state
 }
 
 // Current state reduced into [0, bound) for bound > 0.
-pub rng_below = (r: Rng, bound: i64) i64 {
+rng_below = (r: Rng, bound: i64) i64 {
     r.state % bound
 }
+
+@export({ Rng, rng_new, rng_next, rng_value, rng_below })

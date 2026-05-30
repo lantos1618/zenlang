@@ -7,45 +7,45 @@ E = 2.71828182845904523536
 // Integer Math Functions
 
 // Absolute value (generic)
-pub abs<T> = (n: T) T {
+abs<T> = (n: T) T {
     n < 0 ?
         | true { -n }
         | false { n }
 }
 
 // Factorial (u32 -> u64 to avoid overflow)
-pub factorial = (n: u32) u64 {
+factorial = (n: u32) u64 {
     n == 0 ?
         | true { 1 }
         | false { cast(n, u64) * factorial(n - 1) }
 }
 
 // Check if even
-pub is_even = (n: i32) bool {
+is_even = (n: i32) bool {
     n % 2 == 0
 }
 
 // Check if odd
-pub is_odd = (n: i32) bool {
+is_odd = (n: i32) bool {
     n % 2 != 0
 }
 
 // Max of two values (generic)
-pub max<T> = (a: T, b: T) T {
+max<T> = (a: T, b: T) T {
     a > b ?
         | true { a }
         | false { b }
 }
 
 // Min of two values (generic)
-pub min<T> = (a: T, b: T) T {
+min<T> = (a: T, b: T) T {
     a < b ?
         | true { a }
         | false { b }
 }
 
 // Clamp value to range
-pub clamp = (n: i32, low: i32, high: i32) i32 {
+clamp = (n: i32, low: i32, high: i32) i32 {
     n < low ?
         | true { low }
         | false {
@@ -56,26 +56,26 @@ pub clamp = (n: i32, low: i32, high: i32) i32 {
 }
 
 // Greatest common divisor (Euclid), on non-negative i64.
-pub gcd = (a: i64, b: i64) i64 {
+gcd = (a: i64, b: i64) i64 {
     b == 0 ?
         | true { a }
         | false { gcd(b, a % b) }
 }
 
 // Integer exponentiation: base^exp for exp >= 0.
-pub pow = (base: i64, exp: i64) i64 {
+pow = (base: i64, exp: i64) i64 {
     exp == 0 ?
         | true { cast(1, i64) }
         | false { base * pow(base, exp - 1) }
 }
 
 // Least common multiple of two positive i64 (a/gcd*b avoids overflow vs a*b).
-pub lcm = (a: i64, b: i64) i64 {
+lcm = (a: i64, b: i64) i64 {
     (a / gcd(a, b)) * b
 }
 
 // Sign of an i64: -1, 0, or 1.
-pub sign = (n: i64) i64 {
+sign = (n: i64) i64 {
     n > 0 ?
         | true { cast(1, i64) }
         | false {
@@ -86,7 +86,7 @@ pub sign = (n: i64) i64 {
 }
 
 // Absolute difference |a - b| without risking a negative intermediate.
-pub abs_diff = (a: i64, b: i64) i64 {
+abs_diff = (a: i64, b: i64) i64 {
     a > b ?
         | true { a - b }
         | false { b - a }
@@ -99,7 +99,7 @@ isqrt_iter = (n: i64, x: i64) i64 {
         | true { x }
         | false { isqrt_iter(n, next) }
 }
-pub isqrt = (n: i64) i64 {
+isqrt = (n: i64) i64 {
     n < 2 ?
         | true { n }
         | false { isqrt_iter(n, n / 2) }
@@ -115,3 +115,5 @@ I32_MAX = 2147483647
 U8_MAX = 255
 U16_MAX = 65535
 U32_MAX = 4294967295
+
+@export({ abs, factorial, is_even, is_odd, max, min, clamp, gcd, pow, lcm, sign, abs_diff, isqrt })

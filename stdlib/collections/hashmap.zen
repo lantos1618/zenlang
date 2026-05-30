@@ -7,15 +7,15 @@
 { Hashable } = std.core.cmp
 { Option } = std.core.option
 
-pub Entry<K, V>: { key: K, value: V, next: RawPtr<u8> }
+Entry<K, V>: { key: K, value: V, next: RawPtr<u8> }
 
-pub HashMap<K: Hashable, V>: { buckets: RawPtr<u8>, nbuckets: i64, len: i64 }
+HashMap<K: Hashable, V>: { buckets: RawPtr<u8>, nbuckets: i64, len: i64 }
 
 ptr_slot = (i: i64) i64 {
     i * cast(@builtin.sizeof<RawPtr<u8>>(), i64)
 }
 
-pub hashmap_new<K: Hashable, V> = () HashMap<K, V> {
+hashmap_new<K: Hashable, V> = () HashMap<K, V> {
     n ::= cast(8, i64)
     bytes ::= cast(ptr_slot(n), usize)
     b ::= @builtin.raw_allocate(bytes)
@@ -23,7 +23,7 @@ pub hashmap_new<K: Hashable, V> = () HashMap<K, V> {
     HashMap<K, V> { buckets: b, nbuckets: n, len: 0 }
 }
 
-pub hashmap_len<K: Hashable, V> = (m: HashMap<K, V>) i64 {
+hashmap_len<K: Hashable, V> = (m: HashMap<K, V>) i64 {
     m.len
 }
 
@@ -47,7 +47,7 @@ update_chain<K: Hashable, V> = (ptr: RawPtr<u8>, key: K, value: V) bool {
         }
 }
 
-pub hashmap_put<K: Hashable, V> = (m: HashMap<K, V>, key: K, value: V) HashMap<K, V> {
+hashmap_put<K: Hashable, V> = (m: HashMap<K, V>, key: K, value: V) HashMap<K, V> {
     slot ::= bucket_slot<K, V>(m, key)
     update_chain<K, V>(@builtin.load<RawPtr<u8>>(slot), key, value) ?
         | true { m }
@@ -74,6 +74,8 @@ get_chain<K: Hashable, V> = (ptr: RawPtr<u8>, key: K) Option<V> {
         }
 }
 
-pub hashmap_get<K: Hashable, V> = (m: HashMap<K, V>, key: K) Option<V> {
+hashmap_get<K: Hashable, V> = (m: HashMap<K, V>, key: K) Option<V> {
     get_chain<K, V>(@builtin.load<RawPtr<u8>>(bucket_slot<K, V>(m, key)), key)
 }
+
+@export({ Entry, HashMap, hashmap_new, hashmap_len, hashmap_put, hashmap_get })

@@ -2,18 +2,20 @@
 // may miss (e.g. `hashmap_get`).
 // `{ Option, option_unwrap_or, option_is_some } = std.core.option`
 
-pub Option<T>:
+Option<T>:
     None,
     Some(T)
 
-pub option_unwrap_or<T> = (value: Option<T>, fallback: T) T {
+option_unwrap_or<T> = (value: Option<T>, fallback: T) T {
     value ?
         | Some(inner) { inner }
         | None { fallback }
 }
 
-pub option_is_some<T> = (value: Option<T>) bool {
+option_is_some<T> = (value: Option<T>) bool {
     value ?
         | Some(_) { true }
         | None { false }
 }
+
+@export({ Option, option_unwrap_or, option_is_some })

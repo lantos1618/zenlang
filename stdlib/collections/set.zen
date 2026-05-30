@@ -5,13 +5,13 @@
 { Eq } = std.core.cmp
 { LinkedList, Node, list_new, list_push_front, list_len } = std.collections.linkedlist
 
-pub Set<T: Eq>: { items: LinkedList<T> }
+Set<T: Eq>: { items: LinkedList<T> }
 
-pub set_new<T: Eq> = () Set<T> {
+set_new<T: Eq> = () Set<T> {
     Set<T> { items: list_new<T>() }
 }
 
-pub set_len<T: Eq> = (s: Set<T>) i64 {
+set_len<T: Eq> = (s: Set<T>) i64 {
     list_len<T>(s.items)
 }
 
@@ -26,12 +26,14 @@ contains_from<T: Eq> = (ptr: RawPtr<u8>, target: T) bool {
         }
 }
 
-pub set_contains<T: Eq> = (s: Set<T>, target: T) bool {
+set_contains<T: Eq> = (s: Set<T>, target: T) bool {
     contains_from<T>(s.items.head, target)
 }
 
-pub set_add<T: Eq> = (s: Set<T>, value: T) Set<T> {
+set_add<T: Eq> = (s: Set<T>, value: T) Set<T> {
     set_contains<T>(s, value) ?
         | true { s }
         | false { Set<T> { items: list_push_front<T>(s.items, value) } }
 }
+
+@export({ Set, set_new, set_len, set_contains, set_add })

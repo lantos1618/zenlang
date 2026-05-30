@@ -1,13 +1,13 @@
 // Generic growable vector, heap-backed via @builtin intrinsics.
 // `{ Vec, vec_new, vec_push, vec_get, vec_len, vec_free } = std.collections.vec`
 
-pub Vec<T>: { data: RawPtr<u8>, len: i64, cap: i64 }
+Vec<T>: { data: RawPtr<u8>, len: i64, cap: i64 }
 
 elem_size<T> = () i64 {
     cast(@builtin.sizeof<T>(), i64)
 }
 
-pub vec_new<T> = () Vec<T> {
+vec_new<T> = () Vec<T> {
     Vec<T> {
         data: @builtin.raw_allocate(@builtin.sizeof<T>() * 4),
         len: 0,
@@ -15,15 +15,15 @@ pub vec_new<T> = () Vec<T> {
     }
 }
 
-pub vec_len<T> = (v: Vec<T>) i64 {
+vec_len<T> = (v: Vec<T>) i64 {
     v.len
 }
 
-pub vec_get<T> = (v: Vec<T>, index: i64) T {
+vec_get<T> = (v: Vec<T>, index: i64) T {
     @builtin.load<T>(@builtin.gep(v.data, index * elem_size<T>()))
 }
 
-pub vec_push<T> = (v: Vec<T>, value: T) Vec<T> {
+vec_push<T> = (v: Vec<T>, value: T) Vec<T> {
     grown = v.len == v.cap ?
         | true {
             new_cap = v.cap * 2
@@ -38,7 +38,7 @@ pub vec_push<T> = (v: Vec<T>, value: T) Vec<T> {
     Vec<T> { data: grown.data, len: grown.len + 1, cap: grown.cap }
 }
 
-pub vec_free<T> = (v: Vec<T>) void {
+vec_free<T> = (v: Vec<T>) void {
     @builtin.raw_deallocate(v.data, cast(v.cap * elem_size<T>(), usize))
 }
 
@@ -49,7 +49,7 @@ fold_from<T, A> = (v: Vec<T>, acc: A, f: (A, T) A, i: i64) A {
 }
 
 // Left fold: combine every element into an accumulator with `f`.
-pub vec_fold<T, A> = (v: Vec<T>, init: A, f: (A, T) A) A {
+vec_fold<T, A> = (v: Vec<T>, init: A, f: (A, T) A) A {
     fold_from<T, A>(v, init, f, 0)
 }
 
@@ -60,6 +60,8 @@ map_from<T, U> = (v: Vec<T>, out: Vec<U>, f: (T) U, i: i64) Vec<U> {
 }
 
 // Produce a new vector applying `f` to each element.
-pub vec_map<T, U> = (v: Vec<T>, f: (T) U) Vec<U> {
+vec_map<T, U> = (v: Vec<T>, f: (T) U) Vec<U> {
     map_from<T, U>(v, vec_new<U>(), f, 0)
 }
+
+@export({ Vec, vec_new, vec_len, vec_get, vec_push, vec_free, vec_fold, vec_map })

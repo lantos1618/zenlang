@@ -2,40 +2,40 @@
 // no intrinsics needed. Import the pieces you use:
 //   { Vec2, v2, v2_add, v2_dot, v2_len_sq, v2_manhattan } = std.geometry.geometry
 
-pub Vec2: { x: i64, y: i64 }
+Vec2: { x: i64, y: i64 }
 
 // Construct a vector.
-pub v2 = (x: i64, y: i64) Vec2 {
+v2 = (x: i64, y: i64) Vec2 {
     Vec2 { x: x, y: y }
 }
 
 // Component-wise sum.
-pub v2_add = (a: Vec2, b: Vec2) Vec2 {
+v2_add = (a: Vec2, b: Vec2) Vec2 {
     Vec2 { x: a.x + b.x, y: a.y + b.y }
 }
 
 // Component-wise difference (a - b).
-pub v2_sub = (a: Vec2, b: Vec2) Vec2 {
+v2_sub = (a: Vec2, b: Vec2) Vec2 {
     Vec2 { x: a.x - b.x, y: a.y - b.y }
 }
 
 // Scale by an integer factor.
-pub v2_scale = (a: Vec2, k: i64) Vec2 {
+v2_scale = (a: Vec2, k: i64) Vec2 {
     Vec2 { x: a.x * k, y: a.y * k }
 }
 
 // Dot product.
-pub v2_dot = (a: Vec2, b: Vec2) i64 {
+v2_dot = (a: Vec2, b: Vec2) i64 {
     a.x * b.x + a.y * b.y
 }
 
 // Squared length (avoids a sqrt; exact in integers).
-pub v2_len_sq = (a: Vec2) i64 {
+v2_len_sq = (a: Vec2) i64 {
     a.x * a.x + a.y * a.y
 }
 
 // Manhattan (L1) distance between two points.
-pub v2_manhattan = (a: Vec2, b: Vec2) i64 {
+v2_manhattan = (a: Vec2, b: Vec2) i64 {
     dx = a.x - b.x
     dy = a.y - b.y
     abs_i64(dx) + abs_i64(dy)
@@ -46,3 +46,5 @@ abs_i64 = (n: i64) i64 {
         | true { 0 - n }
         | false { n }
 }
+
+@export({ Vec2, v2, v2_add, v2_sub, v2_scale, v2_dot, v2_len_sq, v2_manhattan })
