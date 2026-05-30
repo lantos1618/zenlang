@@ -89,3 +89,8 @@ fn test_stdlib_ptr() {
 fn test_export_manifest() {
     run_test("export_manifest");
 }
+
+#[test]
+fn test_ffi_extern() {
+    run_test("ffi_extern");
+}

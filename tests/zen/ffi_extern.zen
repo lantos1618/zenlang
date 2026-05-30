@@ -1,0 +1,11 @@
+// End-to-end @extern FFI against always-present libc/libm (no install, no
+// display): exercises a value param (f64), auto string marshaling
+// (StaticString -> const char*), and linking (sqrt via -lm, strlen via libc).
+@extern sqrt = (x: f64) f64
+@extern strlen = (s: StaticString) usize
+
+main = () i32 {
+    root = cast(sqrt(cast(16, f64)), i32)   // 4
+    len = cast(strlen("hello"), i32)         // 5
+    (root + len) - 9                          // 0 on success
+}
