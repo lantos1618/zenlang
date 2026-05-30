@@ -64,7 +64,7 @@ Landed:
   resolving each library via pkg-config (`--cflags --libs` + an rpath to its
   libdir; bare `-l<name>` fallback). `packages:` stays gated.
 - **`extern` C function declarations** (Zig `extern fn` analog):
-  `extern NAME = (params) Ret` — a bodyless callable lowered to a C prototype +
+  `@extern NAME = (params) Ret` — a bodyless callable lowered to a C prototype +
   direct call with the bare C symbol name; opaque pointers as `RawPtr<u8>`. No
   header required (the prototypes are ABI-correct on their own).
 - Evidence: `~/sdl3-zen` opens an SDL3 window via native `extern` calls +

@@ -30,7 +30,7 @@ impl Parser {
             false
         };
 
-        if matches!(self.peek(), Token::Extern) {
+        if matches!(self.peek(), Token::AtExtern) {
             let extern_span = self.peek_span();
             self.advance();
             self.skip_newlines();

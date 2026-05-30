@@ -56,9 +56,9 @@ pub enum Token {
     AtBuiltin, // @builtin
     AtThis,    // @this
     AtExport,  // @export
+    AtExtern,  // @extern (C FFI function declaration)
 
-    Pub,    // pub
-    Extern, // extern (C FFI function declaration)
+    Pub, // pub
 
     Newline,
     EOF,
@@ -122,7 +122,6 @@ impl Token {
     pub(in crate::lexer) fn from_keyword(word: &str) -> Option<Self> {
         match word {
             "pub" => Some(Self::Pub),
-            "extern" => Some(Self::Extern),
             _ => None,
         }
     }
@@ -133,6 +132,7 @@ impl Token {
             crate::root_spelling::BUILTIN_ROOT_NAME => Some(Self::AtBuiltin),
             "this" => Some(Self::AtThis),
             "export" => Some(Self::AtExport),
+            "extern" => Some(Self::AtExtern),
             _ => None,
         }
     }
