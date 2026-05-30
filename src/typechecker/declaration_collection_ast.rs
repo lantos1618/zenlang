@@ -57,6 +57,9 @@ impl TypeChecker {
                         self.imports.insert(name.to_string());
                     }
                 }
+                Declaration::ExternType { name, .. } => {
+                    self.extern_types.insert(name.to_string());
+                }
                 Declaration::ImplBlock {
                     type_name,
                     type_args,

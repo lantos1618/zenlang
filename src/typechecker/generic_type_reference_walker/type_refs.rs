@@ -13,7 +13,7 @@ impl TypeChecker {
         }
 
         let Some((kind, type_params, type_param_bounds)) = self.generic_type_decl(name) else {
-            if !self.imports.contains(name) {
+            if !self.imports.contains(name) && !self.extern_types.contains(name) {
                 self.push_error(E0201, format!("unknown type symbol '{name}'"), span);
             }
             return;

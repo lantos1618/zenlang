@@ -13,10 +13,15 @@ impl TypeChecker {
         let globals = self.register_global_bindings(&program.declarations);
         let mut functions = Vec::new();
         let mut extern_functions = Vec::new();
+        let mut extern_types = Vec::new();
         let mut types = Vec::new();
         let mut entry_point = None;
 
         for decl in &program.declarations {
+            if let Declaration::ExternType { name, .. } = decl {
+                extern_types.push(name.clone());
+                continue;
+            }
             // `extern` C functions have no Zen body to check or emit; record a
             // prototype for codegen and skip the normal callable path.
             if let Declaration::Function {
@@ -168,6 +173,7 @@ impl TypeChecker {
             types,
             globals,
             extern_functions,
+            extern_types,
             entry_point,
         })
     }

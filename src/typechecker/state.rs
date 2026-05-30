@@ -22,6 +22,9 @@ pub struct TypeChecker {
     specialized_type_args: HashMap<String, Vec<AstType>>,
     type_substitutions: Vec<HashMap<String, Type>>,
     imports: HashSet<String>,
+    /// Opaque `@extern` C type names — valid types (used behind pointers in FFI
+    /// signatures) with no Zen definition.
+    extern_types: HashSet<String>,
     scopes: Vec<HashMap<String, VarInfo>>,
     diagnostics: Vec<Diagnostic>,
     current_return_type: Option<Type>,

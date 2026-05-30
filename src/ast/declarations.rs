@@ -107,6 +107,14 @@ pub enum Declaration {
         names: Vec<String>,
         span: Span,
     },
+
+    /// `@extern Name` — an opaque C type (no Zen body/fields), used behind a
+    /// pointer in FFI signatures. Codegen forward-declares it; the real
+    /// definition comes from a `headers:` include.
+    ExternType {
+        name: String,
+        span: Span,
+    },
 }
 
 pub struct CallableDeclaration<'a> {
@@ -167,7 +175,8 @@ impl Declaration {
             | Declaration::Derive { span, .. }
             | Declaration::BehaviorExtends { span, .. }
             | Declaration::TopLevelExpr { span, .. }
-            | Declaration::Export { span, .. } => *span,
+            | Declaration::Export { span, .. }
+            | Declaration::ExternType { span, .. } => *span,
         }
     }
 
@@ -176,7 +185,8 @@ impl Declaration {
             Declaration::Function { name, .. }
             | Declaration::Struct { name, .. }
             | Declaration::Enum { name, .. }
-            | Declaration::Behavior { name, .. } => Some(name),
+            | Declaration::Behavior { name, .. }
+            | Declaration::ExternType { name, .. } => Some(name),
             Declaration::Method { method_name, .. } => Some(method_name),
             _ => None,
         }

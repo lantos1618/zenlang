@@ -66,6 +66,17 @@ impl CEmitter {
         // with a C keyword would be rewritten to `zen_<name>` and fail to link
         // — harmless, since no C library can export a keyword-named function.
         // (A clear compile-time guard for that case is a documented follow-up.)
+        // Opaque `@extern` C types: a forward `typedef struct N N;`. Used behind
+        // pointers (`SDL_Window*`); the real definition comes from a `headers:`
+        // include (an identical typedef is a legal C11 redefinition).
+        for ty in &program.extern_types {
+            let name = c_ident(ty);
+            self.line(&format!("typedef struct {name} {name};"));
+        }
+        if !program.extern_types.is_empty() {
+            self.blank();
+        }
+
         for ext in &program.extern_functions {
             let ret = Self::c_type(&ext.return_type);
             let name = c_func_ident(&ext.name);

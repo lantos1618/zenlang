@@ -59,6 +59,8 @@ impl Resolver {
             Declaration::Import { .. } => {}
             // `@export` is desugared + stripped at parse time; never seen here.
             Declaration::Export { .. } => {}
+            // An opaque `@extern` type has no fields/signature to validate.
+            Declaration::ExternType { .. } => {}
             Declaration::Function { .. } | Declaration::Method { .. } => {}
             Declaration::Requires {
                 type_name,

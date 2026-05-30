@@ -154,6 +154,11 @@ impl Resolver {
                     )?;
                 }
             }
+            // An opaque `@extern` C type registers its name so FFI signatures
+            // (`RawPtr<SDL_Window>`) resolve; it has no fields to validate.
+            Declaration::ExternType { name, span } => {
+                table.define(Namespace::Type, name, false, None, *span)?;
+            }
             Declaration::Function { .. }
             | Declaration::Method { .. }
             | Declaration::Requires { .. }

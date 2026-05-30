@@ -59,6 +59,12 @@ impl Parser {
     ) -> Result<Declaration, CompileError> {
         let (name, _) = self.expect_identifier()?;
         self.skip_newlines();
+        // `@extern Name` with no `=` declares an opaque C type (e.g. an SDL
+        // handle), used behind a pointer and provided by a `headers:` include.
+        if !matches!(self.peek(), Token::Assign) {
+            let span = start_span.merge(self.prev_span());
+            return Ok(Declaration::ExternType { name, span });
+        }
         self.expect(&Token::Assign)?;
         self.skip_newlines();
         self.expect(&Token::LParen)?;

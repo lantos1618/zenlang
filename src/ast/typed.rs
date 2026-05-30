@@ -190,5 +190,8 @@ pub struct TypedProgram {
     pub globals: Vec<TypedGlobal>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extern_functions: Vec<TypedExternFunction>,
+    /// Opaque `@extern` C type names — forward-declared in the generated C.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extern_types: Vec<String>,
     pub entry_point: Option<String>,
 }
