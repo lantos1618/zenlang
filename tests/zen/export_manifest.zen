@@ -1,0 +1,9 @@
+// Everything private by default; `@export` declares the public surface.
+add = (a: i32, b: i32) i32 { a + b }
+double = (n: i32) i32 { add(n, n) }
+
+main = () i32 {
+    double(21) - 42
+}
+
+@export({ add, double })

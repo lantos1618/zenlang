@@ -100,6 +100,13 @@ pub enum Declaration {
         expr: Expression,
         span: Span,
     },
+
+    /// `@export({ Name, other })` — the module's public surface. Everything is
+    /// private by default; listed names are marked public by the resolver.
+    Export {
+        names: Vec<String>,
+        span: Span,
+    },
 }
 
 pub struct CallableDeclaration<'a> {
@@ -159,7 +166,8 @@ impl Declaration {
             | Declaration::Requires { span, .. }
             | Declaration::Derive { span, .. }
             | Declaration::BehaviorExtends { span, .. }
-            | Declaration::TopLevelExpr { span, .. } => *span,
+            | Declaration::TopLevelExpr { span, .. }
+            | Declaration::Export { span, .. } => *span,
         }
     }
 

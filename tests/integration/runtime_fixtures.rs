@@ -84,3 +84,8 @@ fn test_stdlib_geometry() {
 fn test_stdlib_ptr() {
     run_test("stdlib_ptr");
 }
+
+#[test]
+fn test_export_manifest() {
+    run_test("export_manifest");
+}

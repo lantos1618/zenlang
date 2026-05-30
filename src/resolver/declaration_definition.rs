@@ -158,7 +158,9 @@ impl Resolver {
             | Declaration::Method { .. }
             | Declaration::Requires { .. }
             | Declaration::Derive { .. }
-            | Declaration::BehaviorExtends { .. } => {}
+            | Declaration::BehaviorExtends { .. }
+            // `@export` is applied as a separate pass in resolve_program.
+            | Declaration::Export { .. } => {}
         }
         Ok(())
     }
