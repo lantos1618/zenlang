@@ -57,9 +57,10 @@ impl TypeChecker {
                         self.imports.insert(name.to_string());
                     }
                 }
-                Declaration::ExternType { name, .. } => {
-                    self.extern_types.insert(name.to_string());
-                }
+                // Opaque `@extern` types are a known type via the resolver only;
+                // the typechecker resolves them to `Type::Named` and doesn't
+                // re-validate type-knownness (the resolver is the single source).
+                Declaration::ExternType { .. } => {}
                 Declaration::ImplBlock {
                     type_name,
                     type_args,
