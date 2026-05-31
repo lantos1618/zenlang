@@ -3,14 +3,14 @@
 //   { Atomic, atomic_new, atomic_get, atomic_set,
 //     atomic_inc, atomic_compare_set } = std.concurrency.primitives.atomic
 
-{ atomic_load, atomic_store, atomic_add, atomic_cas } = std.compiler
+{ atomic_load, atomic_store, atomic_add, atomic_cas, raw_allocate, raw_deallocate } = std.compiler
 
 // An atomic i64 value backed by an 8-byte heap cell.
 Atomic: { ptr: RawPtr<u8> }
 
 // Allocate a new Atomic cell initialised to `value`.
 atomic_new = (value: i64) Atomic {
-    ptr = @builtin.raw_allocate(cast(8, usize))
+    ptr = raw_allocate(cast(8, usize))
     atomic_store(ptr, cast(value, u64))
     Atomic { ptr: ptr }
 }
@@ -38,7 +38,7 @@ atomic_compare_set = (a: Atomic, expected: i64, new_value: i64) bool {
 
 // Free the underlying cell.
 atomic_free = (a: Atomic) void {
-    @builtin.raw_deallocate(a.ptr, cast(8, usize))
+    raw_deallocate(a.ptr, cast(8, usize))
 }
 
 @export({ Atomic, atomic_new, atomic_get, atomic_set, atomic_inc, atomic_compare_set, atomic_free })

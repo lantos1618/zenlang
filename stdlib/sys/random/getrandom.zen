@@ -5,20 +5,20 @@
 //
 // Syscall number 318 is getrandom on x86-64 Linux.
 
-{ sys3 } = std.compiler
+{ sys3, raw_allocate, raw_deallocate, ptr_to_int, load_u64 } = std.compiler
 
 // Fill `len` bytes at `buf` with OS randomness; returns the bytes written.
 getrandom_fill = (buf: RawPtr<u8>, len: i64) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys3(318, addr, len, 0)
 }
 
 // A single random u64 drawn from the OS.
 getrandom_u64 = () u64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
     getrandom_fill(buf, 8)
-    value = @builtin.load<u64>(buf)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    value = load_u64(buf)
+    raw_deallocate(buf, cast(8, usize))
     value
 }
 

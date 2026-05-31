@@ -7,6 +7,8 @@
 //
 // x86-64 Linux ucontext_t offsets: uc_link @8, uc_stack.ss_sp @16, ss_size @32.
 
+{ raw_allocate, null_ptr, is_null, gep, ptr_to_int, load_i64, store_i64 } = std.compiler
+
 @extern getcontext  = (ctx: RawPtr<u8>) i32
 @extern makecontext = (ctx: RawPtr<u8>, fn: () void, argc: i32) void
 @extern swapcontext = (out: RawPtr<u8>, in: RawPtr<u8>) i32
@@ -16,6 +18,8 @@ Coroutine: { ctx: RawPtr<u8>, link: RawPtr<u8>, stack: RawPtr<u8> }
 // The currently-running coroutine's contexts + a yield flag. coroutine_yield()
 // (called from inside the work fn) reads these to swap back, and resume reads the
 // flag to tell a yield from a final return.
+// Exception: @builtin.null_ptr() used here because global variable initializers
+// must be C compile-time constants; null_ptr() is a function call (not constant).
 g_cur_ctx ::= @builtin.null_ptr()
 g_cur_link ::= @builtin.null_ptr()
 g_yielded ::= @builtin.null_ptr()
@@ -24,16 +28,16 @@ g_yielded ::= @builtin.null_ptr()
 // the context's uc_link (set to `link`, the resumer's saved context) brings control
 // back to the resumer with the yield flag clear, so resume reports completion.
 coroutine_new = (work: () void) Coroutine {
-    @builtin.is_null(g_yielded) ?
-        | true { g_yielded = @builtin.raw_allocate(cast(8, usize)) }
+    is_null(g_yielded) ?
+        | true { g_yielded = raw_allocate(cast(8, usize)) }
         | false { }
-    stack = @builtin.raw_allocate(cast(65536, usize))
-    ctx = @builtin.raw_allocate(cast(1024, usize))
-    link = @builtin.raw_allocate(cast(1024, usize))
+    stack = raw_allocate(cast(65536, usize))
+    ctx = raw_allocate(cast(1024, usize))
+    link = raw_allocate(cast(1024, usize))
     getcontext(ctx)
-    @builtin.store(@builtin.gep(ctx, 16), @builtin.ptr_to_int(stack))
-    @builtin.store(@builtin.gep(ctx, 32), cast(65536, i64))
-    @builtin.store(@builtin.gep(ctx, 8), @builtin.ptr_to_int(link))
+    store_i64(gep(ctx, 16), ptr_to_int(stack))
+    store_i64(gep(ctx, 32), cast(65536, i64))
+    store_i64(gep(ctx, 8), ptr_to_int(link))
     makecontext(ctx, work, 0)
     Coroutine { ctx: ctx, link: link, stack: stack }
 }
@@ -43,14 +47,14 @@ coroutine_new = (work: () void) Coroutine {
 coroutine_resume = (c: Coroutine) bool {
     g_cur_ctx = c.ctx
     g_cur_link = c.link
-    @builtin.store(g_yielded, cast(0, i64))
+    store_i64(g_yielded, cast(0, i64))
     swapcontext(c.link, c.ctx)
-    @builtin.load<i64>(g_yielded) == cast(1, i64)
+    load_i64(g_yielded) == cast(1, i64)
 }
 
 // Suspend the current coroutine back to whoever resumed it.
 coroutine_yield = () void {
-    @builtin.store(g_yielded, cast(1, i64))
+    store_i64(g_yielded, cast(1, i64))
     swapcontext(g_cur_ctx, g_cur_link)
 }
 

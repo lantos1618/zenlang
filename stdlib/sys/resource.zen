@@ -3,26 +3,26 @@
 // is an i64 at byte offset 32.
 //   { getrusage_ok, max_rss_kb } = std.sys.resource
 
-{ sys2 } = std.compiler
+{ sys2, raw_allocate, raw_deallocate, gep, ptr_to_int, load_i64 } = std.compiler
 
 // Returns true if getrusage(RUSAGE_SELF) succeeds (returns 0).
 getrusage_ok = () bool {
-    buf = @builtin.raw_allocate(cast(144, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(144, usize))
+    addr = ptr_to_int(buf)
     ret = sys2(98, 0, addr)
-    @builtin.raw_deallocate(buf, cast(144, usize))
+    raw_deallocate(buf, cast(144, usize))
     ret == 0
 }
 
 // Returns the peak RSS (resident-set size) of this process in kilobytes.
 // The field ru_maxrss sits at byte offset 32 in the rusage struct.
 max_rss_kb = () i64 {
-    buf = @builtin.raw_allocate(cast(144, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(144, usize))
+    addr = ptr_to_int(buf)
     sys2(98, 0, addr)
-    rss_ptr = @builtin.gep(buf, 32)
-    rss = @builtin.load<i64>(rss_ptr)
-    @builtin.raw_deallocate(buf, cast(144, usize))
+    rss_ptr = gep(buf, 32)
+    rss = load_i64(rss_ptr)
+    raw_deallocate(buf, cast(144, usize))
     rss
 }
 

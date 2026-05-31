@@ -4,19 +4,19 @@
 //
 // Both ops take a 16-byte buffer for the process name (including NUL).
 
-{ sys5 } = std.compiler
+{ sys5, ptr_to_int } = std.compiler
 
 // Set the calling thread's name to the null-terminated string at `name_ptr`.
 // prctl(PR_SET_NAME=15, name_ptr, 0, 0, 0) — returns 0 on success.
 prctl_set_name = (name_ptr: RawPtr<u8>) i64 {
-    addr = @builtin.ptr_to_int(name_ptr)
+    addr = ptr_to_int(name_ptr)
     sys5(157, 15, addr, 0, 0, 0)
 }
 
 // Read the calling thread's name into `buf` (must be >= 16 bytes).
 // prctl(PR_GET_NAME=16, buf_ptr, 0, 0, 0) — returns 0 on success.
 prctl_get_name = (buf: RawPtr<u8>) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys5(157, 16, addr, 0, 0, 0)
 }
 

@@ -2,6 +2,8 @@
 // pthread_mutex_t is 40 bytes on Linux x86-64. We allocate 64 bytes to be safe.
 //   { Mutex, mutex_new, mutex_lock, mutex_unlock, mutex_destroy } = std.concurrency.sync.mutex
 
+{ raw_allocate, raw_deallocate, mem_set, null_ptr } = std.compiler
+
 @extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
 @extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
 @extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
@@ -12,9 +14,9 @@ Mutex: { ptr: RawPtr<u8> }
 
 // Allocate and initialise a default (non-recursive) mutex.
 mutex_new = () Mutex {
-    ptr = @builtin.raw_allocate(cast(64, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
-    pthread_mutex_init(ptr, @builtin.null_ptr())
+    ptr = raw_allocate(cast(64, usize))
+    mem_set(ptr, cast(0, u8), cast(64, usize))
+    pthread_mutex_init(ptr, null_ptr())
     Mutex { ptr: ptr }
 }
 
@@ -31,7 +33,7 @@ mutex_unlock = (m: Mutex) void {
 // Destroy and free the mutex.
 mutex_destroy = (m: Mutex) void {
     pthread_mutex_destroy(m.ptr)
-    @builtin.raw_deallocate(m.ptr, cast(64, usize))
+    raw_deallocate(m.ptr, cast(64, usize))
 }
 
 @export({ Mutex, mutex_new, mutex_lock, mutex_unlock, mutex_destroy })

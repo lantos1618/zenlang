@@ -7,25 +7,25 @@
 // Syscall numbers (x86-64 Linux):
 //   read=0, write=1, close=3, lseek=8, ftruncate=77, memfd_create=319
 
-{ sys1, sys2, sys3 } = std.compiler
+{ sys1, sys2, sys3, ptr_to_int } = std.compiler
 
 // Create an anonymous in-memory fd; name_ptr is a null-terminated C string.
 // flags=0: no MFD_CLOEXEC / MFD_ALLOW_SEALING needed for basic usage.
 // Returns the new file descriptor (>= 0) or a negative error code.
 memfd_new = (name_ptr: RawPtr<u8>) i64 {
-    addr = @builtin.ptr_to_int(name_ptr)
+    addr = ptr_to_int(name_ptr)
     sys2(319, addr, 0)
 }
 
 // Write `len` bytes from `buf` into the fd.  Returns bytes written.
 memfd_write = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys3(1, fd, addr, len)
 }
 
 // Read `len` bytes from the fd into `buf`.  Returns bytes read.
 memfd_read = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys3(0, fd, addr, len)
 }
 

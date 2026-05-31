@@ -7,6 +7,7 @@
 { Coroutine, coroutine_new, coroutine_resume } = std.concurrency.coroutine
 { Vec, vec_new_default, vec_push, vec_get, vec_len } = std.collections.vec
 { Mallocator } = std.memory.allocator
+{ raw_allocate, raw_deallocate, gep, load_u8, store_u8 } = std.compiler
 
 Scheduler: { coros: Vec<Coroutine, Mallocator> }
 
@@ -23,7 +24,7 @@ scheduler_spawn = (s: Scheduler, work: () void) Scheduler {
 // it (newly done), else 0. Kept as a helper so the run loop has no bare-statement
 // ternary.
 sched_step_one = (s: Scheduler, done: RawPtr<u8>, i: i64) i64 {
-    d = @builtin.load<u8>(@builtin.gep(done, i))
+    d = load_u8(gep(done, i))
     d == cast(0, u8) ?
         | true {
             co = vec_get<Coroutine, Mallocator>(s.coros, i)
@@ -31,7 +32,7 @@ sched_step_one = (s: Scheduler, done: RawPtr<u8>, i: i64) i64 {
             alive ?
                 | true { cast(0, i64) }
                 | false {
-                    @builtin.store(@builtin.gep(done, i), cast(1, u8))
+                    store_u8(gep(done, i), cast(1, u8))
                     cast(1, i64)
                 }
         }
@@ -41,13 +42,13 @@ sched_step_one = (s: Scheduler, done: RawPtr<u8>, i: i64) i64 {
 // Run every queued coroutine to completion, cooperatively interleaved.
 scheduler_run = (s: Scheduler) void {
     n = vec_len<Coroutine, Mallocator>(s.coros)
-    done = @builtin.raw_allocate(cast(n, usize))
+    done = raw_allocate(cast(n, usize))
     z ::= cast(0, i64)
     loop((l) {
         z >= n ?
             | true { l.done() }
             | false {
-                @builtin.store(@builtin.gep(done, z), cast(0, u8))
+                store_u8(gep(done, z), cast(0, u8))
                 z = z + 1
                 l.next()
             }
@@ -72,7 +73,7 @@ scheduler_run = (s: Scheduler) void {
             }
     })
 
-    @builtin.raw_deallocate(done, cast(n, usize))
+    raw_deallocate(done, cast(n, usize))
 }
 
 @export({ Scheduler, scheduler, scheduler_spawn, scheduler_run })

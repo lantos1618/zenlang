@@ -7,6 +7,7 @@
 
 { coroutine_yield } = std.concurrency.coroutine
 { Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+{ raw_allocate, null_ptr, gep, load_i64, store_i64 } = std.compiler
 
 g_actor_mailbox ::= @builtin.null_ptr()
 g_actor_count ::= @builtin.null_ptr()
@@ -15,15 +16,15 @@ g_actor_state ::= @builtin.null_ptr()
 // The actor's behaviour loop: process each message (sum it into state), yielding
 // after each so the scheduler can run other fibers.
 actor_loop = () void {
-    n = @builtin.load<i64>(g_actor_count)
+    n = load_i64(g_actor_count)
     i ::= cast(0, i64)
     loop((l) {
         i >= n ?
             | true { l.done() }
             | false {
-                msg = @builtin.load<i64>(@builtin.gep(g_actor_mailbox, i * 8))
-                s = @builtin.load<i64>(g_actor_state)
-                @builtin.store(g_actor_state, s + msg)
+                msg = load_i64(gep(g_actor_mailbox, i * 8))
+                s = load_i64(g_actor_state)
+                store_i64(g_actor_state, s + msg)
                 coroutine_yield()
                 i = i + 1
                 l.next()
@@ -35,15 +36,15 @@ actor_loop = () void {
 // them. Returns the final accumulated state.
 async_actor_run = (mailbox: RawPtr<u8>, count: i64) i64 {
     g_actor_mailbox = mailbox
-    g_actor_count = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(g_actor_count, count)
-    g_actor_state = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(g_actor_state, cast(0, i64))
+    g_actor_count = raw_allocate(cast(8, usize))
+    store_i64(g_actor_count, count)
+    g_actor_state = raw_allocate(cast(8, usize))
+    store_i64(g_actor_state, cast(0, i64))
 
     r ::= runtime()
     r = task_spawn(r, actor_loop)
     task_run(r)
-    @builtin.load<i64>(g_actor_state)
+    load_i64(g_actor_state)
 }
 
 @export({ async_actor_run })

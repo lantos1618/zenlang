@@ -10,6 +10,7 @@
 // real executors carry a reactor and expose read/write/etc. over it.
 
 { coroutine_yield } = std.concurrency.coroutine
+{ load_i64, store_i64 } = std.compiler
 
 Executor: behavior {
     step: (Self, RawPtr<u8>) void
@@ -19,8 +20,8 @@ Executor: behavior {
 SyncExec: { }
 SyncExec.implements(Executor) {
     step = (self: SyncExec, cell: RawPtr<u8>) void {
-        v = @builtin.load<i64>(cell)
-        @builtin.store(cell, v + 1)
+        v = load_i64(cell)
+        store_i64(cell, v + 1)
     }
 }
 
@@ -29,8 +30,8 @@ SyncExec.implements(Executor) {
 AsyncExec: { }
 AsyncExec.implements(Executor) {
     step = (self: AsyncExec, cell: RawPtr<u8>) void {
-        v = @builtin.load<i64>(cell)
-        @builtin.store(cell, v + 1)
+        v = load_i64(cell)
+        store_i64(cell, v + 1)
         coroutine_yield()
     }
 }

@@ -3,24 +3,24 @@
 // sysname starts at offset 0; a non-zero first byte proves the call worked.
 //   { uname_ok, uname_sysname_first } = std.sys.uname
 
-{ sys1 } = std.compiler
+{ sys1, raw_allocate, raw_deallocate, ptr_to_int, load_u8 } = std.compiler
 
 // Returns true if the uname syscall succeeds (returns 0).
 uname_ok = () bool {
-    buf = @builtin.raw_allocate(cast(390, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(390, usize))
+    addr = ptr_to_int(buf)
     ret = sys1(63, addr)
-    @builtin.raw_deallocate(buf, cast(390, usize))
+    raw_deallocate(buf, cast(390, usize))
     ret == 0
 }
 
 // Returns the first byte of the sysname field (should be non-zero on any Linux).
 uname_sysname_first = () u8 {
-    buf = @builtin.raw_allocate(cast(390, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(390, usize))
+    addr = ptr_to_int(buf)
     sys1(63, addr)
-    b = @builtin.load<u8>(buf)
-    @builtin.raw_deallocate(buf, cast(390, usize))
+    b = load_u8(buf)
+    raw_deallocate(buf, cast(390, usize))
     b
 }
 
