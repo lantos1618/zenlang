@@ -43,16 +43,7 @@ impl TypeChecker {
                 let var_type = match (ty, annotation_valid) {
                     (Some(t), true) => self.resolve_type(t),
                     (Some(_), false) => Type::Unknown,
-                    // No annotation: adopt the value's type, except a bare untyped
-                    // integer literal defaults to `i64` (the natural width) rather
-                    // than the `i32` literal default — so `i ::= 0` composes with
-                    // i64 lengths/offsets/syscalls without an explicit cast.
-                    // Narrowing to other int types still happens via contextual
-                    // coercion at use sites; annotate (`i: i32 ::= 0`) to force one.
-                    (None, _) => match &typed_value.kind {
-                        TypedExprKind::IntLiteral(_) if typed_value.ty == Type::I32 => Type::I64,
-                        _ => typed_value.ty.clone(),
-                    },
+                    (None, _) => typed_value.ty.clone(),
                 };
 
                 let typed_value = TypedExpression {

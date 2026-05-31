@@ -115,8 +115,6 @@ main = () i32 { 0 }
         .iter()
         .find(|global| global["name"] == "threshold")
         .expect("threshold global in HIR");
-    // An untyped integer-literal binding now defaults to i64 (the natural width),
-    // not the old i32 literal default.
-    assert_eq!(threshold["type"], "i64");
+    assert_eq!(threshold["type"], "i32");
     assert_eq!(threshold["mutable"], true);
 }
