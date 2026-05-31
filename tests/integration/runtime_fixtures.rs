@@ -176,6 +176,11 @@ fn test_stdlib_resource() {
 }
 
 #[test]
+fn test_stdlib_seccomp() {
+    run_test("stdlib_seccomp");
+}
+
+#[test]
 fn test_stdlib_memory() {
     run_test("stdlib_memory");
 }

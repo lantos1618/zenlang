@@ -1,0 +1,16 @@
+// Installing an allow-all seccomp filter succeeds (prctl returns 0) and then an
+// ordinary syscall still goes through — getpid works after the filter is active,
+// proving the BPF program + prctl plumbing is correct (and harmless).
+{ io } = std
+{ seccomp_install_allow_all } = std.sys.seccomp
+{ process_getpid } = std.sys.process.process
+
+main = () i32 {
+    rc = seccomp_install_allow_all()
+    io.println("installed=${cast(rc, i32)}")
+
+    pid = process_getpid()
+    ok = pid > 0
+    io.println("getpid_ok=${cast(ok, i32)}")
+    0
+}

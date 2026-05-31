@@ -1,4 +1,44 @@
-// Parse-only placeholder for @std.sys.seccomp.
+// Seccomp syscall filtering via prctl(2). This installs a classic-BPF filter
+// program that the kernel runs on every syscall. We expose the minimal safe
+// surface: install an allow-all filter (proves the BPF/prctl plumbing without
+// restricting anything), plus the constants to build stricter filters yourself.
+//   { seccomp_install_allow_all } = std.sys.seccomp
 //
-// Seccomp wrappers need explicit host-effect and ABI evidence before this module
-// carries implementation code.
+// A seccomp filter is irreversible and inherited across fork/exec, so only the
+// allow-all program is offered as a one-call helper — a real policy is the
+// caller's responsibility. x86-64: prctl=157, PR_SET_NO_NEW_PRIVS=38,
+// PR_SET_SECCOMP=22, SECCOMP_MODE_FILTER=2.
+//
+// BPF instruction (sock_filter, 8 bytes): code u16@0, jt u8@2, jf u8@3, k u32@4.
+// sock_fprog (16 bytes on x86-64): len u16@0, <pad>, filter ptr@8.
+// "return ALLOW" = code BPF_RET|BPF_K (0x06), k SECCOMP_RET_ALLOW (0x7fff0000).
+
+{ sys5 } = std.compiler
+
+// SECCOMP_RET_ALLOW, the value a filter returns to permit a syscall.
+seccomp_ret_allow = () i64 {
+    2147418112
+}
+
+// Install a one-instruction "allow every syscall" BPF filter. Returns 0 on
+// success (prctl's return). Sets no_new_privs first (required unprivileged).
+seccomp_install_allow_all = () i64 {
+    sys5(157, 38, 1, 0, 0, 0)
+
+    // One BPF instruction: RET ALLOW.
+    filter = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(filter, cast(6, u16))
+    @builtin.store(@builtin.gep(filter, 2), cast(0, u8))
+    @builtin.store(@builtin.gep(filter, 3), cast(0, u8))
+    @builtin.store(@builtin.gep(filter, 4), cast(2147418112, u32))
+
+    // sock_fprog { len = 1, filter = &filter }.
+    prog = @builtin.raw_allocate(cast(16, usize))
+    @builtin.store(prog, cast(1, u16))
+    @builtin.store(@builtin.gep(prog, 8), @builtin.ptr_to_int(filter))
+
+    rc = sys5(157, 22, 2, @builtin.ptr_to_int(prog), 0, 0)
+    rc
+}
+
+@export({ seccomp_ret_allow, seccomp_install_allow_all })
