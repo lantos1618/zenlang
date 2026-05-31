@@ -1,0 +1,15 @@
+// once_should_run returns true exactly once, then false on all subsequent calls.
+{ io } = std
+{ Once, once_new, once_should_run, once_free } = std.concurrency.sync.once
+
+main = () i32 {
+    o = once_new()
+    first = once_should_run(o)
+    second = once_should_run(o)
+    third = once_should_run(o)
+    io.println("first=${cast(first, i32)}")
+    io.println("second=${cast(second, i32)}")
+    io.println("third=${cast(third, i32)}")
+    once_free(o)
+    0
+}

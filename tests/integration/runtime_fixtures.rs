@@ -189,3 +189,8 @@ fn test_stdlib_uname() {
 fn test_stdlib_atomic() {
     run_test("stdlib_atomic");
 }
+
+#[test]
+fn test_stdlib_once() {
+    run_test("stdlib_once");
+}

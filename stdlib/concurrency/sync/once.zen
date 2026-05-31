@@ -1,2 +1,29 @@
-// Parse-only placeholder for @std.concurrency.sync.once.
-// Promote Once APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A one-shot gate: once_should_run returns true exactly the first time it is
+// called on a given Once, then false for all subsequent calls. Built on
+// atomic_cas from std.compiler so it is safe under concurrent use.
+//   { Once, once_new, once_should_run, once_free } = std.concurrency.sync.once
+
+{ atomic_cas, atomic_load } = std.compiler
+
+// An atomic flag: 0 = not yet run, 1 = already run.
+Once: { ptr: RawPtr<u8> }
+
+// Allocate a new Once (initially not-yet-run).
+once_new = () Once {
+    ptr = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(ptr, cast(0, u64))
+    Once { ptr: ptr }
+}
+
+// Returns true the first time it is called; false on all subsequent calls.
+// Uses CAS to atomically transition 0->1, so only one caller wins.
+once_should_run = (o: Once) bool {
+    atomic_cas(o.ptr, cast(0, u64), cast(1, u64))
+}
+
+// Free the underlying allocation.
+once_free = (o: Once) void {
+    @builtin.raw_deallocate(o.ptr, cast(8, usize))
+}
+
+@export({ Once, once_new, once_should_run, once_free })
