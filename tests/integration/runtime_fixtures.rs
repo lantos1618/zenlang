@@ -181,6 +181,11 @@ fn test_stdlib_seccomp() {
 }
 
 #[test]
+fn test_stdlib_coroutine() {
+    run_test("stdlib_coroutine");
+}
+
+#[test]
 fn test_stdlib_memory() {
     run_test("stdlib_memory");
 }

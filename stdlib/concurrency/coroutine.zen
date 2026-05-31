@@ -1,0 +1,57 @@
+// Stackful coroutines (fibers) over libc ucontext — the one irreducible primitive
+// for Zen's no-color async (see docs/concurrency/). A coroutine runs on its own
+// allocator-placed stack; coroutine_yield() suspends it back to the resumer, and
+// coroutine_resume() continues it, returning false once the work function returns.
+// Pure FFI: the compiler has ZERO async machinery.
+//   { Coroutine, coroutine_new, coroutine_resume, coroutine_yield } = std.concurrency.coroutine
+//
+// x86-64 Linux ucontext_t offsets: uc_link @8, uc_stack.ss_sp @16, ss_size @32.
+
+@extern getcontext  = (ctx: RawPtr<u8>) i32
+@extern makecontext = (ctx: RawPtr<u8>, fn: () void, argc: i32) void
+@extern swapcontext = (out: RawPtr<u8>, in: RawPtr<u8>) i32
+
+Coroutine: { ctx: RawPtr<u8>, link: RawPtr<u8>, stack: RawPtr<u8> }
+
+// The currently-running coroutine's contexts + a yield flag. coroutine_yield()
+// (called from inside the work fn) reads these to swap back, and resume reads the
+// flag to tell a yield from a final return.
+g_cur_ctx ::= @builtin.null_ptr()
+g_cur_link ::= @builtin.null_ptr()
+g_yielded ::= @builtin.null_ptr()
+
+// Create a coroutine that runs `work` on a fresh 64 KiB stack. When `work` returns,
+// the context's uc_link (set to `link`, the resumer's saved context) brings control
+// back to the resumer with the yield flag clear, so resume reports completion.
+coroutine_new = (work: () void) Coroutine {
+    @builtin.is_null(g_yielded) ?
+        | true { g_yielded = @builtin.raw_allocate(cast(8, usize)) }
+        | false { }
+    stack = @builtin.raw_allocate(cast(65536, usize))
+    ctx = @builtin.raw_allocate(cast(1024, usize))
+    link = @builtin.raw_allocate(cast(1024, usize))
+    getcontext(ctx)
+    @builtin.store(@builtin.gep(ctx, 16), @builtin.ptr_to_int(stack))
+    @builtin.store(@builtin.gep(ctx, 32), cast(65536, i64))
+    @builtin.store(@builtin.gep(ctx, 8), @builtin.ptr_to_int(link))
+    makecontext(ctx, work, 0)
+    Coroutine { ctx: ctx, link: link, stack: stack }
+}
+
+// Resume (or start) the coroutine. Returns true if it yielded (still alive),
+// false once its work function has returned.
+coroutine_resume = (c: Coroutine) bool {
+    g_cur_ctx = c.ctx
+    g_cur_link = c.link
+    @builtin.store(g_yielded, cast(0, i64))
+    swapcontext(c.link, c.ctx)
+    @builtin.load<i64>(g_yielded) == cast(1, i64)
+}
+
+// Suspend the current coroutine back to whoever resumed it.
+coroutine_yield = () void {
+    @builtin.store(g_yielded, cast(1, i64))
+    swapcontext(g_cur_ctx, g_cur_link)
+}
+
+@export({ Coroutine, coroutine_new, coroutine_resume, coroutine_yield })

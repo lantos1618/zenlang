@@ -1,0 +1,42 @@
+// A coroutine increments a shared counter and yields three times, then returns.
+// Main resumes it until it reports done: the counter reaches 3, and there are 4
+// resumes (3 that yielded + 1 final that ran the work to completion). Proves the
+// stackful ucontext fiber suspends and resumes with its stack intact.
+{ io } = std
+{ Coroutine, coroutine_new, coroutine_resume, coroutine_yield } = std.concurrency.coroutine
+
+g_counter ::= @builtin.null_ptr()
+
+worker = () void {
+    i ::= 0
+    loop((l) {
+        i >= 3 ?
+            | true { l.done() }
+            | false {
+                cur = @builtin.load<i64>(g_counter)
+                @builtin.store(g_counter, cur + 1)
+                coroutine_yield()
+                i = i + 1
+                l.next()
+            }
+    })
+}
+
+main = () i32 {
+    g_counter = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_counter, cast(0, i64))
+
+    c ::= coroutine_new(worker)
+    resumes ::= 0
+    loop((l) {
+        alive = coroutine_resume(c)
+        resumes = resumes + 1
+        alive ?
+            | true { l.next() }
+            | false { l.done() }
+    })
+
+    io.println("counter=${cast(@builtin.load<i64>(g_counter), i32)}")
+    io.println("resumes=${cast(resumes, i32)}")
+    0
+}
