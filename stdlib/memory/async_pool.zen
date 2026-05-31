@@ -1,2 +1,53 @@
-// Parse-only placeholder for @std.memory.async_pool.
-// Promote only after parser, typechecker, lowering, and docs-truth evidence.
+// A cooperative worker pool: `workers` coroutines drain a shared work counter,
+// each grabbing one unit per turn and yielding, until the work is exhausted. The
+// result is order-independent, so the number of workers doesn't change the answer
+// — only the interleaving. Pure stdlib over the task runtime.
+//   { pool_run } = std.memory.async_pool
+
+{ coroutine_yield } = std.concurrency.coroutine
+{ Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+
+g_pool_work ::= @builtin.null_ptr()
+g_pool_sum ::= @builtin.null_ptr()
+
+// One pool worker: grab a unit (its remaining-count), add it to the shared sum,
+// yield, repeat until the work counter hits zero.
+pool_worker = () void {
+    loop((l) {
+        remaining = @builtin.load<i64>(g_pool_work)
+        remaining <= 0 ?
+            | true { l.done() }
+            | false {
+                @builtin.store(g_pool_work, remaining - 1)
+                s = @builtin.load<i64>(g_pool_sum)
+                @builtin.store(g_pool_sum, s + remaining)
+                coroutine_yield()
+                l.next()
+            }
+    })
+}
+
+// Run `workers` cooperative workers over `items` units of work (unit k adds k to a
+// shared sum). Returns the sum = items*(items+1)/2, independent of `workers`.
+pool_run = (workers: i64, items: i64) i64 {
+    g_pool_work = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_pool_work, items)
+    g_pool_sum = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_pool_sum, cast(0, i64))
+
+    r ::= runtime()
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= workers ?
+            | true { l.done() }
+            | false {
+                r = task_spawn(r, pool_worker)
+                i = i + 1
+                l.next()
+            }
+    })
+    task_run(r)
+    @builtin.load<i64>(g_pool_sum)
+}
+
+@export({ pool_run })

@@ -1,2 +1,37 @@
-// Parse-only placeholder for @std.memory.async_helpers.
-// Promote only after parser, typechecker, lowering, and docs-truth evidence.
+// Low-level coroutine combinators. `drive` runs a single coroutine to completion
+// (the moral equivalent of a one-task block_on) and reports how many times it
+// yielded; `yield_n` cooperatively yields the current coroutine n times. Pure
+// stdlib over the coroutine primitive.
+//   { drive, yield_n } = std.memory.async_helpers
+
+{ Coroutine, coroutine_resume, coroutine_yield } = std.concurrency.coroutine
+
+// Run `c` to completion, returning the number of times it yielded.
+drive = (c: Coroutine) i64 {
+    yields ::= cast(0, i64)
+    loop((l) {
+        coroutine_resume(c) ?
+            | true {
+                yields = yields + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    yields
+}
+
+// Yield the current coroutine `n` times (cooperative fairness / back-off).
+yield_n = (n: i64) void {
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                coroutine_yield()
+                i = i + 1
+                l.next()
+            }
+    })
+}
+
+@export({ drive, yield_n })

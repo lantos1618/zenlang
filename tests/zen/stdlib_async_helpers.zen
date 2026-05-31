@@ -1,0 +1,16 @@
+// `drive` runs a coroutine to completion and counts its yields. The worker uses
+// `yield_n` to yield 4 times, so drive reports 4.
+{ io } = std
+{ coroutine_new } = std.concurrency.coroutine
+{ drive, yield_n } = std.memory.async_helpers
+
+worker = () void {
+    yield_n(cast(4, i64))
+}
+
+main = () i32 {
+    c ::= coroutine_new(worker)
+    yields = drive(c)
+    io.println("yields=${cast(yields, i32)}")
+    0
+}

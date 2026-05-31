@@ -201,6 +201,21 @@ fn test_stdlib_task() {
 }
 
 #[test]
+fn test_stdlib_async_helpers() {
+    run_test("stdlib_async_helpers");
+}
+
+#[test]
+fn test_stdlib_async_pool() {
+    run_test("stdlib_async_pool");
+}
+
+#[test]
+fn test_stdlib_async_actor() {
+    run_test("stdlib_async_actor");
+}
+
+#[test]
 fn test_stdlib_memory() {
     run_test("stdlib_memory");
 }

@@ -1,0 +1,16 @@
+// A cooperative actor folds a 3-message mailbox [10, 20, 30] by summing, yielding
+// between each message → final state 60. Proves the green-threaded actor loop runs
+// on a fiber via the task runtime.
+{ io } = std
+{ async_actor_run } = std.concurrency.actor.async_actor
+
+main = () i32 {
+    mb = @builtin.raw_allocate(cast(24, usize))
+    @builtin.store(@builtin.gep(mb, 0), cast(10, i64))
+    @builtin.store(@builtin.gep(mb, 8), cast(20, i64))
+    @builtin.store(@builtin.gep(mb, 16), cast(30, i64))
+
+    sum = async_actor_run(mb, cast(3, i64))
+    io.println("actor_sum=${cast(sum, i32)}")
+    0
+}

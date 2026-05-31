@@ -1,0 +1,13 @@
+// Three cooperative workers drain 5 units of work, summing 5+4+3+2+1 = 15. The
+// result is order-independent, so it's 15 regardless of how the workers interleave
+// (and a single worker gets the same answer).
+{ io } = std
+{ pool_run } = std.memory.async_pool
+
+main = () i32 {
+    three = pool_run(cast(3, i64), cast(5, i64))
+    io.println("sum3=${cast(three, i32)}")
+    one = pool_run(cast(1, i64), cast(5, i64))
+    io.println("sum1=${cast(one, i32)}")
+    0
+}

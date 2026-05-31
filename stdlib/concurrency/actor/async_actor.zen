@@ -1,2 +1,49 @@
-// Parse-only placeholder for @std.concurrency.actor.async_actor.
-// Promote only after parser, typechecker, lowering, and docs-truth evidence.
+// A cooperative actor: its message loop runs as a coroutine on the task runtime,
+// draining an i64 mailbox and folding the messages into its state, yielding between
+// each (so it interleaves with other actors/tasks). Unlike the pthread-backed
+// concurrency/actor/actor.zen, this actor is a green-threaded fiber — same code is
+// scheduled cooperatively, no OS thread. Pure stdlib over the coroutine runtime.
+//   { async_actor_run } = std.concurrency.actor.async_actor
+
+{ coroutine_yield } = std.concurrency.coroutine
+{ Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+
+g_actor_mailbox ::= @builtin.null_ptr()
+g_actor_count ::= @builtin.null_ptr()
+g_actor_state ::= @builtin.null_ptr()
+
+// The actor's behaviour loop: process each message (sum it into state), yielding
+// after each so the scheduler can run other fibers.
+actor_loop = () void {
+    n = @builtin.load<i64>(g_actor_count)
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                msg = @builtin.load<i64>(@builtin.gep(g_actor_mailbox, i * 8))
+                s = @builtin.load<i64>(g_actor_state)
+                @builtin.store(g_actor_state, s + msg)
+                coroutine_yield()
+                i = i + 1
+                l.next()
+            }
+    })
+}
+
+// Run a cooperative actor that folds `count` i64 messages from `mailbox` by summing
+// them. Returns the final accumulated state.
+async_actor_run = (mailbox: RawPtr<u8>, count: i64) i64 {
+    g_actor_mailbox = mailbox
+    g_actor_count = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_actor_count, count)
+    g_actor_state = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_actor_state, cast(0, i64))
+
+    r ::= runtime()
+    r = task_spawn(r, actor_loop)
+    task_run(r)
+    @builtin.load<i64>(g_actor_state)
+}
+
+@export({ async_actor_run })
