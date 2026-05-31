@@ -115,3 +115,4 @@ secrets.yml
 examples/build_demo/target/
 examples/demo_project/target/
 .claude/worktrees/
+.claude/
