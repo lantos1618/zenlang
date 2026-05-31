@@ -156,6 +156,21 @@ fn test_stdlib_getrandom() {
 }
 
 #[test]
+fn test_stdlib_mmap() {
+    run_test("stdlib_mmap");
+}
+
+#[test]
+fn test_stdlib_env() {
+    run_test("stdlib_env");
+}
+
+#[test]
+fn test_stdlib_eventfd() {
+    run_test("stdlib_eventfd");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

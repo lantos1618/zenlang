@@ -1,0 +1,20 @@
+// An eventfd accumulates writes and returns the total on read: create one at 0,
+// add 5 then 3, and a single read yields 8 — exercising the eventfd2/read/write
+// syscalls end to end through the std.compiler facade.
+{ io } = std
+{ eventfd_new, eventfd_write, eventfd_read, eventfd_close } = std.io.eventfd
+
+main = () i32 {
+    fd = eventfd_new(0)
+    fd_ok = fd >= 0
+    io.println("fd_ok=${cast(fd_ok, i32)}")
+
+    eventfd_write(fd, 5)
+    eventfd_write(fd, 3)
+    total = eventfd_read(fd)
+    io.println("counter=${cast(total, i32)}")
+
+    rc = eventfd_close(fd)
+    io.println("closed=${cast(rc, i32)}")
+    0
+}
