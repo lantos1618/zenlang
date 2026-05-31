@@ -1,2 +1,17 @@
-// Parse-only placeholder for @std.sys.process.
-// Promote process APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Process identity syscalls via the std.compiler facade.
+// process_getpid (syscall 39) and process_getppid (syscall 110) — x86-64 Linux.
+//   { process_getpid, process_getppid } = std.sys.process.process
+
+{ sys0 } = std.compiler
+
+// Return the calling process's PID.
+process_getpid = () i64 {
+    sys0(39)
+}
+
+// Return the parent process's PID.
+process_getppid = () i64 {
+    sys0(110)
+}
+
+@export({ process_getpid, process_getppid })

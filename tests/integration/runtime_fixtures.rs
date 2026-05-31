@@ -164,3 +164,8 @@ fn test_stdlib_slice() {
 fn test_stdlib_buffer() {
     run_test("stdlib_buffer");
 }
+
+#[test]
+fn test_stdlib_process() {
+    run_test("stdlib_process");
+}
