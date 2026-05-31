@@ -17,9 +17,10 @@
 //!
 //! `@await e` (inside a poll body) evaluates `e` to a frame pointer, polls it
 //! through its `__poll` field; if Pending it saves the next state and returns
-//! `false`, otherwise it binds the ready value and falls through. `block_on(e)`
-//! (a compiler-provided driver, emitted in the runtime preamble) loops the poll
-//! until Ready and yields the value.
+//! `false`, otherwise it binds the ready value and falls through. Driving a
+//! future from the *outside* (`block_on`, `Scheduler`) is pure stdlib Zen over
+//! the one `@builtin.poll(frame, out)` hook — the compiler owns only this
+//! transform plus that hook.
 //!
 //! ## Scope of what is lowered
 //!

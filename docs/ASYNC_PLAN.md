@@ -35,6 +35,23 @@
 >   pending frame via `@builtin.poll`. The compiler `scheduler_new/spawn/run`
 >   primitives and the `zen_scheduler` C runtime are **deleted**.
 >
+> **Promoted (unblocked by the nameable `Future<T>`):**
+> - `stdlib/memory/async_helpers.zen` — `await_now(Future<i64>)`, `sum2(...)`.
+> - `stdlib/memory/async_pool.zen` — a `Vec<Future<i64>>` pool: `submit`/`drain`.
+> - `stdlib/concurrency/actor/async_actor.zen` — an actor whose mailbox takes
+>   `Future<i64>` messages (`async_actor_feed`), folding into i64 state.
+>
+>   Each has a deterministic `tests/zen` fixture (`async_helpers`, `async_pool`,
+>   `async_actor`). They were blocked *solely* because a future couldn't be named
+>   in a signature; nothing else changed.
+>
+> **One sharp edge to know.** A `Vec<RawPtr<u8>>` / `Vec<Future<i64>>`
+> specialization reached from *both* a generic function body and a non-generic
+> one is currently emitted twice by the monomorphizer (a duplicate-`struct`/`fn`
+> C error). The async stdlib sidesteps it by keeping every `Vec` call in a
+> **non-generic** helper (e.g. `Scheduler.spawn<T>` forwards to a non-generic
+> `spawn_frame`). This is a pre-existing monomorphizer gap, not async-specific.
+>
 > The sections below are the original milestone log; treat the box above as the
 > authoritative description of the *current* compiler surface.
 

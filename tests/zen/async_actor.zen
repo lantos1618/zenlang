@@ -1,0 +1,20 @@
+// Drives the promoted std.concurrency.actor.async_actor module: feed an actor
+// three i64-producing futures and read the accumulated state — proving an actor
+// mailbox of `Future<i64>` messages now type-checks and runs.
+{ io } = std
+{ async_actor, async_actor_feed, async_actor_state } = std.concurrency.actor.async_actor
+
+handler = @async (n: i32, delay: i32) i64 {
+    v = @await pending_then_ready(delay, n)
+    cast(v, i64)
+}
+
+main = () i32 {
+    a = async_actor()
+    async_actor_feed(a, handler(10, 1))
+    async_actor_feed(a, handler(20, 0))
+    async_actor_feed(a, handler(12, 2))
+    s = async_actor_state(a)
+    io.println("state = ${s}")
+    0
+}
