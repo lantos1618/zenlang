@@ -1,0 +1,103 @@
+// Hermetic filesystem test: mkdir a unique /tmp dir, verify fs_exists returns 1,
+// rmdir it, verify fs_exists returns 0. Also verify that fs_exists on "/" is 1
+// and fs_exists on a nonexistent path is 0.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{ fs_exists, fs_mkdir, fs_rmdir, fs_remove } = std.io.files.fs
+{ file_open_create, file_close } = std.io.files.file
+
+// Write decimal digits of `n` into `buf` starting at `offset`.
+// Returns the number of digits written.
+write_digits = (buf: RawPtr<u8>, offset: i64, n: i64) i64 {
+    tmp ::= n
+    count ::= cast(0, i64)
+    loop((l) {
+        tmp <= 0 ?
+            | true { l.done() }
+            | false {
+                tmp = tmp / 10
+                count = count + 1
+                l.next()
+            }
+    })
+    rem ::= n
+    idx ::= count - 1
+    loop((l) {
+        idx < 0 ?
+            | true { l.done() }
+            | false {
+                digit = rem % 10
+                @builtin.store(@builtin.gep(buf, offset + idx), cast(48 + digit, u8))
+                rem = rem / 10
+                idx = idx - 1
+                l.next()
+            }
+    })
+    count
+}
+
+main = () i32 {
+    pid = process_getpid()
+
+    // Build dir path: "/tmp/zen_fs_dir_<pid>\0"
+    // prefix "/tmp/zen_fs_dir_" = 16 bytes
+    dpath = @builtin.raw_allocate(cast(48, usize))
+    dprefix = @builtin.static_string_ptr("/tmp/zen_fs_dir_")
+    @builtin.memcpy(dpath, dprefix, cast(16, usize))
+    dc1 = write_digits(dpath, 16, pid)
+    @builtin.store(@builtin.gep(dpath, 16 + dc1), cast(0, u8))
+
+    // Build file path: "/tmp/zen_fs_file_<pid>\0"
+    // prefix "/tmp/zen_fs_file_" = 17 bytes
+    fpath = @builtin.raw_allocate(cast(48, usize))
+    fprefix = @builtin.static_string_ptr("/tmp/zen_fs_file_")
+    @builtin.memcpy(fpath, fprefix, cast(17, usize))
+    dc2 = write_digits(fpath, 17, pid)
+    @builtin.store(@builtin.gep(fpath, 17 + dc2), cast(0, u8))
+
+    // "/" always exists.
+    root_ptr = @builtin.static_string_ptr("/")
+    root_path = @builtin.raw_allocate(cast(2, usize))
+    @builtin.memcpy(root_path, root_ptr, cast(2, usize))
+    root_exists = fs_exists(root_path)
+    io.println("root_exists=${cast(root_exists, i32)}")
+    @builtin.raw_deallocate(root_path, cast(2, usize))
+
+    // A clearly nonexistent path should not exist.
+    nope_ptr = @builtin.static_string_ptr("/tmp/__zen_fs_nope__")
+    nope = @builtin.raw_allocate(cast(24, usize))
+    @builtin.memcpy(nope, nope_ptr, cast(24, usize))
+    nope_exists = fs_exists(nope)
+    io.println("nope_exists=${cast(nope_exists, i32)}")
+    @builtin.raw_deallocate(nope, cast(24, usize))
+
+    // mkdir the unique dir — mode 0755=493.
+    mkdir_rc = fs_mkdir(dpath, 493)
+    io.println("mkdir_ok=${cast(mkdir_rc == 0, i32)}")
+
+    // It should now exist.
+    dir_exists = fs_exists(dpath)
+    io.println("dir_exists=${cast(dir_exists, i32)}")
+
+    // rmdir it.
+    rmdir_rc = fs_rmdir(dpath)
+    io.println("rmdir_ok=${cast(rmdir_rc == 0, i32)}")
+
+    // Should no longer exist.
+    dir_gone = fs_exists(dpath)
+    io.println("dir_gone=${cast(dir_gone == 0, i32)}")
+
+    // Create a file, verify exists, remove it.
+    wfd = file_open_create(fpath)
+    file_close(wfd)
+    file_exists = fs_exists(fpath)
+    io.println("file_exists=${cast(file_exists, i32)}")
+    remove_rc = fs_remove(fpath)
+    io.println("remove_ok=${cast(remove_rc == 0, i32)}")
+    file_gone = fs_exists(fpath)
+    io.println("file_gone=${cast(file_gone == 0, i32)}")
+
+    @builtin.raw_deallocate(dpath, cast(48, usize))
+    @builtin.raw_deallocate(fpath, cast(48, usize))
+    0
+}
