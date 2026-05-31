@@ -24,8 +24,22 @@ impl Parser {
                 self.advance();
                 let ty = self.parse_type()?;
                 self.skip_newlines();
-                self.expect(&Token::Assign)?;
-                return self.finish_var_decl(name, name_span, Some(ty), false, false);
+                // A type-annotated binding works with any binding operator, just
+                // like the untyped forms: `a: i32 = 0` (immutable), `a: i32 ::= 0`
+                // (mutable), `a: i32 := 0` (const).
+                let (mutable, constant) = match self.peek() {
+                    Token::DeclareAssign => (true, false),
+                    Token::ConstAssign => (false, true),
+                    Token::Assign => (false, false),
+                    _ => {
+                        return Err(CompileError::Syntax(
+                            "expected `=`, `::=`, or `:=` after the type annotation".to_string(),
+                            Some(self.peek_span()),
+                        ))
+                    }
+                };
+                self.advance();
+                return self.finish_var_decl(name, name_span, Some(ty), mutable, constant);
             }
         }
 
@@ -60,7 +74,9 @@ impl Parser {
                     depth = depth.saturating_sub(1);
                     i += 1;
                 }
-                Some(Token::Assign) if depth == 0 => return true,
+                Some(Token::Assign | Token::DeclareAssign | Token::ConstAssign) if depth == 0 => {
+                    return true
+                }
                 Some(Token::Newline | Token::LBrace) if depth == 0 => return false,
                 Some(Token::EOF) | None => return false,
                 _ => i += 1,
