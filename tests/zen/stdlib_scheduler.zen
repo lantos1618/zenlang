@@ -1,0 +1,63 @@
+// Three coroutines, each doing two record-then-yield steps, run on the scheduler.
+// Round-robin interleaving makes the recorded order 0,1,2,0,1,2 (read as 12012) —
+// NOT 0,0,1,1,2,2 (which is what sequential execution would give). Proves the
+// scheduler interleaves fibers at their yield points.
+{ io } = std
+{ coroutine_yield } = std.concurrency.coroutine
+{ Scheduler, scheduler, scheduler_spawn, scheduler_run } = std.concurrency.async.scheduler
+
+g_seq ::= @builtin.null_ptr()
+g_pos ::= @builtin.null_ptr()
+
+record = (id: i64) void {
+    p = @builtin.load<i64>(g_pos)
+    @builtin.store(@builtin.gep(g_seq, p), cast(id, u8))
+    @builtin.store(g_pos, p + 1)
+}
+
+w0 = () void {
+    record(cast(0, i64))
+    coroutine_yield()
+    record(cast(0, i64))
+    coroutine_yield()
+}
+w1 = () void {
+    record(cast(1, i64))
+    coroutine_yield()
+    record(cast(1, i64))
+    coroutine_yield()
+}
+w2 = () void {
+    record(cast(2, i64))
+    coroutine_yield()
+    record(cast(2, i64))
+    coroutine_yield()
+}
+
+main = () i32 {
+    g_seq = @builtin.raw_allocate(cast(6, usize))
+    g_pos = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_pos, cast(0, i64))
+
+    s ::= scheduler()
+    s = scheduler_spawn(s, w0)
+    s = scheduler_spawn(s, w1)
+    s = scheduler_spawn(s, w2)
+    scheduler_run(s)
+
+    // Fold the 6 recorded ids into one number (012012 -> 12012).
+    order ::= cast(0, i64)
+    j ::= cast(0, i64)
+    loop((l) {
+        j >= 6 ?
+            | true { l.done() }
+            | false {
+                d = @builtin.load<u8>(@builtin.gep(g_seq, j))
+                order = order * 10 + cast(d, i64)
+                j = j + 1
+                l.next()
+            }
+    })
+    io.println("order=${cast(order, i32)}")
+    0
+}

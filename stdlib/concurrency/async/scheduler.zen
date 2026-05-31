@@ -1,2 +1,78 @@
-// Parse-only placeholder for @std.concurrency.async.scheduler.
-// Promote only after parser, typechecker, lowering, and docs-truth evidence.
+// Cooperative scheduler: a run-queue of coroutines, driven round-robin until all
+// finish. This is the "to yield to" side of an AsyncExec — pure stdlib Zen over the
+// coroutine primitive, no compiler support. Spawn coroutines, then run(); each pass
+// resumes every still-alive coroutine once, so they interleave at their yield points.
+//   { Scheduler, scheduler, scheduler_spawn, scheduler_run } = std.concurrency.async.scheduler
+
+{ Coroutine, coroutine_new, coroutine_resume } = std.concurrency.coroutine
+{ Vec, vec_new_default, vec_push, vec_get, vec_len } = std.collections.vec
+{ Mallocator } = std.memory.allocator
+
+Scheduler: { coros: Vec<Coroutine, Mallocator> }
+
+scheduler = () Scheduler {
+    Scheduler { coros: vec_new_default<Coroutine>() }
+}
+
+// Queue a coroutine running `work`.
+scheduler_spawn = (s: Scheduler, work: () void) Scheduler {
+    Scheduler { coros: vec_push<Coroutine, Mallocator>(s.coros, coroutine_new(work)) }
+}
+
+// Resume coroutine `i` if it isn't already done. Returns 1 if this resume finished
+// it (newly done), else 0. Kept as a helper so the run loop has no bare-statement
+// ternary.
+sched_step_one = (s: Scheduler, done: RawPtr<u8>, i: i64) i64 {
+    d = @builtin.load<u8>(@builtin.gep(done, i))
+    d == cast(0, u8) ?
+        | true {
+            co = vec_get<Coroutine, Mallocator>(s.coros, i)
+            alive = coroutine_resume(co)
+            alive ?
+                | true { cast(0, i64) }
+                | false {
+                    @builtin.store(@builtin.gep(done, i), cast(1, u8))
+                    cast(1, i64)
+                }
+        }
+        | false { cast(0, i64) }
+}
+
+// Run every queued coroutine to completion, cooperatively interleaved.
+scheduler_run = (s: Scheduler) void {
+    n = vec_len<Coroutine, Mallocator>(s.coros)
+    done = @builtin.raw_allocate(cast(n, usize))
+    z ::= cast(0, i64)
+    loop((l) {
+        z >= n ?
+            | true { l.done() }
+            | false {
+                @builtin.store(@builtin.gep(done, z), cast(0, u8))
+                z = z + 1
+                l.next()
+            }
+    })
+
+    remaining ::= n
+    loop((outer) {
+        remaining <= 0 ?
+            | true { outer.done() }
+            | false {
+                i ::= cast(0, i64)
+                loop((inner) {
+                    i >= n ?
+                        | true { inner.done() }
+                        | false {
+                            remaining = remaining - sched_step_one(s, done, i)
+                            i = i + 1
+                            inner.next()
+                        }
+                })
+                outer.next()
+            }
+    })
+
+    @builtin.raw_deallocate(done, cast(n, usize))
+}
+
+@export({ Scheduler, scheduler, scheduler_spawn, scheduler_run })
