@@ -276,6 +276,11 @@ fn test_stdlib_futex() {
 }
 
 #[test]
+fn test_stdlib_mutex() {
+    run_test("stdlib_mutex");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
