@@ -1,2 +1,38 @@
-// Parse-only placeholder for @std.core.propagate.
-// Promote propagation APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Propagation combinators — thread fallible values between Option and Result
+// without early-return (Zen has no `?`-propagation operator; `?` is the match
+// sigil). These are the manual equivalents: convert a miss into an error, drop
+// an error back to a miss, pull the error out, or fall back to an alternative.
+//   { option_to_result, result_to_option, result_err_opt, option_or } = std.core.propagate
+
+{ Option } = std.core.option
+{ Result } = std.core.result
+
+// A present value becomes `Ok`; a miss becomes `Err(err)`.
+option_to_result<T, E> = (value: Option<T>, err: E) Result<T, E> {
+    value ?
+        | Some(inner) { Result<T, E>.Ok(inner) }
+        | None { Result<T, E>.Err(err) }
+}
+
+// `Ok` becomes a present value; `Err` is dropped to a miss.
+result_to_option<T, E> = (value: Result<T, E>) Option<T> {
+    value ?
+        | Ok(inner) { Option<T>.Some(inner) }
+        | Err(_) { Option<T>.None }
+}
+
+// Pull the error out: `Some(err)` for `Err`, `None` for `Ok`.
+result_err_opt<T, E> = (value: Result<T, E>) Option<E> {
+    value ?
+        | Ok(_) { Option<E>.None }
+        | Err(e) { Option<E>.Some(e) }
+}
+
+// The first present value, else the alternative.
+option_or<T> = (a: Option<T>, b: Option<T>) Option<T> {
+    a ?
+        | Some(inner) { Option<T>.Some(inner) }
+        | None { b }
+}
+
+@export({ option_to_result, result_to_option, result_err_opt, option_or })

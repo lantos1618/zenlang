@@ -1,0 +1,5 @@
+some_to_ok=1
+none_to_err=0
+ok_to_some=1
+err_val=99
+or_picks=7
