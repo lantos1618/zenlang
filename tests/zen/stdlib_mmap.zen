@@ -1,0 +1,30 @@
+// mmap_anon hands back usable zero-filled page memory straight from the kernel:
+// the mapping doesn't fail, freshly-mapped bytes read as zero, stores at the
+// first and last 8-byte slots round-trip, and munmap succeeds (returns 0).
+{ io } = std
+{ mmap_anon, mmap_failed, munmap } = std.memory.mmap
+
+main = () i32 {
+    len = cast(4096, i64)
+    p = mmap_anon(len)
+
+    failed = mmap_failed(p)
+    io.println("failed=${cast(failed, i32)}")
+
+    // Anonymous pages are zero-filled.
+    z = @builtin.load<i64>(p)
+    io.println("zeroed=${cast(z, i32)}")
+
+    // Round-trip the first and last i64 slots of the page.
+    @builtin.store(p, cast(123, i64))
+    last = @builtin.gep(p, 4088)
+    @builtin.store(last, cast(456, i64))
+    v0 = @builtin.load<i64>(p)
+    vlast = @builtin.load<i64>(last)
+    io.println("v0=${cast(v0, i32)}")
+    io.println("vlast=${cast(vlast, i32)}")
+
+    rc = munmap(p, len)
+    io.println("unmapped=${cast(rc, i32)}")
+    0
+}
