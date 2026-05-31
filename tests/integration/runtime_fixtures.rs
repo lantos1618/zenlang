@@ -402,3 +402,13 @@ fn test_async_await_ready() {
     // Proves the milestone-1 state-machine lowering end to end (ASYNC_PLAN.md).
     run_test("async_await_ready");
 }
+
+#[test]
+fn test_async_pending_resume() {
+    // Awaits futures that are genuinely Pending for their first N polls before
+    // going Ready, driven by a `block_on` re-poll loop. Proves real
+    // suspend/resume: the poll fn takes the Pending `return false` path, and the
+    // sub-future handle + resume state + spilled locals survive each re-poll
+    // (ASYNC_PLAN.md milestone 2, increment 1).
+    run_test("async_pending_resume");
+}

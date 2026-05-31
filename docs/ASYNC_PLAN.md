@@ -188,6 +188,7 @@ struct f__frame {
     zen_poll_fn __poll;   // uniform FIRST field — generic driving
     int __state;          // 0 = start, k = resumed after k-th await, -1 = done
     /* every param, then every local, spilled by value */
+    void* __af0; void* __af1; ...  // one sub-future handle per await point
     T __ret;              // omitted for void/never
 };
 static bool f__poll(void* self, void* out);       // the state machine
@@ -207,22 +208,40 @@ f__frame* f(args);                                 // allocating constructor
   C backend) loops the poll until Ready. It is the compiler-provided driver
   standing in for the milestone-2 scheduler.
 
-**Known limitation — real Pending suspend.** The MVP only exercises
-*already-ready* futures, which never take the `return false` path. The await
-*handle* temps (`__af<i>`) live at poll-function scope, not in the frame, so they
-are **not** preserved across a genuine poll/return/re-poll cycle: a future that
-actually returns Pending would lose its handle on resume. This is acceptable for
-milestone 1 (there is nothing to be Pending *on* until the I/O mux of
-milestone 3, and no scheduler to re-poll until milestone 2), but it is the first
-thing to fix when a real Pending source lands: spill `__af<i>` (and the resume
-PC for awaits inside control flow) into the frame, and re-derive them on resume.
+**Shipped — real Pending suspend/resume (milestone 2, increment 1).** The await
+*handle* `__af<i>` now lives **in the frame** (a `void* __af<i>` field per await
+point), initialised to `NULL` by the constructor. On a genuine Pending suspend
+the poll fn takes `return false`; a later re-poll re-enters directly at the
+await's `case` (the switch on `__fr->__state`), re-polls the **saved** handle,
+and — because all locals are spilled into the frame too — threads earlier results
+across the real suspend. Only the ready-value result temp `__aw<i>` stays at
+poll-function scope (it lives for one poll). Proven end to end by
+`tests/zen/async_pending_resume.zen` (runtime fixture
+`runtime_fixtures::test_async_pending_resume`), which awaits futures that are
+Pending for their first N polls before going Ready, driven by `block_on`'s
+re-poll loop, including two real suspends in sequence with a local threaded
+across them.
 
-**Exact next step:** extend `async_is_lowerable` + the poll emission to handle
+**Deterministic Pending source — `pending_then_ready(n, value)`.** Until the I/O
+readiness mux (milestone 3) exists, there was nothing to *be* Pending on. A
+compiler-provided test future fills the gap: typed `(i32, i32) -> Future<i32>`
+(special-cased in `call_support.rs`, whitelisted in the resolver), lowered to a
+tiny runtime frame `zen_ptr_future` (`runtime_helpers.rs`) whose poll returns
+`false` for its first `n` polls then `true` with `value`. It shares the uniform
+`zen_poll_fn` layout so it drives through the same `void*` path as any lowered
+async frame. This is a *test* primitive, not stdlib surface.
+
+**Known limitation — control-flow splitting.** `async_is_lowerable` still gates
+(E3082) awaits nested inside a sub-expression, `match`/`if` branch, or loop: the
+poll body is still a linear switch with one `case` per top-level await. The frame
+already carries the resume PC (`__state`) and the per-await handles, so the
+remaining work is purely emission: split branch/loop bodies into states.
+
+**Exact next step:** widen `async_is_lowerable` + the poll emission to handle
 `@await` inside `match`/`if` branches and loops — i.e. real control-flow
-splitting — and move the await handles into the frame so a Pending re-poll
-resumes correctly. That, plus the milestone-2 cooperative scheduler (which gives
-something to actually suspend for), turns the single-threaded skeleton into a
-usable coroutine runtime.
+splitting — keeping E3082 only for genuinely-unsupported shapes (generic async,
+whose `monomorphize_types` `Future` arm is still `unreachable!`). The
+suspend/resume machinery (frame ABI) is now in place to support it.
 
 Implementation lives in `src/codegen/c/async_lowering.rs` (frame/poll/ctor +
 lowerability analysis), with the `block_on` driver in `src/codegen/c/emit.rs`

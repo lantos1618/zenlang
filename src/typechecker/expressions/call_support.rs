@@ -36,6 +36,13 @@ impl TypeChecker {
             (resolved, ret)
         } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
             (full_name.clone(), self.resolve_type(&type_args[0]))
+        } else if name == "pending_then_ready" && module.is_none() && typed_args.len() == 2 {
+            // A compiler-provided *test* future (ASYNC_PLAN.md milestone 2): it
+            // returns Pending for the first `n` polls, then Ready(`value`). It is
+            // the deterministic Pending source used to prove genuine
+            // suspend/resume before a real I/O readiness source (milestone 3)
+            // exists. `pending_then_ready(n, value) -> Future<i32>`.
+            (full_name.clone(), Type::Future(Box::new(Type::I32)))
         } else if name == "block_on" && module.is_none() && typed_args.len() == 1 {
             // `block_on(fut)` drives a future to completion and yields its value.
             // A compiler-provided driver (ASYNC_PLAN.md milestone 1) standing in

@@ -64,6 +64,15 @@ impl CEmitter {
         for slot in &slots {
             self.line(&format!("{};", c_declarator(&slot.ty, &slot.name)));
         }
+        // The sub-future *handle* for each await point lives in the frame so it
+        // survives a genuine Pending / return / re-poll cycle: on re-entry the
+        // `case` is reached directly and the stored handle is re-polled. (The
+        // ready-value result temp `__aw<i>` need only live for the duration of a
+        // single poll, so it stays at poll-function scope.)
+        let n_awaits = count_awaits(func);
+        for i in 0..n_awaits {
+            self.line(&format!("void* __af{i};"));
+        }
         if func.return_type != Type::Void && func.return_type != Type::Never {
             self.line(&format!("{} __ret;", Self::c_type(&func.return_type)));
         }
@@ -88,6 +97,9 @@ impl CEmitter {
             let id = c_ident(&param.name);
             self.line(&format!("__fr->{id} = {id};"));
         }
+        for i in 0..count_awaits(func) {
+            self.line(&format!("__fr->__af{i} = NULL;"));
+        }
         self.line("return __fr;");
         self.dedent();
         self.line("}");
@@ -108,14 +120,15 @@ impl CEmitter {
             self.async_frame_fields.insert(c_ident(&slot.name));
         }
 
-        // Pre-declare a result temp + future-handle temp for every await point,
-        // at function scope. C forbids a declaration immediately after a `case`
-        // label and a `case` may jump past an in-block declaration, so all await
-        // state must live outside the `switch`.
+        // Pre-declare a ready-value result temp for every await point at function
+        // scope. C forbids a declaration immediately after a `case` label and a
+        // `case` may jump past an in-block declaration, so all await-result temps
+        // must live outside the `switch`. The sub-future *handle* lives in the
+        // frame instead (see `emit_async_frame_struct`), so it survives a genuine
+        // Pending re-poll.
         let await_types = collect_await_types(func);
         for (i, ty) in await_types.iter().enumerate() {
             self.line(&format!("{} __aw{};", Self::c_type(ty), i));
-            self.line(&format!("void* __af{} = NULL;", i));
         }
         self.async_await_index = 0;
 
@@ -196,16 +209,26 @@ impl CEmitter {
         // State numbering: state 0 is the start; the k-th await resumes at k.
         let state = i + 1;
         let fut = self.emit_expr_inline(inner);
-        self.line(&format!("__af{i} = (void*){fut};"));
+        // Store the sub-future handle in the frame so it survives a Pending
+        // suspend: on resume we re-enter at `case {state}` (below) without
+        // re-running this assignment, and re-poll the saved handle.
+        self.line(&format!("__fr->__af{i} = (void*){fut};"));
         self.line(&format!("__fr->__state = {state};"));
         self.line(&format!("case {state}:"));
         // Poll the inner future through its uniform `__poll` field. If Pending,
-        // stay parked at this state and report Pending to our caller.
+        // stay parked at this state and report Pending to our caller; a later
+        // re-poll resumes here with `__fr->__af{i}` intact.
         self.line(&format!(
-            "if (!(*(zen_poll_fn*)__af{i})(__af{i}, &__aw{i})) {{ return false; }}"
+            "if (!(*(zen_poll_fn*)__fr->__af{i})(__fr->__af{i}, &__aw{i})) {{ return false; }}"
         ));
         format!("__aw{i}")
     }
+}
+
+/// The number of `@await` points in the body — used to size the per-await frame
+/// fields (sub-future handles).
+fn count_awaits(func: &TypedFunction) -> usize {
+    collect_await_types(func).len()
 }
 
 /// The inner value type of each `@await` in the body, in source order — used to
