@@ -286,6 +286,11 @@ fn test_stdlib_semaphore() {
 }
 
 #[test]
+fn test_stdlib_rwlock() {
+    run_test("stdlib_rwlock");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }

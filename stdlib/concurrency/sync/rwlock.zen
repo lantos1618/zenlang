@@ -1,4 +1,44 @@
-// Parse-only placeholder for @std.concurrency.sync.rwlock.
-//
-// RwLock APIs are stdlib-owned Zen surface. Restore them only with parser,
-// typechecker, build, and docs-truth evidence.
+// A POSIX reader-writer lock backed by pthread_rwlock_t, allocated on the heap.
+// pthread_rwlock_t is 56 bytes on Linux x86-64. We allocate 64 bytes to be safe.
+//   { RwLock, rwlock_new, rwlock_rdlock, rwlock_wrlock, rwlock_unlock, rwlock_destroy }
+//     = std.concurrency.sync.rwlock
+
+@extern pthread_rwlock_init = (rwlock: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_rwlock_rdlock = (rwlock: RawPtr<u8>) i32
+@extern pthread_rwlock_wrlock = (rwlock: RawPtr<u8>) i32
+@extern pthread_rwlock_unlock = (rwlock: RawPtr<u8>) i32
+@extern pthread_rwlock_destroy = (rwlock: RawPtr<u8>) i32
+
+// A heap-backed pthread_rwlock_t (64-byte opaque buffer).
+RwLock: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a default rwlock.
+rwlock_new = () RwLock {
+    ptr = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
+    pthread_rwlock_init(ptr, @builtin.null_ptr())
+    RwLock { ptr: ptr }
+}
+
+// Acquire a shared (read) lock.
+rwlock_rdlock = (rw: RwLock) void {
+    pthread_rwlock_rdlock(rw.ptr)
+}
+
+// Acquire an exclusive (write) lock.
+rwlock_wrlock = (rw: RwLock) void {
+    pthread_rwlock_wrlock(rw.ptr)
+}
+
+// Release either kind of lock.
+rwlock_unlock = (rw: RwLock) void {
+    pthread_rwlock_unlock(rw.ptr)
+}
+
+// Destroy and free the rwlock.
+rwlock_destroy = (rw: RwLock) void {
+    pthread_rwlock_destroy(rw.ptr)
+    @builtin.raw_deallocate(rw.ptr, cast(64, usize))
+}
+
+@export({ RwLock, rwlock_new, rwlock_rdlock, rwlock_wrlock, rwlock_unlock, rwlock_destroy })
