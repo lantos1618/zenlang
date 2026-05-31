@@ -16,3 +16,4 @@ mod single_file_fixtures;
 mod generic_specializations;
 
 mod cli_build;
+mod stdlib_builtin_enforcement;
