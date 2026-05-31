@@ -1,2 +1,38 @@
-// Parse-only placeholder for @std.concurrency.sync.semaphore.
-// Promote Semaphore APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A POSIX semaphore backed by sem_t, allocated on the heap.
+// sem_t is 32 bytes on Linux x86-64. We allocate 64 bytes to be safe.
+//   { Semaphore, sem_new, sem_wait, sem_post, sem_destroy } = std.concurrency.sync.semaphore
+
+@extern sem_init = (sem: RawPtr<u8>, pshared: i32, value: u32) i32
+@extern sem_wait = (sem: RawPtr<u8>) i32
+@extern sem_post = (sem: RawPtr<u8>) i32
+@extern sem_destroy = (sem: RawPtr<u8>) i32
+
+// A heap-backed POSIX semaphore (64-byte opaque buffer).
+Semaphore: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a semaphore with an initial count.
+// pshared=0 means the semaphore is local to this process.
+sem_new = (initial: i32) Semaphore {
+    ptr = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
+    sem_init(ptr, cast(0, i32), cast(initial, u32))
+    Semaphore { ptr: ptr }
+}
+
+// Decrement (wait/P) — blocks if the count is zero.
+sem_wait_s = (s: Semaphore) void {
+    sem_wait(s.ptr)
+}
+
+// Increment (post/V) — wakes a waiter if count was zero.
+sem_post_s = (s: Semaphore) void {
+    sem_post(s.ptr)
+}
+
+// Destroy and free the semaphore.
+sem_destroy_s = (s: Semaphore) void {
+    sem_destroy(s.ptr)
+    @builtin.raw_deallocate(s.ptr, cast(64, usize))
+}
+
+@export({ Semaphore, sem_new, sem_wait_s, sem_post_s, sem_destroy_s })

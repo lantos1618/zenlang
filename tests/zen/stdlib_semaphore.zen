@@ -1,0 +1,79 @@
+// 4 threads each post 1000 times; main joins, then drains 4000 waits → count==4000.
+{ io } = std
+{ Semaphore, sem_new, sem_wait_s, sem_post_s, sem_destroy_s } = std.concurrency.sync.semaphore
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern sem_post = (sem: RawPtr<u8>) i32
+
+// Thread worker: reads sem_ptr from arg, posts 1000 times.
+worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    sem_ptr = @builtin.load<RawPtr<u8>>(arg)
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 1000 ?
+            | true {
+                sem_post(sem_ptr)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    s = sem_new(0)
+
+    // Arg block: just the sem_ptr
+    arg_block = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(arg_block, s.ptr)
+
+    threads = @builtin.raw_allocate(cast(32, usize))
+
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 4 ?
+            | true {
+                slot = @builtin.gep(threads, i * 8)
+                pthread_create(slot, @builtin.null_ptr(), worker, arg_block)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    j ::= cast(0, i64)
+    loop((l) {
+        j < 4 ?
+            | true {
+                slot = @builtin.gep(threads, j * 8)
+                tid = @builtin.load<i64>(slot)
+                pthread_join(tid, @builtin.null_ptr())
+                j = j + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    // Drain: 4000 waits should all succeed immediately
+    count ::= cast(0, i64)
+    k ::= cast(0, i64)
+    loop((l) {
+        k < 4000 ?
+            | true {
+                sem_wait_s(s)
+                count = count + 1
+                k = k + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    io.println("drained=${cast(count, i32)}")
+
+    @builtin.raw_deallocate(threads, cast(32, usize))
+    @builtin.raw_deallocate(arg_block, cast(8, usize))
+    sem_destroy_s(s)
+    0
+}

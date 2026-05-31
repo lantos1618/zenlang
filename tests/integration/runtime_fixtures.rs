@@ -281,6 +281,11 @@ fn test_stdlib_mutex() {
 }
 
 #[test]
+fn test_stdlib_semaphore() {
+    run_test("stdlib_semaphore");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
