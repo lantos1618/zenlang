@@ -1,0 +1,13 @@
+// getrusage_ok proves the syscall returns 0; max_rss_kb > 0 proves the process
+// has consumed some resident memory (a structural fact for any running process).
+{ io } = std
+{ getrusage_ok, max_rss_kb } = std.sys.resource
+
+main = () i32 {
+    ok = getrusage_ok()
+    io.println("getrusage_ok=${cast(ok, i32)}")
+    rss = max_rss_kb()
+    rss_pos = rss > 0
+    io.println("rss_positive=${cast(rss_pos, i32)}")
+    0
+}

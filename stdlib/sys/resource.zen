@@ -1,4 +1,29 @@
-// Parse-only placeholder for @std.sys.resource.
-//
-// Resource-limit wrappers need explicit host-effect and ABI evidence before this
-// module carries implementation code.
+// Resource usage via getrusage (syscall 98) — x86-64 Linux.
+// RUSAGE_SELF = 0; the rusage struct is 144 bytes; ru_maxrss (peak RSS in KB)
+// is an i64 at byte offset 32.
+//   { getrusage_ok, max_rss_kb } = std.sys.resource
+
+{ sys2 } = std.compiler
+
+// Returns true if getrusage(RUSAGE_SELF) succeeds (returns 0).
+getrusage_ok = () bool {
+    buf = @builtin.raw_allocate(cast(144, usize))
+    addr = @builtin.ptr_to_int(buf)
+    ret = sys2(98, 0, addr)
+    @builtin.raw_deallocate(buf, cast(144, usize))
+    ret == 0
+}
+
+// Returns the peak RSS (resident-set size) of this process in kilobytes.
+// The field ru_maxrss sits at byte offset 32 in the rusage struct.
+max_rss_kb = () i64 {
+    buf = @builtin.raw_allocate(cast(144, usize))
+    addr = @builtin.ptr_to_int(buf)
+    sys2(98, 0, addr)
+    rss_ptr = @builtin.gep(buf, 32)
+    rss = @builtin.load<i64>(rss_ptr)
+    @builtin.raw_deallocate(buf, cast(144, usize))
+    rss
+}
+
+@export({ getrusage_ok, max_rss_kb })
