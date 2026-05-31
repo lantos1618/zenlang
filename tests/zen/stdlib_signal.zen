@@ -1,0 +1,43 @@
+// Hermetic signal test: block SIGUSR1, create a signalfd for it, send SIGUSR1
+// to self (kill(getpid(), SIGUSR1)), read the event from signalfd, verify
+// ssi_signo == 10. Fully deterministic — no async delivery, no handlers.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{
+    signum_sigusr1,
+    signal_block, signal_unblock, signal_send,
+    signalfd_new, signalfd_read, signalfd_close, signalfd_signo,
+} = std.io.signal
+
+main = () i32 {
+    // Block SIGUSR1 so it is queued rather than delivered to the process.
+    sig = signum_sigusr1()
+    blk = signal_block(sig)
+    io.println("block_ok=${cast(blk == 0, i32)}")
+
+    // Create a signalfd to collect SIGUSR1. flags=0 (blocking).
+    sfd = signalfd_new(sig, 0)
+    io.println("signalfd_ok=${cast(sfd >= 0, i32)}")
+
+    // Send SIGUSR1 to ourselves.
+    pid = process_getpid()
+    kill_rc = signal_send(pid, sig)
+    io.println("kill_ok=${cast(kill_rc == 0, i32)}")
+
+    // Read the signalfd_siginfo (128 bytes) from the signalfd.
+    buf = @builtin.raw_allocate(cast(128, usize))
+    nr = signalfd_read(sfd, buf)
+    io.println("read_ok=${cast(nr == 128, i32)}")
+
+    // ssi_signo is the first u32 (bytes 0-3).
+    signo = signalfd_signo(buf)
+    io.println("signo_ok=${cast(signo == sig, i32)}")
+
+    // Clean up.
+    signalfd_close(sfd)
+    @builtin.raw_deallocate(buf, cast(128, usize))
+
+    // Unblock SIGUSR1 to restore state.
+    signal_unblock(sig)
+    0
+}

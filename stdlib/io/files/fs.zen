@@ -1,4 +1,46 @@
-// Parse-only placeholder for @std.io.files.fs.
+// Filesystem operations: existence check, mkdir, rmdir, and file removal.
+// All routed through the std.compiler facade (x86-64 Linux).
 //
-// Filesystem APIs need host-effect, parser, typechecker, build, and docs-truth
-// evidence before this module carries implementation code.
+// Syscall numbers:
+//   stat(4)   — used by fs_exists to probe a path.
+//   mkdir(83) — create a directory.
+//   rmdir(84) — remove an empty directory.
+//   unlink(87)— remove a file.
+//
+//   { fs_exists, fs_mkdir, fs_rmdir, fs_remove } = std.io.files.fs
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Returns 1 if `path` exists (stat returns 0), 0 otherwise.
+// `path` must be a NUL-terminated RawPtr<u8>.
+fs_exists = (path: RawPtr<u8>) i64 {
+    // Allocate a stat buffer (144 bytes for x86-64 Linux struct stat).
+    buf = @builtin.raw_allocate(cast(144, usize))
+    rc = sys2(4, @builtin.ptr_to_int(path), @builtin.ptr_to_int(buf))
+    @builtin.raw_deallocate(buf, cast(144, usize))
+    exists = rc == 0
+    exists ? | true { 1 } | false { 0 }
+}
+
+// Create a directory at `path` with the given permission `mode` (e.g. 0755=493).
+// `path` must be a NUL-terminated RawPtr<u8>.
+// Returns 0 on success, negative errno on failure.
+fs_mkdir = (path: RawPtr<u8>, mode: i64) i64 {
+    sys2(83, @builtin.ptr_to_int(path), mode)
+}
+
+// Remove an empty directory at `path`.
+// `path` must be a NUL-terminated RawPtr<u8>.
+// Returns 0 on success, negative errno on failure.
+fs_rmdir = (path: RawPtr<u8>) i64 {
+    sys1(84, @builtin.ptr_to_int(path))
+}
+
+// Remove a file at `path` (unlink).
+// `path` must be a NUL-terminated RawPtr<u8>.
+// Returns 0 on success, negative errno on failure.
+fs_remove = (path: RawPtr<u8>) i64 {
+    sys1(87, @builtin.ptr_to_int(path))
+}
+
+@export({ fs_exists, fs_mkdir, fs_rmdir, fs_remove })

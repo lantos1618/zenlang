@@ -1,0 +1,90 @@
+// Hermetic file copy test: write known bytes to /tmp/zen_copy_src_<pid>,
+// copy to /tmp/zen_copy_dst_<pid>, read dst back, assert equality, unlink both.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{ file_open, file_open_create, file_read, file_write, file_close, file_unlink } = std.io.files.file
+{ file_copy } = std.io.files.copy
+
+// Write decimal digits of `n` into `buf` starting at `offset`.
+// Returns the number of digits written.
+write_digits = (buf: RawPtr<u8>, offset: i64, n: i64) i64 {
+    tmp ::= n
+    count ::= cast(0, i64)
+    loop((l) {
+        tmp <= 0 ?
+            | true { l.done() }
+            | false {
+                tmp = tmp / 10
+                count = count + 1
+                l.next()
+            }
+    })
+    rem ::= n
+    idx ::= count - 1
+    loop((l) {
+        idx < 0 ?
+            | true { l.done() }
+            | false {
+                digit = rem % 10
+                @builtin.store(@builtin.gep(buf, offset + idx), cast(48 + digit, u8))
+                rem = rem / 10
+                idx = idx - 1
+                l.next()
+            }
+    })
+    count
+}
+
+main = () i32 {
+    pid = process_getpid()
+
+    // Build src path: "/tmp/zen_copy_src_<pid>\0"
+    // prefix "/tmp/zen_copy_src_" = 18 bytes
+    src = @builtin.raw_allocate(cast(48, usize))
+    src_prefix = @builtin.static_string_ptr("/tmp/zen_copy_src_")
+    @builtin.memcpy(src, src_prefix, cast(18, usize))
+    dc1 = write_digits(src, 18, pid)
+    @builtin.store(@builtin.gep(src, 18 + dc1), cast(0, u8))
+
+    // Build dst path: "/tmp/zen_copy_dst_<pid>\0"
+    // prefix "/tmp/zen_copy_dst_" = 18 bytes
+    dst = @builtin.raw_allocate(cast(48, usize))
+    dst_prefix = @builtin.static_string_ptr("/tmp/zen_copy_dst_")
+    @builtin.memcpy(dst, dst_prefix, cast(18, usize))
+    dc2 = write_digits(dst, 18, pid)
+    @builtin.store(@builtin.gep(dst, 18 + dc2), cast(0, u8))
+
+    // Write known content to src.
+    content_str = "copy_test_data"
+    content = @builtin.static_string_ptr(content_str)
+    content_len = cast(@builtin.strlen(content_str), i64)
+
+    wfd = file_open_create(src)
+    file_write(wfd, content, content_len)
+    file_close(wfd)
+
+    // Copy src → dst.
+    copied = file_copy(src, dst)
+    io.println("copied=${cast(copied, i32)}")
+    copy_ok = copied == content_len
+    io.println("copy_ok=${cast(copy_ok, i32)}")
+
+    // Read dst back and compare.
+    rbuf = @builtin.raw_allocate(cast(32, usize))
+    rfd = file_open(dst, 0)
+    got = file_read(rfd, rbuf, 32)
+    file_close(rfd)
+    read_ok = got == content_len
+    io.println("read_ok=${cast(read_ok, i32)}")
+    first_match = @builtin.load<u8>(rbuf) == @builtin.load<u8>(content)
+    io.println("first_match=${cast(first_match, i32)}")
+
+    // Clean up.
+    file_unlink(src)
+    file_unlink(dst)
+
+    @builtin.raw_deallocate(rbuf, cast(32, usize))
+    @builtin.raw_deallocate(src, cast(48, usize))
+    @builtin.raw_deallocate(dst, cast(48, usize))
+    0
+}

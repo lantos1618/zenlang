@@ -1,0 +1,4 @@
+inotify_ok=1
+watch_ok=1
+read_ok=1
+has_create=1

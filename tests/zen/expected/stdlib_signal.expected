@@ -1,0 +1,5 @@
+block_ok=1
+signalfd_ok=1
+kill_ok=1
+read_ok=1
+signo_ok=1

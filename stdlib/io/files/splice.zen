@@ -1,4 +1,38 @@
-// Parse-only placeholder for @std.io.files.splice.
+// splice(2) — move data between file descriptors without copying to user space.
+// x86-64 Linux syscall 275. At least one fd must be a pipe (kernel constraint).
 //
-// Splice/copy-range APIs need host-effect, parser, typechecker, build, and
-// docs-truth evidence before this module carries implementation code.
+// splice(fd_in, off_in, fd_out, off_out, len, flags) -> bytes moved.
+// Pass off_in=0/off_out=0 as null (use -1 to mean NULL when offset tracking is
+// not needed; the kernel ignores them when the fd is a pipe).
+//
+// SPLICE_F_MOVE=1, SPLICE_F_NONBLOCK=2, SPLICE_F_MORE=4, SPLICE_F_GIFT=8.
+//
+//   { splice_move, splice_f_move, splice_f_more } = std.io.files.splice
+//
+// x86-64 Linux syscall number: splice=275.
+
+{ sys6 } = std.compiler
+
+// Move up to `len` bytes from `fd_in` (pipe read end) to `fd_out`, or from
+// `fd_in` to `fd_out` (pipe write end). Both offset pointer args are passed
+// as 0 (NULL) so the kernel uses the fd's current position for seekable fds
+// and the pipe buffer for pipe fds.
+// `flags` is a bitmask: SPLICE_F_MOVE=1, SPLICE_F_MORE=4, SPLICE_F_NONBLOCK=2.
+// Returns bytes moved on success, 0 at EOF, or a negative errno on failure.
+splice_move = (fd_in: i64, fd_out: i64, len: i64, flags: i64) i64 {
+    sys6(275, fd_in, 0, fd_out, 0, len, flags)
+}
+
+// SPLICE_F_MOVE: hint to kernel to move pages rather than copy.
+splice_f_move = () i64 { 1 }
+
+// SPLICE_F_NONBLOCK: do not block on pipe I/O.
+splice_f_nonblock = () i64 { 2 }
+
+// SPLICE_F_MORE: more data will follow (hint for TCP cork-like batching).
+splice_f_more = () i64 { 4 }
+
+// SPLICE_F_GIFT: pages may be given to the destination pipe.
+splice_f_gift = () i64 { 8 }
+
+@export({ splice_move, splice_f_move, splice_f_nonblock, splice_f_more, splice_f_gift })

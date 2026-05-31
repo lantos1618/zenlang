@@ -1,0 +1,14 @@
+nop_ok=1
+readv_ok=1
+writev_ok=1
+read_ok=1
+write_ok=1
+accept_ok=1
+connect_ok=1
+close_ok=1
+openat_ok=1
+setup_iopoll_ok=1
+setup_sqpoll_ok=1
+enter_getevents_ok=1
+fixed_file_ok=1
+io_link_ok=1

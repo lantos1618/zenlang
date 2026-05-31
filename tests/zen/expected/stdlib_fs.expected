@@ -1,0 +1,9 @@
+root_exists=1
+nope_exists=0
+mkdir_ok=1
+dir_exists=1
+rmdir_ok=1
+dir_gone=1
+file_exists=1
+remove_ok=1
+file_gone=1

@@ -1,2 +1,238 @@
-// Parse-only placeholder for @std.io.mux.uring_constants.
-// Promote io_uring constants only after parser, typechecker, lowering, and docs-truth evidence.
+// Pure named constants for io_uring opcodes and setup flags — x86-64 Linux.
+// No syscalls: each function returns a literal i64 constant value.
+// See include/uapi/linux/io_uring.h in the Linux kernel.
+//
+// Opcodes (IORING_OP_*) — passed as the opcode field in a submission queue entry.
+// Setup flags (IORING_SETUP_*) — passed to io_uring_setup(2).
+//
+//   { ioring_op_nop, ioring_op_readv, ioring_op_writev,
+//     ioring_op_read, ioring_op_write, ioring_setup_sqpoll } = std.io.mux.uring_constants
+
+// IORING_OP_NOP: no-op submission (round-trip latency probe).
+ioring_op_nop = () i64 { 0 }
+
+// IORING_OP_READV: vectorised read (readv-like).
+ioring_op_readv = () i64 { 1 }
+
+// IORING_OP_WRITEV: vectorised write (writev-like).
+ioring_op_writev = () i64 { 2 }
+
+// IORING_OP_FSYNC: file sync (fsync-like).
+ioring_op_fsync = () i64 { 3 }
+
+// IORING_OP_READ_FIXED: read into a pre-registered fixed buffer.
+ioring_op_read_fixed = () i64 { 4 }
+
+// IORING_OP_WRITE_FIXED: write from a pre-registered fixed buffer.
+ioring_op_write_fixed = () i64 { 5 }
+
+// IORING_OP_POLL_ADD: add a file descriptor to poll monitoring.
+ioring_op_poll_add = () i64 { 6 }
+
+// IORING_OP_POLL_REMOVE: remove a previously added poll entry.
+ioring_op_poll_remove = () i64 { 7 }
+
+// IORING_OP_SYNC_FILE_RANGE: sync a range of a file.
+ioring_op_sync_file_range = () i64 { 8 }
+
+// IORING_OP_SENDMSG: send a message (sendmsg-like).
+ioring_op_sendmsg = () i64 { 9 }
+
+// IORING_OP_RECVMSG: receive a message (recvmsg-like).
+ioring_op_recvmsg = () i64 { 10 }
+
+// IORING_OP_TIMEOUT: submit a timeout entry.
+ioring_op_timeout = () i64 { 11 }
+
+// IORING_OP_TIMEOUT_REMOVE: cancel a previously submitted timeout.
+ioring_op_timeout_remove = () i64 { 12 }
+
+// IORING_OP_ACCEPT: accept a connection on a socket.
+ioring_op_accept = () i64 { 13 }
+
+// IORING_OP_ASYNC_CANCEL: cancel an in-flight async operation.
+ioring_op_async_cancel = () i64 { 14 }
+
+// IORING_OP_LINK_TIMEOUT: timeout linked to the preceding SQE.
+ioring_op_link_timeout = () i64 { 15 }
+
+// IORING_OP_CONNECT: initiate a connection on a socket.
+ioring_op_connect = () i64 { 16 }
+
+// IORING_OP_FALLOCATE: preallocate file space (fallocate-like).
+ioring_op_fallocate = () i64 { 17 }
+
+// IORING_OP_OPENAT: open a file relative to a directory fd.
+ioring_op_openat = () i64 { 18 }
+
+// IORING_OP_CLOSE: close a file descriptor.
+ioring_op_close = () i64 { 19 }
+
+// IORING_OP_FILES_UPDATE: update the registered file set.
+ioring_op_files_update = () i64 { 20 }
+
+// IORING_OP_STATX: retrieve extended file status.
+ioring_op_statx = () i64 { 21 }
+
+// IORING_OP_READ: plain read into a user buffer.
+ioring_op_read = () i64 { 22 }
+
+// IORING_OP_WRITE: plain write from a user buffer.
+ioring_op_write = () i64 { 23 }
+
+// IORING_OP_FADVISE: file access pattern hint (fadvise-like).
+ioring_op_fadvise = () i64 { 24 }
+
+// IORING_OP_MADVISE: memory access pattern hint (madvise-like).
+ioring_op_madvise = () i64 { 25 }
+
+// IORING_OP_SEND: send data on a socket.
+ioring_op_send = () i64 { 26 }
+
+// IORING_OP_RECV: receive data from a socket.
+ioring_op_recv = () i64 { 27 }
+
+// IORING_OP_OPENAT2: open a file with extended options.
+ioring_op_openat2 = () i64 { 28 }
+
+// IORING_OP_EPOLL_CTL: control an epoll instance.
+ioring_op_epoll_ctl = () i64 { 29 }
+
+// IORING_OP_SPLICE: move data between file descriptors.
+ioring_op_splice = () i64 { 30 }
+
+// IORING_OP_PROVIDE_BUFFERS: register buffers for automatic buffer selection.
+ioring_op_provide_buffers = () i64 { 31 }
+
+// IORING_OP_REMOVE_BUFFERS: unregister previously provided buffers.
+ioring_op_remove_buffers = () i64 { 32 }
+
+// IORING_OP_TEE: duplicate pipe data without consuming it.
+ioring_op_tee = () i64 { 33 }
+
+// IORING_OP_SHUTDOWN: shut down part of a full-duplex connection.
+ioring_op_shutdown = () i64 { 34 }
+
+// IORING_OP_RENAMEAT: rename a file relative to directory fds.
+ioring_op_renameat = () i64 { 35 }
+
+// IORING_OP_UNLINKAT: unlink a file relative to a directory fd.
+ioring_op_unlinkat = () i64 { 36 }
+
+// IORING_OP_MKDIRAT: create a directory relative to a directory fd.
+ioring_op_mkdirat = () i64 { 37 }
+
+// IORING_OP_SYMLINKAT: create a symlink relative to a directory fd.
+ioring_op_symlinkat = () i64 { 38 }
+
+// IORING_OP_LINKAT: create a hard link relative to directory fds.
+ioring_op_linkat = () i64 { 39 }
+
+// --- io_uring_setup flags (IORING_SETUP_*) ---
+
+// IORING_SETUP_IOPOLL: use busy-polling for completions instead of interrupts.
+ioring_setup_iopoll = () i64 { 1 }
+
+// IORING_SETUP_SQPOLL: kernel-side sq-poll thread (avoids enter() for submits).
+ioring_setup_sqpoll = () i64 { 2 }
+
+// IORING_SETUP_SQ_AFF: bind the SQ poll thread to the cpu in sq_thread_cpu.
+ioring_setup_sq_aff = () i64 { 4 }
+
+// IORING_SETUP_CQSIZE: use the cq_entries field to set the CQ ring size.
+ioring_setup_cqsize = () i64 { 8 }
+
+// IORING_SETUP_CLAMP: clamp SQ/CQ ring sizes to the maximum supported.
+ioring_setup_clamp = () i64 { 16 }
+
+// IORING_SETUP_ATTACH_WQ: attach to an existing io_uring worker queue.
+ioring_setup_attach_wq = () i64 { 32 }
+
+// IORING_SETUP_R_DISABLED: start the ring in disabled state.
+ioring_setup_r_disabled = () i64 { 64 }
+
+// --- io_uring_enter flags (IORING_ENTER_*) ---
+
+// IORING_ENTER_GETEVENTS: wait for completion events (blocks until min_complete).
+ioring_enter_getevents = () i64 { 1 }
+
+// IORING_ENTER_SQ_WAKEUP: wake the SQ poll thread if it is sleeping.
+ioring_enter_sq_wakeup = () i64 { 2 }
+
+// --- SQE flags (IOSQE_*) ---
+
+// IOSQE_FIXED_FILE: the fd in the SQE refers to the registered file table.
+iosqe_fixed_file = () i64 { 1 }
+
+// IOSQE_IO_DRAIN: do not start this SQE until all prior SQEs complete.
+iosqe_io_drain = () i64 { 2 }
+
+// IOSQE_IO_LINK: link this SQE to the next one (serial dependency chain).
+iosqe_io_link = () i64 { 4 }
+
+// IOSQE_IO_HARDLINK: hard link — next SQE runs even if this one fails.
+iosqe_io_hardlink = () i64 { 8 }
+
+// IOSQE_ASYNC: always execute the SQE asynchronously.
+iosqe_async = () i64 { 16 }
+
+// IOSQE_BUFFER_SELECT: select a buffer from the registered buffer pool.
+iosqe_buffer_select = () i64 { 32 }
+
+@export({
+    ioring_op_nop,
+    ioring_op_readv,
+    ioring_op_writev,
+    ioring_op_fsync,
+    ioring_op_read_fixed,
+    ioring_op_write_fixed,
+    ioring_op_poll_add,
+    ioring_op_poll_remove,
+    ioring_op_sync_file_range,
+    ioring_op_sendmsg,
+    ioring_op_recvmsg,
+    ioring_op_timeout,
+    ioring_op_timeout_remove,
+    ioring_op_accept,
+    ioring_op_async_cancel,
+    ioring_op_link_timeout,
+    ioring_op_connect,
+    ioring_op_fallocate,
+    ioring_op_openat,
+    ioring_op_close,
+    ioring_op_files_update,
+    ioring_op_statx,
+    ioring_op_read,
+    ioring_op_write,
+    ioring_op_fadvise,
+    ioring_op_madvise,
+    ioring_op_send,
+    ioring_op_recv,
+    ioring_op_openat2,
+    ioring_op_epoll_ctl,
+    ioring_op_splice,
+    ioring_op_provide_buffers,
+    ioring_op_remove_buffers,
+    ioring_op_tee,
+    ioring_op_shutdown,
+    ioring_op_renameat,
+    ioring_op_unlinkat,
+    ioring_op_mkdirat,
+    ioring_op_symlinkat,
+    ioring_op_linkat,
+    ioring_setup_iopoll,
+    ioring_setup_sqpoll,
+    ioring_setup_sq_aff,
+    ioring_setup_cqsize,
+    ioring_setup_clamp,
+    ioring_setup_attach_wq,
+    ioring_setup_r_disabled,
+    ioring_enter_getevents,
+    ioring_enter_sq_wakeup,
+    iosqe_fixed_file,
+    iosqe_io_drain,
+    iosqe_io_link,
+    iosqe_io_hardlink,
+    iosqe_async,
+    iosqe_buffer_select,
+})

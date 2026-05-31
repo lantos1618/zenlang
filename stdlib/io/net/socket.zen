@@ -1,5 +1,132 @@
-// Parse-only placeholder for @std.io.net.socket.
+// TCP/UDP sockets via x86-64 Linux syscalls through the std.compiler facade.
 //
-// The previous syscall-heavy file was an unparseable sketch, not working stdlib
-// code. Restore socket APIs here only with host-effect, parser, typechecker,
-// build, and docs-truth evidence.
+// Syscall numbers:
+//   socket(41)  — create a socket.
+//   bind(49)    — bind a socket to an address.
+//   listen(50)  — mark a socket as passive (server).
+//   accept(43)  — accept a connection (no peer address needed).
+//   connect(42) — initiate a connection.
+//   send(44)    — send data on a connected socket.
+//   recv(45)    — receive data from a connected socket.
+//   close(3)    — close any fd.
+//
+// Address family and type constants:
+//   AF_INET=2, AF_INET6=10, AF_UNIX=1.
+//   SOCK_STREAM=1 (TCP), SOCK_DGRAM=2 (UDP), SOCK_NONBLOCK=2048.
+//
+//   { socket_new, socket_close, socket_bind_inet, socket_listen,
+//     socket_accept, socket_connect_inet, socket_send, socket_recv,
+//     af_inet, sock_stream, sock_dgram } = std.io.net.socket
+//
+// x86-64 Linux syscall numbers as documented above.
+
+{ sys1, sys2, sys3, sys6 } = std.compiler
+
+// --- Domain / type constants ---
+
+// AF_INET: IPv4 address family.
+af_inet = () i64 { 2 }
+
+// AF_INET6: IPv6 address family.
+af_inet6 = () i64 { 10 }
+
+// AF_UNIX: Unix-domain address family.
+af_unix = () i64 { 1 }
+
+// SOCK_STREAM: sequenced, reliable, two-way byte stream (TCP).
+sock_stream = () i64 { 1 }
+
+// SOCK_DGRAM: connectionless, unreliable datagrams (UDP).
+sock_dgram = () i64 { 2 }
+
+// SOCK_NONBLOCK: set O_NONBLOCK on the new socket fd.
+sock_nonblock = () i64 { 2048 }
+
+// --- Core socket operations ---
+
+// Create a socket. domain=AF_INET(2)/AF_UNIX(1)/..., typ=SOCK_STREAM(1)/SOCK_DGRAM(2)/...,
+// protocol=0 for default. Returns fd >= 0 on success, negative errno on failure.
+socket_new = (domain: i64, typ: i64, protocol: i64) i64 {
+    sys3(41, domain, typ, protocol)
+}
+
+// Close a socket fd. Returns 0 on success.
+socket_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+// Bind an IPv4 socket to an address. `addr_buf` must point to a filled-in
+// sockaddr_in (16 bytes): {sin_family:u16, sin_port:u16 (big-endian),
+// sin_addr:u32 (big-endian), pad:u64}. `addr_len` should be 16.
+// Returns 0 on success, negative errno on failure.
+socket_bind = (fd: i64, addr_buf: RawPtr<u8>, addr_len: i64) i64 {
+    sys3(49, fd, @builtin.ptr_to_int(addr_buf), addr_len)
+}
+
+// Mark a bound socket as passive (server). `backlog` = max pending connections.
+// Returns 0 on success.
+socket_listen = (fd: i64, backlog: i64) i64 {
+    sys2(50, fd, backlog)
+}
+
+// Accept the next pending connection on a listening socket. Passes NULL for
+// the peer address (addr=0, addrlen=0). Returns a new connected fd (>= 0)
+// or negative errno.
+socket_accept = (fd: i64) i64 {
+    sys3(43, fd, 0, 0)
+}
+
+// Connect to a remote address. `addr_buf` is a filled-in sockaddr_in (16 bytes).
+// Returns 0 on success, negative errno on failure.
+socket_connect = (fd: i64, addr_buf: RawPtr<u8>, addr_len: i64) i64 {
+    sys3(42, fd, @builtin.ptr_to_int(addr_buf), addr_len)
+}
+
+// Send `len` bytes from `buf` on the connected socket. flags=0 for blocking send.
+// Uses sendto(44) with NULL dest_addr and addrlen=0 (equivalent to send on a
+// connected socket). Returns bytes sent or negative errno.
+socket_send = (fd: i64, buf: RawPtr<u8>, len: i64, flags: i64) i64 {
+    sys6(44, fd, @builtin.ptr_to_int(buf), len, flags, 0, 0)
+}
+
+// Receive up to `len` bytes from the connected socket into `buf`. flags=0.
+// Uses recvfrom(45) with NULL peer address args (equivalent to recv).
+// Returns bytes received, 0 on shutdown, or negative errno.
+socket_recv = (fd: i64, buf: RawPtr<u8>, len: i64, flags: i64) i64 {
+    sys6(45, fd, @builtin.ptr_to_int(buf), len, flags, 0, 0)
+}
+
+// --- Convenience: build a sockaddr_in in a caller-supplied 16-byte buffer ---
+
+// Fill `buf` (16 bytes) as a sockaddr_in for the given IPv4 address and port.
+// addr_be = IPv4 address in network byte order (e.g. 0x0100007F = 127.0.0.1).
+// port_be = port in network byte order (e.g. htons(8080) = 0x901F).
+// The kernel layout: sin_family(u16) sin_port(u16) sin_addr(u32) pad(u64).
+sockaddr_in_fill = (buf: RawPtr<u8>, addr_be: i64, port_be: i64) void {
+    fam_u16 = cast(2, u16)
+    @builtin.store(buf, fam_u16)
+    port_ptr = @builtin.gep(buf, 2)
+    port_u16 = cast(port_be, u16)
+    @builtin.store(port_ptr, port_u16)
+    addr_ptr = @builtin.gep(buf, 4)
+    addr_u32 = cast(addr_be, u32)
+    @builtin.store(addr_ptr, addr_u32)
+    pad_ptr = @builtin.gep(buf, 8)
+    @builtin.store(pad_ptr, cast(0, i64))
+}
+
+// Read the port (in network byte order) from a filled sockaddr_in buffer.
+sockaddr_in_port = (buf: RawPtr<u8>) i64 {
+    port_ptr = @builtin.gep(buf, 2)
+    p_u16 = @builtin.load<u16>(port_ptr)
+    cast(p_u16, i64)
+}
+
+@export({
+    af_inet, af_inet6, af_unix,
+    sock_stream, sock_dgram, sock_nonblock,
+    socket_new, socket_close,
+    socket_bind, socket_listen, socket_accept, socket_connect,
+    socket_send, socket_recv,
+    sockaddr_in_fill, sockaddr_in_port,
+})

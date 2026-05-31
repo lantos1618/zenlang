@@ -291,6 +291,46 @@ fn test_stdlib_ffi() {
 }
 
 #[test]
+fn test_stdlib_uring_constants() {
+    run_test("stdlib_uring_constants");
+}
+
+#[test]
+fn test_stdlib_link() {
+    run_test("stdlib_link");
+}
+
+#[test]
+fn test_stdlib_copy() {
+    run_test("stdlib_copy");
+}
+
+#[test]
+fn test_stdlib_splice() {
+    run_test("stdlib_splice");
+}
+
+#[test]
+fn test_stdlib_fs() {
+    run_test("stdlib_fs");
+}
+
+#[test]
+fn test_stdlib_socket() {
+    run_test("stdlib_socket");
+}
+
+#[test]
+fn test_stdlib_inotify() {
+    run_test("stdlib_inotify");
+}
+
+#[test]
+fn test_stdlib_signal() {
+    run_test("stdlib_signal");
+}
+
+#[test]
 fn test_async_await_ready() {
     // An `@async` leaf returning a ready value, and a chained async fn that
     // awaits twice threading a local across the suspends, driven by `block_on`.
