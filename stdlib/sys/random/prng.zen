@@ -1,2 +1,39 @@
-// Parse-only placeholder for @std.sys.random.prng.
-// Promote PRNG APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Deterministic pseudo-random numbers — a Park–Miller "MINSTD" linear
+// congruential generator: state' = (state * 16807) mod (2^31 - 1). Pure integer
+// arithmetic (no bit shifts, which the language doesn't surface), and the widest
+// intermediate (2147483646 * 16807 ≈ 3.6e13) stays well inside i64, so there is
+// no overflow. State is a plain value threaded functionally, like the other
+// stdlib types: `p = prng_next(p)` returns the advanced generator.
+//   { Prng, prng_seed, prng_next, prng_value, prng_below } = std.sys.random.prng
+//
+// This is NOT cryptographic — use std.sys.random.getrandom for unpredictability.
+// It is for reproducible streams (tests, simulations, hashing salts).
+
+// modulus = 2^31 - 1 (a Mersenne prime); the valid state range is [1, 2^31-2].
+Prng: { state: i64 }
+
+// Seed into the valid state range [1, 2147483646]; any i64 seed is accepted.
+prng_seed = (seed: i64) Prng {
+    folded = seed % 2147483646
+    nonneg = folded < 0 ?
+        | true { folded + 2147483646 }
+        | false { folded }
+    Prng { state: nonneg + 1 }
+}
+
+// Advance the generator one step.
+prng_next = (p: Prng) Prng {
+    Prng { state: (p.state * 16807) % 2147483647 }
+}
+
+// The current raw value, in [1, modulus-1].
+prng_value = (p: Prng) i64 {
+    p.state
+}
+
+// The current value mapped into [0, n). Caller still advances with prng_next.
+prng_below = (p: Prng, n: i64) i64 {
+    p.state % n
+}
+
+@export({ Prng, prng_seed, prng_next, prng_value, prng_below })

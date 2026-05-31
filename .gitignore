@@ -114,3 +114,4 @@ secrets.yml
 /vscode-extension/out/
 examples/build_demo/target/
 examples/demo_project/target/
+.claude/worktrees/

@@ -1,0 +1,43 @@
+// The MINSTD generator is deterministic (same seed -> same stream), stays in its
+// valid range, and different seeds diverge. We assert those properties (robust to
+// the exact constants) and also pin the first two concrete values from seed 42.
+{ io } = std
+{ Prng, prng_seed, prng_next, prng_value, prng_below } = std.sys.random.prng
+
+main = () i32 {
+    a ::= prng_seed(42)
+    a = prng_next(a)
+    va = prng_value(a)
+
+    b ::= prng_seed(42)
+    b = prng_next(b)
+    vb = prng_value(b)
+
+    deterministic = va == vb
+    io.println("deterministic=${cast(deterministic, i32)}")
+
+    ge_lo = va >= 1
+    le_hi = va <= 2147483646
+    in_range = ge_lo && le_hi
+    io.println("in_range=${cast(in_range, i32)}")
+
+    c ::= prng_seed(99)
+    c = prng_next(c)
+    vc = prng_value(c)
+    differs = vc != va
+    io.println("differs=${cast(differs, i32)}")
+
+    // Concrete pinned stream from seed 42.
+    io.println("r1=${cast(va, i32)}")
+    a = prng_next(a)
+    r2 = prng_value(a)
+    io.println("r2=${cast(r2, i32)}")
+
+    // Bounded mapping lands in [0, 6).
+    d6 = prng_below(a, 6)
+    d6_ge = d6 >= 0
+    d6_lt = d6 < 6
+    d6_ok = d6_ge && d6_lt
+    io.println("d6_ok=${cast(d6_ok, i32)}")
+    0
+}

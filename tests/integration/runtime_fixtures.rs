@@ -139,3 +139,8 @@ fn test_stdlib_heap() {
 fn test_stdlib_gpa() {
     run_test("stdlib_gpa");
 }
+
+#[test]
+fn test_stdlib_prng() {
+    run_test("stdlib_prng");
+}
