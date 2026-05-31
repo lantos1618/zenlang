@@ -1,0 +1,67 @@
+// Supervisor test: create an adder actor, send 1..=10 (sum=55), stop,
+// then supervisor restarts it, send 1..=5 (sum=15), stop again.
+// Assert restart_count == 1, final state == 15.
+{ io } = std
+{ Actor, actor_new, actor_recv_raw } = std.concurrency.actor.actor
+{ Supervisor, supervisor_new, supervisor_restart, supervisor_restart_count, supervisor_actor_state, supervisor_send, supervisor_stop, supervisor_free } = std.concurrency.actor.supervisor
+
+// Worker: receives [ch_ptr(8), state_ptr(8)] as arg; adds messages until sentinel.
+adder_worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    ch_ptr = @builtin.load<RawPtr<u8>>(arg)
+    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    sentinel = cast(0 - 1, i64)
+    loop((l) {
+        msg = actor_recv_raw(ch_ptr)
+        msg == sentinel ?
+            | true { l.done() }
+            | false {
+                cur = @builtin.load<i64>(state_ptr)
+                @builtin.store(state_ptr, cur + msg)
+                l.next()
+            }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    a = actor_new(adder_worker)
+    sup = supervisor_new(a, adder_worker)
+
+    // First lifetime: send 1..=10 (sum = 55)
+    i ::= cast(1, i64)
+    loop((l) {
+        i <= 10 ?
+            | true {
+                supervisor_send(sup, i)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    supervisor_stop(sup)
+    s1 = supervisor_actor_state(sup)
+    io.println("lifetime1=${cast(s1, i32)}")
+
+    // Restart the actor (clears state, spawns new thread)
+    supervisor_restart(sup)
+    rc = supervisor_restart_count(sup)
+    io.println("restart_count=${cast(rc, i32)}")
+
+    // Second lifetime: send 1..=5 (sum = 15)
+    j ::= cast(1, i64)
+    loop((l) {
+        j <= 5 ?
+            | true {
+                supervisor_send(sup, j)
+                j = j + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    supervisor_stop(sup)
+    s2 = supervisor_actor_state(sup)
+    io.println("lifetime2=${cast(s2, i32)}")
+
+    supervisor_free(sup)
+    0
+}

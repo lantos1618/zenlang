@@ -326,6 +326,11 @@ fn test_stdlib_actor_system() {
 }
 
 #[test]
+fn test_stdlib_actor_supervisor() {
+    run_test("stdlib_actor_supervisor");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
