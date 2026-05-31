@@ -1,4 +1,78 @@
-// Parse-only placeholder for @std.io.files.copy.
+// File copy: read from a source fd, write to a destination fd, loop until EOF.
+// All I/O is via the std.compiler facade (read=0, write=1, open=2, close=3).
 //
-// File-copy APIs need host-effect, parser, typechecker, build, and docs-truth
-// evidence before this module carries implementation code.
+// file_copy_fds copies between two already-open file descriptors.
+// file_copy copies from src_path to dst_path (creating/truncating dst).
+//
+//   { file_copy_fds, file_copy } = std.io.files.copy
+//
+// x86-64 Linux syscall numbers: open=2, read=0, write=1, close=3.
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Copy all bytes from `src_fd` to `dst_fd` using a 4096-byte stack-allocated
+// scratch buffer. Returns the total number of bytes copied, or a negative
+// errno if a read or write fails.
+file_copy_fds = (src_fd: i64, dst_fd: i64) i64 {
+    buf = @builtin.raw_allocate(cast(4096, usize))
+    total ::= cast(0, i64)
+    err   ::= cast(0, i64)
+    done  ::= false
+    loop((l) {
+        done ?
+            | true { l.done() }
+            | false {
+                nr = sys3(0, src_fd, @builtin.ptr_to_int(buf), 4096)
+                nr <= 0 ?
+                    | true {
+                        err = nr
+                        done = true
+                        l.next()
+                    }
+                    | false {
+                        nw = sys3(1, dst_fd, @builtin.ptr_to_int(buf), nr)
+                        nw < 0 ?
+                            | true {
+                                err = nw
+                                done = true
+                                l.next()
+                            }
+                            | false {
+                                total = total + nw
+                                l.next()
+                            }
+                    }
+            }
+    })
+    @builtin.raw_deallocate(buf, cast(4096, usize))
+    err < 0 ? | true { err } | false { total }
+}
+
+// Copy a file from `src_path` to `dst_path`. dst_path is created/truncated.
+// Both paths must be NUL-terminated RawPtr<u8>. Returns bytes copied on
+// success, or a negative errno on failure.
+// O_WRONLY=1, O_CREAT=64, O_TRUNC=512; mode 0644=420.
+file_copy = (src_path: RawPtr<u8>, dst_path: RawPtr<u8>) i64 {
+    src_fd = sys2(2, @builtin.ptr_to_int(src_path), 0)
+    src_ok = src_fd >= 0
+    src_ok ?
+        | true {
+            dst_flags = cast(1 | 64 | 512, i64)
+            dst_fd = sys3(2, @builtin.ptr_to_int(dst_path), dst_flags, 420)
+            dst_ok = dst_fd >= 0
+            dst_ok ?
+                | true {
+                    copied = file_copy_fds(src_fd, dst_fd)
+                    sys1(3, src_fd)
+                    sys1(3, dst_fd)
+                    copied
+                }
+                | false {
+                    sys1(3, src_fd)
+                    dst_fd
+                }
+        }
+        | false { src_fd }
+}
+
+@export({ file_copy_fds, file_copy })
