@@ -186,6 +186,11 @@ fn test_stdlib_coroutine() {
 }
 
 #[test]
+fn test_stdlib_multisync() {
+    run_test("stdlib_multisync");
+}
+
+#[test]
 fn test_stdlib_memory() {
     run_test("stdlib_memory");
 }

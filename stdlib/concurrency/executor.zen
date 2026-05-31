@@ -1,0 +1,38 @@
+// The execution-mode switch: an `Executor` behavior with a Sync and an Async impl.
+// A `SyncExec` operation runs straight through; an `AsyncExec` operation suspends
+// the current coroutine (coroutine_yield) so a driver/scheduler can interleave it.
+// Code written generic over `E: Executor` is therefore multisync — sync or async
+// purely by which executor it is monomorphized with, with NO function color and
+// NO runtime branch (Zen behavior bounds are 100% statically monomorphized).
+//   { Executor, SyncExec, AsyncExec } = std.concurrency.executor
+//
+// This is the minimal shape (a `step` op over an i64 cell) that proves the model;
+// real executors carry a reactor and expose read/write/etc. over it.
+
+{ coroutine_yield } = std.concurrency.coroutine
+
+Executor: behavior {
+    step: (Self, RawPtr<u8>) void
+}
+
+// Synchronous: the operation completes immediately, no suspension.
+SyncExec: { }
+SyncExec.implements(Executor) {
+    step = (self: SyncExec, cell: RawPtr<u8>) void {
+        v = @builtin.load<i64>(cell)
+        @builtin.store(cell, v + 1)
+    }
+}
+
+// Asynchronous: the operation does its work, then yields the current coroutine
+// (where a real executor would park on I/O readiness and yield to the scheduler).
+AsyncExec: { }
+AsyncExec.implements(Executor) {
+    step = (self: AsyncExec, cell: RawPtr<u8>) void {
+        v = @builtin.load<i64>(cell)
+        @builtin.store(cell, v + 1)
+        coroutine_yield()
+    }
+}
+
+@export({ Executor, SyncExec, AsyncExec, SyncExec.step, AsyncExec.step })

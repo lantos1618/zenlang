@@ -1,0 +1,3 @@
+sync=5
+async=5
+async_yields=5

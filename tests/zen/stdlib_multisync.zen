@@ -1,0 +1,57 @@
+// THE multisync proof. `pump` is written ONCE, generic over its executor, with no
+// async keyword and no Future in its type. Run it with a SyncExec and it executes
+// straight through (no coroutine). Run the SAME source with an AsyncExec — inside a
+// coroutine driven by a resume loop — and each step suspends and resumes. Both
+// reach count 5; the async run yields 5 times. Sync vs async is purely the
+// executor it was monomorphized with: no function color, no runtime branch.
+{ io } = std
+{ Executor, SyncExec, AsyncExec } = std.concurrency.executor
+{ coroutine_new, coroutine_resume } = std.concurrency.coroutine
+
+// Written once. Colorless. Multisync.
+pump<E: Executor> = (e: E, cell: RawPtr<u8>, n: i64) void {
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                e.step(cell)
+                i = i + 1
+                l.next()
+            }
+    })
+}
+
+// The async run needs a () void entry for the coroutine; it drives `pump` with an
+// AsyncExec over a global cell.
+g_cell ::= @builtin.null_ptr()
+
+async_work = () void {
+    pump<AsyncExec>(AsyncExec { }, g_cell, cast(5, i64))
+}
+
+main = () i32 {
+    // Sync path: same `pump`, SyncExec — runs straight through.
+    sc = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(sc, cast(0, i64))
+    pump<SyncExec>(SyncExec { }, sc, cast(5, i64))
+    io.println("sync=${cast(@builtin.load<i64>(sc), i32)}")
+
+    // Async path: same `pump`, AsyncExec — runs as a coroutine, yields each step.
+    g_cell = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_cell, cast(0, i64))
+    co ::= coroutine_new(async_work)
+    yields ::= 0
+    loop((l) {
+        alive = coroutine_resume(co)
+        alive ?
+            | true {
+                yields = yields + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    io.println("async=${cast(@builtin.load<i64>(g_cell), i32)}")
+    io.println("async_yields=${cast(yields, i32)}")
+    0
+}
