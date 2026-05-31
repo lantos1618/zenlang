@@ -1,0 +1,81 @@
+// 4 threads rendezvous at a barrier, then each increments a counter.
+// After join: counter == 4.
+{ io } = std
+{ Barrier, barrier_new, barrier_destroy } = std.concurrency.sync.barrier
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern pthread_barrier_wait = (barrier: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_mutex_destroy = (mutex: RawPtr<u8>) i32
+
+// Arg: [barrier_ptr(8), mutex_ptr(8), counter_ptr(8)] = 24 bytes
+worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    barrier_ptr = @builtin.load<RawPtr<u8>>(arg)
+    mutex_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    counter_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 16))
+    // All 4 threads synchronise here
+    pthread_barrier_wait(barrier_ptr)
+    // Past the barrier: each thread increments the counter
+    pthread_mutex_lock(mutex_ptr)
+    cur = @builtin.load<i64>(counter_ptr)
+    @builtin.store(counter_ptr, cur + 1)
+    pthread_mutex_unlock(mutex_ptr)
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    b = barrier_new(4)
+
+    mutex_buf = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(mutex_buf, cast(0, u8), cast(64, usize))
+    pthread_mutex_init(mutex_buf, @builtin.null_ptr())
+
+    counter = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(counter, cast(0, i64))
+
+    arg_block = @builtin.raw_allocate(cast(24, usize))
+    @builtin.store(arg_block, b.ptr)
+    @builtin.store(@builtin.gep(arg_block, 8), mutex_buf)
+    @builtin.store(@builtin.gep(arg_block, 16), counter)
+
+    threads = @builtin.raw_allocate(cast(32, usize))
+
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 4 ?
+            | true {
+                slot = @builtin.gep(threads, i * 8)
+                pthread_create(slot, @builtin.null_ptr(), worker, arg_block)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    j ::= cast(0, i64)
+    loop((l) {
+        j < 4 ?
+            | true {
+                slot = @builtin.gep(threads, j * 8)
+                tid = @builtin.load<i64>(slot)
+                pthread_join(tid, @builtin.null_ptr())
+                j = j + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    result = @builtin.load<i64>(counter)
+    io.println("counter=${cast(result, i32)}")
+
+    @builtin.raw_deallocate(threads, cast(32, usize))
+    @builtin.raw_deallocate(arg_block, cast(24, usize))
+    @builtin.raw_deallocate(counter, cast(8, usize))
+    pthread_mutex_destroy(mutex_buf)
+    @builtin.raw_deallocate(mutex_buf, cast(64, usize))
+    barrier_destroy(b)
+    0
+}
