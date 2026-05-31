@@ -1,0 +1,47 @@
+// Deterministic test for io_uring named constants.
+// No syscalls — just asserts that each constant function returns its expected value.
+{ io } = std
+{
+    ioring_op_nop, ioring_op_readv, ioring_op_writev,
+    ioring_op_read, ioring_op_write,
+    ioring_op_accept, ioring_op_connect,
+    ioring_op_close, ioring_op_openat,
+    ioring_setup_iopoll, ioring_setup_sqpoll,
+    ioring_enter_getevents,
+    iosqe_fixed_file, iosqe_io_link,
+} = std.io.mux.uring_constants
+
+main = () i32 {
+    nop_ok    = ioring_op_nop()    == 0
+    readv_ok  = ioring_op_readv()  == 1
+    writev_ok = ioring_op_writev() == 2
+    read_ok   = ioring_op_read()   == 22
+    write_ok  = ioring_op_write()  == 23
+
+    accept_ok  = ioring_op_accept()  == 13
+    connect_ok = ioring_op_connect() == 16
+    close_ok   = ioring_op_close()   == 19
+    openat_ok  = ioring_op_openat()  == 18
+
+    setup_iopoll_ok    = ioring_setup_iopoll()    == 1
+    setup_sqpoll_ok    = ioring_setup_sqpoll()    == 2
+    enter_getevents_ok = ioring_enter_getevents() == 1
+    fixed_file_ok      = iosqe_fixed_file()       == 1
+    io_link_ok         = iosqe_io_link()          == 4
+
+    io.println("nop_ok=${cast(nop_ok, i32)}")
+    io.println("readv_ok=${cast(readv_ok, i32)}")
+    io.println("writev_ok=${cast(writev_ok, i32)}")
+    io.println("read_ok=${cast(read_ok, i32)}")
+    io.println("write_ok=${cast(write_ok, i32)}")
+    io.println("accept_ok=${cast(accept_ok, i32)}")
+    io.println("connect_ok=${cast(connect_ok, i32)}")
+    io.println("close_ok=${cast(close_ok, i32)}")
+    io.println("openat_ok=${cast(openat_ok, i32)}")
+    io.println("setup_iopoll_ok=${cast(setup_iopoll_ok, i32)}")
+    io.println("setup_sqpoll_ok=${cast(setup_sqpoll_ok, i32)}")
+    io.println("enter_getevents_ok=${cast(enter_getevents_ok, i32)}")
+    io.println("fixed_file_ok=${cast(fixed_file_ok, i32)}")
+    io.println("io_link_ok=${cast(io_link_ok, i32)}")
+    0
+}

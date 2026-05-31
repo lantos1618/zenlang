@@ -291,6 +291,11 @@ fn test_stdlib_ffi() {
 }
 
 #[test]
+fn test_stdlib_uring_constants() {
+    run_test("stdlib_uring_constants");
+}
+
+#[test]
 fn test_async_await_ready() {
     // An `@async` leaf returning a ready value, and a chained async fn that
     // awaits twice threading a local across the suspends, driven by `block_on`.
