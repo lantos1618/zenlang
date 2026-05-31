@@ -142,17 +142,32 @@ fn await_of_non_future_is_e3081() {
 }
 
 #[test]
-fn async_fn_is_gated_with_e3082_until_lowering_lands() {
-    // A well-formed async program still cannot be compiled: lowering is pending.
+fn top_level_await_async_fn_type_checks_cleanly() {
+    // A well-formed async program whose `@await` sits at top level (a `VarDecl`
+    // value, statement, or tail) now lowers (ASYNC_PLAN.md milestone 1) — no
+    // diagnostics at all, in particular no lowering gate (E3082) and no misuse
+    // codes (E3080/E3081).
     let diags = frontend_diagnostics(
         "g = @async () i32 { 1 }\nf = @async () i32 { @await g() }\nmain = () i32 { 0 }\n",
     );
     assert!(
-        has_code(&diags, "E3082"),
-        "expected E3082 (async lowering not implemented), got {diags:?}",
+        diags.is_empty(),
+        "a top-level-await async program should type-check clean, got {diags:?}",
     );
-    // The await itself must type-check (no spurious E3080/E3081) — the only
-    // complaint is the lowering gate.
+}
+
+#[test]
+fn await_nested_in_subexpression_is_gated_with_e3082() {
+    // `@await` inside a sub-expression (here, an operand of `+`) is out of scope
+    // for the milestone-1 linear-body lowering and is rejected with E3082 — not
+    // a misuse code, since the await itself type-checks.
+    let diags = frontend_diagnostics(
+        "g = @async () i32 { 1 }\nf = @async () i32 { (@await g()) + (@await g()) }\nmain = () i32 { 0 }\n",
+    );
+    assert!(
+        has_code(&diags, "E3082"),
+        "expected E3082 (await nested beyond top level), got {diags:?}",
+    );
     assert!(
         !has_code(&diags, "E3080") && !has_code(&diags, "E3081"),
         "well-formed await must not trip the misuse codes, got {diags:?}",
@@ -178,11 +193,19 @@ fn awaiting_an_async_call_yields_the_inner_value_type() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "async state-machine lowering not implemented yet (ASYNC_PLAN.md milestone 1); \
-            async programs are gated with E3082"]
 fn async_await_ready_value_runs() {
-    // When lowering lands, an async fn that awaits a ready value, driven by a
-    // trivial block_on, should compile, link, run, and print the value.
-    // Pinned here so the gap is visible and the test flips green when (2) ships.
-    unimplemented!("blocked on async lowering");
+    // The milestone-1 slice: an `@async` fn that awaits a ready value, driven by
+    // `block_on`, compiles, links, runs, and prints the value. The end-to-end
+    // proof lives in the runtime fixture `tests/zen/async_await_ready.zen`
+    // (exercised by `runtime_fixtures::test_async_await_ready`); here we assert
+    // the program type-checks clean — i.e. the E3082 lowering gate is gone for
+    // this shape.
+    let diags = frontend_diagnostics(
+        "ready = @async (n: i32) i32 { n + 1 }\n\
+         main = () i32 { block_on(ready(41)) }\n",
+    );
+    assert!(
+        diags.is_empty(),
+        "the ready-value async slice should type-check clean, got {diags:?}",
+    );
 }

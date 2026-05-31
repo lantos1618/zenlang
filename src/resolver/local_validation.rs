@@ -54,6 +54,11 @@ impl Resolver {
         table.lookup(Namespace::Value, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || locals.contains(name)
+            // `block_on` is a compiler-provided async driver (ASYNC_PLAN.md
+            // milestone 1), not a user-defined symbol; the typechecker types it
+            // `Future<T> -> T`. A user binding of the same name shadows it via
+            // the lookups above.
+            || name == "block_on"
     }
 
     pub(super) fn param_locals(

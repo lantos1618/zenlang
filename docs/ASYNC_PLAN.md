@@ -157,38 +157,73 @@ by a trivial `block_on`, proven by one runtime fixture.
 
 ### Status & exact next step
 
-**Shipped (this slice):** the full surface (`@async`/`@await` lexing + parsing)
-and typing (`Type::Future<T>`, async-call → future, `@await` unwrap, the E3080/
-E3081 misuse codes), with parser + typechecker unit tests in
-`tests/async_surface.rs`. Programs that *define* an `@async` function are gated
-with **E3082** before codegen, so the build never emits a half-lowered async fn.
-The `Future`/`Await` arms in the C backend and `monomorphize_types` are therefore
-`unreachable!` for accepted programs (reached only if the E3082 gate is removed).
+**Shipped — surface + typing:** the full surface (`@async`/`@await` lexing +
+parsing) and typing (`Type::Future<T>`, async-call → future, `@await` unwrap, the
+E3080/E3081 misuse codes), with parser + typechecker unit tests in
+`tests/async_surface.rs`.
 
-**Next step (start of the lowering slice), in order:**
+**Shipped — state-machine lowering (this slice).** `@async` functions whose body
+is a *linear sequence of statements + optional tail*, with every `@await` at a
+**top-level** position (a `VarDecl` value, a bare expression statement, or the
+tail), now lower to real C and run. This covers the milestone-1 proof targets:
+a leaf async fn returning a ready value **and** a chained async fn that awaits
+twice, threading a local across both suspend points. Proven end to end by
+`tests/zen/async_await_ready.zen` (runtime fixture
+`runtime_fixtures::test_async_await_ready`); `async_await_ready_value_runs` is
+un-ignored and green.
 
-1. Thread `is_async` from `Declaration::Function` onto `TypedFunction` (add the
-   field in `src/ast/typed.rs`, set it in
-   `src/typechecker/expressions/function_checking.rs::check_function`). Right now
-   the flag is consumed only to type the body and to drive the E3082 gate; the
-   lowering pass needs it on the typed node.
-2. Add `src/codegen/c/async_lowering.rs`: a function
-   `lower_async(program: &mut TypedProgram)` that, for each `is_async`
-   `TypedFunction`, emits the frame struct (as a `TypedTypeDef`), the poll fn,
-   and the constructor per the ABI above. For the MVP, support exactly one
-   `@await` whose operand is a ready future: no live-local spilling across the
-   suspend is required yet (the value is ready), so state `0` polls the inner
-   future, writes `__ret`, sets `__state = -1`, returns `true`.
-3. Provide a minimal C `block_on` (emit it inline in the runtime-helpers
-   preamble, `src/codegen/c/types/runtime_helpers.rs`) that loops `f__poll`
-   until it returns `true` and yields `*out`. Until the stdlib scheduler
-   (milestone 2) exists, this is a compiler-emitted helper.
-4. Remove the E3082 gate in `src/typechecker/program_checking.rs` and flip the
-   `unreachable!` arms to real emission. Replace the `#[ignore]` on
-   `async_await_ready_value_runs` in `tests/async_surface.rs` with a real
-   runtime fixture (`tests/zen/<name>.zen` + `expected/<name>.expected` + a
-   `#[test]` in `tests/integration/runtime_fixtures.rs`).
+Async bodies whose awaits are **nested** inside a sub-expression, `match`/`if`
+branch, or loop are still out of scope and remain gated with **E3082** (now via
+`async_is_lowerable`, not a blanket "any async fn" gate). Generic async stays out
+of scope — `monomorphize_types`' `Future` arm is still `unreachable!`.
 
-Doing 1–4 as one coherent change proves the irreducible piece (suspend/resume
-frame + poll) end to end for the simplest case; N-await and live-local spilling
-across real suspends follow as the next milestone-1 increments.
+**Frame ABI as actually implemented** (uniform poll-fn-pointer variant of the
+sketch above — chosen so `@await` and `block_on` can drive *any* future through a
+`void*` without knowing the concrete frame type):
+
+```c
+typedef bool (*zen_poll_fn)(void*, void*);   // runtime preamble
+
+struct f__frame {
+    zen_poll_fn __poll;   // uniform FIRST field — generic driving
+    int __state;          // 0 = start, k = resumed after k-th await, -1 = done
+    /* every param, then every local, spilled by value */
+    T __ret;              // omitted for void/never
+};
+static bool f__poll(void* self, void* out);       // the state machine
+f__frame* f(args);                                 // allocating constructor
+```
+
+- A *call* `f(args)` lowers to the constructor: `malloc` the frame, set
+  `__poll = f__poll`, `__state = 0`, copy args, return the frame pointer. A
+  `Future<T>` value is held in C as an opaque `void*`.
+- `f__poll` is a `switch (fr->__state)`. Inside it, every spilled name `x` is
+  emitted as `fr->x`. `@await e` is: evaluate `e` to a frame pointer, save the
+  resume state, `case k:` poll it through `(*(zen_poll_fn*)e)(e, &__awk)`; on
+  Pending `return false`, else fall through with the value in `__awk`. The
+  per-await result/handle temps (`__aw<i>`/`__af<i>`) are declared at poll
+  scope (C forbids a declaration right after a `case`).
+- `block_on(e)` (typed `Future<T> -> T` in the checker, special-cased in the
+  C backend) loops the poll until Ready. It is the compiler-provided driver
+  standing in for the milestone-2 scheduler.
+
+**Known limitation — real Pending suspend.** The MVP only exercises
+*already-ready* futures, which never take the `return false` path. The await
+*handle* temps (`__af<i>`) live at poll-function scope, not in the frame, so they
+are **not** preserved across a genuine poll/return/re-poll cycle: a future that
+actually returns Pending would lose its handle on resume. This is acceptable for
+milestone 1 (there is nothing to be Pending *on* until the I/O mux of
+milestone 3, and no scheduler to re-poll until milestone 2), but it is the first
+thing to fix when a real Pending source lands: spill `__af<i>` (and the resume
+PC for awaits inside control flow) into the frame, and re-derive them on resume.
+
+**Exact next step:** extend `async_is_lowerable` + the poll emission to handle
+`@await` inside `match`/`if` branches and loops — i.e. real control-flow
+splitting — and move the await handles into the frame so a Pending re-poll
+resumes correctly. That, plus the milestone-2 cooperative scheduler (which gives
+something to actually suspend for), turns the single-threaded skeleton into a
+usable coroutine runtime.
+
+Implementation lives in `src/codegen/c/async_lowering.rs` (frame/poll/ctor +
+lowerability analysis), with the `block_on` driver in `src/codegen/c/emit.rs`
+and the `zen_poll_fn` typedef in `src/codegen/c/types/runtime_helpers.rs`.
