@@ -101,6 +101,13 @@ pub enum TypedExprKind {
         action: LoopControlAction,
         label: String,
     },
+
+    /// `@await e` — drive the future `e` to completion and yield its inner value.
+    /// `ty` (on the enclosing `TypedExpression`) is the inner `T`; `expr.ty` is
+    /// `Future<T>`. Lowering of this node is milestone-1 work in progress.
+    Await {
+        expr: Box<TypedExpression>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

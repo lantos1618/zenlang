@@ -26,7 +26,8 @@ impl Expression {
             | Expression::Closure { span, .. }
             | Expression::Cast { span, .. }
             | Expression::StringInterpolation { span, .. }
-            | Expression::Defer { span, .. } => *span,
+            | Expression::Defer { span, .. }
+            | Expression::Await { span, .. } => *span,
         }
     }
 }

@@ -198,6 +198,8 @@ impl TypeChecker {
 
             Expression::Defer { expr, span } => self.check_defer_expr(expr, *span),
 
+            Expression::Await { expr, span } => self.check_await_expr(expr, *span),
+
             Expression::IndexAccess {
                 object,
                 index,

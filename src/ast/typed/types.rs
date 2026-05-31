@@ -48,6 +48,12 @@ pub enum Type {
         ret: Box<Type>,
     },
 
+    /// The result of calling an `@async` function returning `T`: a suspendable
+    /// computation that, when driven to completion, yields a `T`. Produced by an
+    /// async call, consumed (unwrapped to `T`) by `@await`. See ASYNC_PLAN.md
+    /// milestone 1.
+    Future(Box<Type>),
+
     Never,
     Unknown,
 }
@@ -85,6 +91,7 @@ impl Type {
             | Type::MutPtr(_)
             | Type::RawPtr(_)
             | Type::Function { .. }
+            | Type::Future(_)
             | Type::Never
             | Type::Unknown => return None,
         })
@@ -109,6 +116,7 @@ impl Type {
                 let ps: Vec<_> = params.iter().map(|p| p.display_name()).collect();
                 format!("({}) {}", ps.join(", "), ret.display_name())
             }
+            Type::Future(inner) => format!("Future<{}>", inner.display_name()),
             Type::Never => "!".into(),
             Type::Unknown => "?".into(),
             _ => unreachable!("handled by builtin_source_name"),

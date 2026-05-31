@@ -73,5 +73,10 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
             params: params.iter().map(type_to_ast).collect(),
             ret: Box::new(type_to_ast(ret)),
         },
+        // A `Future<T>` never flows through generic substitution: generic async
+        // functions are out of scope for ASYNC_PLAN.md milestone 1.
+        Type::Future(_) => {
+            unreachable!("Future has no AstType form; generic async is out of scope")
+        }
     }
 }

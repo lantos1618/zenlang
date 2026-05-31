@@ -30,6 +30,12 @@ impl CEmitter {
                 let ps: Vec<_> = params.iter().map(Self::c_type).collect();
                 format!("{}(*)({})", Self::c_type(ret), ps.join(", "))
             }
+            // The result of an async call. Not yet lowered to a frame type
+            // (ASYNC_PLAN.md milestone 1); the typechecker rejects async programs
+            // before codegen, so this is unreachable for an accepted program.
+            Type::Future(_) => {
+                unreachable!("async lowering not implemented; gated in typechecker")
+            }
             Type::Unknown => "void /* unknown */".into(),
         }
     }

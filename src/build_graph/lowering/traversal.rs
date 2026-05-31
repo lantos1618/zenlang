@@ -73,7 +73,8 @@ impl BuildProgramLowering {
             | Expression::Loop { body: child, .. }
             | Expression::Closure { body: child, .. }
             | Expression::Cast { expr: child, .. }
-            | Expression::Defer { expr: child, .. } => self.collect_dynamic_expr(child),
+            | Expression::Defer { expr: child, .. }
+            | Expression::Await { expr: child, .. } => self.collect_dynamic_expr(child),
             Expression::FunctionCall { args, .. }
             | Expression::ArrayLiteral { elements: args, .. } => self.collect_dynamic_exprs(args),
             Expression::MethodCall { receiver, args, .. } => {
