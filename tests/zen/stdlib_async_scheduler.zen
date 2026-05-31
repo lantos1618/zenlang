@@ -3,7 +3,7 @@
 // cooperatively to completion. Each task folds its value into a shared cell, so
 // the totals prove every spawned task ran.
 { io } = std
-{ scheduler, run } = std.concurrency.async.scheduler
+{ scheduler, spawn, run } = std.concurrency.async.scheduler
 
 task = @async (cell: RawPtr<u8>, delay: i32, value: i32) i32 {
     v = @await pending_then_ready(delay, value)
@@ -19,11 +19,11 @@ main = () i32 {
     @builtin.store(cell, cast(0, i64))
     @builtin.store(@builtin.gep(cell, 8), cast(0, i64))
 
-    s = scheduler()
-    scheduler_spawn(s.handle, task(cell, 2, 5))
-    scheduler_spawn(s.handle, task(cell, 0, 7))
-    scheduler_spawn(s.handle, task(cell, 4, 9))
-    run(s)
+    s0 = scheduler()
+    s1 = spawn(s0, task(cell, 2, 5))
+    s2 = spawn(s1, task(cell, 0, 7))
+    s3 = spawn(s2, task(cell, 4, 9))
+    run(s3)
 
     sum = @builtin.load<i64>(cell)
     done = @builtin.load<i64>(@builtin.gep(cell, 8))
