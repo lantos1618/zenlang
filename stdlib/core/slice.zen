@@ -1,4 +1,31 @@
-// Parse-only placeholder for @std.core.slice.
+// Immutable byte-slice view: a (ptr, len) pair with no ownership. Wraps a
+// RawPtr<u8> and a byte count — no allocation, no lifetime, no free. Use
+// `slice_sub` to derive sub-views into the same backing memory.
+//   { Slice, slice_new, slice_len, slice_get, slice_sub } = std.core.slice
 //
-// Restore slice helpers only with parser, typechecker, build, and docs-truth
-// evidence.
+// Layout: ptr points at byte 0 of the viewed region; len is the byte count.
+// Out-of-bounds access is undefined (no bounds check in this layer).
+
+Slice: { ptr: RawPtr<u8>, len: i64 }
+
+// Construct a Slice from a raw pointer and a byte count.
+slice_new = (ptr: RawPtr<u8>, len: i64) Slice {
+    Slice { ptr: ptr, len: len }
+}
+
+// Return the byte count of the slice.
+slice_len = (s: Slice) i64 {
+    s.len
+}
+
+// Load the byte at `index` (no bounds check).
+slice_get = (s: Slice, index: i64) u8 {
+    @builtin.load<u8>(@builtin.gep(s.ptr, index))
+}
+
+// Return a sub-slice starting at `offset` with `len` bytes.
+slice_sub = (s: Slice, offset: i64, len: i64) Slice {
+    Slice { ptr: @builtin.gep(s.ptr, offset), len: len }
+}
+
+@export({ Slice, slice_new, slice_len, slice_get, slice_sub })

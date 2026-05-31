@@ -1,0 +1,30 @@
+// Proves: buffer_new allocates, buffer_push_byte appends bytes (triggering
+// growth past initial cap=8), buffer_len tracks count, buffer_get_byte
+// round-trips values, and buffer_free releases.
+{ io } = std
+{ Allocator, Mallocator, mallocator } = std.memory.allocator
+{ Buffer, buffer_new, buffer_push_byte, buffer_len, buffer_get_byte, buffer_free } = std.core.buffer
+
+main = () i32 {
+    b ::= buffer_new<Mallocator>(mallocator())
+
+    // Push 10 bytes (past initial cap of 8) to exercise growth.
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= 10 ?
+            | true { l.done() }
+            | false {
+                b = buffer_push_byte<Mallocator>(b, cast(i * 5, u8))
+                i = i + 1
+                l.next()
+            }
+    })
+
+    io.println("len=${cast(buffer_len<Mallocator>(b), i32)}")
+    io.println("b0=${cast(buffer_get_byte<Mallocator>(b, 0), i32)}")
+    io.println("b9=${cast(buffer_get_byte<Mallocator>(b, 9), i32)}")
+    io.println("b5=${cast(buffer_get_byte<Mallocator>(b, 5), i32)}")
+
+    buffer_free<Mallocator>(b)
+    0
+}

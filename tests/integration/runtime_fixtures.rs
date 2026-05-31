@@ -149,3 +149,13 @@ fn test_stdlib_prng() {
 fn test_stdlib_propagate() {
     run_test("stdlib_propagate");
 }
+
+#[test]
+fn test_stdlib_slice() {
+    run_test("stdlib_slice");
+}
+
+#[test]
+fn test_stdlib_buffer() {
+    run_test("stdlib_buffer");
+}
