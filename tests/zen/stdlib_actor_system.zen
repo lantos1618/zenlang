@@ -1,0 +1,55 @@
+// ActorSystem test: spawn 3 adder actors, broadcast 1..=100 to all,
+// stop all, sum their states. Each actor accumulates 5050, total = 15150.
+{ io } = std
+{ ActorSystem, system_new, system_spawn, system_broadcast, system_stop_all, system_actor_state, system_free } = std.concurrency.actor.system
+{ actor_recv_raw } = std.concurrency.actor.actor
+
+// Worker: receives [ch_ptr(8), state_ptr(8)] as arg; adds messages until sentinel.
+adder_worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    ch_ptr = @builtin.load<RawPtr<u8>>(arg)
+    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    sentinel = cast(0 - 1, i64)
+    loop((l) {
+        msg = actor_recv_raw(ch_ptr)
+        msg == sentinel ?
+            | true { l.done() }
+            | false {
+                cur = @builtin.load<i64>(state_ptr)
+                @builtin.store(state_ptr, cur + msg)
+                l.next()
+            }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    sys = system_new()
+
+    system_spawn(sys, adder_worker)
+    system_spawn(sys, adder_worker)
+    system_spawn(sys, adder_worker)
+
+    // Broadcast 1..=100 to all 3 actors
+    i ::= cast(1, i64)
+    loop((l) {
+        i <= 100 ?
+            | true {
+                system_broadcast(sys, i)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    system_stop_all(sys)
+
+    // Each actor got 1..=100 → sum 5050; 3 actors → total 15150
+    s0 = system_actor_state(sys, 0)
+    s1 = system_actor_state(sys, 1)
+    s2 = system_actor_state(sys, 2)
+    total = s0 + s1 + s2
+    io.println("total=${cast(total, i32)}")
+
+    system_free(sys)
+    0
+}

@@ -1,4 +1,113 @@
-// Parse-only placeholder for @std.concurrency.actor.system.
+// An ActorSystem that spawns and tracks up to N actors, broadcasts messages
+// to all of them, and joins/frees them all at shutdown.
 //
-// Actor system APIs are stdlib-owned Zen surface. Restore them only with parser,
-// typechecker, build, and docs-truth evidence.
+// The system stores an array of Actor block pointers (each 32 bytes; see
+// actor.zen for the layout).  A fixed upper bound of 8 actors is used to
+// keep the implementation concrete without heap-growing arrays.
+//
+// ActorSystem heap block layout (80 bytes):
+//   [0..7]   count     (i64 — number of spawned actors, 0..=8)
+//   [8..71]  actors    (8 × 8 bytes — pointers to individual Actor blocks)
+//   [72..79] (padding)
+//
+// Wire format for actor block pointers: each slot holds a RawPtr<u8> that
+// is the Actor.ptr value (the 32-byte actor block from actor.zen).
+//
+//   { ActorSystem, system_new, system_spawn, system_broadcast,
+//     system_stop_all, system_free }
+//     = std.concurrency.actor.system
+
+{ Actor, actor_new, actor_send, actor_recv_raw, actor_send_raw, actor_stop, actor_state, actor_free } = std.concurrency.actor.actor
+
+// Opaque system handle.
+ActorSystem: { ptr: RawPtr<u8> }
+
+// Allocate a new empty ActorSystem.
+system_new = () ActorSystem {
+    ptr = @builtin.raw_allocate(cast(80, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(80, usize))
+    ActorSystem { ptr: ptr }
+}
+
+// Spawn a new actor with the given worker and add it to the system.
+// Returns the index (0-based).  No-op if already at capacity (8).
+system_spawn = (sys: ActorSystem, worker: (RawPtr<u8>) RawPtr<u8>) i64 {
+    count_ptr = sys.ptr
+    count = @builtin.load<i64>(count_ptr)
+    count >= 8 ?
+        | true { cast(0 - 1, i64) }
+        | false {
+            a = actor_new(worker)
+            slot = @builtin.gep(sys.ptr, 8 + count * 8)
+            @builtin.store(slot, a.ptr)
+            @builtin.store(count_ptr, count + 1)
+            count
+        }
+}
+
+// Broadcast a message to all actors in the system.
+system_broadcast = (sys: ActorSystem, msg: i64) void {
+    count = @builtin.load<i64>(sys.ptr)
+    i ::= cast(0, i64)
+    loop((l) {
+        i < count ?
+            | true {
+                slot = @builtin.gep(sys.ptr, 8 + i * 8)
+                actor_ptr = @builtin.load<RawPtr<u8>>(slot)
+                ch_ptr = @builtin.load<RawPtr<u8>>(actor_ptr)
+                actor_send_raw(ch_ptr, msg)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+}
+
+// Stop all actors (send sentinel + join each thread).
+// Does NOT free actor resources — call system_free to release everything.
+system_stop_all = (sys: ActorSystem) void {
+    count = @builtin.load<i64>(sys.ptr)
+    i ::= cast(0, i64)
+    loop((l) {
+        i < count ?
+            | true {
+                slot = @builtin.gep(sys.ptr, 8 + i * 8)
+                actor_ptr = @builtin.load<RawPtr<u8>>(slot)
+                a = Actor { ptr: actor_ptr }
+                actor_stop(a)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+}
+
+// Read the accumulated state of actor at index `idx`.
+system_actor_state = (sys: ActorSystem, idx: i64) i64 {
+    slot = @builtin.gep(sys.ptr, 8 + idx * 8)
+    actor_ptr = @builtin.load<RawPtr<u8>>(slot)
+    a = Actor { ptr: actor_ptr }
+    actor_state(a)
+}
+
+// Free all actor resources and the system block itself
+// (call after system_stop_all).
+system_free = (sys: ActorSystem) void {
+    count = @builtin.load<i64>(sys.ptr)
+    i ::= cast(0, i64)
+    loop((l) {
+        i < count ?
+            | true {
+                slot = @builtin.gep(sys.ptr, 8 + i * 8)
+                actor_ptr = @builtin.load<RawPtr<u8>>(slot)
+                a = Actor { ptr: actor_ptr }
+                actor_free(a)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    @builtin.raw_deallocate(sys.ptr, cast(80, usize))
+}
+
+@export({ ActorSystem, system_new, system_spawn, system_broadcast, system_stop_all, system_actor_state, system_free })
