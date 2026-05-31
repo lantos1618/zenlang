@@ -301,6 +301,11 @@ fn test_stdlib_condvar() {
 }
 
 #[test]
+fn test_stdlib_waitgroup() {
+    run_test("stdlib_waitgroup");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }

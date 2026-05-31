@@ -1,0 +1,96 @@
+// 4 threads each call wg_done; main calls wg_wait and verifies counter==4.
+{ io } = std
+{ WaitGroup, wg_new, wg_add, wg_done, wg_wait, wg_destroy } = std.concurrency.sync.waitgroup
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_cond_broadcast = (cond: RawPtr<u8>) i32
+
+// Inline wg_done that also broadcasts — needed because worker receives raw ptr.
+// wg layout: mutex=[0..63], cond=[64..127], counter=[128..135]
+wg_done_full = (wg_ptr: RawPtr<u8>) void {
+    mutex_ptr = wg_ptr
+    cond_ptr = @builtin.gep(wg_ptr, 64)
+    counter_ptr = @builtin.gep(wg_ptr, 128)
+    pthread_mutex_lock(mutex_ptr)
+    cur = @builtin.load<i64>(counter_ptr)
+    next = cur - 1
+    @builtin.store(counter_ptr, next)
+    next == 0 ?
+        | true { pthread_cond_broadcast(cond_ptr) }
+        | false { 0 }
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Arg: [wg_ptr(8), mutex_ptr(8), counter_ptr(8)] = 24 bytes
+worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    wg_ptr = @builtin.load<RawPtr<u8>>(arg)
+    mutex_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    counter_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 16))
+
+    pthread_mutex_lock(mutex_ptr)
+    cur = @builtin.load<i64>(counter_ptr)
+    @builtin.store(counter_ptr, cur + 1)
+    pthread_mutex_unlock(mutex_ptr)
+
+    wg_done_full(wg_ptr)
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    wg = wg_new()
+    wg_add(wg, 4)
+
+    // Separate mutex for the counter (not the wg's internal mutex)
+    mutex_buf = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(mutex_buf, cast(0, u8), cast(64, usize))
+
+    counter = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(counter, cast(0, i64))
+
+    arg_block = @builtin.raw_allocate(cast(24, usize))
+    @builtin.store(arg_block, wg.ptr)
+    @builtin.store(@builtin.gep(arg_block, 8), mutex_buf)
+    @builtin.store(@builtin.gep(arg_block, 16), counter)
+
+    threads = @builtin.raw_allocate(cast(32, usize))
+
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 4 ?
+            | true {
+                slot = @builtin.gep(threads, i * 8)
+                pthread_create(slot, @builtin.null_ptr(), worker, arg_block)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    wg_wait(wg)
+
+    j ::= cast(0, i64)
+    loop((l) {
+        j < 4 ?
+            | true {
+                slot = @builtin.gep(threads, j * 8)
+                tid = @builtin.load<i64>(slot)
+                pthread_join(tid, @builtin.null_ptr())
+                j = j + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    result = @builtin.load<i64>(counter)
+    io.println("counter=${cast(result, i32)}")
+
+    @builtin.raw_deallocate(threads, cast(32, usize))
+    @builtin.raw_deallocate(arg_block, cast(24, usize))
+    @builtin.raw_deallocate(counter, cast(8, usize))
+    @builtin.raw_deallocate(mutex_buf, cast(64, usize))
+    wg_destroy(wg)
+    0
+}
