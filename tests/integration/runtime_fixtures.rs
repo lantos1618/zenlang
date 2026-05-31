@@ -181,6 +181,11 @@ fn test_stdlib_stat() {
 }
 
 #[test]
+fn test_stdlib_poll() {
+    run_test("stdlib_poll");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

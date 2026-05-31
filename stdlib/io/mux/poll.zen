@@ -1,2 +1,41 @@
-// Parse-only placeholder for @std.io.mux.poll.
-// Promote poll APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// I/O multiplexing via the poll(2) syscall, routed through the std.compiler
+// facade. poll(7) takes a pointer to an array of struct pollfd, a count, and a
+// timeout in milliseconds; returns the number of fds with events ready (or 0
+// on timeout, negative on error).
+//
+// struct pollfd (8 bytes on x86-64):
+//   fd     i32  @ 0
+//   events i16  @ 4
+//   revents i16 @ 6
+//
+// Common event flags: POLLIN=1, POLLOUT=4, POLLERR=8, POLLHUP=16.
+//   { poll_one, POLLIN, POLLOUT } = std.io.mux.poll
+//
+// x86-64 Linux syscall number: poll=7.
+
+{ sys3 } = std.compiler
+
+// Poll a single fd with a given events mask and timeout_ms. Returns the
+// revents mask on the fd (>0 means ready), 0 for timeout, <0 for error.
+// Pass timeout_ms = 0 for an instant (non-blocking) check.
+poll_one = (fd: i64, events: i64, timeout_ms: i64) i64 {
+    // struct pollfd is 8 bytes: [fd i32, events i16, revents i16]
+    buf = @builtin.raw_allocate(cast(8, usize))
+    fd_i32 = cast(fd, i32)
+    ev_i16 = cast(events, i16)
+    @builtin.store(buf, fd_i32)
+    ev_ptr = @builtin.gep(buf, 4)
+    @builtin.store(ev_ptr, ev_i16)
+    rev_ptr = @builtin.gep(buf, 6)
+    zero_i16 = cast(0, i16)
+    @builtin.store(rev_ptr, zero_i16)
+    rc = sys3(7, @builtin.ptr_to_int(buf), 1, timeout_ms)
+    revents_i16 = @builtin.load<i16>(rev_ptr)
+    revents = cast(revents_i16, i64)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    // Return revents on success (rc==1), rc otherwise (0=timeout, <0=error).
+    is_ready = rc == 1
+    is_ready ? | true { revents } | false { rc }
+}
+
+@export({ poll_one })
