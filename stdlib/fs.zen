@@ -1,2 +1,30 @@
-// Parse-only placeholder for @std.fs.
-// Promote filesystem APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Whole-file convenience over std.io.files.file: write a whole buffer to a path
+// (creating/truncating it) and read a whole file into a buffer, in one call each,
+// taking string-literal paths directly. The low-level fd API (open/read/write/
+// close) lives in std.io.files.file; directory ops live in std.io.files.fs.
+//   { fs_write_all, fs_read_all } = std.fs
+
+{ file_open, file_open_create, file_read, file_write, file_close } = std.io.files.file
+
+// Write `len` bytes from `buf` to `path` (created/truncated). Returns bytes written.
+fs_write_all = (path: StaticString, buf: RawPtr<u8>, len: i64) i64 {
+    fd = file_open_create(@builtin.static_string_ptr(path))
+    n = file_write(fd, buf, len)
+    file_close(fd)
+    n
+}
+
+// Read up to `max` bytes from `path` into `buf`. Returns bytes read (negative on
+// open error). Opens read-only (O_RDONLY = 0).
+fs_read_all = (path: StaticString, buf: RawPtr<u8>, max: i64) i64 {
+    fd = file_open(@builtin.static_string_ptr(path), 0)
+    fd < 0 ?
+        | true { fd }
+        | false {
+            n = file_read(fd, buf, max)
+            file_close(fd)
+            n
+        }
+}
+
+@export({ fs_write_all, fs_read_all })

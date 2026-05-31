@@ -336,6 +336,11 @@ fn test_stdlib_ffi() {
 }
 
 #[test]
+fn test_stdlib_fs_rw() {
+    run_test("stdlib_fs_rw");
+}
+
+#[test]
 fn test_stdlib_uring_constants() {
     run_test("stdlib_uring_constants");
 }

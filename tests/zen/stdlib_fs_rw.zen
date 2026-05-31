@@ -1,0 +1,23 @@
+// The std.fs whole-file facade round-trips a file in one call each way: write 8
+// bytes to a path, read them back, and the i64 value survives.
+{ io } = std
+{ fs_write_all, fs_read_all } = std.fs
+{ fs_remove } = std.io.files.fs
+
+main = () i32 {
+    src = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(src, cast(1234567, i64))
+    wrote = fs_write_all("/tmp/zen_fs_rw_X7Q9", src, 8)
+    io.println("wrote=${cast(wrote, i32)}")
+
+    dst = @builtin.raw_allocate(cast(8, usize))
+    read = fs_read_all("/tmp/zen_fs_rw_X7Q9", dst, 8)
+    io.println("read=${cast(read, i32)}")
+    v = @builtin.load<i64>(dst)
+    io.println("v=${cast(v, i32)}")
+
+    fs_remove(@builtin.static_string_ptr("/tmp/zen_fs_rw_X7Q9"))
+    @builtin.raw_deallocate(src, cast(8, usize))
+    @builtin.raw_deallocate(dst, cast(8, usize))
+    0
+}
