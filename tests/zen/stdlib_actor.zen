@@ -1,0 +1,45 @@
+// Adder actor: each message is added to accumulated state.
+// Send 1..=100, stop, assert state == 5050.
+{ io } = std
+{ Actor, actor_new, actor_send, actor_recv_raw, actor_stop, actor_state, actor_free } = std.concurrency.actor.actor
+
+// Worker: receives [ch_ptr(8), state_ptr(8)] as arg.
+// Loops calling actor_recv_raw(ch_ptr) until sentinel (-1), accumulates sum.
+adder_worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    ch_ptr = @builtin.load<RawPtr<u8>>(arg)
+    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    sentinel = cast(0 - 1, i64)
+    loop((l) {
+        msg = actor_recv_raw(ch_ptr)
+        msg == sentinel ?
+            | true { l.done() }
+            | false {
+                cur = @builtin.load<i64>(state_ptr)
+                @builtin.store(state_ptr, cur + msg)
+                l.next()
+            }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    a = actor_new(adder_worker)
+
+    i ::= cast(1, i64)
+    loop((l) {
+        i <= 100 ?
+            | true {
+                actor_send(a, i)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    actor_stop(a)
+    s = actor_state(a)
+    io.println("sum=${cast(s, i32)}")
+
+    actor_free(a)
+    0
+}

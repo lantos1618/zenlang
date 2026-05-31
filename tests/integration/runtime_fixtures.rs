@@ -316,6 +316,11 @@ fn test_stdlib_channel() {
 }
 
 #[test]
+fn test_stdlib_actor() {
+    run_test("stdlib_actor");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
