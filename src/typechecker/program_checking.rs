@@ -65,6 +65,26 @@ impl TypeChecker {
                         }
                     };
                     self.push_checked_function_decl(&mut functions, decl, &checked_name, self_type);
+
+                    // Surface + typing for `@async`/`@await` ship in milestone 1,
+                    // but state-machine lowering does not yet. Type-check the body
+                    // (so `@await` rules fire) and then reject the program with a
+                    // clear, stable-coded error rather than emit broken C. The
+                    // half-built async function is dropped so codegen never sees a
+                    // `Future`/`Await` node. (ASYNC_PLAN.md milestone 1.)
+                    if callable.is_async {
+                        functions.retain(|f| f.name != checked_name);
+                        self.diagnostics.push(Diagnostic::error_code(
+                            E3082,
+                            format!(
+                                "`@async` function `{}` cannot be compiled yet: \
+                                 async/await lowering is not implemented (milestone 1 \
+                                 in progress)",
+                                callable.name
+                            ),
+                            callable.span,
+                        ));
+                    }
                 }
                 continue;
             }
@@ -243,6 +263,7 @@ impl TypeChecker {
             callable.params,
             callable.return_type,
             callable.body,
+            callable.is_async,
             &callable.span,
         ) {
             Ok(function) => functions.push(function),

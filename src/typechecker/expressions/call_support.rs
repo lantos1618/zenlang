@@ -24,7 +24,16 @@ impl TypeChecker {
 
         let (resolved_name, ret_type) = if let Some(info) = self.functions.get(&full_name).cloned()
         {
-            self.resolve_callable_call("function", &full_name, &info, type_args, &typed_args, span)
+            let (resolved, ret) = self
+                .resolve_callable_call("function", &full_name, &info, type_args, &typed_args, span);
+            // A call to an `@async` function yields a `Future<T>`, not `T`; the
+            // value is unwrapped to `T` only by `@await`.
+            let ret = if info.is_async {
+                Type::Future(Box::new(ret))
+            } else {
+                ret
+            };
+            (resolved, ret)
         } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
             (full_name.clone(), self.resolve_type(&type_args[0]))
         } else if let Some(module) = module {

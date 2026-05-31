@@ -1,12 +1,50 @@
 use super::*;
 
 impl TypeChecker {
+    /// `@await e`: legal only inside an `@async` body (E3080), where `e` must be
+    /// a `Future<T>` (E3081); the result type is the inner `T`. See ASYNC_PLAN.md
+    /// milestone 1.
+    pub(crate) fn check_await_expr(
+        &mut self,
+        expr: &Expression,
+        span: Span,
+    ) -> Result<TypedExpression, Diagnostic> {
+        if !self.current_fn_is_async {
+            return Err(Diagnostic::error_code(
+                E3080,
+                "`@await` may only be used inside an `@async` function".to_string(),
+                span,
+            ));
+        }
+
+        let inner = self.check_expr(expr)?;
+        let Type::Future(value_ty) = &inner.ty else {
+            return Err(Diagnostic::error_code(
+                E3081,
+                format!(
+                    "`@await` expects a future, found `{}`",
+                    inner.ty.display_name()
+                ),
+                span,
+            ));
+        };
+        let value_ty = (**value_ty).clone();
+        typed_ok(
+            TypedExprKind::Await {
+                expr: Box::new(inner),
+            },
+            value_ty,
+            span,
+        )
+    }
+
     pub(crate) fn check_function(
         &mut self,
         name: &str,
         params: &[Param],
         return_type: &Option<AstType>,
         body: &Expression,
+        is_async: bool,
         span: &Span,
     ) -> Result<TypedFunction, Diagnostic> {
         let return_annotation_valid = return_type
@@ -18,6 +56,7 @@ impl TypeChecker {
 
         let saved_defers = std::mem::take(&mut self.pending_defers);
         let saved_return_type = self.current_return_type.replace(ret_type.clone());
+        let saved_is_async = std::mem::replace(&mut self.current_fn_is_async, is_async);
 
         let checked = self.with_scope(|checker| {
             let mut typed_params = Vec::new();
@@ -34,6 +73,7 @@ impl TypeChecker {
             Ok((typed_params, checker.check_expr(body)?))
         });
         self.current_return_type = saved_return_type;
+        self.current_fn_is_async = saved_is_async;
 
         let (typed_params, typed_body) = match checked {
             Ok(checked) => checked,

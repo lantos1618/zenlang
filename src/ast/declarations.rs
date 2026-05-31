@@ -22,6 +22,11 @@ pub enum Declaration {
         /// prototype and links the symbol from a `link:`-ed library.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         external: bool,
+        /// An `@async` function: its body may use `@await`, and a *call* to it
+        /// yields a `Future<T>` (see ASYNC_PLAN.md milestone 1). Defaults to
+        /// `false`, so non-async ASTs/goldens are byte-identical.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        is_async: bool,
         span: Span,
     },
 
@@ -124,6 +129,8 @@ pub struct CallableDeclaration<'a> {
     pub return_type: &'a Option<AstType>,
     pub body: &'a Expression,
     pub public: bool,
+    /// `true` for an `@async` function; methods are never async (yet).
+    pub is_async: bool,
     pub span: Span,
 }
 
@@ -137,10 +144,20 @@ impl Declaration {
                 return_type,
                 body,
                 public,
+                is_async,
                 span,
                 ..
-            }
-            | Declaration::Method {
+            } => Some(CallableDeclaration {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                public: *public,
+                is_async: *is_async,
+                span: *span,
+            }),
+            Declaration::Method {
                 method_name: name,
                 type_params,
                 params,
@@ -156,6 +173,7 @@ impl Declaration {
                 return_type,
                 body,
                 public: *public,
+                is_async: false,
                 span: *span,
             }),
             _ => None,

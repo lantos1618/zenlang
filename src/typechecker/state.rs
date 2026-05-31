@@ -26,6 +26,9 @@ pub struct TypeChecker {
     diagnostics: Vec<Diagnostic>,
     current_return_type: Option<Type>,
     current_self_type: Option<Type>,
+    /// Whether the function currently being checked is `@async`. Gates `@await`
+    /// (legal only inside an async body) — see ASYNC_PLAN.md milestone 1.
+    current_fn_is_async: bool,
     pending_defers: Vec<TypedExpression>,
 }
 

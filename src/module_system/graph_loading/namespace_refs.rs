@@ -124,7 +124,9 @@ fn rewrite(
                 }
             }
         }
-        Expression::Defer { expr, .. } => rewrite(expr, names, prefix, shadowed),
+        Expression::Defer { expr, .. } | Expression::Await { expr, .. } => {
+            rewrite(expr, names, prefix, shadowed)
+        }
         Expression::IntLiteral { .. }
         | Expression::FloatLiteral { .. }
         | Expression::StringLiteral { .. }

@@ -196,6 +196,14 @@ impl CEmitter {
             }
 
             TypedExprKind::LoopControl { action, label } => format!("goto {label}_{action}"),
+
+            // `@await` is not yet lowered to a state machine (ASYNC_PLAN.md
+            // milestone 1). The typechecker rejects any program containing an
+            // `@async` function before codegen runs, so this is unreachable for
+            // an accepted program.
+            TypedExprKind::Await { .. } => {
+                unreachable!("async lowering not implemented; gated in typechecker")
+            }
         }
     }
 }

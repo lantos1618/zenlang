@@ -57,6 +57,8 @@ pub enum Token {
     AtThis,    // @this
     AtExport,  // @export
     AtExtern,  // @extern (C FFI function declaration)
+    AtAsync,   // @async (async function marker)
+    AtAwait,   // @await (await expression)
 
     Newline,
     EOF,
@@ -132,6 +134,8 @@ impl Token {
             "this" => Some(Self::AtThis),
             "export" => Some(Self::AtExport),
             "extern" => Some(Self::AtExtern),
+            "async" => Some(Self::AtAsync),
+            "await" => Some(Self::AtAwait),
             _ => None,
         }
     }
@@ -153,6 +157,7 @@ mod tests {
             "loop", "return", "struct", "enum", "behavior", "impl", "type",
             "import", "export", "use", "mod", "pub_", "true", "false", "self",
             "this", "and", "or", "not", "while", "for", "in", "defer", "cast",
+            "async", "await",
         ] {
             assert_eq!(
                 Token::from_keyword(word),
