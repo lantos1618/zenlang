@@ -1,33 +1,32 @@
 // LIFO stack, a thin wrapper over the heap-backed `Vec` on the default
-// (system) allocator.
+// (system) allocator. `Vec<T>` defaults its allocator, so this never names it.
 // `{ Stack, stack_new, stack_push, stack_peek, stack_pop, stack_len } = std.collections.stack`
 
-{ Mallocator } = std.memory.allocator
 { Vec, vec_new_default, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
-Stack<T>: { items: Vec<T, Mallocator> }
+Stack<T>: { items: Vec<T> }
 
 stack_new<T> = () Stack<T> {
     Stack<T> { items: vec_new_default<T>() }
 }
 
 stack_len<T> = (s: Stack<T>) i64 {
-    vec_len<T, Mallocator>(s.items)
+    vec_len(s.items)
 }
 
 stack_push<T> = (s: Stack<T>, value: T) Stack<T> {
-    Stack<T> { items: vec_push<T, Mallocator>(s.items, value) }
+    Stack<T> { items: vec_push(s.items, value) }
 }
 
 stack_peek<T> = (s: Stack<T>) T {
-    vec_get<T, Mallocator>(s.items, vec_len<T, Mallocator>(s.items) - 1)
+    vec_get(s.items, vec_len(s.items) - 1)
 }
 
 // Drop the top element. The popped value is read with `stack_peek` first; this
 // shrinks the logical length without reallocating.
 stack_pop<T> = (s: Stack<T>) Stack<T> {
     Stack<T> {
-        items: Vec<T, Mallocator> {
+        items: Vec<T> {
             data: s.items.data,
             len: s.items.len - 1,
             cap: s.items.cap,
@@ -37,7 +36,7 @@ stack_pop<T> = (s: Stack<T>) Stack<T> {
 }
 
 stack_free<T> = (s: Stack<T>) void {
-    vec_free<T, Mallocator>(s.items)
+    vec_free(s.items)
 }
 
 @export({ Stack, stack_new, stack_len, stack_push, stack_peek, stack_pop, stack_free })

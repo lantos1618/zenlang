@@ -1,0 +1,33 @@
+// The arena is a real bump allocator: sequential allocations are adjacent in one
+// block (delta == 8 for two i64 slots), and it threads through Vec as a custom
+// allocator so pushed values round-trip — all from a single underlying malloc.
+{ io } = std
+{ Allocator } = std.memory.allocator
+{ Arena, arena, arena_free } = std.memory.arena
+{ Vec, vec_new, vec_push, vec_get } = std.collections.vec
+
+main = () i32 {
+    a ::= arena(4096)
+
+    // Bump check: two 8-byte allocations land 8 bytes apart in the same block.
+    p1 = a.alloc(cast(8, usize))
+    p2 = a.alloc(cast(8, usize))
+    io.println("bump_delta=${cast(@builtin.ptr_to_int(p2) - @builtin.ptr_to_int(p1), i32)}")
+
+    // End-to-end: a Vec backed by the arena (explicit allocator type).
+    v ::= vec_new<i64, Arena>(a)
+    i ::= 0
+    loop((l) {
+        i >= 6 ?
+            | true { l.done() }
+            | false {
+                v = vec_push<i64, Arena>(v, cast(i * 10, i64))
+                i = i + 1
+                l.next()
+            }
+    })
+    io.println("v0=${cast(vec_get<i64, Arena>(v, 0), i32)}")
+    io.println("v5=${cast(vec_get<i64, Arena>(v, 5), i32)}")
+    arena_free(a)
+    0
+}

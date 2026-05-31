@@ -1,2 +1,46 @@
-// Parse-only placeholder for @std.memory.arena.
-// Promote arena APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Bump-pointer arena allocator. One `raw_allocate` backs the whole arena; every
+// `alloc` just advances an offset, so N allocations cost a single underlying
+// malloc. State lives behind `ctl` (a pointer) so by-value copies of the Arena
+// share the same bump cursor. Per-allocation `free` is a no-op — the whole block
+// is released at once with `arena_free`.
+//   { Arena, arena, arena_free } = std.memory.arena
+//
+// ctl layout: [0..8) offset (i64, bytes used) | [8..16) cap (i64) | [16..) data
+
+{ Allocator } = std.memory.allocator
+
+Arena: { ctl: RawPtr<u8> }
+
+// Reserve an arena with `cap` bytes of bump space.
+arena = (cap: i64) Arena {
+    ctl = @builtin.raw_allocate(cast(16 + cap, usize))
+    @builtin.store(ctl, cast(0, i64))
+    @builtin.store(@builtin.gep(ctl, 8), cap)
+    Arena { ctl: ctl }
+}
+
+Arena.implements(Allocator) {
+    alloc = (self: Arena, size: usize) RawPtr<u8> {
+        off = @builtin.load<i64>(self.ctl)
+        p = @builtin.gep(self.ctl, 16 + off)
+        @builtin.store(self.ctl, off + cast(size, i64))
+        p
+    }
+    // Bump arenas don't free in place: hand back a fresh region and copy the
+    // old bytes forward.
+    realloc = (self: Arena, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        np = self.alloc(new)
+        @builtin.memcpy(np, p, old)
+        np
+    }
+    free = (self: Arena, p: RawPtr<u8>, size: usize) void {
+    }
+}
+
+// Release the whole arena block at once.
+arena_free = (a: Arena) void {
+    cap = @builtin.load<i64>(@builtin.gep(a.ctl, 8))
+    @builtin.raw_deallocate(a.ctl, cast(16 + cap, usize))
+}
+
+@export({ Arena, arena, arena_free, Arena.alloc, Arena.realloc, Arena.free })

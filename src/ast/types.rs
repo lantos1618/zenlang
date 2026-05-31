@@ -190,6 +190,7 @@ pub(crate) fn type_params_from_names(names: impl IntoIterator<Item = String>) ->
             name,
             constraint: None,
             constraint_type_args: Vec::new(),
+            default: None,
             span: Span::dummy(),
         })
         .collect()

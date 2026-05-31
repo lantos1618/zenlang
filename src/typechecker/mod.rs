@@ -79,6 +79,36 @@ impl TypeChecker {
         self.concrete_type_arg_substitutions(type_params, type_args, &HashSet::new())
     }
 
+    // Pad a generic type reference's args with the declaration's defaults for any
+    // omitted trailing params: `Vec<i64>` becomes `Vec<i64, Mallocator>`. Returns
+    // the args unchanged when the type is unknown, already saturated, or has no
+    // defaults. A missing param without a default stops padding so the normal
+    // arity check still reports it.
+    pub(in crate::typechecker) fn fill_type_arg_defaults(
+        &self,
+        name: &str,
+        type_args: &[AstType],
+    ) -> Vec<AstType> {
+        let (type_params, defaults) = if let Some(info) = self.structs.get(name) {
+            (&info.type_params, &info.type_param_defaults)
+        } else if let Some(info) = self.enums.get(name) {
+            (&info.type_params, &info.type_param_defaults)
+        } else {
+            return type_args.to_vec();
+        };
+        if defaults.is_empty() || type_args.len() >= type_params.len() {
+            return type_args.to_vec();
+        }
+        let mut filled = type_args.to_vec();
+        for param in type_params.iter().skip(type_args.len()) {
+            match defaults.get(param) {
+                Some(default) => filled.push(default.clone()),
+                None => break,
+            }
+        }
+        filled
+    }
+
     fn behavior_type_arg_substitutions(
         &mut self,
         behavior: &str,

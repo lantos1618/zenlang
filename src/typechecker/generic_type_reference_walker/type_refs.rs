@@ -20,12 +20,13 @@ impl TypeChecker {
 
         let type_params = type_params.to_vec();
         let type_param_bounds = type_param_bounds.clone();
-        if !self.validate_type_arg_arity(kind, name, type_params.len(), type_args, span) {
+        let type_args = self.fill_type_arg_defaults(name, type_args);
+        if !self.validate_type_arg_arity(kind, name, type_params.len(), &type_args, span) {
             return;
         }
 
         let substitutions =
-            self.concrete_type_arg_substitutions(&type_params, type_args, scoped_type_params);
+            self.concrete_type_arg_substitutions(&type_params, &type_args, scoped_type_params);
         self.check_generic_bounds(&type_param_bounds, &substitutions, span);
     }
 }

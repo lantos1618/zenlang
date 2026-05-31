@@ -59,6 +59,10 @@ pub struct TypeParam {
     pub name: String,
     pub constraint: Option<String>,
     pub constraint_type_args: Vec<AstType>,
+    // Optional default type, used when a reference omits this (trailing)
+    // argument: `Vec<T, Alloc: Allocator = Mallocator>` lets `Vec<T>` mean
+    // `Vec<T, Mallocator>`.
+    pub default: Option<AstType>,
     pub span: Span,
 }
 
