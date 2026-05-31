@@ -6,6 +6,8 @@
 // Layout: ptr points at byte 0 of the viewed region; len is the byte count.
 // Out-of-bounds access is undefined (no bounds check in this layer).
 
+{ gep, load_u8 } = std.compiler
+
 Slice: { ptr: RawPtr<u8>, len: i64 }
 
 // Construct a Slice from a raw pointer and a byte count.
@@ -20,12 +22,12 @@ slice_len = (s: Slice) i64 {
 
 // Load the byte at `index` (no bounds check).
 slice_get = (s: Slice, index: i64) u8 {
-    @builtin.load<u8>(@builtin.gep(s.ptr, index))
+    load_u8(gep(s.ptr, index))
 }
 
 // Return a sub-slice starting at `offset` with `len` bytes.
 slice_sub = (s: Slice, offset: i64, len: i64) Slice {
-    Slice { ptr: @builtin.gep(s.ptr, offset), len: len }
+    Slice { ptr: gep(s.ptr, offset), len: len }
 }
 
 @export({ Slice, slice_new, slice_len, slice_get, slice_sub })

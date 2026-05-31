@@ -10,15 +10,16 @@
 //             [8..16) block_size (i64) | [16..24) block_count (i64) | [24..) data
 
 { Allocator } = std.memory.allocator
+{ raw_allocate, raw_deallocate, gep, load_i64, store_i64, null_ptr, ptr_to_int } = std.compiler
 
 Pool: { ctl: RawPtr<u8> }
 
 // Reserve a pool of `block_count` blocks, each `block_size` bytes.
 pool = (block_size: i64, block_count: i64) Pool {
-    ctl = @builtin.raw_allocate(cast(24 + block_size * block_count, usize))
-    @builtin.store(ctl, cast(0, i64))
-    @builtin.store(@builtin.gep(ctl, 8), block_size)
-    @builtin.store(@builtin.gep(ctl, 16), block_count)
+    ctl = raw_allocate(cast(24 + block_size * block_count, usize))
+    store_i64(ctl, cast(0, i64))
+    store_i64(gep(ctl, cast(8, i64)), block_size)
+    store_i64(gep(ctl, cast(16, i64)), block_count)
 
     // Thread the free list: block i points at block i+1, the last at -1.
     i ::= cast(0, i64)
@@ -29,7 +30,7 @@ pool = (block_size: i64, block_count: i64) Pool {
                 next = i + 1 >= block_count ?
                     | true { cast(0 - 1, i64) }
                     | false { (i + 1) * block_size }
-                @builtin.store(@builtin.gep(ctl, 24 + i * block_size), next)
+                store_i64(gep(ctl, 24 + i * block_size), next)
                 i = i + 1
                 l.next()
             }
@@ -40,13 +41,13 @@ pool = (block_size: i64, block_count: i64) Pool {
 Pool.implements(Allocator) {
     // Pop the head of the free list. Returns null when the pool is exhausted.
     alloc = (self: Pool, size: usize) RawPtr<u8> {
-        head = @builtin.load<i64>(self.ctl)
+        head = load_i64(self.ctl)
         head < 0 ?
-            | true { @builtin.null_ptr() }
+            | true { null_ptr() }
             | false {
-                p = @builtin.gep(self.ctl, 24 + head)
-                next = @builtin.load<i64>(p)
-                @builtin.store(self.ctl, next)
+                p = gep(self.ctl, 24 + head)
+                next = load_i64(p)
+                store_i64(self.ctl, next)
                 p
             }
     }
@@ -57,19 +58,19 @@ Pool.implements(Allocator) {
     }
     // Push the block back onto the free list (O(1), LIFO).
     free = (self: Pool, p: RawPtr<u8>, size: usize) void {
-        base = @builtin.gep(self.ctl, 24)
-        off = @builtin.ptr_to_int(p) - @builtin.ptr_to_int(base)
-        head = @builtin.load<i64>(self.ctl)
-        @builtin.store(p, head)
-        @builtin.store(self.ctl, cast(off, i64))
+        base = gep(self.ctl, cast(24, i64))
+        off = ptr_to_int(p) - ptr_to_int(base)
+        head = load_i64(self.ctl)
+        store_i64(p, head)
+        store_i64(self.ctl, cast(off, i64))
     }
 }
 
 // Release the whole pool block at once.
 pool_free = (p: Pool) void {
-    block_size = @builtin.load<i64>(@builtin.gep(p.ctl, 8))
-    block_count = @builtin.load<i64>(@builtin.gep(p.ctl, 16))
-    @builtin.raw_deallocate(p.ctl, cast(24 + block_size * block_count, usize))
+    block_size = load_i64(gep(p.ctl, cast(8, i64)))
+    block_count = load_i64(gep(p.ctl, cast(16, i64)))
+    raw_deallocate(p.ctl, cast(24 + block_size * block_count, usize))
 }
 
 @export({ Pool, pool, pool_free, Pool.alloc, Pool.realloc, Pool.free })

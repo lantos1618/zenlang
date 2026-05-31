@@ -9,6 +9,7 @@
 //   cap  — allocated capacity in bytes
 
 { Allocator, Mallocator, mallocator } = std.memory.allocator
+{ gep, load_u8, store_u8 } = std.compiler
 
 Buffer<Alloc: Allocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
 
@@ -29,7 +30,7 @@ buffer_len<Alloc: Allocator> = (b: Buffer<Alloc>) i64 {
 
 // Read the byte at `index` (no bounds check).
 buffer_get_byte<Alloc: Allocator> = (b: Buffer<Alloc>, index: i64) u8 {
-    @builtin.load<u8>(@builtin.gep(b.data, index))
+    load_u8(gep(b.data, index))
 }
 
 // Append one byte, growing the backing allocation if needed.
@@ -45,7 +46,7 @@ buffer_push_byte<Alloc: Allocator> = (b: Buffer<Alloc>, byte: u8) Buffer<Alloc> 
             }
         }
         | false { b }
-    @builtin.store(@builtin.gep(grown.data, grown.len), byte)
+    store_u8(gep(grown.data, grown.len), byte)
     Buffer<Alloc> { data: grown.data, len: grown.len + 1, cap: grown.cap, alloc: grown.alloc }
 }
 

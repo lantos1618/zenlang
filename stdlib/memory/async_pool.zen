@@ -6,6 +6,7 @@
 
 { coroutine_yield } = std.concurrency.coroutine
 { Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+{ raw_allocate, null_ptr, gep, load_i64, store_i64 } = std.compiler
 
 g_pool_work ::= @builtin.null_ptr()
 g_pool_sum ::= @builtin.null_ptr()
@@ -14,13 +15,13 @@ g_pool_sum ::= @builtin.null_ptr()
 // yield, repeat until the work counter hits zero.
 pool_worker = () void {
     loop((l) {
-        remaining = @builtin.load<i64>(g_pool_work)
+        remaining = load_i64(g_pool_work)
         remaining <= 0 ?
             | true { l.done() }
             | false {
-                @builtin.store(g_pool_work, remaining - 1)
-                s = @builtin.load<i64>(g_pool_sum)
-                @builtin.store(g_pool_sum, s + remaining)
+                store_i64(g_pool_work, remaining - 1)
+                s = load_i64(g_pool_sum)
+                store_i64(g_pool_sum, s + remaining)
                 coroutine_yield()
                 l.next()
             }
@@ -30,10 +31,10 @@ pool_worker = () void {
 // Run `workers` cooperative workers over `items` units of work (unit k adds k to a
 // shared sum). Returns the sum = items*(items+1)/2, independent of `workers`.
 pool_run = (workers: i64, items: i64) i64 {
-    g_pool_work = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(g_pool_work, items)
-    g_pool_sum = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(g_pool_sum, cast(0, i64))
+    g_pool_work = raw_allocate(cast(8, usize))
+    store_i64(g_pool_work, items)
+    g_pool_sum = raw_allocate(cast(8, usize))
+    store_i64(g_pool_sum, cast(0, i64))
 
     r ::= runtime()
     i ::= cast(0, i64)
@@ -47,7 +48,7 @@ pool_run = (workers: i64, items: i64) i64 {
             }
     })
     task_run(r)
-    @builtin.load<i64>(g_pool_sum)
+    load_i64(g_pool_sum)
 }
 
 @export({ pool_run })

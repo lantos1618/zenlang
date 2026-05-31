@@ -13,6 +13,7 @@
 //             [8..16) cap (i64) | [16..24) reserved | [24..) data
 
 { Allocator } = std.memory.allocator
+{ raw_allocate, raw_deallocate, gep, load_i64, store_i64, null_ptr, ptr_to_int, mem_copy } = std.compiler
 
 Heap: { ctl: RawPtr<u8> }
 
@@ -24,11 +25,11 @@ heap_align = (n: i64) i64 {
 // Reserve a heap with `cap` bytes of carveable space (one big free chunk).
 heap = (cap: i64) Heap {
     total = heap_align(cap)
-    ctl = @builtin.raw_allocate(cast(24 + total, usize))
-    @builtin.store(ctl, cast(0, i64))
-    @builtin.store(@builtin.gep(ctl, 8), total)
-    @builtin.store(@builtin.gep(ctl, 24), total)
-    @builtin.store(@builtin.gep(ctl, 24 + 8), cast(0 - 1, i64))
+    ctl = raw_allocate(cast(24 + total, usize))
+    store_i64(ctl, cast(0, i64))
+    store_i64(gep(ctl, cast(8, i64)), total)
+    store_i64(gep(ctl, cast(24, i64)), total)
+    store_i64(gep(ctl, cast(24, i64) + 8), cast(0 - 1, i64))
     Heap { ctl: ctl }
 }
 
@@ -38,13 +39,13 @@ Heap.implements(Allocator) {
     alloc = (self: Heap, size: usize) RawPtr<u8> {
         need = heap_align(cast(size, i64))
         prev ::= cast(0 - 1, i64)
-        cur ::= @builtin.load<i64>(self.ctl)
+        cur ::= load_i64(self.ctl)
         found ::= cast(0 - 1, i64)
         fprev ::= cast(0 - 1, i64)
         loop((l) {
             (found < 0) && (cur >= 0) ?
                 | true {
-                    csize = @builtin.load<i64>(@builtin.gep(self.ctl, 24 + cur))
+                    csize = load_i64(gep(self.ctl, cast(24, i64) + cur))
                     csize - 8 >= need ?
                         | true {
                             found = cur
@@ -53,61 +54,61 @@ Heap.implements(Allocator) {
                         }
                         | false {
                             prev = cur
-                            cur = @builtin.load<i64>(@builtin.gep(self.ctl, 24 + cur + 8))
+                            cur = load_i64(gep(self.ctl, cast(24, i64) + cur + 8))
                             l.next()
                         }
                 }
                 | false { l.done() }
         })
         found < 0 ?
-            | true { @builtin.null_ptr() }
+            | true { null_ptr() }
             | false {
-                fsize = @builtin.load<i64>(@builtin.gep(self.ctl, 24 + found))
-                fnext = @builtin.load<i64>(@builtin.gep(self.ctl, 24 + found + 8))
+                fsize = load_i64(gep(self.ctl, cast(24, i64) + found))
+                fnext = load_i64(gep(self.ctl, cast(24, i64) + found + 8))
                 // The free-list slot that pointed at `found`: the head, or prev's link.
                 slot = fprev < 0 ?
                     | true { self.ctl }
-                    | false { @builtin.gep(self.ctl, 24 + fprev + 8) }
+                    | false { gep(self.ctl, cast(24, i64) + fprev + 8) }
                 remainder = fsize - 8 - need
                 remainder >= 16 ?
                     | true {
                         // Split: shrink `found` to the requested size, leave the
                         // remainder as a fresh free chunk linked in `found`'s place.
                         newoff = found + 8 + need
-                        @builtin.store(@builtin.gep(self.ctl, 24 + found), 8 + need)
-                        @builtin.store(@builtin.gep(self.ctl, 24 + newoff), remainder)
-                        @builtin.store(@builtin.gep(self.ctl, 24 + newoff + 8), fnext)
-                        @builtin.store(slot, newoff)
-                        @builtin.gep(self.ctl, 24 + found + 8)
+                        store_i64(gep(self.ctl, cast(24, i64) + found), 8 + need)
+                        store_i64(gep(self.ctl, cast(24, i64) + newoff), remainder)
+                        store_i64(gep(self.ctl, cast(24, i64) + newoff + 8), fnext)
+                        store_i64(slot, newoff)
+                        gep(self.ctl, cast(24, i64) + found + 8)
                     }
                     | false {
                         // Too small to split: hand out the whole chunk, unlink it.
-                        @builtin.store(slot, fnext)
-                        @builtin.gep(self.ctl, 24 + found + 8)
+                        store_i64(slot, fnext)
+                        gep(self.ctl, cast(24, i64) + found + 8)
                     }
             }
     }
     // No in-place grow: allocate fresh, copy, release the old chunk.
     realloc = (self: Heap, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
         np = self.alloc(new)
-        @builtin.memcpy(np, p, old)
+        mem_copy(np, p, old)
         self.free(p, old)
         np
     }
     // Push the chunk back onto the free list (O(1), LIFO). Header is intact.
     free = (self: Heap, p: RawPtr<u8>, size: usize) void {
-        base = @builtin.gep(self.ctl, 24)
-        off = cast(@builtin.ptr_to_int(p) - @builtin.ptr_to_int(base), i64) - 8
-        head = @builtin.load<i64>(self.ctl)
-        @builtin.store(@builtin.gep(self.ctl, 24 + off + 8), head)
-        @builtin.store(self.ctl, off)
+        base = gep(self.ctl, cast(24, i64))
+        off = cast(ptr_to_int(p) - ptr_to_int(base), i64) - 8
+        head = load_i64(self.ctl)
+        store_i64(gep(self.ctl, cast(24, i64) + off + 8), head)
+        store_i64(self.ctl, off)
     }
 }
 
 // Release the whole heap block at once.
 heap_free = (h: Heap) void {
-    cap = @builtin.load<i64>(@builtin.gep(h.ctl, 8))
-    @builtin.raw_deallocate(h.ctl, cast(24 + cap, usize))
+    cap = load_i64(gep(h.ctl, cast(8, i64)))
+    raw_deallocate(h.ctl, cast(24 + cap, usize))
 }
 
 @export({ Heap, heap, heap_free, Heap.alloc, Heap.realloc, Heap.free })

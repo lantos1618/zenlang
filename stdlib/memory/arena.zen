@@ -8,29 +8,30 @@
 // ctl layout: [0..8) offset (i64, bytes used) | [8..16) cap (i64) | [16..) data
 
 { Allocator } = std.memory.allocator
+{ raw_allocate, raw_deallocate, gep, load_i64, store_i64, mem_copy } = std.compiler
 
 Arena: { ctl: RawPtr<u8> }
 
 // Reserve an arena with `cap` bytes of bump space.
 arena = (cap: i64) Arena {
-    ctl = @builtin.raw_allocate(cast(16 + cap, usize))
-    @builtin.store(ctl, cast(0, i64))
-    @builtin.store(@builtin.gep(ctl, 8), cap)
+    ctl = raw_allocate(cast(16 + cap, usize))
+    store_i64(ctl, cast(0, i64))
+    store_i64(gep(ctl, 8), cap)
     Arena { ctl: ctl }
 }
 
 Arena.implements(Allocator) {
     alloc = (self: Arena, size: usize) RawPtr<u8> {
-        off = @builtin.load<i64>(self.ctl)
-        p = @builtin.gep(self.ctl, 16 + off)
-        @builtin.store(self.ctl, off + cast(size, i64))
+        off = load_i64(self.ctl)
+        p = gep(self.ctl, 16 + off)
+        store_i64(self.ctl, off + cast(size, i64))
         p
     }
     // Bump arenas don't free in place: hand back a fresh region and copy the
     // old bytes forward.
     realloc = (self: Arena, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
         np = self.alloc(new)
-        @builtin.memcpy(np, p, old)
+        mem_copy(np, p, old)
         np
     }
     free = (self: Arena, p: RawPtr<u8>, size: usize) void {
@@ -39,8 +40,8 @@ Arena.implements(Allocator) {
 
 // Release the whole arena block at once.
 arena_free = (a: Arena) void {
-    cap = @builtin.load<i64>(@builtin.gep(a.ctl, 8))
-    @builtin.raw_deallocate(a.ctl, cast(16 + cap, usize))
+    cap = load_i64(gep(a.ctl, 8))
+    raw_deallocate(a.ctl, cast(16 + cap, usize))
 }
 
 @export({ Arena, arena, arena_free, Arena.alloc, Arena.realloc, Arena.free })
