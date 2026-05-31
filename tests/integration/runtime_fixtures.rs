@@ -169,3 +169,8 @@ fn test_stdlib_buffer() {
 fn test_stdlib_process() {
     run_test("stdlib_process");
 }
+
+#[test]
+fn test_stdlib_sched() {
+    run_test("stdlib_sched");
+}
