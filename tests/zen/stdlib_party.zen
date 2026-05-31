@@ -1,0 +1,68 @@
+// Pony's "Party" example, runnable in Zen on cooperative actors. Main spawns a
+// host Party (actor 0) and N Friends; each Friend, on its `hello` message,
+// responds to the Party with its own id; the Party counts responses and, when
+// all have answered, prints "Everyone responded!". Hollywood actors, green
+// threads, no locks — pure stdlib over the coroutine runtime.
+//
+//   actor Friend          be hello(party) => party.respond(me)
+//   actor Party           be respond(name) => count+1; if count==total ...
+//   actor Main            spawn party + friends; friend.hello(party)
+{ io } = std
+{ co_init, co_spawn, co_send, co_recv, co_self, co_run } = std.concurrency.actor.coactor
+
+// Party state lives in globals (one host instance). g_total = friends expected;
+// g_responses = how many answered (read back after the run).
+g_total ::= @builtin.null_ptr()
+g_responses ::= @builtin.null_ptr()
+
+// actor Party: drain `total` responses, announcing each, then the finale.
+party_loop = () void {
+    total = @builtin.load<i64>(g_total)
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= total ?
+            | true { l.done() }
+            | false {
+                who = co_recv()
+                io.println("friend ${cast(who, i32)} responded")
+                i = i + 1
+                l.next()
+            }
+    })
+    @builtin.store(g_responses, total)
+    io.println("Everyone responded!")
+}
+
+// actor Friend: wait for the hello, then respond to the Party (actor 0) with me.
+friend_loop = () void {
+    me = co_self()
+    hello = co_recv()
+    co_send(cast(0, i64), me)
+}
+
+main = () i32 {
+    co_init()
+    total = cast(3, i64)
+    g_total = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_total, total)
+    g_responses = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_responses, cast(0, i64))
+
+    // actor Main: party is id 0; spawn the friends and tell each one hello.
+    party = co_spawn(party_loop)
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= total ?
+            | true { l.done() }
+            | false {
+                fid = co_spawn(friend_loop)
+                co_send(fid, cast(0, i64))   // hello (carries the party id)
+                i = i + 1
+                l.next()
+            }
+    })
+
+    co_run()
+    io.println("responses=${cast(@builtin.load<i64>(g_responses), i32)}")
+    0
+}

@@ -1,0 +1,192 @@
+// Cooperative multi-actor mailboxes — green-threaded actors over the coroutine
+// runtime. Each actor is a fiber with its own i64 mailbox; `co_run` drives them
+// round-robin until all return. Unlike concurrency/actor/actor.zen (one pthread
+// per actor), these actors share one OS thread and interleave at their recv
+// points — Hollywood-style "don't call us, we'll call you", no locks, no threads.
+//   { co_init, co_spawn, co_send, co_recv, co_self, co_run } = std.concurrency.actor.coactor
+//
+// An actor's behaviour is a () void fiber. Inside it: co_self() is its own id,
+// co_recv() drains its mailbox (yielding while empty so peers run), co_send(id,m)
+// posts to any actor's mailbox. The driver spawns actors, seeds the first
+// messages, then co_run() until every fiber has returned.
+//
+// Bounded to 8 actors with 16-slot mailboxes — concrete, no heap-growing arrays.
+// Mailbox layout: head[0] tail[8] count[16] cap[24] data[32..]. The scheduler
+// sets g_self before each resume, so co_recv/co_self read it fresh after a yield.
+
+{ Coroutine, coroutine_new, coroutine_resume, coroutine_yield } = std.concurrency.coroutine
+{ raw_allocate, gep, load_i64, store_i64, load_u8, store_u8, load_rawptr, store_rawptr } = std.compiler
+
+// Global-var initializers must be C compile-time constants, so they start null
+// and are filled by co_init() (same exception as coroutine.zen).
+g_mailboxes ::= @builtin.null_ptr()
+g_coros ::= @builtin.null_ptr()
+g_self ::= @builtin.null_ptr()
+g_count ::= @builtin.null_ptr()
+
+// ── Mailbox ring (i64 messages) ─────────────────────────────────────────────
+
+mb_new = (cap: i64) RawPtr<u8> {
+    m = raw_allocate(cast(32 + cap * 8, usize))
+    store_i64(m, cast(0, i64))
+    store_i64(gep(m, 8), cast(0, i64))
+    store_i64(gep(m, 16), cast(0, i64))
+    store_i64(gep(m, 24), cap)
+    m
+}
+
+mb_count = (m: RawPtr<u8>) i64 {
+    load_i64(gep(m, 16))
+}
+
+mb_push = (m: RawPtr<u8>, v: i64) void {
+    tail = load_i64(gep(m, 8))
+    cap = load_i64(gep(m, 24))
+    store_i64(gep(m, 32 + tail * 8), v)
+    t1 = tail + 1
+    q = t1 / cap
+    next = t1 - q * cap
+    store_i64(gep(m, 8), next)
+    store_i64(gep(m, 16), load_i64(gep(m, 16)) + 1)
+}
+
+mb_pop = (m: RawPtr<u8>) i64 {
+    head = load_i64(m)
+    cap = load_i64(gep(m, 24))
+    v = load_i64(gep(m, 32 + head * 8))
+    h1 = head + 1
+    q = h1 / cap
+    next = h1 - q * cap
+    store_i64(m, next)
+    store_i64(gep(m, 16), load_i64(gep(m, 16)) - 1)
+    v
+}
+
+// ── System ──────────────────────────────────────────────────────────────────
+
+// Reset the actor system. Call once before spawning.
+co_init = () void {
+    g_mailboxes = raw_allocate(cast(64, usize))
+    g_coros = raw_allocate(cast(192, usize))
+    g_self = raw_allocate(cast(8, usize))
+    g_count = raw_allocate(cast(8, usize))
+    store_i64(g_self, cast(0, i64))
+    store_i64(g_count, cast(0, i64))
+}
+
+// Spawn an actor running `work`. Returns its id (its index, 0-based).
+co_spawn = (work: () void) i64 {
+    id = load_i64(g_count)
+    store_rawptr(gep(g_mailboxes, id * 8), mb_new(16))
+    co ::= coroutine_new(work)
+    base = gep(g_coros, id * 24)
+    store_rawptr(base, co.ctx)
+    store_rawptr(gep(base, 8), co.link)
+    store_rawptr(gep(base, 16), co.stack)
+    store_i64(g_count, id + 1)
+    id
+}
+
+co_mailbox = (id: i64) RawPtr<u8> {
+    load_rawptr(gep(g_mailboxes, id * 8))
+}
+
+// The id of the currently-running actor (valid inside a behaviour fiber).
+co_self = () i64 {
+    load_i64(g_self)
+}
+
+// Post a message to actor `id`'s mailbox (from anywhere — driver or fiber).
+co_send = (id: i64, msg: i64) void {
+    mb_push(co_mailbox(id), msg)
+}
+
+// Receive the next message for the current actor, yielding the fiber while its
+// mailbox is empty so peers get to run.
+co_recv = () i64 {
+    result ::= cast(0, i64)
+    loop((l) {
+        mb = co_mailbox(co_self())
+        mb_count(mb) > 0 ?
+            | true {
+                result = mb_pop(mb)
+                l.done()
+            }
+            | false {
+                coroutine_yield()
+                l.next()
+            }
+    })
+    result
+}
+
+// Drive all actors round-robin until every fiber has returned. Sets g_self
+// before each resume so co_self/co_recv resolve to the right mailbox.
+co_run = () void {
+    n = load_i64(g_count)
+    done = raw_allocate(cast(n, usize))
+    z ::= cast(0, i64)
+    loop((l) {
+        z >= n ?
+            | true { l.done() }
+            | false {
+                store_u8(gep(done, z), cast(0, u8))
+                z = z + 1
+                l.next()
+            }
+    })
+
+    remaining ::= n
+    loop((outer) {
+        remaining <= 0 ?
+            | true { outer.done() }
+            | false {
+                i ::= cast(0, i64)
+                loop((inner) {
+                    i >= n ?
+                        | true { inner.done() }
+                        | false {
+                            co_run_step(done, i)
+                            remaining = remaining - load_u8_as_dec(done, i)
+                            i = i + 1
+                            inner.next()
+                        }
+                })
+                outer.next()
+            }
+    })
+}
+
+// Resume actor `i` if still alive; mark it done when its fiber returns.
+co_run_step = (done: RawPtr<u8>, i: i64) void {
+    d = load_u8(gep(done, i))
+    d == cast(0, u8) ?
+        | true {
+            store_i64(g_self, i)
+            base = gep(g_coros, i * 24)
+            co = Coroutine {
+                ctx: load_rawptr(base),
+                link: load_rawptr(gep(base, 8)),
+                stack: load_rawptr(gep(base, 16)),
+            }
+            alive = coroutine_resume(co)
+            alive ?
+                | true { }
+                | false { store_u8(gep(done, i), cast(2, u8)) }
+        }
+        | false { }
+}
+
+// Returns 1 if actor `i` was just marked done this step (flag == 2 → reset to 1),
+// else 0. Lets co_run decrement `remaining` exactly once per completed fiber.
+load_u8_as_dec = (done: RawPtr<u8>, i: i64) i64 {
+    d = load_u8(gep(done, i))
+    d == cast(2, u8) ?
+        | true {
+            store_u8(gep(done, i), cast(1, u8))
+            cast(1, i64)
+        }
+        | false { cast(0, i64) }
+}
+
+@export({ co_init, co_spawn, co_send, co_recv, co_self, co_run })

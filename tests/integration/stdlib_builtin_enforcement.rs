@@ -12,6 +12,7 @@
 //   stdlib/concurrency/actor/actor.zen       — void bare-statement stores (Zen parser footgun)
 //   stdlib/concurrency/sync/channel.zen      — void bare-statement stores (Zen parser footgun)
 //   stdlib/concurrency/actor/async_actor.zen — global-var initializers (same as coroutine.zen)
+//   stdlib/concurrency/actor/coactor.zen     — global-var initializers (same as coroutine.zen)
 //   stdlib/memory/async_pool.zen             — global-var initializers (same as coroutine.zen)
 
 use std::path::Path;
@@ -41,6 +42,7 @@ fn partially_exempt(relative: &str) -> bool {
             | "concurrency/actor/actor.zen"
             | "concurrency/sync/channel.zen"
             | "concurrency/actor/async_actor.zen"
+            | "concurrency/actor/coactor.zen"
             | "memory/async_pool.zen"
     )
 }

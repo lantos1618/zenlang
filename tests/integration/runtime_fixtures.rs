@@ -371,6 +371,11 @@ fn test_stdlib_actor_system() {
 }
 
 #[test]
+fn test_stdlib_party() {
+    run_test("stdlib_party");
+}
+
+#[test]
 fn test_stdlib_actor_supervisor() {
     run_test("stdlib_actor_supervisor");
 }
