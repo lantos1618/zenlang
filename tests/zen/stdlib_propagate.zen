@@ -1,0 +1,27 @@
+// Propagation combinators thread values between Option and Result: a present
+// value maps to Ok and a miss to Err, the reverse drops the error, the error
+// can be pulled out, and option_or falls back to an alternative.
+{ io } = std
+{ Option, option_is_some, option_unwrap_or } = std.core.option
+{ Result, result_is_ok } = std.core.result
+{ option_to_result, result_to_option, result_err_opt, option_or } = std.core.propagate
+
+main = () i32 {
+    s = Option<i32>.Some(7)
+    n = Option<i32>.None
+
+    rs = option_to_result<i32, i32>(s, 99)
+    rn = option_to_result<i32, i32>(n, 99)
+    io.println("some_to_ok=${cast(result_is_ok<i32, i32>(rs), i32)}")
+    io.println("none_to_err=${cast(result_is_ok<i32, i32>(rn), i32)}")
+
+    back = result_to_option<i32, i32>(rs)
+    io.println("ok_to_some=${cast(option_is_some<i32>(back), i32)}")
+
+    errv = result_err_opt<i32, i32>(rn)
+    io.println("err_val=${cast(option_unwrap_or<i32>(errv, 0), i32)}")
+
+    chosen = option_or<i32>(n, s)
+    io.println("or_picks=${cast(option_unwrap_or<i32>(chosen, 0), i32)}")
+    0
+}

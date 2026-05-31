@@ -144,3 +144,8 @@ fn test_stdlib_gpa() {
 fn test_stdlib_prng() {
     run_test("stdlib_prng");
 }
+
+#[test]
+fn test_stdlib_propagate() {
+    run_test("stdlib_propagate");
+}
