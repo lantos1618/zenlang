@@ -1,0 +1,13 @@
+// A Zen string literal's data pointer is a NUL-terminated C string: libc strlen
+// measures it (5 for "hello"), and indexed bytes match the ASCII codes ('h'=104,
+// 'o'=111). Bridges StaticString to the C-string world for extern calls.
+{ io } = std
+{ cstr_len, cstr_byte, static_cstr } = std.ffi
+
+main = () i32 {
+    p = static_cstr("hello")
+    io.println("len=${cast(cstr_len(p), i32)}")
+    io.println("c0=${cast(cstr_byte(p, 0), i32)}")
+    io.println("c4=${cast(cstr_byte(p, 4), i32)}")
+    0
+}
