@@ -1,2 +1,65 @@
-// Parse-only placeholder for @std.io.mux.epoll.
-// Promote epoll APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Edge/level-triggered I/O multiplexing via the epoll(7) family of syscalls,
+// routed through the std.compiler facade.
+//
+// epoll_event is packed 12 bytes on x86-64 Linux ({u32 events; u64 data}).
+// We allocate 16 bytes per event slot (safe for both packed and padded layouts)
+// and read only the 4-byte events field at offset 0.
+//
+// Event flags: EPOLLIN=1, EPOLLOUT=4, EPOLLERR=8, EPOLLHUP=16.
+//   { epoll_create, epoll_add, epoll_del, epoll_wait_one } = std.io.mux.epoll
+//
+// x86-64 Linux syscall numbers: epoll_wait=232, epoll_ctl=233, epoll_create1=291.
+// epoll_ctl ops: EPOLL_CTL_ADD=1, EPOLL_CTL_DEL=2, EPOLL_CTL_MOD=3.
+
+{ sys1, sys2, sys4 } = std.compiler
+
+// Create an epoll instance. Returns the epoll fd (>= 0 on success).
+epoll_create = () i64 {
+    sys1(291, 0)
+}
+
+// Add fd to the epoll instance with the given events mask. The data value
+// stored in the event is also set to `fd` (i64). Returns 0 on success.
+// epoll_event layout: [events u32 @ 0, data u64 @ 4 (packed) or @ 8 (padded)]
+// We write a 16-byte buffer and populate both possible data offsets.
+epoll_add = (epfd: i64, fd: i64, events: i64) i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    ev_u32 = cast(events, u32)
+    @builtin.store(buf, ev_u32)
+    // Write data as i64 at offset 4 (packed layout used by kernel).
+    data_ptr = @builtin.gep(buf, 4)
+    @builtin.store(data_ptr, fd)
+    rc = sys4(233, epfd, 1, fd, @builtin.ptr_to_int(buf))
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    rc
+}
+
+// Remove fd from the epoll instance. Returns 0 on success.
+epoll_del = (epfd: i64, fd: i64) i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    rc = sys4(233, epfd, 2, fd, @builtin.ptr_to_int(buf))
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    rc
+}
+
+// Wait for up to one event, with the given timeout in milliseconds.
+// Returns the events mask of the ready fd, 0 on timeout, <0 on error.
+// Allocates a 16-byte event buffer (safe for both 12-byte packed and
+// 16-byte padded kernel layouts).
+epoll_wait_one = (epfd: i64, timeout_ms: i64) i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    rc = sys4(232, epfd, @builtin.ptr_to_int(buf), 1, timeout_ms)
+    // events field is always at offset 0 regardless of packing.
+    ev_u32 = @builtin.load<u32>(buf)
+    ev = cast(ev_u32, i64)
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    is_ready = rc == 1
+    is_ready ? | true { ev } | false { rc }
+}
+
+// Close the epoll fd.
+epoll_close = (epfd: i64) i64 {
+    sys1(3, epfd)
+}
+
+@export({ epoll_create, epoll_add, epoll_del, epoll_wait_one, epoll_close })

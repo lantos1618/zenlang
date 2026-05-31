@@ -186,6 +186,11 @@ fn test_stdlib_poll() {
 }
 
 #[test]
+fn test_stdlib_epoll() {
+    run_test("stdlib_epoll");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }
