@@ -102,36 +102,6 @@ impl CEmitter {
                 format!("({}{})", op.symbol(), o)
             }
 
-            TypedExprKind::FunctionCall { function, args } if function == "block_on" => {
-                // `block_on(fut)`: drive the future to completion, yield its
-                // value. Emitted as a poll loop over the uniform `__poll` field
-                // (ASYNC_PLAN.md milestone 1's compiler-provided driver).
-                let fut = self.emit_expr_inline(&args[0]);
-                let fut_tmp = self.fresh_tmp();
-                let out_tmp = self.fresh_tmp();
-                let out_ty = Self::c_type(&expr.ty);
-                self.line(&format!("void* {fut_tmp} = (void*){fut};"));
-                self.line(&format!("{out_ty} {out_tmp};"));
-                self.line(&format!(
-                    "while (!(*(zen_poll_fn*){fut_tmp})({fut_tmp}, &{out_tmp})) {{}}"
-                ));
-                out_tmp
-            }
-
-            TypedExprKind::FunctionCall { function, args } if function == "scheduler_new" => {
-                let _ = args;
-                "((uint8_t*)zen_scheduler_new())".to_string()
-            }
-            TypedExprKind::FunctionCall { function, args } if function == "scheduler_spawn" => {
-                let s = self.emit_expr_inline(&args[0]);
-                let fut = self.emit_expr_inline(&args[1]);
-                format!("zen_scheduler_spawn((zen_scheduler*)({s}), (void*)({fut}))")
-            }
-            TypedExprKind::FunctionCall { function, args } if function == "scheduler_run" => {
-                let s = self.emit_expr_inline(&args[0]);
-                format!("zen_scheduler_run((zen_scheduler*)({s}))")
-            }
-
             TypedExprKind::FunctionCall { function, args } if function == "pending_then_ready" => {
                 // The compiler-provided test future: `pending_then_ready(n, v)`
                 // constructs a `Future<i32>` Pending for `n` polls then Ready(v),
@@ -166,6 +136,12 @@ impl CEmitter {
             TypedExprKind::FieldAccess { object, field } => {
                 let obj = self.emit_expr_inline(object);
                 match &object.ty {
+                    // A `Future<T>` is held in C as the bare coroutine-frame
+                    // `void*`; its sole field `.frame` (a `RawPtr<u8>`) IS that
+                    // pointer, so the access lowers to identity (cast to the
+                    // raw-pointer C type). This is what lets stdlib `block_on` /
+                    // `Scheduler` read `f.frame` and feed it to `@builtin.poll`.
+                    Type::Future(_) if field == "frame" => format!("((uint8_t*){obj})"),
                     Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) => {
                         format!("{}->{}", obj, c_ident(field))
                     }

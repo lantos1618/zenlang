@@ -1,0 +1,23 @@
+// Drives the promoted std.memory.async_helpers module: await a single i64 future
+// and sum two futures, proving Future<i64> is nameable in a stdlib signature.
+{ io } = std
+{ await_now, sum2 } = std.memory.async_helpers
+
+// i64-returning async handlers (the test future yields i32, cast to i64).
+double = @async (n: i32) i64 {
+    v = @await pending_then_ready(1, n)
+    cast(v, i64) + cast(v, i64)
+}
+
+mk = @async (n: i32) i64 {
+    v = @await pending_then_ready(0, n)
+    cast(v, i64)
+}
+
+main = () i32 {
+    a = await_now(mk(10))
+    io.println("await_now = ${a}")
+    s = sum2(double(3), mk(20))
+    io.println("sum2 = ${s}")
+    0
+}

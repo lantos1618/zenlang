@@ -1,31 +1,80 @@
-// Cooperative single-threaded async scheduler.
+// Cooperative single-threaded async scheduler — pure Zen over `@builtin.poll`.
 //
-//   { Scheduler, scheduler, run } = std.concurrency.async.scheduler
+//   { Scheduler, scheduler, spawn, run } = std.concurrency.async.scheduler
 //
-// The irreducible mechanism — a run-queue of suspended coroutine frames, plus
-// the round-robin poll-until-all-done loop — is provided by the compiler/runtime
-// (ASYNC_PLAN.md milestone 2). This module owns the *policy* surface: a typed
-// `Scheduler` handle and the verbs to drive it.
+// A scheduler is just a run-queue of coroutine-frame pointers and a round-robin
+// poll-until-all-done loop. Both are ordinary Zen: the queue is a `Vec` of frame
+// pointers (each a `Future<T>.frame`, type-erased to `RawPtr<u8>`), and `run`
+// drives them through the one compiler hook, `@builtin.poll`. There is NO
+// scheduler runtime in the compiler — only the per-frame poll.
 //
-// `spawn` enqueues a future. A future has no surface type in Zen (a call to an
-// `@async` function yields the compiler-internal `Future<T>`), so spawning is the
-// compiler primitive `scheduler_spawn(s.handle, <async call>)` invoked directly
-// at the call site; this module wraps construction and the run loop, which are
-// expressible as ordinary typed functions.
+//   s = scheduler()
+//   s = spawn(s, work(args))   // enqueue an @async call's future
+//   run(s)                     // round-robin poll every frame to completion
 
-// A scheduler handle. `handle` is the opaque run-queue allocated by the runtime.
-Scheduler: { handle: RawPtr<u8> }
+{ Vec, vec_new_default, vec_push, vec_get, vec_len } = std.collections.vec
+
+// A cooperative scheduler: a growable queue of coroutine-frame pointers.
+Scheduler: { frames: Vec<RawPtr<u8>> }
 
 // Create a fresh, empty cooperative scheduler.
 scheduler = () Scheduler {
-    Scheduler { handle: scheduler_new() }
+    Scheduler { frames: vec_new_default<RawPtr<u8>>() }
 }
 
-// Round-robin every spawned future to completion: each sweep polls every
-// not-yet-Ready frame once; futures that suspend (Pending) interleave until all
-// have completed. Returns when the run-queue is fully drained.
+// Enqueue a coroutine-frame pointer. Non-generic, so the `Vec<RawPtr<u8>>`
+// specialization stays out of any generic function body.
+spawn_frame = (s: Scheduler, frame: RawPtr<u8>) Scheduler {
+    Scheduler { frames: vec_push(s.frames, frame) }
+}
+
+// Enqueue a future. Only its frame pointer is kept (the value type is erased —
+// the cooperative scheduler is fire-and-forget; task results are observed via
+// shared state). Returns the scheduler with the future enqueued.
+spawn<T> = (s: Scheduler, f: Future<T>) Scheduler {
+    spawn_frame(s, f.frame)
+}
+
+// Round-robin every spawned future to completion. Each sweep polls every
+// not-yet-Ready frame once; a frame that reports Ready is marked done (its slot
+// in the parallel `done` byte-array is set), so futures that suspend (Pending)
+// cooperatively interleave until all have completed.
 run = (s: Scheduler) void {
-    scheduler_run(s.handle)
+    n = vec_len(s.frames)
+    out  = @builtin.raw_allocate(cast(8, usize))
+    done = @builtin.raw_allocate(cast(n, usize))
+    @builtin.memset(done, cast(0, u8), cast(n, usize))
+    remaining ::= n
+    loop((outer) {
+        remaining == 0 ?
+            | true { outer.done() }
+            | false {
+                i ::= cast(0, i64)
+                loop((inner) {
+                    i >= n ?
+                        | true { inner.done() }
+                        | false {
+                            flag = @builtin.load<u8>(@builtin.gep(done, i))
+                            flag == cast(0, u8) ?
+                                | true {
+                                    frame = vec_get(s.frames, i)
+                                    @builtin.poll(frame, out) ?
+                                        | true {
+                                            @builtin.store(@builtin.gep(done, i), cast(1, u8))
+                                            remaining = remaining - 1
+                                        }
+                                        | false {}
+                                }
+                                | false {}
+                            i = i + 1
+                            inner.next()
+                        }
+                })
+                outer.next()
+            }
+    })
+    @builtin.raw_deallocate(done, cast(n, usize))
+    @builtin.raw_deallocate(out, cast(8, usize))
 }
 
-@export({ Scheduler, scheduler, run })
+@export({ Scheduler, scheduler, spawn_frame, spawn, run })

@@ -434,3 +434,24 @@ fn test_stdlib_async_scheduler() {
     // cooperatively to completion (ASYNC_PLAN.md milestone 2, increment 3).
     run_test("stdlib_async_scheduler");
 }
+
+#[test]
+fn test_async_helpers() {
+    // Promoted `std.memory.async_helpers`: `await_now`/`sum2` take `Future<i64>`
+    // in their signatures (now a nameable type) and drive them via `block_on`.
+    run_test("async_helpers");
+}
+
+#[test]
+fn test_async_pool() {
+    // Promoted `std.memory.async_pool`: a `Vec<Future<i64>>` pool; `submit` a few
+    // futures then `drain` them all to a single total (future-typed signatures).
+    run_test("async_pool");
+}
+
+#[test]
+fn test_async_actor() {
+    // Promoted `std.concurrency.actor.async_actor`: an actor whose mailbox takes
+    // `Future<i64>` messages; feed three and read the accumulated i64 state.
+    run_test("async_actor");
+}

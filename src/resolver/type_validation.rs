@@ -143,7 +143,8 @@ impl Resolver {
             | AstType::Slice(elem)
             | AstType::Ptr(elem)
             | AstType::MutPtr(elem)
-            | AstType::RawPtr(elem) => {
+            | AstType::RawPtr(elem)
+            | AstType::Future(elem) => {
                 self.validate_type_ref(table, type_params, elem, span, allow_self_type, diagnostics)
             }
             AstType::Function { params, ret } => {

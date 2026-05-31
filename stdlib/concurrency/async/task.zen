@@ -1,31 +1,15 @@
 // Async task surface for the cooperative scheduler.
 //
-//   { spawn } = std.concurrency.async.task
+// A *task* is an `@async` call enqueued on a `Scheduler`. Both spawning and the
+// single-future driver are now ordinary typed Zen over a nameable `Future<T>`
+// (resolved as a built-in generic type, like `RawPtr<T>`). Import them directly:
 //
-// A *task* is an `@async` call enqueued on a `Scheduler` (see
-// `std.concurrency.async.scheduler`). Spawning and the single-future driver
-// (`block_on`) both take a `Future<T>` — the compiler-internal result type of an
-// async call, which currently has **no surface spelling in Zen** (ASYNC_PLAN.md:
-// `Future` has no `AstType` form). A typed Zen wrapper `(f: Future<T>)` therefore
-// cannot be written yet, so the two future-consuming verbs remain compiler
-// primitives invoked directly at the call site:
+//   { scheduler, spawn, run } = std.concurrency.async.scheduler
+//   { block_on }              = std.concurrency.async.future
 //
-//   s = scheduler()                         // std.concurrency.async.scheduler
-//   scheduler_spawn(s.handle, work(args))   // enqueue an @async call  (= spawn)
-//   run(s)                                   // poll-until-all-done
-//   v = block_on(work(args))                 // drive ONE future to its value
+//   s = scheduler()
+//   s = spawn(s, work(args))   // enqueue an @async call's future
+//   run(s)                     // poll-until-all-done
+//   v = block_on(work(args))   // drive ONE future to its value
 //
-// `spawn` below is the *policy* wrapper for the run-queue handle that IS
-// expressible: it forwards the opaque scheduler handle, leaving the future to be
-// supplied by the compiler primitive once a surface `Future<T>` type lands. Until
-// then, prefer the `scheduler_spawn` primitive directly.
-
-{ Scheduler } = std.concurrency.async.scheduler
-
-// The opaque run-queue handle of a scheduler, for passing to the
-// `scheduler_spawn` compiler primitive at a spawn site.
-spawn = (s: Scheduler) RawPtr<u8> {
-    s.handle
-}
-
-@export({ spawn })
+// This module is documentation only; the verbs live in `scheduler`/`future`.

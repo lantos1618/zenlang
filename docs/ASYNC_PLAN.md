@@ -1,5 +1,62 @@
 # Async program — scope & sequencing
 
+> ## Elevation refactor (current) — compiler surface stripped to the minimum
+>
+> The async impl below (milestones 1–2) has been refactored so the **compiler
+> owns only two things**, and everything else is stdlib Zen:
+>
+> 1. **The transform** — `@async` body → heap frame struct + `static bool
+>    f__poll(void*, void*)` + an allocating constructor; `@await e` →
+>    suspend/resume state machine. This is irreducible (`async_lowering.rs`).
+> 2. **One thin hook** — `@builtin.poll(frame: RawPtr<u8>, out: RawPtr<u8>) -> bool`,
+>    lowering to `(*(zen_poll_fn*)frame)(frame, out)` (true = Ready and wrote
+>    `out`, false = Pending). The *entire* driver surface stdlib needs.
+>
+> **The lang-item (how `Future<T>` is nameable everywhere).** `Future` is a
+> **built-in generic type name** — exactly like `RawPtr<T>` / `Slice<T>`. The
+> parser maps `Future<T>` → `AstType::Future(T)` via `BuiltinGenericTypeName::Future`,
+> and `resolve_type` maps that to `Type::Future(T)`. Because it is a builtin name
+> (not a module symbol), it resolves **without an import**, so `@async`/`@await`
+> work in any program; and because stdlib writing `Future<i64>` resolves through
+> the *same* path, it gets the *same* `Type::Future(i64)` the compiler produces
+> for an `@async` call. A `Future<T>` exposes one field, `frame: RawPtr<u8>` (the
+> coroutine-frame pointer the transform allocates); its C value *is* that pointer,
+> so `.frame` lowers to identity. This is the cleanest option: zero prelude
+> injection, zero special module resolution — a future is a builtin type the same
+> way a raw pointer is.
+>
+> **Elevated to stdlib (pure Zen over `@builtin.poll`):**
+> - `stdlib/concurrency/async/future.zen` — `block_on<T>(f: Future<T>) T`:
+>   `out = raw_allocate(sizeof<T>()); loop { poll(f.frame, out) ? done : next };
+>   load<T>(out)`. The compiler's special-cased C `block_on` driver, its
+>   typechecker arm, and its resolver whitelist entry are **deleted**.
+> - `stdlib/concurrency/async/scheduler.zen` — the cooperative `Scheduler` is a
+>   pure-Zen run-queue (a `Vec` of frame pointers) round-robin polling each
+>   pending frame via `@builtin.poll`. The compiler `scheduler_new/spawn/run`
+>   primitives and the `zen_scheduler` C runtime are **deleted**.
+>
+> **Promoted (unblocked by the nameable `Future<T>`):**
+> - `stdlib/memory/async_helpers.zen` — `await_now(Future<i64>)`, `sum2(...)`.
+> - `stdlib/memory/async_pool.zen` — a `Vec<Future<i64>>` pool: `submit`/`drain`.
+> - `stdlib/concurrency/actor/async_actor.zen` — an actor whose mailbox takes
+>   `Future<i64>` messages (`async_actor_feed`), folding into i64 state.
+>
+>   Each has a deterministic `tests/zen` fixture (`async_helpers`, `async_pool`,
+>   `async_actor`). They were blocked *solely* because a future couldn't be named
+>   in a signature; nothing else changed.
+>
+> **One sharp edge to know.** A `Vec<RawPtr<u8>>` / `Vec<Future<i64>>`
+> specialization reached from *both* a generic function body and a non-generic
+> one is currently emitted twice by the monomorphizer (a duplicate-`struct`/`fn`
+> C error). The async stdlib sidesteps it by keeping every `Vec` call in a
+> **non-generic** helper (e.g. `Scheduler.spawn<T>` forwards to a non-generic
+> `spawn_frame`). This is a pre-existing monomorphizer gap, not async-specific.
+>
+> The sections below are the original milestone log; treat the box above as the
+> authoritative description of the *current* compiler surface.
+
+---
+
 Status: **not started** (only stubs exist). This is the one track where "the
 compiler is fine, work in stdlib" does **not** hold — async needs an irreducible
 compiler capability that stdlib cannot fake.
