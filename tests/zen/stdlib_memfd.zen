@@ -1,0 +1,46 @@
+// memfd_create gives a real in-memory fd; write bytes, seek to 0, read them
+// back — the round-trip proves the fd is live and the kernel IO path works.
+{ io } = std
+{ memfd_new, memfd_write, memfd_read, memfd_lseek, memfd_ftruncate, memfd_close }
+    = std.sys.memfd
+
+main = () i32 {
+    name_ptr = @builtin.static_string_ptr("zenmem")
+    fd = memfd_new(name_ptr)
+    fd_ok = fd >= 0
+    io.println("fd_ok=${cast(fd_ok, i32)}")
+
+    // Write 4 known bytes.
+    wbuf = @builtin.raw_allocate(cast(4, usize))
+    @builtin.store(@builtin.gep(wbuf, 0), cast(10, u8))
+    @builtin.store(@builtin.gep(wbuf, 1), cast(20, u8))
+    @builtin.store(@builtin.gep(wbuf, 2), cast(30, u8))
+    @builtin.store(@builtin.gep(wbuf, 3), cast(40, u8))
+    nw = memfd_write(fd, wbuf, 4)
+    io.println("wrote=${cast(nw, i32)}")
+
+    // Seek back to start.
+    pos = memfd_lseek(fd, 0, 0)
+    io.println("seeked=${cast(pos, i32)}")
+
+    // Read the bytes back.
+    rbuf = @builtin.raw_allocate(cast(4, usize))
+    nr = memfd_read(fd, rbuf, 4)
+    io.println("read=${cast(nr, i32)}")
+
+    b0 = @builtin.load<u8>(@builtin.gep(rbuf, 0))
+    b1 = @builtin.load<u8>(@builtin.gep(rbuf, 1))
+    b2 = @builtin.load<u8>(@builtin.gep(rbuf, 2))
+    b3 = @builtin.load<u8>(@builtin.gep(rbuf, 3))
+    ok0 = b0 == cast(10, u8)
+    ok1 = b1 == cast(20, u8)
+    ok2 = b2 == cast(30, u8)
+    ok3 = b3 == cast(40, u8)
+    match_ok = ok0 && ok1 && ok2 && ok3
+    io.println("match=${cast(match_ok, i32)}")
+
+    memfd_close(fd)
+    @builtin.raw_deallocate(wbuf, cast(4, usize))
+    @builtin.raw_deallocate(rbuf, cast(4, usize))
+    0
+}

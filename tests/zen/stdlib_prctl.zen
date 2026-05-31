@@ -1,0 +1,23 @@
+// prctl set/get name: set the thread name to "zentest", read it back,
+// verify the first byte is 'z' (ASCII 122) and second is 'e' (ASCII 101).
+{ io } = std
+{ prctl_set_name, prctl_get_name } = std.sys.process.prctl
+
+main = () i32 {
+    name_ptr = @builtin.static_string_ptr("zentest")
+    rc_set = prctl_set_name(name_ptr)
+    io.println("set_ok=${cast(rc_set == 0, i32)}")
+
+    buf = @builtin.raw_allocate(cast(16, usize))
+    rc_get = prctl_get_name(buf)
+    io.println("get_ok=${cast(rc_get == 0, i32)}")
+
+    // First byte should be 'z' = 122, second 'e' = 101.
+    b0 = @builtin.load<u8>(buf)
+    b1 = @builtin.load<u8>(@builtin.gep(buf, 1))
+    io.println("first_z=${cast(b0 == cast(122, u8), i32)}")
+    io.println("second_e=${cast(b1 == cast(101, u8), i32)}")
+
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    0
+}

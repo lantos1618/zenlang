@@ -1,0 +1,31 @@
+// alloc/write_i64/read_i64 round-trip; copy propagates values to a second
+// buffer; dealloc doesn't crash — together they prove the full memory facade.
+{ io } = std
+{ alloc, dealloc, read_i64, write_i64, copy } = std.memory.memory
+
+main = () i32 {
+    // 3 i64 cells = 24 bytes.
+    p = alloc(24)
+    write_i64(p, 0, 100)
+    write_i64(p, 1, 200)
+    write_i64(p, 2, 300)
+
+    v0 = read_i64(p, 0)
+    v1 = read_i64(p, 1)
+    v2 = read_i64(p, 2)
+    io.println("v0=${cast(v0, i32)}")
+    io.println("v1=${cast(v1, i32)}")
+    io.println("v2=${cast(v2, i32)}")
+
+    // Copy 24 bytes to a new buffer and verify.
+    q = alloc(24)
+    copy(q, p, 24)
+    c0 = read_i64(q, 0)
+    c1 = read_i64(q, 1)
+    io.println("copy0=${cast(c0, i32)}")
+    io.println("copy1=${cast(c1, i32)}")
+
+    dealloc(p, 24)
+    dealloc(q, 24)
+    0
+}

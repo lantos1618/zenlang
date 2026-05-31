@@ -1,2 +1,33 @@
-// Parse-only placeholder for @std.memory.
-// Promote memory APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Thin convenience wrappers over the raw @builtin memory hooks.
+// Analogous to std.core.ptr but works with raw byte counts rather than typed
+// cell counts, and exposes a memcpy equivalent.
+//   { alloc, dealloc, read_i64, write_i64, copy } = std.memory.memory
+
+// Allocate `size` bytes; returns a raw byte pointer.
+alloc = (size: i64) RawPtr<u8> {
+    @builtin.raw_allocate(cast(size, usize))
+}
+
+// Free a buffer previously obtained from alloc; `size` must match.
+dealloc = (p: RawPtr<u8>, size: i64) void {
+    @builtin.raw_deallocate(p, cast(size, usize))
+}
+
+// Read the i64 stored at byte offset `i * 8` inside `p`.
+read_i64 = (p: RawPtr<u8>, i: i64) i64 {
+    cell_bytes = cast(@builtin.sizeof<i64>(), i64)
+    @builtin.load<i64>(@builtin.gep(p, i * cell_bytes))
+}
+
+// Write `v` at byte offset `i * 8` inside `p`.
+write_i64 = (p: RawPtr<u8>, i: i64, v: i64) void {
+    cell_bytes = cast(@builtin.sizeof<i64>(), i64)
+    @builtin.store(@builtin.gep(p, i * cell_bytes), v)
+}
+
+// Copy `n` bytes from `src` to `dst`.
+copy = (dst: RawPtr<u8>, src: RawPtr<u8>, n: i64) void {
+    @builtin.memcpy(dst, src, cast(n, usize))
+}
+
+@export({ alloc, dealloc, read_i64, write_i64, copy })
