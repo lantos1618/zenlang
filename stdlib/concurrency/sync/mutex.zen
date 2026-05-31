@@ -1,2 +1,37 @@
-// Parse-only placeholder for @std.concurrency.sync.mutex.
-// Promote Mutex APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A POSIX mutex backed by pthread_mutex_t, allocated on the heap.
+// pthread_mutex_t is 40 bytes on Linux x86-64. We allocate 64 bytes to be safe.
+//   { Mutex, mutex_new, mutex_lock, mutex_unlock, mutex_destroy } = std.concurrency.sync.mutex
+
+@extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_destroy = (mutex: RawPtr<u8>) i32
+
+// A heap-backed pthread_mutex_t (64-byte opaque buffer, zero-initialised).
+Mutex: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a default (non-recursive) mutex.
+mutex_new = () Mutex {
+    ptr = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
+    pthread_mutex_init(ptr, @builtin.null_ptr())
+    Mutex { ptr: ptr }
+}
+
+// Lock the mutex (blocking).
+mutex_lock = (m: Mutex) void {
+    pthread_mutex_lock(m.ptr)
+}
+
+// Unlock the mutex.
+mutex_unlock = (m: Mutex) void {
+    pthread_mutex_unlock(m.ptr)
+}
+
+// Destroy and free the mutex.
+mutex_destroy = (m: Mutex) void {
+    pthread_mutex_destroy(m.ptr)
+    @builtin.raw_deallocate(m.ptr, cast(64, usize))
+}
+
+@export({ Mutex, mutex_new, mutex_lock, mutex_unlock, mutex_destroy })

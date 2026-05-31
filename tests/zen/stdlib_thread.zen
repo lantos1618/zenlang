@@ -1,0 +1,24 @@
+// Spawn a thread that writes sentinel=99 into a shared cell; join and assert.
+{ io } = std
+{ Thread, thread_spawn, thread_join, thread_free } = std.concurrency.sync.thread
+
+// Worker: writes 99 into the cell pointed to by arg.
+worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    @builtin.store(arg, cast(99, i64))
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    cell = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(cell, cast(0, i64))
+
+    t = thread_spawn(worker, cell)
+    thread_join(t)
+    thread_free(t)
+
+    result = @builtin.load<i64>(cell)
+    io.println("sentinel=${cast(result, i32)}")
+
+    @builtin.raw_deallocate(cell, cast(8, usize))
+    0
+}

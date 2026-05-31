@@ -1,0 +1,89 @@
+// Producer thread sends 100 items (1..=100); main receives them and sums → 5050.
+{ io } = std
+{ Channel, chan_new, chan_recv, chan_destroy } = std.concurrency.sync.channel
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_cond_wait = (cond: RawPtr<u8>, mutex: RawPtr<u8>) i32
+@extern pthread_cond_signal = (cond: RawPtr<u8>) i32
+
+// chan_send inlined for the worker (which receives a raw channel pointer).
+// Channel layout: mutex[0], not_empty[64], not_full[128],
+//                 head[192], tail[200], count[208], cap[216], data[224].
+chan_send_ptr = (ch_ptr: RawPtr<u8>, value: i64) void {
+    mutex_ptr = ch_ptr
+    not_full_ptr = @builtin.gep(ch_ptr, 128)
+    not_empty_ptr = @builtin.gep(ch_ptr, 64)
+    tail_ptr = @builtin.gep(ch_ptr, 200)
+    count_ptr = @builtin.gep(ch_ptr, 208)
+    cap_ptr = @builtin.gep(ch_ptr, 216)
+    data_ptr = @builtin.gep(ch_ptr, 224)
+    pthread_mutex_lock(mutex_ptr)
+    loop((l) {
+        cnt = @builtin.load<i64>(count_ptr)
+        cap = @builtin.load<i64>(cap_ptr)
+        cnt >= cap ?
+            | true {
+                pthread_cond_wait(not_full_ptr, mutex_ptr)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    tail = @builtin.load<i64>(tail_ptr)
+    slot = @builtin.gep(data_ptr, tail * 8)
+    @builtin.store(slot, value)
+    cap = @builtin.load<i64>(cap_ptr)
+    next_tail = (tail + 1) - (((tail + 1) / cap) * cap)
+    @builtin.store(tail_ptr, next_tail)
+    cnt = @builtin.load<i64>(count_ptr)
+    @builtin.store(count_ptr, cnt + 1)
+    pthread_cond_signal(not_empty_ptr)
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Producer: sends 1..=100 into the channel via raw pointer.
+producer = (arg: RawPtr<u8>) RawPtr<u8> {
+    i ::= cast(1, i64)
+    loop((l) {
+        i <= 100 ?
+            | true {
+                chan_send_ptr(arg, i)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    ch = chan_new(10)
+
+    thread_cell = @builtin.raw_allocate(cast(8, usize))
+    pthread_create(thread_cell, @builtin.null_ptr(), producer, ch.ptr)
+
+    // Receive 100 items and sum them
+    sum ::= cast(0, i64)
+    k ::= cast(0, i64)
+    loop((l) {
+        k < 100 ?
+            | true {
+                v = chan_recv(ch)
+                sum = sum + v
+                k = k + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    tid = @builtin.load<i64>(thread_cell)
+    pthread_join(tid, @builtin.null_ptr())
+    @builtin.raw_deallocate(thread_cell, cast(8, usize))
+
+    io.println("sum=${cast(sum, i32)}")
+
+    chan_destroy(ch)
+    0
+}

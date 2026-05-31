@@ -1,0 +1,21 @@
+// futex_wake on an address with no waiters returns 0 (woke nobody).
+// futex_wait is NOT called here — it blocks indefinitely without a timeout.
+{ io } = std
+{ futex_wait, futex_wake } = std.concurrency.primitives.futex
+
+main = () i32 {
+    // Allocate a 4-byte cell for the futex word (kernel uses i32)
+    cell = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(cell, cast(0, u64))
+
+    // Wake with no waiters → should return 0
+    woke = futex_wake(cell, 1)
+    io.println("wake_no_waiters=${cast(woke, i32)}")
+
+    // FUTEX_WAIT returns -EAGAIN (−11) immediately if *addr != expected
+    result = futex_wait(cell, 99)
+    io.println("wait_mismatch_neg=${cast(result < 0, i32)}")
+
+    @builtin.raw_deallocate(cell, cast(8, usize))
+    0
+}

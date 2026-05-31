@@ -1,0 +1,76 @@
+// 4 writer threads x 1000 write-locked increments → counter == 4000.
+{ io } = std
+{ RwLock, rwlock_new, rwlock_wrlock, rwlock_unlock, rwlock_destroy } = std.concurrency.sync.rwlock
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern pthread_rwlock_wrlock = (rwlock: RawPtr<u8>) i32
+@extern pthread_rwlock_unlock = (rwlock: RawPtr<u8>) i32
+
+// Thread worker: reads rw_ptr and counter_ptr from arg (16 bytes),
+// does 1000 write-locked increments.
+worker = (arg: RawPtr<u8>) RawPtr<u8> {
+    rw_ptr = @builtin.load<RawPtr<u8>>(arg)
+    counter_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 1000 ?
+            | true {
+                pthread_rwlock_wrlock(rw_ptr)
+                cur = @builtin.load<i64>(counter_ptr)
+                @builtin.store(counter_ptr, cur + 1)
+                pthread_rwlock_unlock(rw_ptr)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    rw = rwlock_new()
+
+    counter = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(counter, cast(0, i64))
+
+    arg_block = @builtin.raw_allocate(cast(16, usize))
+    @builtin.store(arg_block, rw.ptr)
+    @builtin.store(@builtin.gep(arg_block, 8), counter)
+
+    threads = @builtin.raw_allocate(cast(32, usize))
+
+    i ::= cast(0, i64)
+    loop((l) {
+        i < 4 ?
+            | true {
+                slot = @builtin.gep(threads, i * 8)
+                pthread_create(slot, @builtin.null_ptr(), worker, arg_block)
+                i = i + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    j ::= cast(0, i64)
+    loop((l) {
+        j < 4 ?
+            | true {
+                slot = @builtin.gep(threads, j * 8)
+                tid = @builtin.load<i64>(slot)
+                pthread_join(tid, @builtin.null_ptr())
+                j = j + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+
+    result = @builtin.load<i64>(counter)
+    io.println("counter=${cast(result, i32)}")
+
+    @builtin.raw_deallocate(threads, cast(32, usize))
+    @builtin.raw_deallocate(arg_block, cast(16, usize))
+    @builtin.raw_deallocate(counter, cast(8, usize))
+    rwlock_destroy(rw)
+    0
+}

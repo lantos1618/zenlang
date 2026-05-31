@@ -1,4 +1,115 @@
-// Parse-only placeholder for @std.concurrency.sync.channel.
+// A bounded i64 channel (MPMC queue) backed by mutex + two condvars.
+// Layout of the heap block:
+//   [0..63]   mutex       (pthread_mutex_t)
+//   [64..127] not_empty   (pthread_cond_t) — signalled when an item is pushed
+//   [128..191] not_full   (pthread_cond_t) — signalled when an item is popped
+//   [192..199] head       (i64)  — next read index
+//   [200..207] tail       (i64)  — next write index
+//   [208..215] count      (i64)  — number of items
+//   [216..223] capacity   (i64)  — max items
+//   [224..]    data       (capacity × 8 bytes of i64 slots)
 //
-// Channels are stdlib-owned Zen surface. Restore them only with parser,
-// typechecker, build, and docs-truth evidence.
+//   { Channel, chan_new, chan_send, chan_recv, chan_destroy }
+//     = std.concurrency.sync.channel
+
+@extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_destroy = (mutex: RawPtr<u8>) i32
+@extern pthread_cond_init = (cond: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_cond_wait = (cond: RawPtr<u8>, mutex: RawPtr<u8>) i32
+@extern pthread_cond_signal = (cond: RawPtr<u8>) i32
+@extern pthread_cond_destroy = (cond: RawPtr<u8>) i32
+
+// Opaque heap block holding the channel state.
+Channel: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a channel with the given capacity (number of i64 slots).
+chan_new = (capacity: i64) Channel {
+    data_bytes = capacity * 8
+    total = 224 + data_bytes
+    ptr = @builtin.raw_allocate(cast(total, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(total, usize))
+    pthread_mutex_init(ptr, @builtin.null_ptr())
+    pthread_cond_init(@builtin.gep(ptr, 64), @builtin.null_ptr())
+    pthread_cond_init(@builtin.gep(ptr, 128), @builtin.null_ptr())
+    // capacity stored at [216]
+    @builtin.store(@builtin.gep(ptr, 216), capacity)
+    Channel { ptr: ptr }
+}
+
+// Send (push) a value; blocks if the channel is full.
+chan_send = (ch: Channel, value: i64) void {
+    mutex_ptr = ch.ptr
+    not_full_ptr = @builtin.gep(ch.ptr, 128)
+    not_empty_ptr = @builtin.gep(ch.ptr, 64)
+    tail_ptr = @builtin.gep(ch.ptr, 200)
+    count_ptr = @builtin.gep(ch.ptr, 208)
+    cap_ptr = @builtin.gep(ch.ptr, 216)
+    data_ptr = @builtin.gep(ch.ptr, 224)
+    pthread_mutex_lock(mutex_ptr)
+    loop((l) {
+        cnt = @builtin.load<i64>(count_ptr)
+        cap = @builtin.load<i64>(cap_ptr)
+        cnt >= cap ?
+            | true {
+                pthread_cond_wait(not_full_ptr, mutex_ptr)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    tail = @builtin.load<i64>(tail_ptr)
+    slot = @builtin.gep(data_ptr, tail * 8)
+    @builtin.store(slot, value)
+    cap = @builtin.load<i64>(cap_ptr)
+    next_tail = (tail + 1) - (((tail + 1) / cap) * cap)
+    @builtin.store(tail_ptr, next_tail)
+    cnt = @builtin.load<i64>(count_ptr)
+    @builtin.store(count_ptr, cnt + 1)
+    pthread_cond_signal(not_empty_ptr)
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Receive (pop) a value; blocks if the channel is empty.
+chan_recv = (ch: Channel) i64 {
+    mutex_ptr = ch.ptr
+    not_empty_ptr = @builtin.gep(ch.ptr, 64)
+    not_full_ptr = @builtin.gep(ch.ptr, 128)
+    head_ptr = @builtin.gep(ch.ptr, 192)
+    count_ptr = @builtin.gep(ch.ptr, 208)
+    cap_ptr = @builtin.gep(ch.ptr, 216)
+    data_ptr = @builtin.gep(ch.ptr, 224)
+    pthread_mutex_lock(mutex_ptr)
+    loop((l) {
+        cnt = @builtin.load<i64>(count_ptr)
+        cnt == 0 ?
+            | true {
+                pthread_cond_wait(not_empty_ptr, mutex_ptr)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    head = @builtin.load<i64>(head_ptr)
+    slot = @builtin.gep(data_ptr, head * 8)
+    value = @builtin.load<i64>(slot)
+    cap = @builtin.load<i64>(cap_ptr)
+    next_head = (head + 1) - (((head + 1) / cap) * cap)
+    @builtin.store(head_ptr, next_head)
+    cnt = @builtin.load<i64>(count_ptr)
+    @builtin.store(count_ptr, cnt - 1)
+    pthread_cond_signal(not_full_ptr)
+    pthread_mutex_unlock(mutex_ptr)
+    value
+}
+
+// Destroy and free the channel.
+chan_destroy = (ch: Channel) void {
+    cap = @builtin.load<i64>(@builtin.gep(ch.ptr, 216))
+    total = 224 + cap * 8
+    pthread_cond_destroy(@builtin.gep(ch.ptr, 128))
+    pthread_cond_destroy(@builtin.gep(ch.ptr, 64))
+    pthread_mutex_destroy(ch.ptr)
+    @builtin.raw_deallocate(ch.ptr, cast(total, usize))
+}
+
+@export({ Channel, chan_new, chan_send, chan_recv, chan_destroy })

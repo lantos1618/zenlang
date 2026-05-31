@@ -1,4 +1,84 @@
-// Parse-only placeholder for @std.concurrency.sync.waitgroup.
+// A WaitGroup built on a mutex + i64 counter + condvar.
+// Layout of the heap block (160 bytes):
+//   [0..63]   mutex  (pthread_mutex_t, 40 bytes actual, 64 allotted)
+//   [64..127] condvar (pthread_cond_t, 48 bytes actual, 64 allotted)
+//   [128..135] counter (i64)
+//   Total: 136 bytes — we allocate 160 for alignment safety.
 //
-// WaitGroup APIs are stdlib-owned Zen surface. Restore them only with parser,
-// typechecker, build, and docs-truth evidence.
+//   { WaitGroup, wg_new, wg_add, wg_done, wg_wait, wg_destroy }
+//     = std.concurrency.sync.waitgroup
+
+@extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_destroy = (mutex: RawPtr<u8>) i32
+@extern pthread_cond_init = (cond: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_cond_wait = (cond: RawPtr<u8>, mutex: RawPtr<u8>) i32
+@extern pthread_cond_broadcast = (cond: RawPtr<u8>) i32
+@extern pthread_cond_destroy = (cond: RawPtr<u8>) i32
+
+// A heap-backed WaitGroup (160-byte opaque block).
+WaitGroup: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a WaitGroup with counter = 0.
+wg_new = () WaitGroup {
+    ptr = @builtin.raw_allocate(cast(160, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(160, usize))
+    mutex_ptr = ptr
+    cond_ptr = @builtin.gep(ptr, 64)
+    pthread_mutex_init(mutex_ptr, @builtin.null_ptr())
+    pthread_cond_init(cond_ptr, @builtin.null_ptr())
+    WaitGroup { ptr: ptr }
+}
+
+// Add `delta` to the counter (must be called before spawning goroutines).
+wg_add = (wg: WaitGroup, delta: i64) void {
+    mutex_ptr = wg.ptr
+    pthread_mutex_lock(mutex_ptr)
+    counter_ptr = @builtin.gep(wg.ptr, 128)
+    cur = @builtin.load<i64>(counter_ptr)
+    @builtin.store(counter_ptr, cur + delta)
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Decrement the counter by 1; broadcast if it reaches 0.
+wg_done = (wg: WaitGroup) void {
+    mutex_ptr = wg.ptr
+    cond_ptr = @builtin.gep(wg.ptr, 64)
+    counter_ptr = @builtin.gep(wg.ptr, 128)
+    pthread_mutex_lock(mutex_ptr)
+    cur = @builtin.load<i64>(counter_ptr)
+    next = cur - 1
+    @builtin.store(counter_ptr, next)
+    next == 0 ?
+        | true { pthread_cond_broadcast(cond_ptr) }
+        | false { 0 }
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Block until the counter reaches 0.
+wg_wait = (wg: WaitGroup) void {
+    mutex_ptr = wg.ptr
+    cond_ptr = @builtin.gep(wg.ptr, 64)
+    counter_ptr = @builtin.gep(wg.ptr, 128)
+    pthread_mutex_lock(mutex_ptr)
+    loop((l) {
+        cur = @builtin.load<i64>(counter_ptr)
+        cur > 0 ?
+            | true {
+                pthread_cond_wait(cond_ptr, mutex_ptr)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    pthread_mutex_unlock(mutex_ptr)
+}
+
+// Destroy and free the WaitGroup.
+wg_destroy = (wg: WaitGroup) void {
+    pthread_mutex_destroy(wg.ptr)
+    pthread_cond_destroy(@builtin.gep(wg.ptr, 64))
+    @builtin.raw_deallocate(wg.ptr, cast(160, usize))
+}
+
+@export({ WaitGroup, wg_new, wg_add, wg_done, wg_wait, wg_destroy })

@@ -1,2 +1,32 @@
-// Parse-only placeholder for @std.concurrency.sync.barrier.
-// Promote Barrier APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A POSIX barrier backed by pthread_barrier_t, allocated on the heap.
+// pthread_barrier_t is 32 bytes on Linux x86-64. We allocate 64 bytes to be safe.
+//   { Barrier, barrier_new, barrier_wait, barrier_destroy } = std.concurrency.sync.barrier
+
+@extern pthread_barrier_init = (barrier: RawPtr<u8>, attr: RawPtr<u8>, count: u32) i32
+@extern pthread_barrier_wait = (barrier: RawPtr<u8>) i32
+@extern pthread_barrier_destroy = (barrier: RawPtr<u8>) i32
+
+// A heap-backed pthread_barrier_t (64-byte opaque buffer).
+Barrier: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a barrier for `count` threads.
+barrier_new = (count: i32) Barrier {
+    ptr = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
+    pthread_barrier_init(ptr, @builtin.null_ptr(), cast(count, u32))
+    Barrier { ptr: ptr }
+}
+
+// Wait at the barrier; all threads block until `count` have arrived.
+// Returns PTHREAD_BARRIER_SERIAL_THREAD (-1 on Linux) for exactly one thread.
+barrier_wait = (b: Barrier) i32 {
+    pthread_barrier_wait(b.ptr)
+}
+
+// Destroy and free the barrier.
+barrier_destroy = (b: Barrier) void {
+    pthread_barrier_destroy(b.ptr)
+    @builtin.raw_deallocate(b.ptr, cast(64, usize))
+}
+
+@export({ Barrier, barrier_new, barrier_wait, barrier_destroy })
