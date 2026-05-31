@@ -145,12 +145,6 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
             lowered.name = Some(label.clone());
             "loop_control"
         }
-        // `@await e` — emitted structurally in the MIR JSON (the operand future);
-        // state-machine lowering is ASYNC_PLAN.md milestone 1, still in progress.
-        TypedExprKind::Await { expr } => {
-            lowered.target = Some(Box::new(mir_expression(expr)));
-            "await"
-        }
     };
 
     lowered

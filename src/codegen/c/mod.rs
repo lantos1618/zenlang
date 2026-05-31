@@ -1,4 +1,3 @@
-mod async_lowering;
 mod emit;
 mod functions;
 mod intrinsics;
@@ -10,8 +9,6 @@ mod types;
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::typed::*;
-
-pub use async_lowering::async_is_lowerable;
 
 pub fn generate(program: &TypedProgram) -> String {
     let mut emitter = CEmitter::new();
@@ -26,13 +23,6 @@ struct CEmitter {
     /// For each `@extern` function, the argument positions typed `Str` — their
     /// arguments are marshaled to a null-terminated `const char*` at call sites.
     extern_str_args: HashMap<String, HashSet<usize>>,
-    /// While emitting an async poll body, the set of spilled names: a
-    /// `Variable(x)` whose `c_ident` is in here is emitted as `__fr->x` (the
-    /// frame slot) instead of a bare local. Empty outside async lowering.
-    async_frame_fields: HashSet<String>,
-    /// Per-await index within the current async poll body, used to name the
-    /// pre-declared result/handle temps (`__aw<i>` / `__af<i>`).
-    async_await_index: usize,
 }
 
 impl CEmitter {
@@ -42,8 +32,6 @@ impl CEmitter {
             indent: 0,
             tmp_counter: 0,
             extern_str_args: HashMap::new(),
-            async_frame_fields: HashSet::new(),
-            async_await_index: 0,
         }
     }
 

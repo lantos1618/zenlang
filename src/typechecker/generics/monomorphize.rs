@@ -101,8 +101,6 @@ impl TypeChecker {
             &template.params,
             &template.return_type,
             &template.body,
-            // Generic async functions are out of scope for milestone 1.
-            false,
             &template.span,
         );
         self.type_substitutions.pop();

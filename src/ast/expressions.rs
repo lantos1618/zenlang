@@ -138,13 +138,6 @@ pub enum Expression {
         expr: Box<Expression>,
         span: Span,
     },
-
-    /// `@await e` — suspend the enclosing `@async` function until the future `e`
-    /// is ready, then evaluate to its inner value (ASYNC_PLAN.md milestone 1).
-    Await {
-        expr: Box<Expression>,
-        span: Span,
-    },
 }
 
 impl Expression {
@@ -184,8 +177,7 @@ impl Expression {
                 object: operand, ..
             }
             | Expression::Loop { body: operand, .. }
-            | Expression::Defer { expr: operand, .. }
-            | Expression::Await { expr: operand, .. } => operand.walk_type_refs(on_type),
+            | Expression::Defer { expr: operand, .. } => operand.walk_type_refs(on_type),
             Expression::StructLiteral {
                 type_args,
                 fields,

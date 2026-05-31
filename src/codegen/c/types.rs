@@ -30,11 +30,6 @@ impl CEmitter {
                 let ps: Vec<_> = params.iter().map(Self::c_type).collect();
                 format!("{}(*)({})", Self::c_type(ret), ps.join(", "))
             }
-            // The result of an async call is a pointer to that function's
-            // coroutine frame (ASYNC_PLAN.md milestone 1). Frames are driven
-            // generically through their uniform leading `__poll` field, so a
-            // `Future<T>` value is held as an opaque `void*` handle.
-            Type::Future(_) => "void*".into(),
             Type::Unknown => "void /* unknown */".into(),
         }
     }
@@ -103,32 +98,11 @@ impl CEmitter {
             self.blank();
         }
 
-        // Async functions lower to a frame struct + poll fn + constructor; emit
-        // their frame typedefs/structs before any prototype so the constructor
-        // return type and poll body are complete. (ASYNC_PLAN.md milestone 1.)
-        let async_fns: Vec<&TypedFunction> =
-            program.functions.iter().filter(|f| f.is_async).collect();
-        for func in &async_fns {
-            let frame = format!("{}__frame", c_func_ident(&func.name));
-            self.line(&format!("typedef struct {frame} {frame};"));
-        }
-        for func in &async_fns {
-            self.emit_async_frame_struct(func);
-            self.blank();
-        }
-
         for func in &program.functions {
             let name = c_func_ident(&func.name);
             let params = self.format_params(&func.params);
-            if func.is_async {
-                // Constructor returns a frame pointer (the `Future<T>` value).
-                let frame = format!("{name}__frame");
-                self.line(&format!("static bool {name}__poll(void*, void*);"));
-                self.line(&format!("{frame}* {name}({params});"));
-            } else {
-                let ret = Self::c_type(&func.return_type);
-                self.line(&format!("{} {}({});", ret, name, params));
-            }
+            let ret = Self::c_type(&func.return_type);
+            self.line(&format!("{} {}({});", ret, name, params));
         }
         if !program.functions.is_empty() {
             self.blank();
@@ -150,15 +124,8 @@ impl CEmitter {
         }
 
         for func in &program.functions {
-            if func.is_async {
-                self.emit_async_poll(func);
-                self.blank();
-                self.emit_async_constructor(func);
-                self.blank();
-            } else {
-                self.emit_function(func);
-                self.blank();
-            }
+            self.emit_function(func);
+            self.blank();
         }
 
         if program.entry_point.is_some() {

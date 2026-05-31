@@ -13,7 +13,6 @@ fn callable_signature_from_declaration(
         return_type: callable.return_type.clone().unwrap_or(AstType::Void),
         type_params: type_params.clone(),
         type_param_bounds: type_param_bounds(callable.type_params),
-        is_async: callable.is_async,
     };
     let template = (!type_params.is_empty()).then(|| GenericFunctionTemplate {
         type_params,

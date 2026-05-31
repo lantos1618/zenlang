@@ -57,8 +57,6 @@ pub enum Token {
     AtThis,    // @this
     AtExport,  // @export
     AtExtern,  // @extern (C FFI function declaration)
-    AtAsync,   // @async (async function marker)
-    AtAwait,   // @await (await expression)
 
     Newline,
     EOF,
@@ -134,8 +132,6 @@ impl Token {
             "this" => Some(Self::AtThis),
             "export" => Some(Self::AtExport),
             "extern" => Some(Self::AtExtern),
-            "async" => Some(Self::AtAsync),
-            "await" => Some(Self::AtAwait),
             _ => None,
         }
     }
