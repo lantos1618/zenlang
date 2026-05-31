@@ -1,4 +1,44 @@
-// Parse-only placeholder for @std.concurrency.primitives.atomic.
-//
-// Atomic APIs are stdlib-owned wrappers over guarded compiler hooks. Restore
-// them only with parser, typechecker, build, and docs-truth evidence.
+// A heap-backed atomic i64 cell using the std.compiler atomic wrappers.
+// The cell is a single 8-byte allocation storing a u64 value.
+//   { Atomic, atomic_new, atomic_get, atomic_set,
+//     atomic_inc, atomic_compare_set } = std.concurrency.primitives.atomic
+
+{ atomic_load, atomic_store, atomic_add, atomic_cas } = std.compiler
+
+// An atomic i64 value backed by an 8-byte heap cell.
+Atomic: { ptr: RawPtr<u8> }
+
+// Allocate a new Atomic cell initialised to `value`.
+atomic_new = (value: i64) Atomic {
+    ptr = @builtin.raw_allocate(cast(8, usize))
+    atomic_store(ptr, cast(value, u64))
+    Atomic { ptr: ptr }
+}
+
+// Load the current value.
+atomic_get = (a: Atomic) i64 {
+    cast(atomic_load(a.ptr), i64)
+}
+
+// Store a new value.
+atomic_set = (a: Atomic, value: i64) void {
+    atomic_store(a.ptr, cast(value, u64))
+}
+
+// Atomically increment by 1; returns the previous value.
+atomic_inc = (a: Atomic) i64 {
+    cast(atomic_add(a.ptr, cast(1, u64)), i64)
+}
+
+// Compare-and-swap: if current == expected, set to new_value.
+// Returns true if the swap happened.
+atomic_compare_set = (a: Atomic, expected: i64, new_value: i64) bool {
+    atomic_cas(a.ptr, cast(expected, u64), cast(new_value, u64))
+}
+
+// Free the underlying cell.
+atomic_free = (a: Atomic) void {
+    @builtin.raw_deallocate(a.ptr, cast(8, usize))
+}
+
+@export({ Atomic, atomic_new, atomic_get, atomic_set, atomic_inc, atomic_compare_set, atomic_free })

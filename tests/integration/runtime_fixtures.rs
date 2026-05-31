@@ -179,3 +179,38 @@ fn test_stdlib_slice() {
 fn test_stdlib_buffer() {
     run_test("stdlib_buffer");
 }
+
+#[test]
+fn test_stdlib_process() {
+    run_test("stdlib_process");
+}
+
+#[test]
+fn test_stdlib_sched() {
+    run_test("stdlib_sched");
+}
+
+#[test]
+fn test_stdlib_time() {
+    run_test("stdlib_time");
+}
+
+#[test]
+fn test_stdlib_uname() {
+    run_test("stdlib_uname");
+}
+
+#[test]
+fn test_stdlib_atomic() {
+    run_test("stdlib_atomic");
+}
+
+#[test]
+fn test_stdlib_once() {
+    run_test("stdlib_once");
+}
+
+#[test]
+fn test_stdlib_file() {
+    run_test("stdlib_file");
+}

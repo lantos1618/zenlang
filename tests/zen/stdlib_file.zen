@@ -1,0 +1,79 @@
+// Hermetic file I/O test: write known bytes to /tmp/zen_<pid>, read them back,
+// assert equality, then unlink. Proves open/write/read/close/unlink round-trip.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{ file_open, file_open_create, file_read, file_write, file_close, file_unlink } = std.io.files.file
+
+// Write decimal digits of `n` into `buf` starting at `offset`.
+// Returns the number of digits written.
+write_digits = (buf: RawPtr<u8>, offset: i64, n: i64) i64 {
+    // Find how many digits we need (n >= 1).
+    tmp ::= n
+    count ::= cast(0, i64)
+    loop((l) {
+        tmp <= 0 ?
+            | true { l.done() }
+            | false {
+                tmp = tmp / 10
+                count = count + 1
+                l.next()
+            }
+    })
+    // Write digits in reverse (least significant first), then fix up.
+    rem ::= n
+    idx ::= count - 1
+    loop((l) {
+        idx < 0 ?
+            | true { l.done() }
+            | false {
+                digit = rem % 10
+                @builtin.store(@builtin.gep(buf, offset + idx), cast(48 + digit, u8))
+                rem = rem / 10
+                idx = idx - 1
+                l.next()
+            }
+    })
+    count
+}
+
+main = () i32 {
+    pid = process_getpid()
+
+    // Build path: "/tmp/zen_<pid>\0"
+    // prefix = "/tmp/zen_" = 9 bytes
+    path = @builtin.raw_allocate(cast(32, usize))
+    prefix = @builtin.static_string_ptr("/tmp/zen_")
+    @builtin.memcpy(path, prefix, cast(9, usize))
+    dcount = write_digits(path, 9, pid)
+    // null terminator
+    @builtin.store(@builtin.gep(path, 9 + dcount), cast(0, u8))
+
+    // Write known bytes.
+    content_str = "hello_zen"
+    content = @builtin.static_string_ptr(content_str)
+    content_len = cast(@builtin.strlen(content_str), i64)
+
+    wfd = file_open_create(path)
+    wrote = file_write(wfd, content, content_len)
+    file_close(wfd)
+
+    // Read them back.
+    rbuf = @builtin.raw_allocate(cast(64, usize))
+    rfd = file_open(path, 0)
+    got = file_read(rfd, rbuf, 64)
+    file_close(rfd)
+
+    // Compare: wrote==got==9, and first byte matches.
+    write_ok = wrote == content_len
+    read_ok = got == content_len
+    first_match = @builtin.load<u8>(rbuf) == @builtin.load<u8>(content)
+    io.println("wrote_ok=${cast(write_ok, i32)}")
+    io.println("read_ok=${cast(read_ok, i32)}")
+    io.println("first_match=${cast(first_match, i32)}")
+
+    // Clean up.
+    file_unlink(path)
+    @builtin.raw_deallocate(rbuf, cast(64, usize))
+    @builtin.raw_deallocate(path, cast(32, usize))
+    0
+}

@@ -1,0 +1,15 @@
+// process_getpid() returns a positive PID; process_getppid() returns a positive PPID.
+// Both are structural facts (any real process has a positive PID and a parent),
+// so the output is deterministic regardless of the actual values.
+{ io } = std
+{ process_getpid, process_getppid } = std.sys.process.process
+
+main = () i32 {
+    pid = process_getpid()
+    ppid = process_getppid()
+    pid_pos = pid > 0
+    ppid_pos = ppid > 0
+    io.println("pid_positive=${cast(pid_pos, i32)}")
+    io.println("ppid_positive=${cast(ppid_pos, i32)}")
+    0
+}

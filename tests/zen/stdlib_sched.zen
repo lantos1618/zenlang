@@ -1,0 +1,10 @@
+// sched_yield() must return 0 on success (Linux guarantee for this syscall).
+{ io } = std
+{ sched_yield } = std.sys.process.sched
+
+main = () i32 {
+    ret = sched_yield()
+    ok = ret == 0
+    io.println("yield_ok=${cast(ok, i32)}")
+    0
+}

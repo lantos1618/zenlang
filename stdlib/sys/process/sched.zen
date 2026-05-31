@@ -1,4 +1,12 @@
-// Parse-only placeholder for @std.sys.process.sched.
-//
-// Scheduler syscall wrappers need host-effect and ABI evidence before this
-// module carries implementation code.
+// Scheduler syscall wrappers via the std.compiler facade.
+// sched_yield (syscall 24) — x86-64 Linux.
+//   { sched_yield } = std.sys.process.sched
+
+{ sys0 } = std.compiler
+
+// Yield the CPU to another runnable thread/process; returns 0 on success.
+sched_yield = () i64 {
+    sys0(24)
+}
+
+@export({ sched_yield })

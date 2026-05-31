@@ -1,0 +1,19 @@
+// time_now_secs() must be after 2023-11-01 (Unix epoch > 1698796800, which is
+// safely > 1700000000 as required). The monotonic clock never goes backward:
+// a second read is >= the first. Both are structural facts, not volatile values.
+{ io } = std
+{ time_now_secs, time_monotonic_nanos } = std.time
+
+main = () i32 {
+    secs = time_now_secs()
+    // 1700000000 is 2023-11-14 — any real wall clock is past this.
+    threshold = cast(1700000000, i64)
+    after_2023 = secs > threshold
+    io.println("after_2023=${cast(after_2023, i32)}")
+
+    t1 = time_monotonic_nanos()
+    t2 = time_monotonic_nanos()
+    mono_ok = t2 >= t1
+    io.println("monotonic_nondecreasing=${cast(mono_ok, i32)}")
+    0
+}

@@ -1,0 +1,13 @@
+// uname_ok() proves the syscall returns 0 (success).
+// uname_sysname_first() proves sysname[0] != 0 (non-empty kernel name).
+{ io } = std
+{ uname_ok, uname_sysname_first } = std.sys.uname
+
+main = () i32 {
+    ok = uname_ok()
+    io.println("uname_ok=${cast(ok, i32)}")
+    first = uname_sysname_first()
+    nonzero = first != cast(0, u8)
+    io.println("sysname_nonzero=${cast(nonzero, i32)}")
+    0
+}
