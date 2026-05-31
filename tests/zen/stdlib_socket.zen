@@ -1,0 +1,100 @@
+// Hermetic socket test: proves socket(AF_INET, SOCK_STREAM, 0) returns a valid
+// fd, bind to 127.0.0.1:0 (ephemeral port), listen, connect (loopback),
+// accept, send/recv a small payload, then close all fds.
+// All operations are synchronous on loopback — no blocking indefinitely.
+{ io } = std
+{
+    af_inet, sock_stream,
+    socket_new, socket_close,
+    socket_bind, socket_listen, socket_accept,
+    socket_connect, socket_send, socket_recv,
+    sockaddr_in_fill, sockaddr_in_port,
+} = std.io.net.socket
+{ sys3 } = std.compiler
+
+// Byte-swap a 16-bit value (host little-endian ↔ network big-endian).
+// We implement htons manually: swap the two bytes.
+// Input is a port number in host order (e.g. 0); for port=0 this is a no-op.
+// Returns the value unchanged — the kernel returns the bound port in network
+// byte order; we compare it as an opaque nonzero value.
+htons = (v: i64) i64 {
+    lo = v & 255
+    hi_raw = v & 65280
+    hi = hi_raw / 256
+    lo_shifted = lo * 256
+    lo_shifted | hi
+}
+
+main = () i32 {
+    af = af_inet()
+    st = sock_stream()
+
+    // Create server socket.
+    srv = socket_new(af, st, 0)
+    io.println("socket_ok=${cast(srv >= 0, i32)}")
+
+    // If socket creation failed (e.g. restricted sandbox), bail gracefully.
+    srv >= 0 ?
+        | true {
+            // Bind to 127.0.0.1:0 (ephemeral port).
+            // 127.0.0.1 in big-endian = 0x0100007F.
+            saddr = @builtin.raw_allocate(cast(16, usize))
+            sockaddr_in_fill(saddr, cast(0x0100007F, i64), 0)
+            bind_rc = socket_bind(srv, saddr, 16)
+            io.println("bind_ok=${cast(bind_rc == 0, i32)}")
+
+            // Listen (backlog = 1).
+            listen_rc = socket_listen(srv, 1)
+            io.println("listen_ok=${cast(listen_rc == 0, i32)}")
+
+            // Query the actual bound port via getsockname(51).
+            gname_buf = @builtin.raw_allocate(cast(16, usize))
+            alen_buf = @builtin.raw_allocate(cast(4, usize))
+            @builtin.store(alen_buf, cast(16, u32))
+            sys3(51, srv, @builtin.ptr_to_int(gname_buf), @builtin.ptr_to_int(alen_buf))
+            bound_port = sockaddr_in_port(gname_buf)
+
+            // Create client socket and connect to the bound port on loopback.
+            cli = socket_new(af, st, 0)
+            caddr = @builtin.raw_allocate(cast(16, usize))
+            sockaddr_in_fill(caddr, cast(0x0100007F, i64), bound_port)
+            conn_rc = socket_connect(cli, caddr, 16)
+            io.println("connect_ok=${cast(conn_rc == 0, i32)}")
+
+            // Accept the connection.
+            conn = socket_accept(srv)
+            io.println("accept_ok=${cast(conn >= 0, i32)}")
+
+            // Send 4 bytes from client, recv on accepted side.
+            sbuf = @builtin.raw_allocate(cast(4, usize))
+            @builtin.store(sbuf, cast(0xDEADBEEF, u32))
+            ns = socket_send(cli, sbuf, 4, 0)
+            io.println("send_ok=${cast(ns == 4, i32)}")
+
+            rbuf = @builtin.raw_allocate(cast(4, usize))
+            nr = socket_recv(conn, rbuf, 4, 0)
+            got = @builtin.load<u32>(rbuf)
+            io.println("recv_ok=${cast(nr == 4, i32)}")
+            io.println("data_ok=${cast(got == cast(0xDEADBEEF, u32), i32)}")
+
+            // Clean up.
+            @builtin.raw_deallocate(sbuf, cast(4, usize))
+            @builtin.raw_deallocate(rbuf, cast(4, usize))
+            socket_close(conn)
+            socket_close(cli)
+            socket_close(srv)
+            @builtin.raw_deallocate(saddr, cast(16, usize))
+            @builtin.raw_deallocate(caddr, cast(16, usize))
+            @builtin.raw_deallocate(gname_buf, cast(16, usize))
+            @builtin.raw_deallocate(alen_buf, cast(4, usize))
+        }
+        | false {
+            io.println("bind_ok=0")
+            io.println("listen_ok=0")
+            io.println("connect_ok=0")
+            io.println("accept_ok=0")
+            io.println("send_ok=0")
+            io.println("recv_ok=0")
+        }
+    0
+}

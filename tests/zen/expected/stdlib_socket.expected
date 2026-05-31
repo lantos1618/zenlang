@@ -1,0 +1,8 @@
+socket_ok=1
+bind_ok=1
+listen_ok=1
+connect_ok=1
+accept_ok=1
+send_ok=1
+recv_ok=1
+data_ok=1
