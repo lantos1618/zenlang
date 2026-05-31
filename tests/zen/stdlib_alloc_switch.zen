@@ -1,14 +1,19 @@
-// THE thesis, runnable: one `pump` written ONCE, generic over its runtime
-// allocator. Pass a SyncArena and it runs straight through; pass an AsyncArena —
-// inside a coroutine — and the SAME source suspends each step. The only change is
-// which allocator-mode you hand it. No @async, no Future, no color, no runtime
-// branch: SyncArena.suspend and AsyncArena.suspend are statically monomorphized.
+// THE thesis, runnable: one `pump` written ONCE, generic over its runtime `R`.
+// `R: Runtime` carries BOTH the allocator and the execution mode — pump
+// allocates its counter cell THROUGH `r` and suspends THROUGH `r`. Pass a
+// SyncArena and it runs straight through; pass an AsyncArena — inside a
+// coroutine — and the SAME source suspends each step. The only change is which
+// allocator-mode you hand it. No @async, no Future, no color, no runtime branch:
+// SyncArena.suspend and AsyncArena.suspend are statically monomorphized.
 { io } = std
-{ Suspender, SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+{ Runtime, SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
 { coroutine_new, coroutine_resume } = std.concurrency.coroutine
 
-// Written once. Colorless. The switch is the allocator `r`.
-pump<R: Suspender> = (r: R, cell: RawPtr<u8>, n: i64) void {
+// Written once. Colorless. The switch is the runtime `r`: it both allocates the
+// cell and decides whether each step suspends.
+pump<R: Runtime> = (r: R, out: RawPtr<u8>, n: i64) void {
+    cell = r.alloc(cast(8, usize))
+    @builtin.store(cell, cast(0, i64))
     i ::= cast(0, i64)
     loop((l) {
         i >= n ?
@@ -21,23 +26,22 @@ pump<R: Suspender> = (r: R, cell: RawPtr<u8>, n: i64) void {
                 l.next()
             }
     })
+    @builtin.store(out, @builtin.load<i64>(cell))
 }
 
-g_cell ::= @builtin.null_ptr()
+g_out ::= @builtin.null_ptr()
 async_work = () void {
-    pump<AsyncArena>(async_arena(1024), g_cell, cast(5, i64))
+    pump<AsyncArena>(async_arena(1024), g_out, cast(5, i64))
 }
 
 main = () i32 {
-    // Sync allocator: pump runs straight through, no coroutine.
-    sc = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(sc, cast(0, i64))
-    pump<SyncArena>(sync_arena(1024), sc, cast(5, i64))
-    io.println("sync=${cast(@builtin.load<i64>(sc), i32)}")
+    // Sync runtime: pump allocates from the arena and runs straight through.
+    so = @builtin.raw_allocate(cast(8, usize))
+    pump<SyncArena>(sync_arena(1024), so, cast(5, i64))
+    io.println("sync=${cast(@builtin.load<i64>(so), i32)}")
 
-    // Async allocator: SAME pump, run as a coroutine — suspends each step.
-    g_cell = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(g_cell, cast(0, i64))
+    // Async runtime: SAME pump, run as a coroutine — suspends each step.
+    g_out = @builtin.raw_allocate(cast(8, usize))
     co ::= coroutine_new(async_work)
     yields ::= 0
     loop((l) {
@@ -49,7 +53,7 @@ main = () i32 {
             }
             | false { l.done() }
     })
-    io.println("async=${cast(@builtin.load<i64>(g_cell), i32)}")
+    io.println("async=${cast(@builtin.load<i64>(g_out), i32)}")
     io.println("async_yields=${cast(yields, i32)}")
     0
 }

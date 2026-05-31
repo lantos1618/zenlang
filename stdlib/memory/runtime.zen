@@ -1,27 +1,56 @@
-// A runtime allocator carries BOTH memory (an arena) AND execution mode. Its
-// `suspend` is a no-op under Sync and yields the current fiber under Async, so
-// code generic over the runtime allocator is multisync: sync or async purely by
-// which one you pass — no function color, no runtime branch (static dispatch).
-//   { SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+// A runtime allocator carries BOTH memory AND execution mode in one value. It
+// implements `Runtime` — the Allocator surface (alloc/realloc/free) plus one
+// extra capability, `suspend`. `suspend` is a no-op under Sync and yields the
+// current fiber under Async, so code generic over `R: Runtime` is multisync:
+// the SAME source runs blocking or cooperatively purely by which one you pass —
+// no function color, no runtime branch (suspend is statically monomorphized).
+//   { Runtime, SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+//
+// Zen has one behavior bound per type param, so Runtime folds the allocator
+// methods and suspend into a single behavior rather than bounding on both.
 
 { Arena, arena, arena_free } = std.memory.arena
 { coroutine_yield } = std.concurrency.coroutine
 
-// The execution-mode capability the allocator carries.
-Suspender: behavior {
+// Memory + execution mode in one capability: allocate through it AND suspend
+// through it. The allocator IS the sync/async switch.
+Runtime: behavior {
+    alloc: (Self, usize) RawPtr<u8>
+    realloc: (Self, RawPtr<u8>, usize, usize) RawPtr<u8>
+    free: (Self, RawPtr<u8>, usize) void
     suspend: (Self) void
 }
 
-// Sync: arena memory; operations run inline (suspend is a no-op).
+// Sync: arena memory; suspend is a no-op, so a Runtime-generic function runs
+// straight through with no coroutine machinery.
 SyncArena: { mem: Arena }
-SyncArena.implements(Suspender) {
+SyncArena.implements(Runtime) {
+    alloc = (self: SyncArena, size: usize) RawPtr<u8> {
+        self.mem.alloc(size)
+    }
+    realloc = (self: SyncArena, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        self.mem.realloc(p, old, new)
+    }
+    free = (self: SyncArena, p: RawPtr<u8>, size: usize) void {
+        self.mem.free(p, size)
+    }
     suspend = (self: SyncArena) void {
     }
 }
 
-// Async: arena memory; a suspension point yields the current coroutine.
+// Async: arena memory; a suspension point yields the current coroutine, so the
+// SAME Runtime-generic function cooperates with the scheduler.
 AsyncArena: { mem: Arena }
-AsyncArena.implements(Suspender) {
+AsyncArena.implements(Runtime) {
+    alloc = (self: AsyncArena, size: usize) RawPtr<u8> {
+        self.mem.alloc(size)
+    }
+    realloc = (self: AsyncArena, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        self.mem.realloc(p, old, new)
+    }
+    free = (self: AsyncArena, p: RawPtr<u8>, size: usize) void {
+        self.mem.free(p, size)
+    }
     suspend = (self: AsyncArena) void {
         coroutine_yield()
     }
@@ -34,4 +63,8 @@ async_arena = (cap: i64) AsyncArena {
     AsyncArena { mem: arena(cap) }
 }
 
-@export({ Suspender, SyncArena, AsyncArena, sync_arena, async_arena, SyncArena.suspend, AsyncArena.suspend })
+@export({
+    Runtime, SyncArena, AsyncArena, sync_arena, async_arena,
+    SyncArena.alloc, SyncArena.realloc, SyncArena.free, SyncArena.suspend,
+    AsyncArena.alloc, AsyncArena.realloc, AsyncArena.free, AsyncArena.suspend,
+})
