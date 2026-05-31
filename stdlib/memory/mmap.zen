@@ -1,2 +1,30 @@
-// Parse-only placeholder for @std.memory.mmap.
-// Promote mmap APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Anonymous memory mapping via the mmap(2)/munmap(2) syscalls, routed through
+// the std.compiler facade. Unlike raw_allocate (which goes through malloc), this
+// asks the kernel directly for page-aligned anonymous memory — the substrate an
+// allocator (arena/pool/heap) can sit on, or a one-off large buffer.
+//   { mmap_anon, munmap, mmap_failed } = std.memory.mmap
+//
+// Syscall numbers and flag values are x86-64 Linux:
+//   mmap=9, munmap=11; PROT_READ|PROT_WRITE=3; MAP_PRIVATE|MAP_ANONYMOUS=0x22=34.
+
+{ sys2, sys6 } = std.compiler
+
+// Map `len` bytes of zero-filled anonymous memory. Check the result with
+// mmap_failed before use.
+mmap_anon = (len: i64) RawPtr<u8> {
+    addr = sys6(9, 0, len, 3, 34, cast(0 - 1, i64), 0)
+    @builtin.int_to_ptr(addr)
+}
+
+// mmap returns MAP_FAILED ((void*)-1) on error; this reports that.
+mmap_failed = (p: RawPtr<u8>) bool {
+    @builtin.ptr_to_int(p) == cast(0 - 1, i64)
+}
+
+// Unmap a region previously returned by mmap_anon. Returns 0 on success.
+munmap = (p: RawPtr<u8>, len: i64) i64 {
+    addr = @builtin.ptr_to_int(p)
+    sys2(11, addr, len)
+}
+
+@export({ mmap_anon, mmap_failed, munmap })

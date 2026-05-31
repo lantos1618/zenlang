@@ -156,6 +156,11 @@ fn test_stdlib_getrandom() {
 }
 
 #[test]
+fn test_stdlib_mmap() {
+    run_test("stdlib_mmap");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }
