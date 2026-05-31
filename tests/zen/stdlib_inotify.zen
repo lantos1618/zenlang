@@ -1,0 +1,94 @@
+// Hermetic inotify test: watch /tmp, create a file there, read the IN_CREATE
+// event back, verify the mask. The kernel queues the event synchronously when
+// the file is created, so the read immediately finds data — no timing dependency.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{
+    inotify_init, inotify_add_watch, inotify_rm_watch,
+    inotify_read_event, inotify_close,
+    in_create, in_all_events,
+} = std.io.inotify
+{ file_open_create, file_close, file_unlink } = std.io.files.file
+
+// Write decimal digits of `n` into `buf` starting at `offset`.
+// Returns the number of digits written.
+write_digits = (buf: RawPtr<u8>, offset: i64, n: i64) i64 {
+    tmp ::= n
+    count ::= cast(0, i64)
+    loop((l) {
+        tmp <= 0 ?
+            | true { l.done() }
+            | false {
+                tmp = tmp / 10
+                count = count + 1
+                l.next()
+            }
+    })
+    rem ::= n
+    idx ::= count - 1
+    loop((l) {
+        idx < 0 ?
+            | true { l.done() }
+            | false {
+                digit = rem % 10
+                @builtin.store(@builtin.gep(buf, offset + idx), cast(48 + digit, u8))
+                rem = rem / 10
+                idx = idx - 1
+                l.next()
+            }
+    })
+    count
+}
+
+main = () i32 {
+    pid = process_getpid()
+
+    // Create inotify instance.
+    ifd = inotify_init(0)
+    io.println("inotify_ok=${cast(ifd >= 0, i32)}")
+
+    // Build /tmp path buffer to watch.
+    tmp_ptr = @builtin.static_string_ptr("/tmp")
+    tmp_path = @builtin.raw_allocate(cast(8, usize))
+    @builtin.memcpy(tmp_path, tmp_ptr, cast(5, usize))
+
+    // Add watch for IN_CREATE on /tmp.
+    create_mask = in_create()
+    wd = inotify_add_watch(ifd, tmp_path, create_mask)
+    io.println("watch_ok=${cast(wd >= 0, i32)}")
+
+    // Build path for the file to create: "/tmp/zen_inotify_<pid>\0"
+    // prefix "/tmp/zen_inotify_" = 17 bytes
+    fpath = @builtin.raw_allocate(cast(48, usize))
+    fprefix = @builtin.static_string_ptr("/tmp/zen_inotify_")
+    @builtin.memcpy(fpath, fprefix, cast(17, usize))
+    dc = write_digits(fpath, 17, pid)
+    @builtin.store(@builtin.gep(fpath, 17 + dc), cast(0, u8))
+
+    // Create the file — this queues an IN_CREATE event in the inotify fd.
+    cfd = file_open_create(fpath)
+    file_close(cfd)
+
+    // Read the event. Buffer must be >= 16 bytes (inotify_event header) + name.
+    evbuf = @builtin.raw_allocate(cast(128, usize))
+    nr = inotify_read_event(ifd, evbuf, 128)
+    io.println("read_ok=${cast(nr >= 16, i32)}")
+
+    // mask is at byte offset 4 in inotify_event (u32).
+    mask_ptr = @builtin.gep(evbuf, 4)
+    mask_u32 = @builtin.load<u32>(mask_ptr)
+    mask = cast(mask_u32, i64)
+    // IN_CREATE=256; the mask should have that bit set.
+    has_create = mask & create_mask
+    io.println("has_create=${cast(has_create > 0, i32)}")
+
+    // Clean up.
+    file_unlink(fpath)
+    inotify_rm_watch(ifd, wd)
+    inotify_close(ifd)
+
+    @builtin.raw_deallocate(evbuf, cast(128, usize))
+    @builtin.raw_deallocate(fpath, cast(48, usize))
+    @builtin.raw_deallocate(tmp_path, cast(8, usize))
+    0
+}

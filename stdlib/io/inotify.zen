@@ -1,2 +1,107 @@
-// Parse-only placeholder for @std.io.inotify.
-// Promote inotify APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// inotify(7) file-system event monitoring via x86-64 Linux syscalls,
+// routed through the std.compiler facade.
+//
+// Syscall numbers:
+//   inotify_init1(294) — create an inotify instance.
+//   inotify_add_watch(254) — add a watch for a path.
+//   inotify_rm_watch(255) — remove a watch.
+//   read(0) — read pending events from the inotify fd.
+//   close(3) — close the inotify fd.
+//
+// Event flags (IN_*):
+//   IN_ACCESS=1, IN_MODIFY=2, IN_ATTRIB=4, IN_CLOSE_WRITE=8,
+//   IN_CLOSE_NOWRITE=16, IN_OPEN=32, IN_MOVED_FROM=64, IN_MOVED_TO=128,
+//   IN_CREATE=256, IN_DELETE=512, IN_DELETE_SELF=1024, IN_MOVE_SELF=2048.
+//   IN_ALL_EVENTS=4095.
+//
+// inotify_event layout (16 bytes fixed + name[]):
+//   wd     i32 @ 0
+//   mask   u32 @ 4
+//   cookie u32 @ 8
+//   len    u32 @ 12
+//   name   u8[] @ 16 (len bytes, NUL-padded to multiple of 4)
+//
+//   { inotify_init, inotify_add_watch, inotify_rm_watch, inotify_read_event,
+//     in_create, in_delete, in_modify, in_all_events } = std.io.inotify
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Create an inotify instance. flags=0 or IN_NONBLOCK=2048/IN_CLOEXEC=524288.
+// Returns inotify fd (>= 0) on success, negative errno on failure.
+inotify_init = (flags: i64) i64 {
+    sys1(294, flags)
+}
+
+// Add a watch for `path` (NUL-terminated) on inotify fd `ifd` with event mask
+// `mask`. Returns the watch descriptor (wd >= 0) on success, negative errno
+// on failure.
+inotify_add_watch = (ifd: i64, path: RawPtr<u8>, mask: i64) i64 {
+    sys3(254, ifd, @builtin.ptr_to_int(path), mask)
+}
+
+// Remove a watch descriptor from an inotify instance. Returns 0 on success.
+inotify_rm_watch = (ifd: i64, wd: i64) i64 {
+    sys2(255, ifd, wd)
+}
+
+// Read one inotify_event from `ifd` into `buf` (at least 64 bytes recommended).
+// Returns bytes read (>= 16) on success, or negative errno.
+inotify_read_event = (ifd: i64, buf: RawPtr<u8>, buf_len: i64) i64 {
+    sys3(0, ifd, @builtin.ptr_to_int(buf), buf_len)
+}
+
+// Close the inotify fd. Returns 0 on success.
+inotify_close = (ifd: i64) i64 {
+    sys1(3, ifd)
+}
+
+// --- Event mask constants ---
+
+// IN_ACCESS: file was accessed (read).
+in_access = () i64 { 1 }
+
+// IN_MODIFY: file was modified (write).
+in_modify = () i64 { 2 }
+
+// IN_ATTRIB: metadata changed (permissions, timestamps, etc.).
+in_attrib = () i64 { 4 }
+
+// IN_CLOSE_WRITE: writable file was closed.
+in_close_write = () i64 { 8 }
+
+// IN_CLOSE_NOWRITE: unwritable file was closed.
+in_close_nowrite = () i64 { 16 }
+
+// IN_OPEN: file or directory was opened.
+in_open = () i64 { 32 }
+
+// IN_MOVED_FROM: file moved out of watched directory.
+in_moved_from = () i64 { 64 }
+
+// IN_MOVED_TO: file moved into watched directory.
+in_moved_to = () i64 { 128 }
+
+// IN_CREATE: file/directory created in watched directory.
+in_create = () i64 { 256 }
+
+// IN_DELETE: file/directory deleted from watched directory.
+in_delete = () i64 { 512 }
+
+// IN_DELETE_SELF: watched file/directory itself was deleted.
+in_delete_self = () i64 { 1024 }
+
+// IN_MOVE_SELF: watched file/directory itself was moved.
+in_move_self = () i64 { 2048 }
+
+// IN_ALL_EVENTS: all of the above events combined.
+in_all_events = () i64 { 4095 }
+
+@export({
+    inotify_init, inotify_add_watch, inotify_rm_watch,
+    inotify_read_event, inotify_close,
+    in_access, in_modify, in_attrib,
+    in_close_write, in_close_nowrite, in_open,
+    in_moved_from, in_moved_to,
+    in_create, in_delete, in_delete_self, in_move_self,
+    in_all_events,
+})
