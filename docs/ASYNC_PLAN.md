@@ -231,6 +231,47 @@ tiny runtime frame `zen_ptr_future` (`runtime_helpers.rs`) whose poll returns
 `zen_poll_fn` layout so it drives through the same `void*` path as any lowered
 async frame. This is a *test* primitive, not stdlib surface.
 
+**Shipped — cooperative scheduler primitive (milestone 2, increment 2).** A
+single-threaded run-queue + round-robin driver lives in the runtime
+(`runtime_helpers.rs`): `zen_scheduler` is a growable array of future-frame
+handles; `zen_scheduler_run` repeatedly sweeps the queue, polling each
+not-yet-Ready frame once, until every frame reports Ready — so tasks that suspend
+(Pending) cooperatively interleave. Three compiler-recognised primitives expose
+it (typed in `call_support.rs`, whitelisted in the resolver, lowered in
+`emit.rs`):
+
+- `scheduler_new() -> RawPtr<u8>` — a fresh empty run-queue (opaque handle);
+- `scheduler_spawn(sched, fut)` — enqueue a `Future<T>` (arg 1 must be a future,
+  else E3081); held opaquely as a `void*`;
+- `scheduler_run(sched)` — poll every spawned future to completion.
+
+The **mechanism** (queue + poll loop) is irreducible runtime; the **policy**
+(what to spawn, when to run) is exposed to the stdlib. Proven by
+`tests/zen/async_scheduler.zen` (runtime fixture
+`runtime_fixtures::test_async_scheduler`): three tasks suspending 0/1/3 times all
+run to completion, observed via a shared cell.
+
+**Shipped — promoted async stdlib (milestone 2, increment 3).**
+`stdlib/concurrency/async/scheduler.zen` is now a real module: a typed
+`Scheduler` handle plus `scheduler()` and `run()` policy wrappers over the
+runtime primitives (`@export`ed). `stdlib/concurrency/async/task.zen` exposes the
+`spawn` handle-forwarding wrapper and documents the spawn/`block_on` call sites.
+Driven end to end by `tests/zen/stdlib_async_scheduler.zen` (runtime fixture
+`runtime_fixtures::test_stdlib_async_scheduler`).
+
+**Not yet promotable — `async_actor.zen`, `async_helpers.zen`, `async_pool.zen`,
+and a typed `spawn`/`block_on`.** All of these want to *hold or pass a future as
+a value* — e.g. `spawn(s: Scheduler, t: Future<T>)`, `block_on(f: Future<T>) T`,
+an actor mailbox of pending sends, an async allocator whose `alloc` returns a
+future. But `Future<T>` has **no surface spelling**: there is no `AstType::Future`
+and `monomorphize_types`' `Future` arm is `unreachable!`. So any future-typed
+parameter is currently inexpressible in stdlib Zen, and these modules stay
+placeholders. The precise unblock is to add a surface `Future<T>` type
+(parser `BuiltinGenericTypeName::Future` + an `AstType::Future` + `resolve_type`
+mapping + a real monomorphization arm); once a future can be named in a
+signature, `spawn`/`block_on`/the actor mailbox/the async allocator all become
+ordinary typed stdlib functions.
+
 **Known limitation — control-flow splitting.** `async_is_lowerable` still gates
 (E3082) awaits nested inside a sub-expression, `match`/`if` branch, or loop: the
 poll body is still a linear switch with one `case` per top-level await. The frame
@@ -244,5 +285,9 @@ whose `monomorphize_types` `Future` arm is still `unreachable!`). The
 suspend/resume machinery (frame ABI) is now in place to support it.
 
 Implementation lives in `src/codegen/c/async_lowering.rs` (frame/poll/ctor +
-lowerability analysis), with the `block_on` driver in `src/codegen/c/emit.rs`
-and the `zen_poll_fn` typedef in `src/codegen/c/types/runtime_helpers.rs`.
+lowerability analysis), with the `block_on` driver and scheduler primitive
+lowering in `src/codegen/c/emit.rs`, and the `zen_poll_fn` typedef, the
+`zen_ptr_future` test future, and the `zen_scheduler` run-queue in
+`src/codegen/c/types/runtime_helpers.rs`. Scheduler/test-future *typing* is in
+`src/typechecker/expressions/call_support.rs`; resolver whitelisting in
+`src/resolver/local_validation.rs`.

@@ -79,6 +79,7 @@ fn is_untracked_c_call_name(name: &str) -> bool {
     matches!(
         name,
         "abort"
+            | "calloc"
             | "ceil"
             | "dlclose"
             | "dlerror"
