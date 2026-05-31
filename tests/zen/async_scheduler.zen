@@ -1,0 +1,33 @@
+{ io } = std
+
+// Each task awaits a future that is Pending for `delay` polls, then Ready(value).
+// On completion it folds `value` into a shared cell (slot 0 = running sum,
+// slot 8 = count of completed tasks). The scheduler interleaves the three tasks
+// across their Pending suspends, so all of them must run to completion.
+task = @async (cell: RawPtr<u8>, delay: i32, value: i32) i32 {
+    v = @await pending_then_ready(delay, value)
+    sum = @builtin.load<i64>(cell)
+    @builtin.store(cell, sum + cast(v, i64))
+    done = @builtin.load<i64>(@builtin.gep(cell, 8))
+    @builtin.store(@builtin.gep(cell, 8), done + cast(1, i64))
+    v
+}
+
+main = () i32 {
+    cell = @builtin.raw_allocate(cast(24, usize))
+    @builtin.store(cell, cast(0, i64))
+    @builtin.store(@builtin.gep(cell, 8), cast(0, i64))
+
+    s = scheduler_new()
+    // Spawn three tasks with different suspend counts; all must finish.
+    scheduler_spawn(s, task(cell, 1, 100))
+    scheduler_spawn(s, task(cell, 3, 20))
+    scheduler_spawn(s, task(cell, 0, 3))
+    scheduler_run(s)
+
+    sum = @builtin.load<i64>(cell)
+    done = @builtin.load<i64>(@builtin.gep(cell, 8))
+    io.println("sum = ${sum}")
+    io.println("done = ${done}")
+    0
+}

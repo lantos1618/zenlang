@@ -1,0 +1,26 @@
+{ io } = std
+
+// Awaits a future that is Pending for its first 2 polls, then Ready(value).
+// This forces the poll function to take the `return false` (Pending) path and
+// be re-polled: the saved sub-future handle must survive in the frame for the
+// resume to find the same future and eventually observe Ready.
+wait_then = @async (value: i32) i32 {
+    r = @await pending_then_ready(2, value)
+    r + 1
+}
+
+// Two suspending awaits in sequence, threading a local across both real
+// suspends — proves the resume PC + handles + spilled locals all persist.
+two_waits = @async () i32 {
+    a = @await pending_then_ready(1, 10)
+    b = @await pending_then_ready(3, 20)
+    a + b
+}
+
+main = () i32 {
+    x = block_on(wait_then(41))
+    io.println("wait_then = ${x}")
+    y = block_on(two_waits())
+    io.println("two_waits = ${y}")
+    0
+}

@@ -1,4 +1,31 @@
-// Parse-only placeholder for @std.concurrency.async.scheduler.
+// Cooperative single-threaded async scheduler.
 //
-// Async scheduling is stdlib-owned Zen surface. Restore the implementation here
-// only with parser, typechecker, build, and docs-truth evidence.
+//   { Scheduler, scheduler, run } = std.concurrency.async.scheduler
+//
+// The irreducible mechanism — a run-queue of suspended coroutine frames, plus
+// the round-robin poll-until-all-done loop — is provided by the compiler/runtime
+// (ASYNC_PLAN.md milestone 2). This module owns the *policy* surface: a typed
+// `Scheduler` handle and the verbs to drive it.
+//
+// `spawn` enqueues a future. A future has no surface type in Zen (a call to an
+// `@async` function yields the compiler-internal `Future<T>`), so spawning is the
+// compiler primitive `scheduler_spawn(s.handle, <async call>)` invoked directly
+// at the call site; this module wraps construction and the run loop, which are
+// expressible as ordinary typed functions.
+
+// A scheduler handle. `handle` is the opaque run-queue allocated by the runtime.
+Scheduler: { handle: RawPtr<u8> }
+
+// Create a fresh, empty cooperative scheduler.
+scheduler = () Scheduler {
+    Scheduler { handle: scheduler_new() }
+}
+
+// Round-robin every spawned future to completion: each sweep polls every
+// not-yet-Ready frame once; futures that suspend (Pending) interleave until all
+// have completed. Returns when the run-queue is fully drained.
+run = (s: Scheduler) void {
+    scheduler_run(s.handle)
+}
+
+@export({ Scheduler, scheduler, run })

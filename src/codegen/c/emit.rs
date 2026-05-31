@@ -118,6 +118,30 @@ impl CEmitter {
                 out_tmp
             }
 
+            TypedExprKind::FunctionCall { function, args } if function == "scheduler_new" => {
+                let _ = args;
+                "((uint8_t*)zen_scheduler_new())".to_string()
+            }
+            TypedExprKind::FunctionCall { function, args } if function == "scheduler_spawn" => {
+                let s = self.emit_expr_inline(&args[0]);
+                let fut = self.emit_expr_inline(&args[1]);
+                format!("zen_scheduler_spawn((zen_scheduler*)({s}), (void*)({fut}))")
+            }
+            TypedExprKind::FunctionCall { function, args } if function == "scheduler_run" => {
+                let s = self.emit_expr_inline(&args[0]);
+                format!("zen_scheduler_run((zen_scheduler*)({s}))")
+            }
+
+            TypedExprKind::FunctionCall { function, args } if function == "pending_then_ready" => {
+                // The compiler-provided test future: `pending_then_ready(n, v)`
+                // constructs a `Future<i32>` Pending for `n` polls then Ready(v),
+                // held as the uniform `void*` frame pointer (ASYNC_PLAN.md
+                // milestone 2's deterministic Pending source).
+                let n = self.emit_expr_inline(&args[0]);
+                let v = self.emit_expr_inline(&args[1]);
+                format!("zen_pending_then_ready((int)({n}), (int)({v}))")
+            }
+
             TypedExprKind::FunctionCall { function, args } => {
                 let name = c_func_ident(function);
                 let str_args = self.extern_str_args.get(function).cloned();

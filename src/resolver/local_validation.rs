@@ -59,6 +59,15 @@ impl Resolver {
             // `Future<T> -> T`. A user binding of the same name shadows it via
             // the lookups above.
             || name == "block_on"
+            // `pending_then_ready` is a compiler-provided *test* future
+            // (ASYNC_PLAN.md milestone 2): the deterministic Pending source used
+            // to prove genuine suspend/resume. Typed `(i32, i32) -> Future<i32>`.
+            || name == "pending_then_ready"
+            // Cooperative scheduler primitives (ASYNC_PLAN.md milestone 2): the
+            // irreducible run-queue + polling, driven by stdlib policy.
+            || name == "scheduler_new"
+            || name == "scheduler_spawn"
+            || name == "scheduler_run"
     }
 
     pub(super) fn param_locals(

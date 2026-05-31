@@ -407,3 +407,30 @@ fn test_async_await_ready() {
     // Proves the milestone-1 state-machine lowering end to end (ASYNC_PLAN.md).
     run_test("async_await_ready");
 }
+
+#[test]
+fn test_async_pending_resume() {
+    // Awaits futures that are genuinely Pending for their first N polls before
+    // going Ready, driven by a `block_on` re-poll loop. Proves real
+    // suspend/resume: the poll fn takes the Pending `return false` path, and the
+    // sub-future handle + resume state + spilled locals survive each re-poll
+    // (ASYNC_PLAN.md milestone 2, increment 1).
+    run_test("async_pending_resume");
+}
+
+#[test]
+fn test_async_scheduler() {
+    // The cooperative scheduler primitive (ASYNC_PLAN.md milestone 2, increment
+    // 2): spawn three async tasks that suspend a different number of times, run
+    // the scheduler to round-robin them to completion, and observe (via a shared
+    // cell) that every task ran. Proves spawn + poll-until-all-done.
+    run_test("async_scheduler");
+}
+
+#[test]
+fn test_stdlib_async_scheduler() {
+    // Drives the promoted `std.concurrency.async.scheduler` module end to end:
+    // build a `Scheduler`, spawn three suspending `@async` tasks, `run` them
+    // cooperatively to completion (ASYNC_PLAN.md milestone 2, increment 3).
+    run_test("stdlib_async_scheduler");
+}

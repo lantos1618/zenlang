@@ -36,6 +36,37 @@ impl TypeChecker {
             (resolved, ret)
         } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
             (full_name.clone(), self.resolve_type(&type_args[0]))
+        } else if name == "pending_then_ready" && module.is_none() && typed_args.len() == 2 {
+            // A compiler-provided *test* future (ASYNC_PLAN.md milestone 2): it
+            // returns Pending for the first `n` polls, then Ready(`value`). It is
+            // the deterministic Pending source used to prove genuine
+            // suspend/resume before a real I/O readiness source (milestone 3)
+            // exists. `pending_then_ready(n, value) -> Future<i32>`.
+            (full_name.clone(), Type::Future(Box::new(Type::I32)))
+        } else if name == "scheduler_new" && module.is_none() && typed_args.is_empty() {
+            // Cooperative scheduler primitives (ASYNC_PLAN.md milestone 2): the
+            // run-queue + polling is the irreducible runtime piece; the stdlib
+            // drives the policy. A scheduler is an opaque `RawPtr<u8>`.
+            (full_name.clone(), Type::RawPtr(Box::new(Type::U8)))
+        } else if name == "scheduler_spawn" && module.is_none() && typed_args.len() == 2 {
+            // `scheduler_spawn(sched, fut)`: enqueue a future frame on the
+            // scheduler. `fut` must be a `Future<T>` (it is held opaquely and
+            // polled to completion by `scheduler_run`).
+            if !matches!(typed_args[1].ty, Type::Future(_)) {
+                self.push_error(
+                    E3081,
+                    format!(
+                        "`scheduler_spawn` expects a future, found `{}`",
+                        typed_args[1].ty.display_name()
+                    ),
+                    span,
+                );
+            }
+            (full_name.clone(), Type::Void)
+        } else if name == "scheduler_run" && module.is_none() && typed_args.len() == 1 {
+            // `scheduler_run(sched)`: round-robin poll every spawned future until
+            // all are Ready (cooperative interleaving on Pending).
+            (full_name.clone(), Type::Void)
         } else if name == "block_on" && module.is_none() && typed_args.len() == 1 {
             // `block_on(fut)` drives a future to completion and yields its value.
             // A compiler-provided driver (ASYNC_PLAN.md milestone 1) standing in
