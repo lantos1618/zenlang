@@ -196,6 +196,16 @@ fn test_stdlib_timerfd() {
 }
 
 #[test]
+fn test_stdlib_unix_socket() {
+    run_test("stdlib_unix_socket");
+}
+
+#[test]
+fn test_stdlib_terminal() {
+    run_test("stdlib_terminal");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

@@ -1,0 +1,32 @@
+// Hermetic unix socket pair test: create a socketpair, write 4 known bytes
+// into fd0, read them back from fd1, assert equality, then close both fds.
+{ io } = std
+{ socketpair_new, socketpair_write, socketpair_read, socketpair_close } = std.io.net.unix_socket
+
+main = () i32 {
+    fds = socketpair_new()
+    ok = fds.fd0 >= 0
+    io.println("pair_ok=${cast(ok, i32)}")
+
+    // Write 4 known bytes into fd0.
+    wbuf = @builtin.raw_allocate(cast(4, usize))
+    @builtin.store(wbuf, cast(0x44332211, i32))
+    nw = socketpair_write(fds.fd0, wbuf, 4)
+    io.println("wrote=${cast(nw, i32)}")
+    @builtin.raw_deallocate(wbuf, cast(4, usize))
+
+    // Read them back from fd1.
+    rbuf = @builtin.raw_allocate(cast(4, usize))
+    nr = socketpair_read(fds.fd1, rbuf, 4)
+    io.println("read=${cast(nr, i32)}")
+    val = @builtin.load<i32>(rbuf)
+    @builtin.raw_deallocate(rbuf, cast(4, usize))
+    match_ok = val == 0x44332211
+    io.println("match=${cast(match_ok, i32)}")
+
+    rc0 = socketpair_close(fds.fd0)
+    rc1 = socketpair_close(fds.fd1)
+    both_closed = rc0 == 0 && rc1 == 0
+    io.println("closed=${cast(both_closed, i32)}")
+    0
+}
