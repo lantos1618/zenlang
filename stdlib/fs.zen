@@ -5,10 +5,11 @@
 //   { fs_write_all, fs_read_all } = std.fs
 
 { file_open, file_open_create, file_read, file_write, file_close } = std.io.files.file
+{ str_ptr } = std.compiler
 
 // Write `len` bytes from `buf` to `path` (created/truncated). Returns bytes written.
 fs_write_all = (path: StaticString, buf: RawPtr<u8>, len: i64) i64 {
-    fd = file_open_create(@builtin.static_string_ptr(path))
+    fd = file_open_create(str_ptr(path))
     n = file_write(fd, buf, len)
     file_close(fd)
     n
@@ -17,7 +18,7 @@ fs_write_all = (path: StaticString, buf: RawPtr<u8>, len: i64) i64 {
 // Read up to `max` bytes from `path` into `buf`. Returns bytes read (negative on
 // open error). Opens read-only (O_RDONLY = 0).
 fs_read_all = (path: StaticString, buf: RawPtr<u8>, max: i64) i64 {
-    fd = file_open(@builtin.static_string_ptr(path), 0)
+    fd = file_open(str_ptr(path), 0)
     fd < 0 ?
         | true { fd }
         | false {

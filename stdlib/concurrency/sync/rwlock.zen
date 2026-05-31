@@ -3,6 +3,8 @@
 //   { RwLock, rwlock_new, rwlock_rdlock, rwlock_wrlock, rwlock_unlock, rwlock_destroy }
 //     = std.concurrency.sync.rwlock
 
+{ raw_allocate, raw_deallocate, mem_set, null_ptr } = std.compiler
+
 @extern pthread_rwlock_init = (rwlock: RawPtr<u8>, attr: RawPtr<u8>) i32
 @extern pthread_rwlock_rdlock = (rwlock: RawPtr<u8>) i32
 @extern pthread_rwlock_wrlock = (rwlock: RawPtr<u8>) i32
@@ -14,9 +16,9 @@ RwLock: { ptr: RawPtr<u8> }
 
 // Allocate and initialise a default rwlock.
 rwlock_new = () RwLock {
-    ptr = @builtin.raw_allocate(cast(64, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
-    pthread_rwlock_init(ptr, @builtin.null_ptr())
+    ptr = raw_allocate(cast(64, usize))
+    mem_set(ptr, cast(0, u8), cast(64, usize))
+    pthread_rwlock_init(ptr, null_ptr())
     RwLock { ptr: ptr }
 }
 
@@ -38,7 +40,7 @@ rwlock_unlock = (rw: RwLock) void {
 // Destroy and free the rwlock.
 rwlock_destroy = (rw: RwLock) void {
     pthread_rwlock_destroy(rw.ptr)
-    @builtin.raw_deallocate(rw.ptr, cast(64, usize))
+    raw_deallocate(rw.ptr, cast(64, usize))
 }
 
 @export({ RwLock, rwlock_new, rwlock_rdlock, rwlock_wrlock, rwlock_unlock, rwlock_destroy })

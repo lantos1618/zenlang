@@ -7,7 +7,7 @@
 //
 // x86-64 Linux syscall numbers: eventfd2=290, read=0, write=1, close=3.
 
-{ sys1, sys2, sys3 } = std.compiler
+{ sys1, sys2, sys3, raw_allocate, raw_deallocate, ptr_to_int, load_i64, store_i64 } = std.compiler
 
 // Create an eventfd with an initial counter value. Returns the fd (>= 0 on ok).
 eventfd_new = (initval: i64) i64 {
@@ -16,19 +16,19 @@ eventfd_new = (initval: i64) i64 {
 
 // Add `value` to the counter. Returns bytes written (8 on success).
 eventfd_write = (fd: i64, value: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(buf, value)
-    n = sys3(1, fd, @builtin.ptr_to_int(buf), 8)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
+    store_i64(buf, value)
+    n = sys3(1, fd, ptr_to_int(buf), 8)
+    raw_deallocate(buf, cast(8, usize))
     n
 }
 
 // Read and reset the counter, returning its accumulated value.
 eventfd_read = (fd: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
-    sys3(0, fd, @builtin.ptr_to_int(buf), 8)
-    value = @builtin.load<i64>(buf)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
+    sys3(0, fd, ptr_to_int(buf), 8)
+    value = load_i64(buf)
+    raw_deallocate(buf, cast(8, usize))
     value
 }
 

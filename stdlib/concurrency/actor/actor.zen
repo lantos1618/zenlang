@@ -9,7 +9,7 @@
 //   [8..15]  state_ptr (RawPtr<u8>) — write the accumulated i64 result here
 //
 // The worker loops calling actor_recv(ch_ptr) until it sees the sentinel (-1),
-// then returns @builtin.null_ptr(). Use actor_send to enqueue messages and
+// then returns null_ptr(). Use actor_send to enqueue messages and
 // actor_stop to send the sentinel and join the thread.
 //
 // Actor heap block layout (32 bytes):
@@ -23,6 +23,8 @@
 //   { Actor, actor_new, actor_send, actor_recv, actor_stop, actor_state,
 //     actor_free, ACTOR_SENTINEL }
 //     = std.concurrency.actor.actor
+
+{ raw_allocate, raw_deallocate, mem_set, gep, null_ptr, load_i64, store_i64, load_rawptr, store_rawptr } = std.compiler
 
 @extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
 @extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
@@ -45,16 +47,16 @@ Actor: { ptr: RawPtr<u8> }
 // Send a value to the raw channel block; blocks if full.
 actor_send_raw = (ch_ptr: RawPtr<u8>, value: i64) void {
     mutex_ptr = ch_ptr
-    not_full_ptr = @builtin.gep(ch_ptr, 128)
-    not_empty_ptr = @builtin.gep(ch_ptr, 64)
-    tail_ptr = @builtin.gep(ch_ptr, 200)
-    count_ptr = @builtin.gep(ch_ptr, 208)
-    cap_ptr = @builtin.gep(ch_ptr, 216)
-    data_ptr = @builtin.gep(ch_ptr, 224)
+    not_full_ptr = gep(ch_ptr, 128)
+    not_empty_ptr = gep(ch_ptr, 64)
+    tail_ptr = gep(ch_ptr, 200)
+    count_ptr = gep(ch_ptr, 208)
+    cap_ptr = gep(ch_ptr, 216)
+    data_ptr = gep(ch_ptr, 224)
     pthread_mutex_lock(mutex_ptr)
     loop((l) {
-        cnt = @builtin.load<i64>(count_ptr)
-        cap = @builtin.load<i64>(cap_ptr)
+        cnt = load_i64(count_ptr)
+        cap = load_i64(cap_ptr)
         cnt >= cap ?
             | true {
                 pthread_cond_wait(not_full_ptr, mutex_ptr)
@@ -62,13 +64,13 @@ actor_send_raw = (ch_ptr: RawPtr<u8>, value: i64) void {
             }
             | false { l.done() }
     })
-    tail = @builtin.load<i64>(tail_ptr)
-    slot = @builtin.gep(data_ptr, tail * 8)
+    tail = load_i64(tail_ptr)
+    slot = gep(data_ptr, tail * 8)
     @builtin.store(slot, value)
-    cap = @builtin.load<i64>(cap_ptr)
+    cap = load_i64(cap_ptr)
     next_tail = (tail + 1) - (((tail + 1) / cap) * cap)
     @builtin.store(tail_ptr, next_tail)
-    cnt = @builtin.load<i64>(count_ptr)
+    cnt = load_i64(count_ptr)
     @builtin.store(count_ptr, cnt + 1)
     pthread_cond_signal(not_empty_ptr)
     pthread_mutex_unlock(mutex_ptr)
@@ -77,15 +79,15 @@ actor_send_raw = (ch_ptr: RawPtr<u8>, value: i64) void {
 // Receive a value from the raw channel block; blocks if empty.
 actor_recv_raw = (ch_ptr: RawPtr<u8>) i64 {
     mutex_ptr = ch_ptr
-    not_empty_ptr = @builtin.gep(ch_ptr, 64)
-    not_full_ptr = @builtin.gep(ch_ptr, 128)
-    head_ptr = @builtin.gep(ch_ptr, 192)
-    count_ptr = @builtin.gep(ch_ptr, 208)
-    cap_ptr = @builtin.gep(ch_ptr, 216)
-    data_ptr = @builtin.gep(ch_ptr, 224)
+    not_empty_ptr = gep(ch_ptr, 64)
+    not_full_ptr = gep(ch_ptr, 128)
+    head_ptr = gep(ch_ptr, 192)
+    count_ptr = gep(ch_ptr, 208)
+    cap_ptr = gep(ch_ptr, 216)
+    data_ptr = gep(ch_ptr, 224)
     pthread_mutex_lock(mutex_ptr)
     loop((l) {
-        cnt = @builtin.load<i64>(count_ptr)
+        cnt = load_i64(count_ptr)
         cnt == 0 ?
             | true {
                 pthread_cond_wait(not_empty_ptr, mutex_ptr)
@@ -93,13 +95,13 @@ actor_recv_raw = (ch_ptr: RawPtr<u8>) i64 {
             }
             | false { l.done() }
     })
-    head = @builtin.load<i64>(head_ptr)
-    slot = @builtin.gep(data_ptr, head * 8)
-    value = @builtin.load<i64>(slot)
-    cap = @builtin.load<i64>(cap_ptr)
+    head = load_i64(head_ptr)
+    slot = gep(data_ptr, head * 8)
+    value = load_i64(slot)
+    cap = load_i64(cap_ptr)
     next_head = (head + 1) - (((head + 1) / cap) * cap)
     @builtin.store(head_ptr, next_head)
-    cnt = @builtin.load<i64>(count_ptr)
+    cnt = load_i64(count_ptr)
     @builtin.store(count_ptr, cnt - 1)
     pthread_cond_signal(not_full_ptr)
     pthread_mutex_unlock(mutex_ptr)
@@ -111,22 +113,22 @@ actor_recv_raw = (ch_ptr: RawPtr<u8>) i64 {
 _chan_alloc = (capacity: i64) RawPtr<u8> {
     data_bytes = capacity * 8
     total = 224 + data_bytes
-    ptr = @builtin.raw_allocate(cast(total, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(total, usize))
-    pthread_mutex_init(ptr, @builtin.null_ptr())
-    pthread_cond_init(@builtin.gep(ptr, 64), @builtin.null_ptr())
-    pthread_cond_init(@builtin.gep(ptr, 128), @builtin.null_ptr())
-    @builtin.store(@builtin.gep(ptr, 216), capacity)
+    ptr = raw_allocate(cast(total, usize))
+    mem_set(ptr, cast(0, u8), cast(total, usize))
+    pthread_mutex_init(ptr, null_ptr())
+    pthread_cond_init(gep(ptr, 64), null_ptr())
+    pthread_cond_init(gep(ptr, 128), null_ptr())
+    store_i64(gep(ptr, 216), capacity)
     ptr
 }
 
 _chan_dealloc = (ch_ptr: RawPtr<u8>) void {
-    cap = @builtin.load<i64>(@builtin.gep(ch_ptr, 216))
+    cap = load_i64(gep(ch_ptr, 216))
     total = 224 + cap * 8
-    pthread_cond_destroy(@builtin.gep(ch_ptr, 128))
-    pthread_cond_destroy(@builtin.gep(ch_ptr, 64))
+    pthread_cond_destroy(gep(ch_ptr, 128))
+    pthread_cond_destroy(gep(ch_ptr, 64))
     pthread_mutex_destroy(ch_ptr)
-    @builtin.raw_deallocate(ch_ptr, cast(total, usize))
+    raw_deallocate(ch_ptr, cast(total, usize))
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -137,74 +139,74 @@ _chan_dealloc = (ch_ptr: RawPtr<u8>) void {
 //   arg[8..15] = state_ptr — write the i64 accumulated result here
 // The worker must loop until it receives the sentinel value cast(0-1, i64) = -1.
 actor_new = (worker: (RawPtr<u8>) RawPtr<u8>) Actor {
-    ptr = @builtin.raw_allocate(cast(32, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(32, usize))
+    ptr = raw_allocate(cast(32, usize))
+    mem_set(ptr, cast(0, u8), cast(32, usize))
 
     ch_ptr = _chan_alloc(64)
-    @builtin.store(ptr, ch_ptr)
+    store_rawptr(ptr, ch_ptr)
 
-    state_ptr = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(state_ptr, cast(0, i64))
-    @builtin.store(@builtin.gep(ptr, 8), state_ptr)
+    state_ptr = raw_allocate(cast(8, usize))
+    store_i64(state_ptr, cast(0, i64))
+    store_rawptr(gep(ptr, 8), state_ptr)
 
     // 16-byte arg block: [ch_ptr(8), state_ptr(8)]
-    arg_ptr = @builtin.raw_allocate(cast(16, usize))
-    @builtin.store(arg_ptr, ch_ptr)
-    @builtin.store(@builtin.gep(arg_ptr, 8), state_ptr)
-    @builtin.store(@builtin.gep(ptr, 16), arg_ptr)
+    arg_ptr = raw_allocate(cast(16, usize))
+    store_rawptr(arg_ptr, ch_ptr)
+    store_rawptr(gep(arg_ptr, 8), state_ptr)
+    store_rawptr(gep(ptr, 16), arg_ptr)
 
-    thread_ptr = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(@builtin.gep(ptr, 24), thread_ptr)
+    thread_ptr = raw_allocate(cast(8, usize))
+    store_rawptr(gep(ptr, 24), thread_ptr)
 
-    pthread_create(thread_ptr, @builtin.null_ptr(), worker, arg_ptr)
+    pthread_create(thread_ptr, null_ptr(), worker, arg_ptr)
 
     Actor { ptr: ptr }
 }
 
 // Send an i64 message to the actor's mailbox.
 actor_send = (a: Actor, msg: i64) void {
-    ch_ptr = @builtin.load<RawPtr<u8>>(a.ptr)
+    ch_ptr = load_rawptr(a.ptr)
     actor_send_raw(ch_ptr, msg)
 }
 
 // Receive a message from the actor's mailbox (for use inside the worker).
 // Exported so worker functions defined outside this module can call it.
 actor_recv = (a: Actor) i64 {
-    ch_ptr = @builtin.load<RawPtr<u8>>(a.ptr)
+    ch_ptr = load_rawptr(a.ptr)
     actor_recv_raw(ch_ptr)
 }
 
 // Stop the actor: send the sentinel (-1) and join the worker thread.
 actor_stop = (a: Actor) void {
     sentinel = cast(0 - 1, i64)
-    ch_ptr = @builtin.load<RawPtr<u8>>(a.ptr)
+    ch_ptr = load_rawptr(a.ptr)
     actor_send_raw(ch_ptr, sentinel)
-    thread_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(a.ptr, 24))
-    tid = @builtin.load<i64>(thread_ptr)
-    pthread_join(tid, @builtin.null_ptr())
+    thread_ptr = load_rawptr(gep(a.ptr, 24))
+    tid = load_i64(thread_ptr)
+    pthread_join(tid, null_ptr())
 }
 
 // Read the accumulated i64 state (call only after actor_stop).
 actor_state = (a: Actor) i64 {
-    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(a.ptr, 8))
-    @builtin.load<i64>(state_ptr)
+    state_ptr = load_rawptr(gep(a.ptr, 8))
+    load_i64(state_ptr)
 }
 
 // Free all resources (call after actor_stop).
 actor_free = (a: Actor) void {
-    ch_ptr = @builtin.load<RawPtr<u8>>(a.ptr)
+    ch_ptr = load_rawptr(a.ptr)
     _chan_dealloc(ch_ptr)
 
-    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(a.ptr, 8))
-    @builtin.raw_deallocate(state_ptr, cast(8, usize))
+    state_ptr = load_rawptr(gep(a.ptr, 8))
+    raw_deallocate(state_ptr, cast(8, usize))
 
-    arg_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(a.ptr, 16))
-    @builtin.raw_deallocate(arg_ptr, cast(16, usize))
+    arg_ptr = load_rawptr(gep(a.ptr, 16))
+    raw_deallocate(arg_ptr, cast(16, usize))
 
-    thread_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(a.ptr, 24))
-    @builtin.raw_deallocate(thread_ptr, cast(8, usize))
+    thread_ptr = load_rawptr(gep(a.ptr, 24))
+    raw_deallocate(thread_ptr, cast(8, usize))
 
-    @builtin.raw_deallocate(a.ptr, cast(32, usize))
+    raw_deallocate(a.ptr, cast(32, usize))
 }
 
 @export({ Actor, actor_new, actor_send, actor_recv, actor_recv_raw, actor_send_raw, actor_stop, actor_state, actor_free })

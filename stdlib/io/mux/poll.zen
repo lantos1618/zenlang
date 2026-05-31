@@ -13,26 +13,26 @@
 //
 // x86-64 Linux syscall number: poll=7.
 
-{ sys3 } = std.compiler
+{ sys3, raw_allocate, raw_deallocate, gep, ptr_to_int, load_i16, store_i32, store_i16 } = std.compiler
 
 // Poll a single fd with a given events mask and timeout_ms. Returns the
 // revents mask on the fd (>0 means ready), 0 for timeout, <0 for error.
 // Pass timeout_ms = 0 for an instant (non-blocking) check.
 poll_one = (fd: i64, events: i64, timeout_ms: i64) i64 {
     // struct pollfd is 8 bytes: [fd i32, events i16, revents i16]
-    buf = @builtin.raw_allocate(cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
     fd_i32 = cast(fd, i32)
     ev_i16 = cast(events, i16)
-    @builtin.store(buf, fd_i32)
-    ev_ptr = @builtin.gep(buf, 4)
-    @builtin.store(ev_ptr, ev_i16)
-    rev_ptr = @builtin.gep(buf, 6)
+    store_i32(buf, fd_i32)
+    ev_ptr = gep(buf, 4)
+    store_i16(ev_ptr, ev_i16)
+    rev_ptr = gep(buf, 6)
     zero_i16 = cast(0, i16)
-    @builtin.store(rev_ptr, zero_i16)
-    rc = sys3(7, @builtin.ptr_to_int(buf), 1, timeout_ms)
-    revents_i16 = @builtin.load<i16>(rev_ptr)
+    store_i16(rev_ptr, zero_i16)
+    rc = sys3(7, ptr_to_int(buf), 1, timeout_ms)
+    revents_i16 = load_i16(rev_ptr)
     revents = cast(revents_i16, i64)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    raw_deallocate(buf, cast(8, usize))
     // Return revents on success (rc==1), rc otherwise (0=timeout, <0=error).
     is_ready = rc == 1
     is_ready ? | true { revents } | false { rc }

@@ -13,7 +13,7 @@
 // sock_fprog (16 bytes on x86-64): len u16@0, <pad>, filter ptr@8.
 // "return ALLOW" = code BPF_RET|BPF_K (0x06), k SECCOMP_RET_ALLOW (0x7fff0000).
 
-{ sys5 } = std.compiler
+{ sys5, raw_allocate, gep, ptr_to_int, store_u16, store_u8, store_u32, store_i64 } = std.compiler
 
 // SECCOMP_RET_ALLOW, the value a filter returns to permit a syscall.
 seccomp_ret_allow = () i64 {
@@ -26,18 +26,18 @@ seccomp_install_allow_all = () i64 {
     sys5(157, 38, 1, 0, 0, 0)
 
     // One BPF instruction: RET ALLOW.
-    filter = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(filter, cast(6, u16))
-    @builtin.store(@builtin.gep(filter, 2), cast(0, u8))
-    @builtin.store(@builtin.gep(filter, 3), cast(0, u8))
-    @builtin.store(@builtin.gep(filter, 4), cast(2147418112, u32))
+    filter = raw_allocate(cast(8, usize))
+    store_u16(filter, cast(6, u16))
+    store_u8(gep(filter, 2), cast(0, u8))
+    store_u8(gep(filter, 3), cast(0, u8))
+    store_u32(gep(filter, 4), cast(2147418112, u32))
 
     // sock_fprog { len = 1, filter = &filter }.
-    prog = @builtin.raw_allocate(cast(16, usize))
-    @builtin.store(prog, cast(1, u16))
-    @builtin.store(@builtin.gep(prog, 8), @builtin.ptr_to_int(filter))
+    prog = raw_allocate(cast(16, usize))
+    store_u16(prog, cast(1, u16))
+    store_i64(gep(prog, 8), ptr_to_int(filter))
 
-    rc = sys5(157, 22, 2, @builtin.ptr_to_int(prog), 0, 0)
+    rc = sys5(157, 22, 2, ptr_to_int(prog), 0, 0)
     rc
 }
 

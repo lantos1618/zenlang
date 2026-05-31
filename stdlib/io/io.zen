@@ -1,4 +1,9 @@
 // Zen stdlib: IO on @builtin intrinsics. fd 1=stdout, 2=stderr.
+// NOTE: this file is a stdlib namespace module — it is spliced verbatim into
+// every program that writes `{ io } = std`. The namespace injector (Rust)
+// only understands function declarations, not import statements, so the
+// bodies here must call @builtin.* directly rather than via std.compiler
+// wrappers. This is the sole documented @builtin exception outside compiler.zen.
 print = (message: StaticString) void {
     @builtin.libc_write(1, @builtin.static_string_ptr(message), @builtin.strlen(message))
 }

@@ -4,6 +4,7 @@
 
 { Eq } = std.core.cmp
 { LinkedList, Node, list_new, list_push_front, list_len } = std.collections.linkedlist
+{ is_null, load } = std.compiler
 
 Set<T: Eq>: { items: LinkedList<T> }
 
@@ -16,10 +17,10 @@ set_len<T: Eq> = (s: Set<T>) i64 {
 }
 
 contains_from<T: Eq> = (ptr: RawPtr<u8>, target: T) bool {
-    @builtin.is_null(ptr) ?
+    is_null(ptr) ?
         | true { false }
         | false {
-            node = @builtin.load<Node<T>>(ptr)
+            node = load<Node<T>>(ptr)
             node.value.eq(target) ?
                 | true { true }
                 | false { contains_from<T>(node.next, target) }

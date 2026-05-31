@@ -1,12 +1,11 @@
 // The compiler facade: thin, typed Zen wrappers over the raw `@builtin` OS and
 // hardware hooks. Other stdlib modules should build on THESE rather than calling
-// `@builtin.syscallN` / `@builtin.atomic_*` directly, so the raw-intrinsic
-// surface lives in exactly one place (the intrinsics-in-Rust / stdlib-in-Zen
-// boundary).
-//   { sys1, sys3, atomic_load, atomic_store, atomic_cas } = std.compiler
+// `@builtin.*` directly, so the raw-intrinsic surface lives in exactly one place
+// (the intrinsics-in-Rust / stdlib-in-Zen boundary).
+//   { sys1, sys3, atomic_load, gep, load, store, sizeof, raw_allocate, ... } = std.compiler
 //
-// Syscall numbers are caller-supplied and platform-specific (these wrappers are
-// arch-agnostic; the numbers in sys/* modules are x86-64 Linux).
+// Note: mem_* and str_* prefixes avoid conflicts with the identically-named
+// C standard library functions that the Zen compiler emits into the same .c file.
 
 // --- syscalls: sysN(number, arg0..arg{N-1}) -> return value ---
 sys0 = (n: i64) i64 {
@@ -54,7 +53,155 @@ fence = () void {
     @builtin.fence()
 }
 
+// --- memory: raw allocation ---
+raw_allocate = (size: usize) RawPtr<u8> {
+    @builtin.raw_allocate(size)
+}
+raw_deallocate = (ptr: RawPtr<u8>, size: usize) void {
+    @builtin.raw_deallocate(ptr, size)
+}
+raw_reallocate = (ptr: RawPtr<u8>, old_size: usize, new_size: usize) RawPtr<u8> {
+    @builtin.raw_reallocate(ptr, old_size, new_size)
+}
+
+// --- memory: bulk operations (mem_ prefix avoids C stdlib name collisions) ---
+mem_copy = (dst: RawPtr<u8>, src: RawPtr<u8>, size: usize) void {
+    @builtin.memcpy(dst, src, size)
+}
+mem_move = (dst: RawPtr<u8>, src: RawPtr<u8>, size: usize) void {
+    @builtin.memmove(dst, src, size)
+}
+mem_set = (ptr: RawPtr<u8>, byte: u8, size: usize) void {
+    @builtin.memset(ptr, byte, size)
+}
+mem_cmp = (a: RawPtr<u8>, b: RawPtr<u8>, size: usize) i32 {
+    @builtin.memcmp(a, b, size)
+}
+
+// --- memory: concrete typed load/store helpers ---
+// Concrete-typed to avoid C redefinition when multiple modules use the same type.
+load_i64 = (ptr: RawPtr<u8>) i64 {
+    @builtin.load<i64>(ptr)
+}
+load_u64 = (ptr: RawPtr<u8>) u64 {
+    @builtin.load<u64>(ptr)
+}
+load_u8 = (ptr: RawPtr<u8>) u8 {
+    @builtin.load<u8>(ptr)
+}
+load_u32 = (ptr: RawPtr<u8>) u32 {
+    @builtin.load<u32>(ptr)
+}
+load_u16 = (ptr: RawPtr<u8>) u16 {
+    @builtin.load<u16>(ptr)
+}
+load_i32 = (ptr: RawPtr<u8>) i32 {
+    @builtin.load<i32>(ptr)
+}
+load_i16 = (ptr: RawPtr<u8>) i16 {
+    @builtin.load<i16>(ptr)
+}
+load_rawptr = (ptr: RawPtr<u8>) RawPtr<u8> {
+    @builtin.load<RawPtr<u8>>(ptr)
+}
+
+store_i64 = (ptr: RawPtr<u8>, value: i64) void {
+    @builtin.store(ptr, value)
+}
+store_u64 = (ptr: RawPtr<u8>, value: u64) void {
+    @builtin.store(ptr, value)
+}
+store_u8 = (ptr: RawPtr<u8>, value: u8) void {
+    @builtin.store(ptr, value)
+}
+store_u32 = (ptr: RawPtr<u8>, value: u32) void {
+    @builtin.store(ptr, value)
+}
+store_u16 = (ptr: RawPtr<u8>, value: u16) void {
+    @builtin.store(ptr, value)
+}
+store_i32 = (ptr: RawPtr<u8>, value: i32) void {
+    @builtin.store(ptr, value)
+}
+store_i16 = (ptr: RawPtr<u8>, value: i16) void {
+    @builtin.store(ptr, value)
+}
+store_rawptr = (ptr: RawPtr<u8>, value: RawPtr<u8>) void {
+    @builtin.store(ptr, value)
+}
+
+// Generic load/store for complex types (structs, enums) — use only where T is
+// a concrete non-scalar type specific to that module (no cross-module sharing).
+load<T> = (ptr: RawPtr<u8>) T {
+    @builtin.load<T>(ptr)
+}
+store<T> = (ptr: RawPtr<u8>, value: T) void {
+    @builtin.store(ptr, value)
+}
+
+// sizeof: generic — use sizeof_i64 etc where possible to avoid C redefinition.
+sizeof_i64 = () usize {
+    @builtin.sizeof<i64>()
+}
+sizeof_rawptr = () usize {
+    @builtin.sizeof<RawPtr<u8>>()
+}
+sizeof<T> = () usize {
+    @builtin.sizeof<T>()
+}
+
+// --- pointer arithmetic and conversion ---
+gep = (ptr: RawPtr<u8>, offset: i64) RawPtr<u8> {
+    @builtin.gep(ptr, offset)
+}
+ptr_to_int = (ptr: RawPtr<u8>) i64 {
+    @builtin.ptr_to_int(ptr)
+}
+int_to_ptr = (addr: i64) RawPtr<u8> {
+    @builtin.int_to_ptr(addr)
+}
+null_ptr = () RawPtr<u8> {
+    @builtin.null_ptr()
+}
+is_null = (ptr: RawPtr<u8>) bool {
+    @builtin.is_null(ptr)
+}
+
+// --- string intrinsics (str_ prefix avoids C stdlib name collisions) ---
+str_len = (s: StaticString) usize {
+    @builtin.strlen(s)
+}
+str_ptr = (s: StaticString) RawPtr<u8> {
+    @builtin.static_string_ptr(s)
+}
+libc_write = (fd: i64, ptr: RawPtr<u8>, len: usize) i64 {
+    @builtin.libc_write(fd, ptr, len)
+}
+
+// --- bit intrinsics ---
+ctpop = (x: u64) u64 {
+    @builtin.ctpop(x)
+}
+ctlz = (x: u64) u64 {
+    @builtin.ctlz(x)
+}
+cttz = (x: u64) u64 {
+    @builtin.cttz(x)
+}
+bswap64 = (x: u64) u64 {
+    @builtin.bswap64(x)
+}
+
 @export({
     sys0, sys1, sys2, sys3, sys4, sys5, sys6,
     atomic_load, atomic_store, atomic_add, atomic_sub, atomic_cas, atomic_xchg, fence,
+    raw_allocate, raw_deallocate, raw_reallocate,
+    mem_copy, mem_move, mem_set, mem_cmp,
+    load_i64, load_u64, load_u8, load_u32, load_u16, load_i32, load_i16, load_rawptr,
+    store_i64, store_u64, store_u8, store_u32, store_u16, store_i32, store_i16, store_rawptr,
+    load, store,
+    sizeof_i64, sizeof_rawptr, sizeof,
+    gep, ptr_to_int, int_to_ptr, null_ptr, is_null,
+    str_len, str_ptr, libc_write,
+    ctpop, ctlz, cttz, bswap64,
 })

@@ -3,15 +3,15 @@
 // atomic_cas from std.compiler so it is safe under concurrent use.
 //   { Once, once_new, once_should_run, once_free } = std.concurrency.sync.once
 
-{ atomic_cas, atomic_load } = std.compiler
+{ atomic_cas, atomic_load, raw_allocate, raw_deallocate, store_u64 } = std.compiler
 
 // An atomic flag: 0 = not yet run, 1 = already run.
 Once: { ptr: RawPtr<u8> }
 
 // Allocate a new Once (initially not-yet-run).
 once_new = () Once {
-    ptr = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(ptr, cast(0, u64))
+    ptr = raw_allocate(cast(8, usize))
+    store_u64(ptr, cast(0, u64))
     Once { ptr: ptr }
 }
 
@@ -23,7 +23,7 @@ once_should_run = (o: Once) bool {
 
 // Free the underlying allocation.
 once_free = (o: Once) void {
-    @builtin.raw_deallocate(o.ptr, cast(8, usize))
+    raw_deallocate(o.ptr, cast(8, usize))
 }
 
 @export({ Once, once_new, once_should_run, once_free })

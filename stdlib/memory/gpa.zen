@@ -13,6 +13,7 @@
 { Allocator } = std.memory.allocator
 { Pool, pool, pool_free } = std.memory.pool
 { Heap, heap, heap_free } = std.memory.heap
+{ mem_copy } = std.compiler
 
 Gpa: { pool: Pool, heap: Heap, threshold: i64 }
 
@@ -47,7 +48,7 @@ Gpa.implements(Allocator) {
                 np = new_small ?
                     | true { self.pool.alloc(new) }
                     | false { self.heap.alloc(new) }
-                @builtin.memcpy(np, p, old)
+                mem_copy(np, p, old)
                 old_small ?
                     | true {
                         self.pool.free(p, old)

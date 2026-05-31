@@ -24,7 +24,7 @@
 //   { inotify_init, inotify_add_watch, inotify_rm_watch, inotify_read_event,
 //     in_create, in_delete, in_modify, in_all_events } = std.io.inotify
 
-{ sys1, sys2, sys3 } = std.compiler
+{ sys1, sys2, sys3, ptr_to_int } = std.compiler
 
 // Create an inotify instance. flags=0 or IN_NONBLOCK=2048/IN_CLOEXEC=524288.
 // Returns inotify fd (>= 0) on success, negative errno on failure.
@@ -36,7 +36,7 @@ inotify_init = (flags: i64) i64 {
 // `mask`. Returns the watch descriptor (wd >= 0) on success, negative errno
 // on failure.
 inotify_add_watch = (ifd: i64, path: RawPtr<u8>, mask: i64) i64 {
-    sys3(254, ifd, @builtin.ptr_to_int(path), mask)
+    sys3(254, ifd, ptr_to_int(path), mask)
 }
 
 // Remove a watch descriptor from an inotify instance. Returns 0 on success.
@@ -47,7 +47,7 @@ inotify_rm_watch = (ifd: i64, wd: i64) i64 {
 // Read one inotify_event from `ifd` into `buf` (at least 64 bytes recommended).
 // Returns bytes read (>= 16) on success, or negative errno.
 inotify_read_event = (ifd: i64, buf: RawPtr<u8>, buf_len: i64) i64 {
-    sys3(0, ifd, @builtin.ptr_to_int(buf), buf_len)
+    sys3(0, ifd, ptr_to_int(buf), buf_len)
 }
 
 // Close the inotify fd. Returns 0 on success.

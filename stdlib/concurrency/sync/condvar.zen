@@ -3,6 +3,8 @@
 //   { Condvar, condvar_new, condvar_wait, condvar_signal, condvar_broadcast, condvar_destroy }
 //     = std.concurrency.sync.condvar
 
+{ raw_allocate, raw_deallocate, mem_set, null_ptr } = std.compiler
+
 @extern pthread_cond_init = (cond: RawPtr<u8>, attr: RawPtr<u8>) i32
 @extern pthread_cond_wait = (cond: RawPtr<u8>, mutex: RawPtr<u8>) i32
 @extern pthread_cond_signal = (cond: RawPtr<u8>) i32
@@ -14,9 +16,9 @@ Condvar: { ptr: RawPtr<u8> }
 
 // Allocate and initialise a condition variable.
 condvar_new = () Condvar {
-    ptr = @builtin.raw_allocate(cast(64, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
-    pthread_cond_init(ptr, @builtin.null_ptr())
+    ptr = raw_allocate(cast(64, usize))
+    mem_set(ptr, cast(0, u8), cast(64, usize))
+    pthread_cond_init(ptr, null_ptr())
     Condvar { ptr: ptr }
 }
 
@@ -39,7 +41,7 @@ condvar_broadcast = (cv: Condvar) void {
 // Destroy and free the condvar.
 condvar_destroy = (cv: Condvar) void {
     pthread_cond_destroy(cv.ptr)
-    @builtin.raw_deallocate(cv.ptr, cast(64, usize))
+    raw_deallocate(cv.ptr, cast(64, usize))
 }
 
 @export({ Condvar, condvar_new, condvar_wait, condvar_signal, condvar_broadcast, condvar_destroy })

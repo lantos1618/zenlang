@@ -4,6 +4,8 @@
 //   { Thread, thread_spawn, thread_join, thread_free }
 //     = std.concurrency.sync.thread
 
+{ raw_allocate, raw_deallocate, null_ptr, load_i64 } = std.compiler
+
 @extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
 @extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
 
@@ -12,20 +14,20 @@ Thread: { ptr: RawPtr<u8> }
 
 // Spawn a new thread running `start(arg)`. Returns the Thread handle.
 thread_spawn = (start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) Thread {
-    ptr = @builtin.raw_allocate(cast(8, usize))
-    pthread_create(ptr, @builtin.null_ptr(), start, arg)
+    ptr = raw_allocate(cast(8, usize))
+    pthread_create(ptr, null_ptr(), start, arg)
     Thread { ptr: ptr }
 }
 
 // Block until the thread finishes. The thread's return value is discarded.
 thread_join = (t: Thread) void {
-    tid = @builtin.load<i64>(t.ptr)
-    pthread_join(tid, @builtin.null_ptr())
+    tid = load_i64(t.ptr)
+    pthread_join(tid, null_ptr())
 }
 
 // Free the Thread handle (call after thread_join).
 thread_free = (t: Thread) void {
-    @builtin.raw_deallocate(t.ptr, cast(8, usize))
+    raw_deallocate(t.ptr, cast(8, usize))
 }
 
 @export({ Thread, thread_spawn, thread_join, thread_free })

@@ -1,8 +1,10 @@
 // Typed memory allocator. Collections allocate through an `Allocator` instead
-// of calling `@builtin.raw_allocate` directly, so the allocation strategy
+// of calling `raw_allocate` directly, so the allocation strategy
 // (system, arena, pool) is a choice rather than hardcoded malloc. Backed by the
-// compiler's raw-memory @builtins.
+// compiler's raw-memory builtins via std.compiler.
 //   { Allocator, Mallocator, mallocator } = std.memory.allocator
+
+{ raw_allocate, raw_reallocate, raw_deallocate } = std.compiler
 
 Allocator: behavior {
     alloc: (Self, usize) RawPtr<u8>
@@ -10,18 +12,18 @@ Allocator: behavior {
     free: (Self, RawPtr<u8>, usize) void
 }
 
-// The default system allocator: malloc / realloc / free via @builtin.
+// The default system allocator: malloc / realloc / free via std.compiler.
 Mallocator: { tag: i64 }
 
 Mallocator.implements(Allocator) {
     alloc = (self: Mallocator, size: usize) RawPtr<u8> {
-        @builtin.raw_allocate(size)
+        raw_allocate(size)
     }
     realloc = (self: Mallocator, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
-        @builtin.raw_reallocate(p, old, new)
+        raw_reallocate(p, old, new)
     }
     free = (self: Mallocator, p: RawPtr<u8>, size: usize) void {
-        @builtin.raw_deallocate(p, size)
+        raw_deallocate(p, size)
     }
 }
 

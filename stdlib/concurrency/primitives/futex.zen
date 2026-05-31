@@ -3,19 +3,19 @@
 // FUTEX_WAIT(0): sleep if *addr == expected; FUTEX_WAKE(1): wake up to N waiters.
 //   { futex_wait, futex_wake } = std.concurrency.primitives.futex
 
-{ sys4 } = std.compiler
+{ sys4, ptr_to_int } = std.compiler
 
 // Sleep while *addr == expected (FUTEX_WAIT=0).
 // Returns 0 on wake, negative errno on error (e.g. -EAGAIN if *addr != expected).
 // Pass null (0) for timeout → indefinite wait.
 futex_wait = (addr: RawPtr<u8>, expected: i64) i64 {
-    sys4(202, @builtin.ptr_to_int(addr), 0, expected, 0)
+    sys4(202, ptr_to_int(addr), 0, expected, 0)
 }
 
 // Wake up to N threads waiting on addr (FUTEX_WAKE=1).
 // Returns the number of threads actually woken (0 if nobody was waiting).
 futex_wake = (addr: RawPtr<u8>, n: i64) i64 {
-    sys4(202, @builtin.ptr_to_int(addr), 1, n, 0)
+    sys4(202, ptr_to_int(addr), 1, n, 0)
 }
 
 @export({ futex_wait, futex_wake })

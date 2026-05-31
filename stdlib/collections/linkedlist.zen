@@ -1,14 +1,16 @@
-// Singly linked list with heap-allocated nodes, via @builtin intrinsics.
+// Singly linked list with heap-allocated nodes, via std.compiler wrappers.
 // Each node is one `raw_allocate(sizeof<Node<T>>())` block holding the value and
 // a raw pointer to the next node (null at the tail).
 // `{ LinkedList, list_new, list_push_front, list_head, list_pop_front, list_len } = std.collections.linkedlist`
+
+{ raw_allocate, raw_deallocate, sizeof, null_ptr, is_null, load, store } = std.compiler
 
 Node<T>: { value: T, next: RawPtr<u8> }
 
 LinkedList<T>: { head: RawPtr<u8>, len: i64 }
 
 list_new<T> = () LinkedList<T> {
-    LinkedList<T> { head: @builtin.null_ptr(), len: 0 }
+    LinkedList<T> { head: null_ptr(), len: 0 }
 }
 
 list_len<T> = (l: LinkedList<T>) i64 {
@@ -16,24 +18,24 @@ list_len<T> = (l: LinkedList<T>) i64 {
 }
 
 list_is_empty<T> = (l: LinkedList<T>) bool {
-    @builtin.is_null(l.head)
+    is_null(l.head)
 }
 
 list_push_front<T> = (l: LinkedList<T>, value: T) LinkedList<T> {
-    node ::= @builtin.raw_allocate(@builtin.sizeof<Node<T>>())
-    @builtin.store(node, Node<T> { value: value, next: l.head })
+    node ::= raw_allocate(sizeof<Node<T>>())
+    store<Node<T>>(node, Node<T> { value: value, next: l.head })
     LinkedList<T> { head: node, len: l.len + 1 }
 }
 
 list_head<T> = (l: LinkedList<T>) T {
-    @builtin.load<Node<T>>(l.head).value
+    load<Node<T>>(l.head).value
 }
 
 // Drop the front node, returning the tail. Reads the value with `list_head`
 // first; frees the popped node so the list does not leak.
 list_pop_front<T> = (l: LinkedList<T>) LinkedList<T> {
-    node ::= @builtin.load<Node<T>>(l.head)
-    @builtin.raw_deallocate(l.head, @builtin.sizeof<Node<T>>())
+    node ::= load<Node<T>>(l.head)
+    raw_deallocate(l.head, sizeof<Node<T>>())
     LinkedList<T> { head: node.next, len: l.len - 1 }
 }
 

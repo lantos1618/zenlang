@@ -19,6 +19,7 @@
 //     = std.concurrency.actor.supervisor
 
 { Actor, actor_new, actor_send, actor_recv_raw, actor_send_raw, actor_stop, actor_state, actor_free } = std.concurrency.actor.actor
+{ raw_allocate, raw_deallocate, mem_set, gep, null_ptr, load_i64, store_i64, load_rawptr, store_rawptr } = std.compiler
 
 @extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
 @extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
@@ -29,12 +30,12 @@ Supervisor: { ptr: RawPtr<u8> }
 // Create a supervisor for the given actor and worker function.
 // Takes ownership of the actor (do NOT call actor_free separately).
 supervisor_new = (a: Actor, worker: (RawPtr<u8>) RawPtr<u8>) Supervisor {
-    ptr = @builtin.raw_allocate(cast(24, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(24, usize))
-    @builtin.store(ptr, a.ptr)
+    ptr = raw_allocate(cast(24, usize))
+    mem_set(ptr, cast(0, u8), cast(24, usize))
+    store_rawptr(ptr, a.ptr)
     worker_as_ptr = cast(worker, RawPtr<u8>)
-    @builtin.store(@builtin.gep(ptr, 8), worker_as_ptr)
-    @builtin.store(@builtin.gep(ptr, 16), cast(0, i64))
+    store_rawptr(gep(ptr, 8), worker_as_ptr)
+    store_i64(gep(ptr, 16), cast(0, i64))
     Supervisor { ptr: ptr }
 }
 
@@ -42,66 +43,66 @@ supervisor_new = (a: Actor, worker: (RawPtr<u8>) RawPtr<u8>) Supervisor {
 // state cell to 0, allocate a new pthread_t cell, spawn the worker again.
 // Increments restart_count.
 supervisor_restart = (sup: Supervisor) void {
-    actor_ptr = @builtin.load<RawPtr<u8>>(sup.ptr)
+    actor_ptr = load_rawptr(sup.ptr)
 
     // Join and free the old thread cell
-    thread_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(actor_ptr, 24))
-    @builtin.raw_deallocate(thread_ptr, cast(8, usize))
+    thread_ptr = load_rawptr(gep(actor_ptr, 24))
+    raw_deallocate(thread_ptr, cast(8, usize))
 
     // Reset the state cell to 0
-    state_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(actor_ptr, 8))
-    @builtin.store(state_ptr, cast(0, i64))
+    state_ptr = load_rawptr(gep(actor_ptr, 8))
+    store_i64(state_ptr, cast(0, i64))
 
     // Allocate a new thread cell
-    new_thread_ptr = @builtin.raw_allocate(cast(8, usize))
-    @builtin.store(@builtin.gep(actor_ptr, 24), new_thread_ptr)
+    new_thread_ptr = raw_allocate(cast(8, usize))
+    store_rawptr(gep(actor_ptr, 24), new_thread_ptr)
 
     // Re-use the existing arg block ([ch_ptr, state_ptr] at actor_ptr+16)
-    arg_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(actor_ptr, 16))
+    arg_ptr = load_rawptr(gep(actor_ptr, 16))
 
     // Spawn the worker again
-    worker_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(sup.ptr, 8))
+    worker_ptr = load_rawptr(gep(sup.ptr, 8))
     worker = cast(worker_ptr, (RawPtr<u8>) RawPtr<u8>)
-    pthread_create(new_thread_ptr, @builtin.null_ptr(), worker, arg_ptr)
+    pthread_create(new_thread_ptr, null_ptr(), worker, arg_ptr)
 
     // Increment restart count
-    rc_ptr = @builtin.gep(sup.ptr, 16)
-    rc = @builtin.load<i64>(rc_ptr)
-    @builtin.store(rc_ptr, rc + 1)
+    rc_ptr = gep(sup.ptr, 16)
+    rc = load_i64(rc_ptr)
+    store_i64(rc_ptr, rc + 1)
 }
 
 // How many times the actor has been restarted.
 supervisor_restart_count = (sup: Supervisor) i64 {
-    @builtin.load<i64>(@builtin.gep(sup.ptr, 16))
+    load_i64(gep(sup.ptr, 16))
 }
 
 // Read the actor's current accumulated state (safe after actor is stopped).
 supervisor_actor_state = (sup: Supervisor) i64 {
-    actor_ptr = @builtin.load<RawPtr<u8>>(sup.ptr)
+    actor_ptr = load_rawptr(sup.ptr)
     a = Actor { ptr: actor_ptr }
     actor_state(a)
 }
 
 // Stop the actor and send the actor a message to use as state.
 supervisor_send = (sup: Supervisor, msg: i64) void {
-    actor_ptr = @builtin.load<RawPtr<u8>>(sup.ptr)
+    actor_ptr = load_rawptr(sup.ptr)
     a = Actor { ptr: actor_ptr }
     actor_send(a, msg)
 }
 
 // Stop the currently running actor thread (send sentinel + join).
 supervisor_stop = (sup: Supervisor) void {
-    actor_ptr = @builtin.load<RawPtr<u8>>(sup.ptr)
+    actor_ptr = load_rawptr(sup.ptr)
     a = Actor { ptr: actor_ptr }
     actor_stop(a)
 }
 
 // Free the supervisor and the underlying actor.
 supervisor_free = (sup: Supervisor) void {
-    actor_ptr = @builtin.load<RawPtr<u8>>(sup.ptr)
+    actor_ptr = load_rawptr(sup.ptr)
     a = Actor { ptr: actor_ptr }
     actor_free(a)
-    @builtin.raw_deallocate(sup.ptr, cast(24, usize))
+    raw_deallocate(sup.ptr, cast(24, usize))
 }
 
 @export({ Supervisor, supervisor_new, supervisor_restart, supervisor_restart_count, supervisor_actor_state, supervisor_send, supervisor_stop, supervisor_free })

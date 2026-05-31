@@ -1,18 +1,21 @@
-// Allocator-backed dynamic String: heap u8 buffer built on @builtin.
+// Allocator-backed dynamic String: heap u8 buffer built on std.compiler wrappers.
 // `{ String, string_new, string_from, string_push_byte, string_len,
 //    string_byte_at, string_print, string_free } = std.collections.string`
+
+{ raw_allocate, raw_deallocate, raw_reallocate, gep, load_u8, store_u8,
+  str_len, str_ptr, mem_copy, mem_cmp, libc_write } = std.compiler
 
 String: { data: RawPtr<u8>, len: i64, cap: i64 }
 
 string_new = () String {
-    String { data: @builtin.raw_allocate(8), len: 0, cap: 8 }
+    String { data: raw_allocate(8), len: 0, cap: 8 }
 }
 
 // Copy a baked StaticString into a fresh heap String.
 string_from = (text: StaticString) String {
-    n = cast(@builtin.strlen(text), i64)
-    p = @builtin.raw_allocate(cast(n, usize))
-    @builtin.memcpy(p, @builtin.static_string_ptr(text), cast(n, usize))
+    n = cast(str_len(text), i64)
+    p = raw_allocate(cast(n, usize))
+    mem_copy(p, str_ptr(text), cast(n, usize))
     String { data: p, len: n, cap: n }
 }
 
@@ -21,7 +24,7 @@ string_len = (s: String) i64 {
 }
 
 string_byte_at = (s: String, index: i64) u8 {
-    @builtin.load<u8>(@builtin.gep(s.data, index))
+    load_u8(gep(s.data, index))
 }
 
 string_push_byte = (s: String, byte: u8) String {
@@ -29,38 +32,38 @@ string_push_byte = (s: String, byte: u8) String {
         | true {
             new_cap = s.cap * 2
             String {
-                data: @builtin.raw_reallocate(s.data, cast(s.cap, usize), cast(new_cap, usize)),
+                data: raw_reallocate(s.data, cast(s.cap, usize), cast(new_cap, usize)),
                 len: s.len,
                 cap: new_cap,
             }
         }
         | false { s }
-    @builtin.store(@builtin.gep(grown.data, grown.len), byte)
+    store_u8(gep(grown.data, grown.len), byte)
     String { data: grown.data, len: grown.len + 1, cap: grown.cap }
 }
 
 // Write the string's bytes to stdout.
 string_print = (s: String) void {
-    @builtin.libc_write(1, s.data, cast(s.len, usize))
+    libc_write(1, s.data, cast(s.len, usize))
 }
 
 string_free = (s: String) void {
-    @builtin.raw_deallocate(s.data, cast(s.cap, usize))
+    raw_deallocate(s.data, cast(s.cap, usize))
 }
 
 // Concatenate two strings into a fresh heap String.
 string_concat = (a: String, b: String) String {
     total = a.len + b.len
-    p = @builtin.raw_allocate(cast(total, usize))
-    @builtin.memcpy(p, a.data, cast(a.len, usize))
-    @builtin.memcpy(@builtin.gep(p, a.len), b.data, cast(b.len, usize))
+    p = raw_allocate(cast(total, usize))
+    mem_copy(p, a.data, cast(a.len, usize))
+    mem_copy(gep(p, a.len), b.data, cast(b.len, usize))
     String { data: p, len: total, cap: total }
 }
 
 // Byte-equality of two strings.
 string_eq = (a: String, b: String) bool {
     a.len == b.len ?
-        | true { @builtin.memcmp(a.data, b.data, cast(a.len, usize)) == 0 }
+        | true { mem_cmp(a.data, b.data, cast(a.len, usize)) == 0 }
         | false { false }
 }
 

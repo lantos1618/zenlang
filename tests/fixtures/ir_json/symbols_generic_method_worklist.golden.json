@@ -115,9 +115,9 @@
         },
         {
           "definition_span": {
-            "end": 195,
+            "end": 579,
             "file_id": 0,
-            "start": 65
+            "start": 449
           },
           "id": 6,
           "is_public": false,
@@ -135,9 +135,9 @@
         },
         {
           "definition_span": {
-            "end": 392,
+            "end": 776,
             "file_id": 0,
-            "start": 196
+            "start": 580
           },
           "id": 7,
           "is_public": false,
@@ -155,9 +155,9 @@
         },
         {
           "definition_span": {
-            "end": 590,
+            "end": 974,
             "file_id": 0,
-            "start": 393
+            "start": 777
           },
           "id": 8,
           "is_public": false,
@@ -214,9 +214,9 @@
         },
         {
           "definition_span": {
-            "end": 95,
+            "end": 479,
             "file_id": 0,
-            "start": 74
+            "start": 458
           },
           "id": 12,
           "is_mutable": false,
@@ -227,9 +227,9 @@
         },
         {
           "definition_span": {
-            "end": 228,
+            "end": 612,
             "file_id": 0,
-            "start": 207
+            "start": 591
           },
           "id": 13,
           "is_mutable": false,
@@ -240,9 +240,9 @@
         },
         {
           "definition_span": {
-            "end": 426,
+            "end": 810,
             "file_id": 0,
-            "start": 405
+            "start": 789
           },
           "id": 14,
           "is_mutable": false,

@@ -20,7 +20,7 @@
 //
 // x86-64 Linux syscall numbers as documented above.
 
-{ sys1, sys2, sys3, sys6 } = std.compiler
+{ sys1, sys2, sys3, sys6, gep, ptr_to_int, load_u16, store_u16, store_u32, store_i64 } = std.compiler
 
 // --- Domain / type constants ---
 
@@ -60,7 +60,7 @@ socket_close = (fd: i64) i64 {
 // sin_addr:u32 (big-endian), pad:u64}. `addr_len` should be 16.
 // Returns 0 on success, negative errno on failure.
 socket_bind = (fd: i64, addr_buf: RawPtr<u8>, addr_len: i64) i64 {
-    sys3(49, fd, @builtin.ptr_to_int(addr_buf), addr_len)
+    sys3(49, fd, ptr_to_int(addr_buf), addr_len)
 }
 
 // Mark a bound socket as passive (server). `backlog` = max pending connections.
@@ -79,21 +79,21 @@ socket_accept = (fd: i64) i64 {
 // Connect to a remote address. `addr_buf` is a filled-in sockaddr_in (16 bytes).
 // Returns 0 on success, negative errno on failure.
 socket_connect = (fd: i64, addr_buf: RawPtr<u8>, addr_len: i64) i64 {
-    sys3(42, fd, @builtin.ptr_to_int(addr_buf), addr_len)
+    sys3(42, fd, ptr_to_int(addr_buf), addr_len)
 }
 
 // Send `len` bytes from `buf` on the connected socket. flags=0 for blocking send.
 // Uses sendto(44) with NULL dest_addr and addrlen=0 (equivalent to send on a
 // connected socket). Returns bytes sent or negative errno.
 socket_send = (fd: i64, buf: RawPtr<u8>, len: i64, flags: i64) i64 {
-    sys6(44, fd, @builtin.ptr_to_int(buf), len, flags, 0, 0)
+    sys6(44, fd, ptr_to_int(buf), len, flags, 0, 0)
 }
 
 // Receive up to `len` bytes from the connected socket into `buf`. flags=0.
 // Uses recvfrom(45) with NULL peer address args (equivalent to recv).
 // Returns bytes received, 0 on shutdown, or negative errno.
 socket_recv = (fd: i64, buf: RawPtr<u8>, len: i64, flags: i64) i64 {
-    sys6(45, fd, @builtin.ptr_to_int(buf), len, flags, 0, 0)
+    sys6(45, fd, ptr_to_int(buf), len, flags, 0, 0)
 }
 
 // --- Convenience: build a sockaddr_in in a caller-supplied 16-byte buffer ---
@@ -104,21 +104,21 @@ socket_recv = (fd: i64, buf: RawPtr<u8>, len: i64, flags: i64) i64 {
 // The kernel layout: sin_family(u16) sin_port(u16) sin_addr(u32) pad(u64).
 sockaddr_in_fill = (buf: RawPtr<u8>, addr_be: i64, port_be: i64) void {
     fam_u16 = cast(2, u16)
-    @builtin.store(buf, fam_u16)
-    port_ptr = @builtin.gep(buf, 2)
+    store_u16(buf, fam_u16)
+    port_ptr = gep(buf, 2)
     port_u16 = cast(port_be, u16)
-    @builtin.store(port_ptr, port_u16)
-    addr_ptr = @builtin.gep(buf, 4)
+    store_u16(port_ptr, port_u16)
+    addr_ptr = gep(buf, 4)
     addr_u32 = cast(addr_be, u32)
-    @builtin.store(addr_ptr, addr_u32)
-    pad_ptr = @builtin.gep(buf, 8)
-    @builtin.store(pad_ptr, cast(0, i64))
+    store_u32(addr_ptr, addr_u32)
+    pad_ptr = gep(buf, 8)
+    store_i64(pad_ptr, cast(0, i64))
 }
 
 // Read the port (in network byte order) from a filled sockaddr_in buffer.
 sockaddr_in_port = (buf: RawPtr<u8>) i64 {
-    port_ptr = @builtin.gep(buf, 2)
-    p_u16 = @builtin.load<u16>(port_ptr)
+    port_ptr = gep(buf, 2)
+    p_u16 = load_u16(port_ptr)
     cast(p_u16, i64)
 }
 

@@ -11,7 +11,7 @@
 // x86-64 Linux syscall numbers: epoll_wait=232, epoll_ctl=233, epoll_create1=291.
 // epoll_ctl ops: EPOLL_CTL_ADD=1, EPOLL_CTL_DEL=2, EPOLL_CTL_MOD=3.
 
-{ sys1, sys2, sys4 } = std.compiler
+{ sys1, sys2, sys4, raw_allocate, raw_deallocate, gep, ptr_to_int, load_u32, store_u32, store_i64 } = std.compiler
 
 // Create an epoll instance. Returns the epoll fd (>= 0 on success).
 epoll_create = () i64 {
@@ -23,22 +23,22 @@ epoll_create = () i64 {
 // epoll_event layout: [events u32 @ 0, data u64 @ 4 (packed) or @ 8 (padded)]
 // We write a 16-byte buffer and populate both possible data offsets.
 epoll_add = (epfd: i64, fd: i64, events: i64) i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
+    buf = raw_allocate(cast(16, usize))
     ev_u32 = cast(events, u32)
-    @builtin.store(buf, ev_u32)
+    store_u32(buf, ev_u32)
     // Write data as i64 at offset 4 (packed layout used by kernel).
-    data_ptr = @builtin.gep(buf, 4)
-    @builtin.store(data_ptr, fd)
-    rc = sys4(233, epfd, 1, fd, @builtin.ptr_to_int(buf))
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    data_ptr = gep(buf, 4)
+    store_i64(data_ptr, fd)
+    rc = sys4(233, epfd, 1, fd, ptr_to_int(buf))
+    raw_deallocate(buf, cast(16, usize))
     rc
 }
 
 // Remove fd from the epoll instance. Returns 0 on success.
 epoll_del = (epfd: i64, fd: i64) i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
-    rc = sys4(233, epfd, 2, fd, @builtin.ptr_to_int(buf))
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    buf = raw_allocate(cast(16, usize))
+    rc = sys4(233, epfd, 2, fd, ptr_to_int(buf))
+    raw_deallocate(buf, cast(16, usize))
     rc
 }
 
@@ -47,12 +47,12 @@ epoll_del = (epfd: i64, fd: i64) i64 {
 // Allocates a 16-byte event buffer (safe for both 12-byte packed and
 // 16-byte padded kernel layouts).
 epoll_wait_one = (epfd: i64, timeout_ms: i64) i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
-    rc = sys4(232, epfd, @builtin.ptr_to_int(buf), 1, timeout_ms)
+    buf = raw_allocate(cast(16, usize))
+    rc = sys4(232, epfd, ptr_to_int(buf), 1, timeout_ms)
     // events field is always at offset 0 regardless of packing.
-    ev_u32 = @builtin.load<u32>(buf)
+    ev_u32 = load_u32(buf)
     ev = cast(ev_u32, i64)
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    raw_deallocate(buf, cast(16, usize))
     is_ready = rc == 1
     is_ready ? | true { ev } | false { rc }
 }

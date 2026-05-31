@@ -1,30 +1,32 @@
 // Typed heap helpers for i64 cells, built directly on the compiler's memory
-// @builtins (raw_allocate / gep / load / store / raw_deallocate). A concrete,
+// builtins (raw_allocate / gep / load / store / raw_deallocate). A concrete,
 // testable demonstration of the intrinsics-in-Rust / stdlib-in-Zen split.
 // Import: { i64_alloc, i64_read, i64_write, i64_free } = std.core.ptr
 
+{ raw_allocate, raw_deallocate, sizeof_i64, gep, load_i64, store_i64 } = std.compiler
+
 cell_size = () i64 {
-    cast(@builtin.sizeof<i64>(), i64)
+    cast(sizeof_i64(), i64)
 }
 
 // Allocate a buffer holding `count` i64 cells.
 i64_alloc = (count: i64) RawPtr<u8> {
-    @builtin.raw_allocate(cast(count * cell_size(), usize))
+    raw_allocate(cast(count * cell_size(), usize))
 }
 
 // Read the i64 stored in cell `index`.
 i64_read = (p: RawPtr<u8>, index: i64) i64 {
-    @builtin.load<i64>(@builtin.gep(p, index * cell_size()))
+    load_i64(gep(p, index * cell_size()))
 }
 
 // Write `value` into cell `index`.
 i64_write = (p: RawPtr<u8>, index: i64, value: i64) void {
-    @builtin.store(@builtin.gep(p, index * cell_size()), value)
+    store_i64(gep(p, index * cell_size()), value)
 }
 
 // Free a buffer previously allocated for `count` cells.
 i64_free = (p: RawPtr<u8>, count: i64) void {
-    @builtin.raw_deallocate(p, cast(count * cell_size(), usize))
+    raw_deallocate(p, cast(count * cell_size(), usize))
 }
 
 @export({ i64_alloc, i64_read, i64_write, i64_free })

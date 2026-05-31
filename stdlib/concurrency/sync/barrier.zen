@@ -2,6 +2,8 @@
 // pthread_barrier_t is 32 bytes on Linux x86-64. We allocate 64 bytes to be safe.
 //   { Barrier, barrier_new, barrier_wait, barrier_destroy } = std.concurrency.sync.barrier
 
+{ raw_allocate, raw_deallocate, mem_set, null_ptr } = std.compiler
+
 @extern pthread_barrier_init = (barrier: RawPtr<u8>, attr: RawPtr<u8>, count: u32) i32
 @extern pthread_barrier_wait = (barrier: RawPtr<u8>) i32
 @extern pthread_barrier_destroy = (barrier: RawPtr<u8>) i32
@@ -11,9 +13,9 @@ Barrier: { ptr: RawPtr<u8> }
 
 // Allocate and initialise a barrier for `count` threads.
 barrier_new = (count: i32) Barrier {
-    ptr = @builtin.raw_allocate(cast(64, usize))
-    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
-    pthread_barrier_init(ptr, @builtin.null_ptr(), cast(count, u32))
+    ptr = raw_allocate(cast(64, usize))
+    mem_set(ptr, cast(0, u8), cast(64, usize))
+    pthread_barrier_init(ptr, null_ptr(), cast(count, u32))
     Barrier { ptr: ptr }
 }
 
@@ -26,7 +28,7 @@ barrier_wait = (b: Barrier) i32 {
 // Destroy and free the barrier.
 barrier_destroy = (b: Barrier) void {
     pthread_barrier_destroy(b.ptr)
-    @builtin.raw_deallocate(b.ptr, cast(64, usize))
+    raw_deallocate(b.ptr, cast(64, usize))
 }
 
 @export({ Barrier, barrier_new, barrier_wait, barrier_destroy })

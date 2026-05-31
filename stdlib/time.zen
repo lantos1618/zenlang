@@ -3,39 +3,39 @@
 // CLOCK_REALTIME=0, CLOCK_MONOTONIC=1.
 //   { time_now_secs, time_now_nanos } = std.time
 
-{ sys2 } = std.compiler
+{ sys2, raw_allocate, raw_deallocate, ptr_to_int, gep, load_i64 } = std.compiler
 
 // Seconds since the Unix epoch (CLOCK_REALTIME).
 time_now_secs = () i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(16, usize))
+    addr = ptr_to_int(buf)
     sys2(228, 0, addr)
-    secs = @builtin.load<i64>(buf)
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs = load_i64(buf)
+    raw_deallocate(buf, cast(16, usize))
     secs
 }
 
 // Nanoseconds since the Unix epoch (CLOCK_REALTIME), as a single i64
 // combining seconds*1_000_000_000 + nsec.
 time_now_nanos = () i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(16, usize))
+    addr = ptr_to_int(buf)
     sys2(228, 0, addr)
-    secs = @builtin.load<i64>(buf)
-    nsec = @builtin.load<i64>(@builtin.gep(buf, 8))
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs = load_i64(buf)
+    nsec = load_i64(gep(buf, 8))
+    raw_deallocate(buf, cast(16, usize))
     secs * 1000000000 + nsec
 }
 
 // Nanoseconds on the monotonic clock (CLOCK_MONOTONIC=1).
 // Useful for measuring elapsed time between two calls.
 time_monotonic_nanos = () i64 {
-    buf = @builtin.raw_allocate(cast(16, usize))
-    addr = @builtin.ptr_to_int(buf)
+    buf = raw_allocate(cast(16, usize))
+    addr = ptr_to_int(buf)
     sys2(228, 1, addr)
-    secs = @builtin.load<i64>(buf)
-    nsec = @builtin.load<i64>(@builtin.gep(buf, 8))
-    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs = load_i64(buf)
+    nsec = load_i64(gep(buf, 8))
+    raw_deallocate(buf, cast(16, usize))
     secs * 1000000000 + nsec
 }
 
