@@ -1,0 +1,12 @@
+// The assertion helpers print PASS/FAIL tagged with the check name: a true
+// assert_true, a false assert_false, and an equal/unequal assert_eq_i64 give a
+// deterministic PASS, PASS, PASS, FAIL sequence.
+{ assert_true, assert_false, assert_eq_i64 } = std.testing
+
+main = () i32 {
+    assert_true("truthy", true)
+    assert_false("falsy", false)
+    assert_eq_i64("eq", 5, 5)
+    assert_eq_i64("neq", 1, 2)
+    0
+}
