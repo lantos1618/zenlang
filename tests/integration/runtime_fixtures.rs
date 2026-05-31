@@ -139,3 +139,13 @@ fn test_stdlib_heap() {
 fn test_stdlib_gpa() {
     run_test("stdlib_gpa");
 }
+
+#[test]
+fn test_stdlib_slice() {
+    run_test("stdlib_slice");
+}
+
+#[test]
+fn test_stdlib_buffer() {
+    run_test("stdlib_buffer");
+}

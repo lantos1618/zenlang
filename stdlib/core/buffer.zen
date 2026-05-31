@@ -1,2 +1,57 @@
-// Parse-only placeholder for @std.core.buffer.
-// Promote Buffer APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Growable byte buffer backed by an Allocator (mirrors Vec's allocator
+// pattern). Starts with a small initial capacity and doubles on overflow.
+// Call `buffer_free` to release the backing allocation when done.
+//   { Buffer, buffer_new, buffer_push_byte, buffer_len, buffer_get_byte, buffer_free } = std.core.buffer
+//
+// Layout: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
+//   data — backing allocation, cap bytes wide
+//   len  — bytes currently written
+//   cap  — allocated capacity in bytes
+
+{ Allocator, Mallocator, mallocator } = std.memory.allocator
+
+Buffer<Alloc: Allocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
+
+// Allocate a Buffer on the given allocator with a small initial capacity.
+buffer_new<Alloc: Allocator> = (alloc: Alloc) Buffer<Alloc> {
+    Buffer<Alloc> {
+        data: alloc.alloc(cast(8, usize)),
+        len: 0,
+        cap: 8,
+        alloc: alloc,
+    }
+}
+
+// Return the number of bytes currently held in the buffer.
+buffer_len<Alloc: Allocator> = (b: Buffer<Alloc>) i64 {
+    b.len
+}
+
+// Read the byte at `index` (no bounds check).
+buffer_get_byte<Alloc: Allocator> = (b: Buffer<Alloc>, index: i64) u8 {
+    @builtin.load<u8>(@builtin.gep(b.data, index))
+}
+
+// Append one byte, growing the backing allocation if needed.
+buffer_push_byte<Alloc: Allocator> = (b: Buffer<Alloc>, byte: u8) Buffer<Alloc> {
+    grown = b.len == b.cap ?
+        | true {
+            new_cap = b.cap * 2
+            Buffer<Alloc> {
+                data: b.alloc.realloc(b.data, cast(b.cap, usize), cast(new_cap, usize)),
+                len: b.len,
+                cap: new_cap,
+                alloc: b.alloc,
+            }
+        }
+        | false { b }
+    @builtin.store(@builtin.gep(grown.data, grown.len), byte)
+    Buffer<Alloc> { data: grown.data, len: grown.len + 1, cap: grown.cap, alloc: grown.alloc }
+}
+
+// Release the backing allocation.
+buffer_free<Alloc: Allocator> = (b: Buffer<Alloc>) void {
+    b.alloc.free(b.data, cast(b.cap, usize))
+}
+
+@export({ Buffer, buffer_new, buffer_len, buffer_get_byte, buffer_push_byte, buffer_free })

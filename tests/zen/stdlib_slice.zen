@@ -1,0 +1,27 @@
+// Proves: slice_new wraps a raw allocation, slice_len reports byte count,
+// slice_get reads individual bytes, slice_sub yields a sub-view.
+{ io } = std
+{ Slice, slice_new, slice_len, slice_get, slice_sub } = std.core.slice
+
+main = () i32 {
+    // Allocate 4 bytes and fill them with known values.
+    buf = @builtin.raw_allocate(cast(4, usize))
+    @builtin.store(@builtin.gep(buf, 0), cast(10, u8))
+    @builtin.store(@builtin.gep(buf, 1), cast(20, u8))
+    @builtin.store(@builtin.gep(buf, 2), cast(30, u8))
+    @builtin.store(@builtin.gep(buf, 3), cast(40, u8))
+
+    s = slice_new(buf, 4)
+    io.println("len=${cast(slice_len(s), i32)}")
+    io.println("b0=${cast(slice_get(s, 0), i32)}")
+    io.println("b3=${cast(slice_get(s, 3), i32)}")
+
+    // Sub-slice: bytes [1,3) should see 20 and 30.
+    sub = slice_sub(s, 1, 2)
+    io.println("sub_len=${cast(slice_len(sub), i32)}")
+    io.println("sub_b0=${cast(slice_get(sub, 0), i32)}")
+    io.println("sub_b1=${cast(slice_get(sub, 1), i32)}")
+
+    @builtin.raw_deallocate(buf, cast(4, usize))
+    0
+}
