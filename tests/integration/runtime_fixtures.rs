@@ -296,6 +296,11 @@ fn test_stdlib_barrier() {
 }
 
 #[test]
+fn test_stdlib_condvar() {
+    run_test("stdlib_condvar");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }

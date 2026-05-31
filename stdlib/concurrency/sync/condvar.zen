@@ -1,2 +1,45 @@
-// Parse-only placeholder for @std.concurrency.sync.condvar.
-// Promote Condvar APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A POSIX condition variable backed by pthread_cond_t, allocated on the heap.
+// pthread_cond_t is 48 bytes on Linux x86-64. We allocate 64 bytes to be safe.
+//   { Condvar, condvar_new, condvar_wait, condvar_signal, condvar_broadcast, condvar_destroy }
+//     = std.concurrency.sync.condvar
+
+@extern pthread_cond_init = (cond: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_cond_wait = (cond: RawPtr<u8>, mutex: RawPtr<u8>) i32
+@extern pthread_cond_signal = (cond: RawPtr<u8>) i32
+@extern pthread_cond_broadcast = (cond: RawPtr<u8>) i32
+@extern pthread_cond_destroy = (cond: RawPtr<u8>) i32
+
+// A heap-backed pthread_cond_t (64-byte opaque buffer).
+Condvar: { ptr: RawPtr<u8> }
+
+// Allocate and initialise a condition variable.
+condvar_new = () Condvar {
+    ptr = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(ptr, cast(0, u8), cast(64, usize))
+    pthread_cond_init(ptr, @builtin.null_ptr())
+    Condvar { ptr: ptr }
+}
+
+// Atomically release `mutex` and wait on this condvar.
+// The mutex must be locked by the caller on entry; it is relocked on return.
+condvar_wait = (cv: Condvar, mutex_ptr: RawPtr<u8>) void {
+    pthread_cond_wait(cv.ptr, mutex_ptr)
+}
+
+// Wake one thread waiting on this condvar.
+condvar_signal = (cv: Condvar) void {
+    pthread_cond_signal(cv.ptr)
+}
+
+// Wake all threads waiting on this condvar.
+condvar_broadcast = (cv: Condvar) void {
+    pthread_cond_broadcast(cv.ptr)
+}
+
+// Destroy and free the condvar.
+condvar_destroy = (cv: Condvar) void {
+    pthread_cond_destroy(cv.ptr)
+    @builtin.raw_deallocate(cv.ptr, cast(64, usize))
+}
+
+@export({ Condvar, condvar_new, condvar_wait, condvar_signal, condvar_broadcast, condvar_destroy })

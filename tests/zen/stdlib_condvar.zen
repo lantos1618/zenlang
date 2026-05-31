@@ -1,0 +1,73 @@
+// Producer thread sets a sentinel, signals condvar; main waits and reads it.
+// Deterministic: main joins after reading, then verifies the sentinel.
+{ io } = std
+{ Condvar, condvar_new, condvar_wait, condvar_signal, condvar_destroy } = std.concurrency.sync.condvar
+
+@extern pthread_create = (thread: RawPtr<u8>, attr: RawPtr<u8>, start: (RawPtr<u8>) RawPtr<u8>, arg: RawPtr<u8>) i32
+@extern pthread_join = (thread: i64, retval: RawPtr<u8>) i32
+@extern pthread_mutex_init = (mutex: RawPtr<u8>, attr: RawPtr<u8>) i32
+@extern pthread_mutex_lock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_unlock = (mutex: RawPtr<u8>) i32
+@extern pthread_mutex_destroy = (mutex: RawPtr<u8>) i32
+@extern pthread_cond_signal = (cond: RawPtr<u8>) i32
+
+// Arg: [mutex_ptr(8), cond_ptr(8), flag_ptr(8)] = 24 bytes
+// Producer: locks mutex, sets flag=42, signals, unlocks.
+producer = (arg: RawPtr<u8>) RawPtr<u8> {
+    mutex_ptr = @builtin.load<RawPtr<u8>>(arg)
+    cond_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 8))
+    flag_ptr = @builtin.load<RawPtr<u8>>(@builtin.gep(arg, 16))
+    pthread_mutex_lock(mutex_ptr)
+    @builtin.store(flag_ptr, cast(42, i64))
+    pthread_cond_signal(cond_ptr)
+    pthread_mutex_unlock(mutex_ptr)
+    @builtin.null_ptr()
+}
+
+main = () i32 {
+    cv = condvar_new()
+
+    mutex_buf = @builtin.raw_allocate(cast(64, usize))
+    @builtin.memset(mutex_buf, cast(0, u8), cast(64, usize))
+    pthread_mutex_init(mutex_buf, @builtin.null_ptr())
+
+    flag = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(flag, cast(0, i64))
+
+    arg_block = @builtin.raw_allocate(cast(24, usize))
+    @builtin.store(arg_block, mutex_buf)
+    @builtin.store(@builtin.gep(arg_block, 8), cv.ptr)
+    @builtin.store(@builtin.gep(arg_block, 16), flag)
+
+    thread_cell = @builtin.raw_allocate(cast(8, usize))
+
+    // Lock before spawning so we can't miss the signal
+    pthread_mutex_lock(mutex_buf)
+    pthread_create(thread_cell, @builtin.null_ptr(), producer, arg_block)
+
+    // Wait until flag != 0
+    loop((l) {
+        fval = @builtin.load<i64>(flag)
+        fval == 0 ?
+            | true {
+                condvar_wait(cv, mutex_buf)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    pthread_mutex_unlock(mutex_buf)
+
+    tid = @builtin.load<i64>(thread_cell)
+    pthread_join(tid, @builtin.null_ptr())
+
+    result = @builtin.load<i64>(flag)
+    io.println("sentinel=${cast(result, i32)}")
+
+    @builtin.raw_deallocate(thread_cell, cast(8, usize))
+    @builtin.raw_deallocate(arg_block, cast(24, usize))
+    @builtin.raw_deallocate(flag, cast(8, usize))
+    pthread_mutex_destroy(mutex_buf)
+    @builtin.raw_deallocate(mutex_buf, cast(64, usize))
+    condvar_destroy(cv)
+    0
+}
