@@ -191,6 +191,11 @@ fn test_stdlib_epoll() {
 }
 
 #[test]
+fn test_stdlib_timerfd() {
+    run_test("stdlib_timerfd");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

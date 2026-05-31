@@ -1,2 +1,59 @@
-// Parse-only placeholder for @std.io.timerfd.
-// Promote timerfd APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Kernel timer file descriptor via timerfd_create(2)/timerfd_settime(2)/read(2),
+// routed through the std.compiler facade. A timerfd is a file descriptor that
+// becomes readable after a timer expires; reading returns the expiration count
+// (u64, 8 bytes).
+//
+// itimerspec layout (4 × i64, 32 bytes):
+//   it_interval.tv_sec  i64 @ 0
+//   it_interval.tv_nsec i64 @ 8
+//   it_value.tv_sec     i64 @ 16
+//   it_value.tv_nsec    i64 @ 24
+//
+// CLOCK_REALTIME=0, CLOCK_MONOTONIC=1.
+//   { timerfd_create, timerfd_settime, timerfd_read, timerfd_close } = std.io.timerfd
+//
+// x86-64 Linux syscall numbers: timerfd_create=283, timerfd_settime=286,
+//   read=0, close=3.
+
+{ sys1, sys2, sys3, sys4 } = std.compiler
+
+// Create a timerfd. clock_id=1 (CLOCK_MONOTONIC). Returns fd >= 0 on success.
+timerfd_create = () i64 {
+    sys2(283, 1, 0)
+}
+
+// Arm the timer with a one-shot relative timeout.
+// sec/nsec: relative expiry; interval_sec/interval_nsec: repeat interval
+// (0/0 = single-shot). Returns 0 on success.
+timerfd_settime = (fd: i64, sec: i64, nsec: i64, interval_sec: i64, interval_nsec: i64) i64 {
+    // new_value itimerspec (32 bytes): [interval.sec, interval.nsec, value.sec, value.nsec]
+    buf = @builtin.raw_allocate(cast(32, usize))
+    insec_ptr = @builtin.gep(buf, 8)
+    vsec_ptr = @builtin.gep(buf, 16)
+    vnsec_ptr = @builtin.gep(buf, 24)
+    @builtin.store(buf, interval_sec)
+    @builtin.store(insec_ptr, interval_nsec)
+    @builtin.store(vsec_ptr, sec)
+    @builtin.store(vnsec_ptr, nsec)
+    // old_value = NULL (0)
+    rc = sys4(286, fd, 0, @builtin.ptr_to_int(buf), 0)
+    @builtin.raw_deallocate(buf, cast(32, usize))
+    rc
+}
+
+// Read the expiration count (blocks until at least one expiry).
+// Returns the number of expirations since the last read.
+timerfd_read = (fd: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    sys3(0, fd, @builtin.ptr_to_int(buf), 8)
+    count = @builtin.load<i64>(buf)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    count
+}
+
+// Close the timerfd. Returns 0 on success.
+timerfd_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ timerfd_create, timerfd_settime, timerfd_read, timerfd_close })
