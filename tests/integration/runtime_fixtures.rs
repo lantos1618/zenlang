@@ -191,6 +191,11 @@ fn test_stdlib_multisync() {
 }
 
 #[test]
+fn test_stdlib_alloc_switch() {
+    run_test("stdlib_alloc_switch");
+}
+
+#[test]
 fn test_stdlib_scheduler() {
     run_test("stdlib_scheduler");
 }

@@ -1,0 +1,55 @@
+// THE thesis, runnable: one `pump` written ONCE, generic over its runtime
+// allocator. Pass a SyncArena and it runs straight through; pass an AsyncArena —
+// inside a coroutine — and the SAME source suspends each step. The only change is
+// which allocator-mode you hand it. No @async, no Future, no color, no runtime
+// branch: SyncArena.suspend and AsyncArena.suspend are statically monomorphized.
+{ io } = std
+{ Suspender, SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+{ coroutine_new, coroutine_resume } = std.concurrency.coroutine
+
+// Written once. Colorless. The switch is the allocator `r`.
+pump<R: Suspender> = (r: R, cell: RawPtr<u8>, n: i64) void {
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                v = @builtin.load<i64>(cell)
+                @builtin.store(cell, v + 1)
+                r.suspend()                 // Sync: no-op; Async: yields the fiber
+                i = i + 1
+                l.next()
+            }
+    })
+}
+
+g_cell ::= @builtin.null_ptr()
+async_work = () void {
+    pump<AsyncArena>(async_arena(1024), g_cell, cast(5, i64))
+}
+
+main = () i32 {
+    // Sync allocator: pump runs straight through, no coroutine.
+    sc = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(sc, cast(0, i64))
+    pump<SyncArena>(sync_arena(1024), sc, cast(5, i64))
+    io.println("sync=${cast(@builtin.load<i64>(sc), i32)}")
+
+    // Async allocator: SAME pump, run as a coroutine — suspends each step.
+    g_cell = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_cell, cast(0, i64))
+    co ::= coroutine_new(async_work)
+    yields ::= 0
+    loop((l) {
+        alive = coroutine_resume(co)
+        alive ?
+            | true {
+                yields = yields + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    io.println("async=${cast(@builtin.load<i64>(g_cell), i32)}")
+    io.println("async_yields=${cast(yields, i32)}")
+    0
+}

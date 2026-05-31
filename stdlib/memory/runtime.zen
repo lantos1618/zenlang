@@ -1,0 +1,37 @@
+// A runtime allocator carries BOTH memory (an arena) AND execution mode. Its
+// `suspend` is a no-op under Sync and yields the current fiber under Async, so
+// code generic over the runtime allocator is multisync: sync or async purely by
+// which one you pass — no function color, no runtime branch (static dispatch).
+//   { SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+
+{ Arena, arena, arena_free } = std.memory.arena
+{ coroutine_yield } = std.concurrency.coroutine
+
+// The execution-mode capability the allocator carries.
+Suspender: behavior {
+    suspend: (Self) void
+}
+
+// Sync: arena memory; operations run inline (suspend is a no-op).
+SyncArena: { mem: Arena }
+SyncArena.implements(Suspender) {
+    suspend = (self: SyncArena) void {
+    }
+}
+
+// Async: arena memory; a suspension point yields the current coroutine.
+AsyncArena: { mem: Arena }
+AsyncArena.implements(Suspender) {
+    suspend = (self: AsyncArena) void {
+        coroutine_yield()
+    }
+}
+
+sync_arena = (cap: i64) SyncArena {
+    SyncArena { mem: arena(cap) }
+}
+async_arena = (cap: i64) AsyncArena {
+    AsyncArena { mem: arena(cap) }
+}
+
+@export({ Suspender, SyncArena, AsyncArena, sync_arena, async_arena, SyncArena.suspend, AsyncArena.suspend })
