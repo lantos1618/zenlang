@@ -160,7 +160,12 @@ impl TypeChecker {
 
 fn literal_coerced_type(expected: &Type, actual: &TypedExpression) -> Type {
     match &actual.kind {
-        TypedExprKind::IntLiteral(_) if expected.is_integer() => expected.clone(),
+        // An int literal soundly adopts an integer OR a float expected type
+        // (`ratio: f64 = 2` becomes 2.0), matching binary-op coercion (`1 + 2.5`).
+        // A float literal only adopts a float — never silently an integer.
+        TypedExprKind::IntLiteral(_) if expected.is_integer() || expected.is_float() => {
+            expected.clone()
+        }
         TypedExprKind::FloatLiteral(_) if expected.is_float() => expected.clone(),
         _ => actual.ty.clone(),
     }
