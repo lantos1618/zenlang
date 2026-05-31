@@ -1,0 +1,112 @@
+// Hermetic link test: create a file, hard-link it to a second path, verify both
+// paths exist and contain the same data, then unlink both. Also creates a symlink
+// and reads it back. Uses getpid for unique /tmp paths.
+{ io } = std
+{ process_getpid } = std.sys.process.process
+{ file_open, file_open_create, file_read, file_write, file_close } = std.io.files.file
+{ file_link, file_symlink, file_readlink, link_unlink } = std.io.files.link
+
+// Write decimal digits of `n` into `buf` starting at `offset`.
+// Returns the number of digits written.
+write_digits = (buf: RawPtr<u8>, offset: i64, n: i64) i64 {
+    tmp ::= n
+    count ::= cast(0, i64)
+    loop((l) {
+        tmp <= 0 ?
+            | true { l.done() }
+            | false {
+                tmp = tmp / 10
+                count = count + 1
+                l.next()
+            }
+    })
+    rem ::= n
+    idx ::= count - 1
+    loop((l) {
+        idx < 0 ?
+            | true { l.done() }
+            | false {
+                digit = rem % 10
+                @builtin.store(@builtin.gep(buf, offset + idx), cast(48 + digit, u8))
+                rem = rem / 10
+                idx = idx - 1
+                l.next()
+            }
+    })
+    count
+}
+
+main = () i32 {
+    pid = process_getpid()
+
+    // Build src path: "/tmp/zen_link_src_<pid>\0"
+    // prefix "/tmp/zen_link_src_" = 18 bytes
+    src = @builtin.raw_allocate(cast(48, usize))
+    src_prefix = @builtin.static_string_ptr("/tmp/zen_link_src_")
+    @builtin.memcpy(src, src_prefix, cast(18, usize))
+    dc1 = write_digits(src, 18, pid)
+    @builtin.store(@builtin.gep(src, 18 + dc1), cast(0, u8))
+
+    // Build dst (hard link) path: "/tmp/zen_link_dst_<pid>\0"
+    // prefix "/tmp/zen_link_dst_" = 18 bytes
+    dst = @builtin.raw_allocate(cast(48, usize))
+    dst_prefix = @builtin.static_string_ptr("/tmp/zen_link_dst_")
+    @builtin.memcpy(dst, dst_prefix, cast(18, usize))
+    dc2 = write_digits(dst, 18, pid)
+    @builtin.store(@builtin.gep(dst, 18 + dc2), cast(0, u8))
+
+    // Build sym path: "/tmp/zen_link_sym_<pid>\0"
+    // prefix "/tmp/zen_link_sym_" = 18 bytes
+    sym = @builtin.raw_allocate(cast(48, usize))
+    sym_prefix = @builtin.static_string_ptr("/tmp/zen_link_sym_")
+    @builtin.memcpy(sym, sym_prefix, cast(18, usize))
+    dc3 = write_digits(sym, 18, pid)
+    @builtin.store(@builtin.gep(sym, 18 + dc3), cast(0, u8))
+
+    // Write known content to src.
+    content_str = "link_data"
+    content = @builtin.static_string_ptr(content_str)
+    content_len = cast(@builtin.strlen(content_str), i64)
+
+    wfd = file_open_create(src)
+    file_write(wfd, content, content_len)
+    file_close(wfd)
+
+    // Hard-link src → dst.
+    rc_link = file_link(src, dst)
+    io.println("link_ok=${cast(rc_link == 0, i32)}")
+
+    // Read dst back — should equal src content.
+    rbuf = @builtin.raw_allocate(cast(32, usize))
+    rfd = file_open(dst, 0)
+    got = file_read(rfd, rbuf, 32)
+    file_close(rfd)
+    read_ok = got == content_len
+    io.println("read_ok=${cast(read_ok, i32)}")
+
+    // First byte must match.
+    first_match = @builtin.load<u8>(rbuf) == @builtin.load<u8>(content)
+    io.println("first_match=${cast(first_match, i32)}")
+
+    // Symlink: sym → src path.
+    rc_sym = file_symlink(src, sym)
+    io.println("symlink_ok=${cast(rc_sym == 0, i32)}")
+
+    // Readlink sym — length should match the src path length.
+    rlbuf = @builtin.raw_allocate(cast(64, usize))
+    src_path_len = cast(18, i64) + dc1
+    rl = file_readlink(sym, rlbuf, 64)
+    readlink_ok = rl == src_path_len
+    io.println("readlink_ok=${cast(readlink_ok, i32)}")
+    @builtin.raw_deallocate(rlbuf, cast(64, usize))
+
+    // Clean up.
+    link_unlink(src)
+    link_unlink(dst)
+    link_unlink(sym)
+    @builtin.raw_deallocate(rbuf, cast(32, usize))
+    @builtin.raw_deallocate(src, cast(48, usize))
+    @builtin.raw_deallocate(dst, cast(48, usize))
+    @builtin.raw_deallocate(sym, cast(48, usize))
+    0
+}
