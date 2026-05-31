@@ -1,2 +1,150 @@
-// Parse-only placeholder for @std.io.signal.
-// Promote signal APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Signal manipulation via x86-64 Linux syscalls through the std.compiler facade.
+//
+// Syscall numbers:
+//   rt_sigprocmask(14)  — get/set the process signal mask.
+//   rt_sigaction(13)    — examine/change a signal action (SIG_IGN/SIG_DFL).
+//   kill(62)            — send a signal to a process.
+//   signalfd4(289)      — create a file descriptor for accepting signals.
+//   read(0)             — read a signalfd_siginfo from a signalfd fd.
+//   close(3)            — close a signalfd fd.
+//
+// Signal numbers (SIGXXX):
+//   SIGHUP=1, SIGINT=2, SIGQUIT=3, SIGILL=4, SIGTRAP=5, SIGABRT=6,
+//   SIGBUS=7, SIGFPE=8, SIGKILL=9, SIGUSR1=10, SIGSEGV=11, SIGUSR2=12,
+//   SIGPIPE=13, SIGALRM=14, SIGTERM=15, SIGCHLD=17, SIGCONT=18,
+//   SIGSTOP=19, SIGTSTP=20, SIGURG=23, SIGWINCH=28, SIGIO=29.
+//
+// rt_sigprocmask how values:
+//   SIG_BLOCK=0, SIG_UNBLOCK=1, SIG_SETMASK=2.
+//
+// The kernel sigset_t is 8 bytes (64 signals) on x86-64.
+//
+//   { sig_block, sig_unblock, sig_setmask, signal_mask, signal_unmask,
+//     signal_send, signalfd_new, signalfd_read, signalfd_close,
+//     signum_sigusr1, signum_sigusr2, signum_sigterm } = std.io.signal
+
+{ sys1, sys2, sys3, sys4 } = std.compiler
+
+// --- Signal number constants ---
+signum_sighup    = () i64 { 1 }
+signum_sigint    = () i64 { 2 }
+signum_sigquit   = () i64 { 3 }
+signum_sigill    = () i64 { 4 }
+signum_sigabrt   = () i64 { 6 }
+signum_sigbus    = () i64 { 7 }
+signum_sigfpe    = () i64 { 8 }
+signum_sigkill   = () i64 { 9 }
+signum_sigusr1   = () i64 { 10 }
+signum_sigsegv   = () i64 { 11 }
+signum_sigusr2   = () i64 { 12 }
+signum_sigpipe   = () i64 { 13 }
+signum_sigalrm   = () i64 { 14 }
+signum_sigterm   = () i64 { 15 }
+signum_sigchld   = () i64 { 17 }
+signum_sigcont   = () i64 { 18 }
+signum_sigwinch  = () i64 { 28 }
+
+// --- how constants for rt_sigprocmask ---
+sig_block   = () i64 { 0 }
+sig_unblock = () i64 { 1 }
+sig_setmask = () i64 { 2 }
+
+// Build a 64-bit sigset_t with signal `signum` set.
+// Signal N maps to bit (N-1) in the 64-bit mask. We compute 1 << (N-1) using
+// a multiply-by-2 loop to avoid the forbidden << shift operator.
+sigset_bit = (signum: i64) i64 {
+    // Compute 2^(signum-1) iteratively.
+    val ::= cast(1, i64)
+    rem ::= signum - 1
+    loop((l) {
+        rem <= 0 ?
+            | true { l.done() }
+            | false {
+                val = val * 2
+                rem = rem - 1
+                l.next()
+            }
+    })
+    val
+}
+
+// Write the sigset_t for `signum` into a caller-supplied 8-byte buffer.
+sigset_fill = (buf: RawPtr<u8>, signum: i64) void {
+    bits = sigset_bit(signum)
+    @builtin.store(buf, bits)
+}
+
+// Call rt_sigprocmask(14). `how` is SIG_BLOCK(0)/SIG_UNBLOCK(1)/SIG_SETMASK(2).
+// `new_set` and `old_set` are pointers to 8-byte sigset_t buffers (or 0 for NULL).
+// `sigsetsize` is always 8 on x86-64.
+// Returns 0 on success, negative errno on failure.
+signal_mask_raw = (how: i64, new_set: i64, old_set: i64) i64 {
+    sys4(14, how, new_set, old_set, 8)
+}
+
+// Block signal `signum` in the current thread's signal mask.
+// Returns 0 on success, negative errno on failure.
+signal_block = (signum: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    sigset_fill(buf, signum)
+    rc = signal_mask_raw(0, @builtin.ptr_to_int(buf), 0)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc
+}
+
+// Unblock signal `signum` in the current thread's signal mask.
+// Returns 0 on success, negative errno on failure.
+signal_unblock = (signum: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    sigset_fill(buf, signum)
+    rc = signal_mask_raw(1, @builtin.ptr_to_int(buf), 0)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc
+}
+
+// Send signal `signum` to process `pid`. kill(62).
+// Returns 0 on success, negative errno on failure.
+signal_send = (pid: i64, signum: i64) i64 {
+    sys2(62, pid, signum)
+}
+
+// Create a signalfd. Pass fd=-1 to create a new fd. `signum` is the signal
+// to accept. `flags` = 0 or SFD_NONBLOCK(2048) / SFD_CLOEXEC(524288).
+// Returns a signalfd fd (>= 0) or negative errno.
+// signalfd4(289): (fd, mask_ptr, sigsetsize=8, flags).
+signalfd_new = (signum: i64, flags: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    sigset_fill(buf, signum)
+    rc = sys4(289, cast(0 - 1, i64), @builtin.ptr_to_int(buf), 8, flags)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc
+}
+
+// Read one signalfd_siginfo (128 bytes) from a signalfd fd into `buf`.
+// Returns 128 on success, or negative errno.
+signalfd_read = (sfd: i64, buf: RawPtr<u8>) i64 {
+    sys3(0, sfd, @builtin.ptr_to_int(buf), 128)
+}
+
+// Close a signalfd fd.
+signalfd_close = (sfd: i64) i64 {
+    sys1(3, sfd)
+}
+
+// Read the signal number from a signalfd_siginfo buffer (ssi_signo at byte 0).
+signalfd_signo = (buf: RawPtr<u8>) i64 {
+    v = @builtin.load<u32>(buf)
+    cast(v, i64)
+}
+
+@export({
+    signum_sighup, signum_sigint, signum_sigquit, signum_sigill,
+    signum_sigabrt, signum_sigbus, signum_sigfpe, signum_sigkill,
+    signum_sigusr1, signum_sigsegv, signum_sigusr2, signum_sigpipe,
+    signum_sigalrm, signum_sigterm, signum_sigchld, signum_sigcont,
+    signum_sigwinch,
+    sig_block, sig_unblock, sig_setmask,
+    sigset_bit, sigset_fill, signal_mask_raw,
+    signal_block, signal_unblock, signal_send,
+    signalfd_new, signalfd_read, signalfd_close, signalfd_signo,
+})
