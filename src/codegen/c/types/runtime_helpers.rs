@@ -4,6 +4,10 @@ impl CEmitter {
     pub(super) fn emit_runtime_types(&mut self) {
         self.line("/* Runtime types */");
         self.line("typedef struct { const char* ptr; size_t len; } zen_str;");
+        // The uniform async poll function pointer: every coroutine frame's
+        // leading field has this type, so any `Future<T>` (held as `void*`) can
+        // be driven generically (ASYNC_PLAN.md milestone 1).
+        self.line("typedef bool (*zen_poll_fn)(void*, void*);");
         self.blank();
 
         self.line("static zen_str zen_str_from_cstr(const char* s) {");

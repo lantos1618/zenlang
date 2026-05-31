@@ -136,6 +136,7 @@ impl TypeChecker {
                 return_type: ret_type,
                 body: body_block,
                 defers,
+                is_async,
                 span: *span,
             })
         })();

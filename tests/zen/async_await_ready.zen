@@ -1,0 +1,21 @@
+{ io } = std
+
+// A leaf async function: ready immediately, no await.
+ready = @async (n: i32) i32 {
+    n + 1
+}
+
+// Awaits a ready future, then awaits again threading a local across the suspend.
+chained = @async (n: i32) i32 {
+    a = @await ready(n)
+    b = @await ready(a)
+    a + b
+}
+
+main = () i32 {
+    r = block_on(ready(41))
+    io.println("ready = ${r}")
+    c = block_on(chained(10))
+    io.println("chained = ${c}")
+    0
+}

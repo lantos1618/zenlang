@@ -219,3 +219,11 @@ fn test_stdlib_file() {
 fn test_stdlib_iterator() {
     run_test("stdlib_iterator");
 }
+
+#[test]
+fn test_async_await_ready() {
+    // An `@async` leaf returning a ready value, and a chained async fn that
+    // awaits twice threading a local across the suspends, driven by `block_on`.
+    // Proves the milestone-1 state-machine lowering end to end (ASYNC_PLAN.md).
+    run_test("async_await_ready");
+}

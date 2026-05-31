@@ -80,7 +80,15 @@ impl CEmitter {
                 c_static_str_literal(&escaped)
             }
             TypedExprKind::BoolLiteral(b) => b.to_string(),
-            TypedExprKind::Variable(name) => c_ident(name),
+            TypedExprKind::Variable(name) => {
+                let id = c_ident(name);
+                // Inside an async poll body, a spilled name lives in the frame.
+                if self.async_frame_fields.contains(&id) {
+                    format!("__fr->{id}")
+                } else {
+                    id
+                }
+            }
 
             TypedExprKind::BinaryOp { op, left, right } => {
                 let l = self.emit_expr_inline(left);
@@ -92,6 +100,22 @@ impl CEmitter {
             TypedExprKind::UnaryOp { op, operand } => {
                 let o = self.emit_expr_inline(operand);
                 format!("({}{})", op.symbol(), o)
+            }
+
+            TypedExprKind::FunctionCall { function, args } if function == "block_on" => {
+                // `block_on(fut)`: drive the future to completion, yield its
+                // value. Emitted as a poll loop over the uniform `__poll` field
+                // (ASYNC_PLAN.md milestone 1's compiler-provided driver).
+                let fut = self.emit_expr_inline(&args[0]);
+                let fut_tmp = self.fresh_tmp();
+                let out_tmp = self.fresh_tmp();
+                let out_ty = Self::c_type(&expr.ty);
+                self.line(&format!("void* {fut_tmp} = (void*){fut};"));
+                self.line(&format!("{out_ty} {out_tmp};"));
+                self.line(&format!(
+                    "while (!(*(zen_poll_fn*){fut_tmp})({fut_tmp}, &{out_tmp})) {{}}"
+                ));
+                out_tmp
             }
 
             TypedExprKind::FunctionCall { function, args } => {

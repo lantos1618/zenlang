@@ -66,24 +66,30 @@ impl TypeChecker {
                     };
                     self.push_checked_function_decl(&mut functions, decl, &checked_name, self_type);
 
-                    // Surface + typing for `@async`/`@await` ship in milestone 1,
-                    // but state-machine lowering does not yet. Type-check the body
-                    // (so `@await` rules fire) and then reject the program with a
-                    // clear, stable-coded error rather than emit broken C. The
-                    // half-built async function is dropped so codegen never sees a
-                    // `Future`/`Await` node. (ASYNC_PLAN.md milestone 1.)
+                    // `@async`/`@await` lower to a coroutine frame + poll + ctor
+                    // (ASYNC_PLAN.md milestone 1). The state-machine lowering
+                    // handles a linear body whose awaits sit at top level; awaits
+                    // nested in a sub-expression, branch, or loop are not yet
+                    // supported and are rejected with E3082 (rather than emitting
+                    // broken C). The half-built async function is dropped so
+                    // codegen never sees an unlowerable `Await` node.
                     if callable.is_async {
-                        functions.retain(|f| f.name != checked_name);
-                        self.diagnostics.push(Diagnostic::error_code(
-                            E3082,
-                            format!(
-                                "`@async` function `{}` cannot be compiled yet: \
-                                 async/await lowering is not implemented (milestone 1 \
-                                 in progress)",
-                                callable.name
-                            ),
-                            callable.span,
-                        ));
+                        if let Some(func) = functions.iter().find(|f| f.name == checked_name) {
+                            if !crate::codegen::c::async_is_lowerable(func) {
+                                functions.retain(|f| f.name != checked_name);
+                                self.diagnostics.push(Diagnostic::error_code(
+                                    E3082,
+                                    format!(
+                                        "`@async` function `{}` cannot be compiled yet: \
+                                         its `@await` points are nested in a sub-expression, \
+                                         branch, or loop, which async lowering does not yet \
+                                         support (milestone 1 in progress)",
+                                        callable.name
+                                    ),
+                                    callable.span,
+                                ));
+                            }
+                        }
                     }
                 }
                 continue;
