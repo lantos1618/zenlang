@@ -306,6 +306,11 @@ fn test_stdlib_waitgroup() {
 }
 
 #[test]
+fn test_stdlib_thread() {
+    run_test("stdlib_thread");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
