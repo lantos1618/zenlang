@@ -1,4 +1,47 @@
-// Parse-only placeholder for @std.sys.memfd.
+// In-memory file descriptors via memfd_create (syscall 319) — x86-64 Linux.
+// Exposes memfd_new (create an anonymous in-memory fd), memfd_write, memfd_read,
+// memfd_lseek, memfd_ftruncate, and memfd_close.
+//   { memfd_new, memfd_write, memfd_read, memfd_lseek, memfd_ftruncate, memfd_close }
+//     = std.sys.memfd
 //
-// Memfd wrappers need explicit host-effect and ABI evidence before this module
-// carries implementation code.
+// Syscall numbers (x86-64 Linux):
+//   read=0, write=1, close=3, lseek=8, ftruncate=77, memfd_create=319
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Create an anonymous in-memory fd; name_ptr is a null-terminated C string.
+// flags=0: no MFD_CLOEXEC / MFD_ALLOW_SEALING needed for basic usage.
+// Returns the new file descriptor (>= 0) or a negative error code.
+memfd_new = (name_ptr: RawPtr<u8>) i64 {
+    addr = @builtin.ptr_to_int(name_ptr)
+    sys2(319, addr, 0)
+}
+
+// Write `len` bytes from `buf` into the fd.  Returns bytes written.
+memfd_write = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
+    addr = @builtin.ptr_to_int(buf)
+    sys3(1, fd, addr, len)
+}
+
+// Read `len` bytes from the fd into `buf`.  Returns bytes read.
+memfd_read = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
+    addr = @builtin.ptr_to_int(buf)
+    sys3(0, fd, addr, len)
+}
+
+// Seek to `offset` from `whence` (0=SEEK_SET).  Returns new offset.
+memfd_lseek = (fd: i64, offset: i64, whence: i64) i64 {
+    sys3(8, fd, offset, whence)
+}
+
+// Set the in-memory file size to `size` bytes (syscall ftruncate=77).
+memfd_ftruncate = (fd: i64, size: i64) i64 {
+    sys2(77, fd, size)
+}
+
+// Close the fd.  Returns 0 on success.
+memfd_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ memfd_new, memfd_write, memfd_read, memfd_lseek, memfd_ftruncate, memfd_close })

@@ -161,6 +161,26 @@ fn test_stdlib_mmap() {
 }
 
 #[test]
+fn test_stdlib_memfd() {
+    run_test("stdlib_memfd");
+}
+
+#[test]
+fn test_stdlib_prctl() {
+    run_test("stdlib_prctl");
+}
+
+#[test]
+fn test_stdlib_resource() {
+    run_test("stdlib_resource");
+}
+
+#[test]
+fn test_stdlib_memory() {
+    run_test("stdlib_memory");
+}
+
+#[test]
 fn test_stdlib_env() {
     run_test("stdlib_env");
 }
