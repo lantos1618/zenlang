@@ -1,0 +1,19 @@
+// getrandom fills exactly the requested number of bytes (deterministic: the
+// syscall returns the count) and two independent u64 draws differ (the chance
+// of collision is 2^-64). Proves the full raw-syscall path through the
+// std.compiler facade works end to end.
+{ io } = std
+{ getrandom_fill, getrandom_u64 } = std.sys.random.getrandom
+
+main = () i32 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    n = getrandom_fill(buf, 16)
+    io.println("filled=${cast(n, i32)}")
+    @builtin.raw_deallocate(buf, cast(16, usize))
+
+    a = getrandom_u64()
+    b = getrandom_u64()
+    differ = a != b
+    io.println("two_draws_differ=${cast(differ, i32)}")
+    0
+}

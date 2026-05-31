@@ -1,4 +1,60 @@
-// Parse-only placeholder for @std.compiler.
+// The compiler facade: thin, typed Zen wrappers over the raw `@builtin` OS and
+// hardware hooks. Other stdlib modules should build on THESE rather than calling
+// `@builtin.syscallN` / `@builtin.atomic_*` directly, so the raw-intrinsic
+// surface lives in exactly one place (the intrinsics-in-Rust / stdlib-in-Zen
+// boundary).
+//   { sys1, sys3, atomic_load, atomic_store, atomic_cas } = std.compiler
 //
-// Raw @builtin hooks are guarded by the compiler until this facade has parser,
-// typechecker, lowering, ABI, and docs-truth evidence.
+// Syscall numbers are caller-supplied and platform-specific (these wrappers are
+// arch-agnostic; the numbers in sys/* modules are x86-64 Linux).
+
+// --- syscalls: sysN(number, arg0..arg{N-1}) -> return value ---
+sys0 = (n: i64) i64 {
+    @builtin.syscall0(n)
+}
+sys1 = (n: i64, a0: i64) i64 {
+    @builtin.syscall1(n, a0)
+}
+sys2 = (n: i64, a0: i64, a1: i64) i64 {
+    @builtin.syscall2(n, a0, a1)
+}
+sys3 = (n: i64, a0: i64, a1: i64, a2: i64) i64 {
+    @builtin.syscall3(n, a0, a1, a2)
+}
+sys4 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64) i64 {
+    @builtin.syscall4(n, a0, a1, a2, a3)
+}
+sys5 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64, a4: i64) i64 {
+    @builtin.syscall5(n, a0, a1, a2, a3, a4)
+}
+sys6 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64, a4: i64, a5: i64) i64 {
+    @builtin.syscall6(n, a0, a1, a2, a3, a4, a5)
+}
+
+// --- atomics over a 64-bit cell (sequentially consistent) ---
+atomic_load = (ptr: RawPtr<u8>) u64 {
+    @builtin.atomic_load(ptr)
+}
+atomic_store = (ptr: RawPtr<u8>, value: u64) void {
+    @builtin.atomic_store(ptr, value)
+}
+atomic_add = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_add(ptr, value)
+}
+atomic_sub = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_sub(ptr, value)
+}
+atomic_cas = (ptr: RawPtr<u8>, expected: u64, new_value: u64) bool {
+    @builtin.atomic_cas(ptr, expected, new_value)
+}
+atomic_xchg = (ptr: RawPtr<u8>, value: u64) u64 {
+    @builtin.atomic_xchg(ptr, value)
+}
+fence = () void {
+    @builtin.fence()
+}
+
+@export({
+    sys0, sys1, sys2, sys3, sys4, sys5, sys6,
+    atomic_load, atomic_store, atomic_add, atomic_sub, atomic_cas, atomic_xchg, fence,
+})

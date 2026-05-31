@@ -4,7 +4,7 @@
   "files": [
     {
       "id": 0,
-      "path": "$TMP/atomic_gate.zen"
+      "path": "$TMP/async_yield_gate.zen"
     }
   ],
   "diagnostics": [
@@ -15,12 +15,12 @@
       "phase": "resolver",
       "category": "resolution",
       "docs_path": "docs/DIAGNOSTICS.md#resolution",
-      "message": "`@builtin.atomic_load` is gated until the Zen stdlib compiler facade defines it",
+      "message": "`@builtin.async_yield` is gated until the Zen stdlib compiler facade defines it",
       "span": {
         "file_id": 0,
-        "path": "$TMP/atomic_gate.zen",
+        "path": "$TMP/async_yield_gate.zen",
         "start": 22,
-        "end": 45,
+        "end": 44,
         "line": 3,
         "column": 5
       },

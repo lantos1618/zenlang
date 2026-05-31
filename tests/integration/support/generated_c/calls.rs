@@ -69,9 +69,11 @@ pub(super) fn c_function_head(trimmed: &str) -> Option<(&str, &str)> {
 
 fn is_untracked_c_call_name(name: &str) -> bool {
     // Compiler builtins (`__builtin_popcountll`, `__builtin_bswap64`, the
-    // overflow-checked arithmetic, trap/unreachable, …) are provided by the C
-    // compiler, never emitted as Zen function definitions.
-    if name.starts_with("__builtin_") {
+    // overflow-checked arithmetic, trap/unreachable, …) and the atomic builtins
+    // (`__atomic_load_n`, `__atomic_compare_exchange_n`, `__atomic_thread_fence`,
+    // …) are provided by the C compiler, never emitted as Zen function
+    // definitions.
+    if name.starts_with("__builtin_") || name.starts_with("__atomic_") {
         return true;
     }
     matches!(

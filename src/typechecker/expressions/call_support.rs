@@ -81,9 +81,12 @@ impl TypeChecker {
 
     /// Resolve `@builtin.<name>(...)`. The compiler owns the primitives (the
     /// registry in `crate::intrinsics`); the usable subset lowers to a
-    /// `TypedExprKind::Intrinsic` node the C backend emits directly. Primitives
-    /// whose semantics aren't settled yet (syscalls, atomics, async, comptime
-    /// type-match) stay gated.
+    /// `TypedExprKind::Intrinsic` node the C backend emits directly. `syscall*`,
+    /// `atomic_*`, and `fence` are settled OS/hardware hooks with full C lowering,
+    /// exposed so the stdlib can build sys/io/concurrency on them (the recommended
+    /// path is the `stdlib/compiler.zen` facade). Still gated: the async runtime
+    /// hooks (mid-build, see ASYNC_PLAN.md) and comptime `type_match` (semantics
+    /// not settled).
     fn check_builtin_intrinsic_call(
         &mut self,
         name: &str,
@@ -92,12 +95,7 @@ impl TypeChecker {
         typed_args: Vec<TypedExpression>,
         span: Span,
     ) -> TypedExpression {
-        let gated = name.starts_with("syscall")
-            || name.starts_with("atomic_")
-            || matches!(
-                name,
-                "fence" | "async_enqueue" | "async_yield" | "type_match"
-            );
+        let gated = matches!(name, "async_enqueue" | "async_yield" | "type_match");
         if gated {
             self.push_error(
                 E0203,

@@ -1,2 +1,25 @@
-// Parse-only placeholder for @std.sys.random.getrandom.
-// Promote getrandom APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// OS-backed cryptographic randomness via the getrandom(2) syscall, routed
+// through the std.compiler facade (no direct @builtin here). For reproducible
+// streams use std.sys.random.prng instead.
+//   { getrandom_fill, getrandom_u64 } = std.sys.random.getrandom
+//
+// Syscall number 318 is getrandom on x86-64 Linux.
+
+{ sys3 } = std.compiler
+
+// Fill `len` bytes at `buf` with OS randomness; returns the bytes written.
+getrandom_fill = (buf: RawPtr<u8>, len: i64) i64 {
+    addr = @builtin.ptr_to_int(buf)
+    sys3(318, addr, len, 0)
+}
+
+// A single random u64 drawn from the OS.
+getrandom_u64 = () u64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    getrandom_fill(buf, 8)
+    value = @builtin.load<u64>(buf)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    value
+}
+
+@export({ getrandom_fill, getrandom_u64 })

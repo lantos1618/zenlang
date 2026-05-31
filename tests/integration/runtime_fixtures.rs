@@ -151,6 +151,11 @@ fn test_stdlib_propagate() {
 }
 
 #[test]
+fn test_stdlib_getrandom() {
+    run_test("stdlib_getrandom");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }
