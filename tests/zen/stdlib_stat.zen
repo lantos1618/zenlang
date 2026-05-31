@@ -1,0 +1,21 @@
+// Hermetic stat test: stat "/" (always exists), verify syscall returns ok and
+// st_mode is nonzero. Also fstat fd 1 (stdout — a tty or pipe, always open);
+// verify ok and st_mode nonzero.
+{ io } = std
+{ stat_path, fstat } = std.io.files.stat
+
+main = () i32 {
+    // stat "/" — the root directory always exists.
+    r = stat_path("/")
+    io.println("stat_ok=${cast(r.ok, i32)}")
+    // st_mode for "/" is nonzero (directory + permissions bits).
+    mode_ok = r.st_mode > 0
+    io.println("mode_ok=${cast(mode_ok, i32)}")
+
+    // fstat stdout (fd 1) — always open in a normal process.
+    r2 = fstat(1)
+    io.println("fstat_ok=${cast(r2.ok, i32)}")
+    mode_ok2 = r2.st_mode > 0
+    io.println("mode_ok2=${cast(mode_ok2, i32)}")
+    0
+}

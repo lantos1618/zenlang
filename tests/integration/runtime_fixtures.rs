@@ -176,6 +176,11 @@ fn test_stdlib_pipe() {
 }
 
 #[test]
+fn test_stdlib_stat() {
+    run_test("stdlib_stat");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }
