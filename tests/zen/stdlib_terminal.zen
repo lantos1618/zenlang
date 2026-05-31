@@ -1,0 +1,16 @@
+// Hermetic terminal test: fd 9999 is never a valid tty (deterministically),
+// so is_tty(9999) must return false (0). Also test fd 0 (stdin) — in the test
+// harness stdin is not a tty either (it's a pipe), so it also returns false.
+{ io } = std
+{ is_tty } = std.io.terminal
+
+main = () i32 {
+    // A garbage fd is never a tty.
+    t9999 = is_tty(9999)
+    io.println("bad_fd_is_tty=${cast(t9999, i32)}")
+
+    // fd 0 in the test harness is a pipe/null, not a tty.
+    t0 = is_tty(0)
+    io.println("stdin_is_tty=${cast(t0, i32)}")
+    0
+}

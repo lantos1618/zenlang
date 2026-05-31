@@ -92,6 +92,7 @@ fn is_untracked_c_call_name(name: &str) -> bool {
             | "fwrite"
             | "getenv"
             | "if"
+            | "isatty"
             | "malloc"
             | "memcmp"
             | "memcpy"
