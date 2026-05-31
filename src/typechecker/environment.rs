@@ -30,9 +30,6 @@ pub struct FuncInfo {
     pub return_type: AstType,
     pub type_params: Vec<String>,
     pub type_param_bounds: HashMap<String, BehaviorBound>,
-    /// `true` for an `@async` function: a *call* to it yields `Future<return_type>`
-    /// rather than `return_type` directly. See ASYNC_PLAN.md milestone 1.
-    pub is_async: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

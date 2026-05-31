@@ -78,19 +78,6 @@ impl Parser {
             Token::AtBuiltin => self.parse_builtin_module_call_expr(),
             Token::AtStd => self.parse_std_module_root_expr(),
 
-            // `@await e` — suspend until the future `e` is ready. The operand is
-            // parsed at prefix binding power, so `@await f(x)` awaits the call and
-            // `@await a + b` is `(@await a) + b` (matching unary `-`).
-            Token::AtAwait => {
-                let (_, op_span) = self.advance();
-                let operand = self.parse_expr_bp(PREFIX_BP)?;
-                let span = op_span.merge(operand.span());
-                Ok(Expression::Await {
-                    expr: Box::new(operand),
-                    span,
-                })
-            }
-
             Token::LParen => {
                 if self.is_closure() {
                     self.parse_closure()

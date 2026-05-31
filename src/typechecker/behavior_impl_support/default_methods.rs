@@ -45,7 +45,6 @@ impl TypeChecker {
                 body,
                 public: true,
                 external: false,
-                is_async: false,
                 span: required.span,
             })
         })

@@ -103,7 +103,6 @@ fn collect_namespace_module(dep: &Program, prefix: &str, out: &mut Vec<Declarati
             return_type,
             body,
             external,
-            is_async,
             span,
             ..
         } = decl
@@ -118,7 +117,6 @@ fn collect_namespace_module(dep: &Program, prefix: &str, out: &mut Vec<Declarati
                 body,
                 public: false,
                 external: *external,
-                is_async: *is_async,
                 span: *span,
             });
         }

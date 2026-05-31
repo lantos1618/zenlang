@@ -26,7 +26,6 @@ pub enum BuiltinGenericTypeName {
     MutPtr,
     RawPtr,
     Slice,
-    Future,
 }
 
 const BUILTIN_TYPE_SPELLINGS: &[(BuiltinTypeName, &str)] = &[
@@ -53,7 +52,6 @@ const BUILTIN_GENERIC_TYPE_SPELLINGS: &[(BuiltinGenericTypeName, &str)] = &[
     (BuiltinGenericTypeName::MutPtr, "MutPtr"),
     (BuiltinGenericTypeName::RawPtr, "RawPtr"),
     (BuiltinGenericTypeName::Slice, "Slice"),
-    (BuiltinGenericTypeName::Future, "Future"),
 ];
 
 impl BuiltinTypeName {
@@ -123,7 +121,6 @@ impl BuiltinGenericTypeName {
             Self::MutPtr => AstType::MutPtr(ty),
             Self::RawPtr => AstType::RawPtr(ty),
             Self::Slice => AstType::Slice(ty),
-            Self::Future => AstType::Future(ty),
         })
     }
 }

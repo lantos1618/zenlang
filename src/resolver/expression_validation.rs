@@ -78,8 +78,7 @@ impl Resolver {
             | Expression::MemberAccess {
                 object: operand, ..
             }
-            | Expression::Defer { expr: operand, .. }
-            | Expression::Await { expr: operand, .. } => self.validate_expr_refs_in(operand, ctx),
+            | Expression::Defer { expr: operand, .. } => self.validate_expr_refs_in(operand, ctx),
             Expression::Cast {
                 expr,
                 target_type,

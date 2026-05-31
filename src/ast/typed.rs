@@ -101,13 +101,6 @@ pub enum TypedExprKind {
         action: LoopControlAction,
         label: String,
     },
-
-    /// `@await e` — drive the future `e` to completion and yield its inner value.
-    /// `ty` (on the enclosing `TypedExpression`) is the inner `T`; `expr.ty` is
-    /// `Future<T>`. Lowering of this node is milestone-1 work in progress.
-    Await {
-        expr: Box<TypedExpression>,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -142,11 +135,6 @@ pub struct TypedFunction {
     pub return_type: Type,
     pub body: TypedBlock,
     pub defers: Vec<TypedExpression>,
-    /// `true` for an `@async` function. Such a function's *callable* return type
-    /// is `Future<return_type>`; the C backend lowers it to a coroutine frame +
-    /// poll function + allocating constructor (ASYNC_PLAN.md milestone 1).
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub is_async: bool,
     pub span: Span,
 }
 

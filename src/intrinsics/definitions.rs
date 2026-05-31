@@ -120,16 +120,6 @@ pub(super) fn build_intrinsics() -> HashMap<&'static str, Intrinsic> {
     intrinsic!(m, "load",  ("ptr" => ptr.clone()) -> generic_t.clone(), "Load a value from a pointer", "Memory");
     intrinsic!(m, "store", ("ptr" => ptr.clone(), "value" => generic_t) -> AstType::Void, "Store a value to a pointer", "Memory");
 
-    // -- Async driver hook ------------------------------------------------
-    // The *entire* async driver surface stdlib needs: poll one coroutine frame
-    // once. `true` = Ready (and `out` was written with the `T` result), `false` =
-    // Pending. `block_on` and `Scheduler` are pure Zen over this hook (ASYNC_PLAN).
-    intrinsic!(m, "poll", ("frame" => ptr.clone(), "out" => ptr.clone()) -> AstType::Bool, "Poll a coroutine frame once (true=Ready and wrote out, false=Pending)", "Async");
-
-    // -- Async scheduler (gated) ------------------------------------------
-    intrinsic!(m, "async_enqueue", ("task" => ptr.clone()) -> AstType::Void, "Enqueue an async task", "Async");
-    intrinsic!(m, "async_yield",   () -> AstType::Void, "Yield the current async task", "Async");
-
     // -- Comptime type matching (gated) -----------------------------------
     intrinsic!(m, "type_match", () -> AstType::Bool, "Comptime type metadata match", "Comptime");
 

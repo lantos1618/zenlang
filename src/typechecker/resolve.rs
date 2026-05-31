@@ -73,7 +73,6 @@ impl TypeChecker {
             AstType::Ptr(inner) => Type::Ptr(self.resolve_boxed_type(inner, substitutions)),
             AstType::MutPtr(inner) => Type::MutPtr(self.resolve_boxed_type(inner, substitutions)),
             AstType::RawPtr(inner) => Type::RawPtr(self.resolve_boxed_type(inner, substitutions)),
-            AstType::Future(inner) => Type::Future(self.resolve_boxed_type(inner, substitutions)),
             AstType::Array { elem, size } => Type::Array {
                 elem: self.resolve_boxed_type(elem, substitutions),
                 size: *size,
@@ -182,12 +181,6 @@ impl TypeChecker {
                 })
                 .unwrap_or(Type::Unknown),
             Type::Ptr(inner) | Type::MutPtr(inner) => self.lookup_field_type(inner, field),
-            // A `Future<T>` exposes a single field `frame: RawPtr<u8>` — the
-            // coroutine-frame pointer the `@async`-call transform allocates. This
-            // is the entire handle stdlib (`block_on`, `Scheduler`) reads to drive
-            // the future through `@builtin.poll`. The C value of a future *is* that
-            // pointer, so `.frame` lowers to identity (see the C backend).
-            Type::Future(_) if field == "frame" => Type::RawPtr(Box::new(Type::U8)),
             _ => Type::Unknown,
         }
     }

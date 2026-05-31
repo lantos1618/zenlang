@@ -12,7 +12,6 @@ where
         AstType::Ptr(inner) => AstType::Ptr(substitute_inner(inner)),
         AstType::MutPtr(inner) => AstType::MutPtr(substitute_inner(inner)),
         AstType::RawPtr(inner) => AstType::RawPtr(substitute_inner(inner)),
-        AstType::Future(inner) => AstType::Future(substitute_inner(inner)),
         AstType::Slice(inner) => AstType::Slice(substitute_inner(inner)),
         AstType::Array { elem, size } => AstType::Array {
             elem: substitute_inner(elem),

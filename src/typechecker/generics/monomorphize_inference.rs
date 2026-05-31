@@ -99,7 +99,6 @@ impl TypeChecker {
             (AstType::Ptr(inner), Type::Ptr(actual_inner))
             | (AstType::MutPtr(inner), Type::MutPtr(actual_inner))
             | (AstType::RawPtr(inner), Type::RawPtr(actual_inner))
-            | (AstType::Future(inner), Type::Future(actual_inner))
             | (AstType::Slice(inner), Type::Slice(actual_inner)) => {
                 self.match_type_param(inner, actual_inner, type_params, map, conflicts);
             }

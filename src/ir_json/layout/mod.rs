@@ -150,13 +150,7 @@ impl<'a> LayoutContext<'a> {
             Type::Slice(_) => {
                 self.cache_compound_layout(ty, "slice", POINTER_SIZE + USIZE_SIZE, POINTER_ALIGN)
             }
-            // A `Future<T>` lowers to a heap pointer to its coroutine frame
-            // (ASYNC_PLAN.md milestone 1), so it has pointer layout.
-            Type::Ptr(_)
-            | Type::MutPtr(_)
-            | Type::RawPtr(_)
-            | Type::Function { .. }
-            | Type::Future(_) => {
+            Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) | Type::Function { .. } => {
                 self.cache_compound_layout(ty, "pointer", POINTER_SIZE, POINTER_ALIGN)
             }
             Type::I8

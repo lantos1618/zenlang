@@ -54,10 +54,6 @@ impl Resolver {
         table.lookup(Namespace::Value, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || locals.contains(name)
-            // `pending_then_ready` is a compiler-provided *test* future
-            // (ASYNC_PLAN.md milestone 2): the deterministic Pending source used
-            // to prove genuine suspend/resume. Typed `(i32, i32) -> Future<i32>`.
-            || name == "pending_then_ready"
     }
 
     pub(super) fn param_locals(

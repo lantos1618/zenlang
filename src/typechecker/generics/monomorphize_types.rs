@@ -21,7 +21,6 @@ pub(super) fn type_mangle_key(ty: &Type) -> String {
         Type::Ptr(inner) => format!("ptr_{}", type_mangle_key(inner)),
         Type::MutPtr(inner) => format!("mutptr_{}", type_mangle_key(inner)),
         Type::RawPtr(inner) => format!("rawptr_{}", type_mangle_key(inner)),
-        Type::Future(inner) => format!("future_{}", type_mangle_key(inner)),
         Type::Function { params, ret } => {
             let params = params
                 .iter()
@@ -65,7 +64,6 @@ pub(crate) fn type_to_ast(ty: &Type) -> AstType {
         Type::Ptr(inner) => AstType::Ptr(Box::new(type_to_ast(inner))),
         Type::MutPtr(inner) => AstType::MutPtr(Box::new(type_to_ast(inner))),
         Type::RawPtr(inner) => AstType::RawPtr(Box::new(type_to_ast(inner))),
-        Type::Future(inner) => AstType::Future(Box::new(type_to_ast(inner))),
         Type::Slice(inner) => AstType::Slice(Box::new(type_to_ast(inner))),
         Type::Array { elem, size } => AstType::Array {
             elem: Box::new(type_to_ast(elem)),

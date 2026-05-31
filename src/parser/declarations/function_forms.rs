@@ -11,16 +11,10 @@ impl Parser {
         self.expect(&Token::Assign)?;
         self.skip_newlines();
 
-        // `@async` may prefix the function literal: `f = @async (x: i32) i32 {...}`.
-        // It is consumed before the `(`-detection below, since an async literal
-        // begins with the directive, not the parameter list.
-        let is_async = self.consume_async_directive();
-
         // A function literal starts with `(`. Anything else is a module-level
         // constant binding: `PI = 3.14159` — lowered to a single-statement
-        // `VarDecl` block, the same shape as the `:=` const form. (An `@async`
-        // directive guarantees a function literal follows.)
-        if !is_async && !matches!(self.peek(), Token::LParen) {
+        // `VarDecl` block, the same shape as the `:=` const form.
+        if !matches!(self.peek(), Token::LParen) {
             let value = self.parse_expression()?;
             let span = name_span.merge(value.span());
             return Ok(Declaration::TopLevelExpr {
@@ -51,20 +45,8 @@ impl Parser {
             body,
             public,
             external: false,
-            is_async,
             span,
         })
-    }
-
-    /// Consume a leading `@async` directive on a function literal, if present.
-    fn consume_async_directive(&mut self) -> bool {
-        if matches!(self.peek(), Token::AtAsync) {
-            self.advance();
-            self.skip_newlines();
-            true
-        } else {
-            false
-        }
     }
 
     /// Parse an `extern` C function declaration: `extern NAME = (params) Ret`
@@ -107,7 +89,6 @@ impl Parser {
             },
             public,
             external: true,
-            is_async: false,
             span,
         })
     }

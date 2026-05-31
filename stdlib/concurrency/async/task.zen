@@ -1,15 +1,2 @@
-// Async task surface for the cooperative scheduler.
-//
-// A *task* is an `@async` call enqueued on a `Scheduler`. Both spawning and the
-// single-future driver are now ordinary typed Zen over a nameable `Future<T>`
-// (resolved as a built-in generic type, like `RawPtr<T>`). Import them directly:
-//
-//   { scheduler, spawn, run } = std.concurrency.async.scheduler
-//   { block_on }              = std.concurrency.async.future
-//
-//   s = scheduler()
-//   s = spawn(s, work(args))   // enqueue an @async call's future
-//   run(s)                     // poll-until-all-done
-//   v = block_on(work(args))   // drive ONE future to its value
-//
-// This module is documentation only; the verbs live in `scheduler`/`future`.
+// Parse-only placeholder for @std.concurrency.async.task.
+// Promote only after parser, typechecker, lowering, and docs-truth evidence.

@@ -80,15 +80,7 @@ impl CEmitter {
                 c_static_str_literal(&escaped)
             }
             TypedExprKind::BoolLiteral(b) => b.to_string(),
-            TypedExprKind::Variable(name) => {
-                let id = c_ident(name);
-                // Inside an async poll body, a spilled name lives in the frame.
-                if self.async_frame_fields.contains(&id) {
-                    format!("__fr->{id}")
-                } else {
-                    id
-                }
-            }
+            TypedExprKind::Variable(name) => c_ident(name),
 
             TypedExprKind::BinaryOp { op, left, right } => {
                 let l = self.emit_expr_inline(left);
@@ -100,16 +92,6 @@ impl CEmitter {
             TypedExprKind::UnaryOp { op, operand } => {
                 let o = self.emit_expr_inline(operand);
                 format!("({}{})", op.symbol(), o)
-            }
-
-            TypedExprKind::FunctionCall { function, args } if function == "pending_then_ready" => {
-                // The compiler-provided test future: `pending_then_ready(n, v)`
-                // constructs a `Future<i32>` Pending for `n` polls then Ready(v),
-                // held as the uniform `void*` frame pointer (ASYNC_PLAN.md
-                // milestone 2's deterministic Pending source).
-                let n = self.emit_expr_inline(&args[0]);
-                let v = self.emit_expr_inline(&args[1]);
-                format!("zen_pending_then_ready((int)({n}), (int)({v}))")
             }
 
             TypedExprKind::FunctionCall { function, args } => {
@@ -136,12 +118,6 @@ impl CEmitter {
             TypedExprKind::FieldAccess { object, field } => {
                 let obj = self.emit_expr_inline(object);
                 match &object.ty {
-                    // A `Future<T>` is held in C as the bare coroutine-frame
-                    // `void*`; its sole field `.frame` (a `RawPtr<u8>`) IS that
-                    // pointer, so the access lowers to identity (cast to the
-                    // raw-pointer C type). This is what lets stdlib `block_on` /
-                    // `Scheduler` read `f.frame` and feed it to `@builtin.poll`.
-                    Type::Future(_) if field == "frame" => format!("((uint8_t*){obj})"),
                     Type::Ptr(_) | Type::MutPtr(_) | Type::RawPtr(_) => {
                         format!("{}->{}", obj, c_ident(field))
                     }
@@ -220,14 +196,6 @@ impl CEmitter {
             }
 
             TypedExprKind::LoopControl { action, label } => format!("goto {label}_{action}"),
-
-            // `@await` is not yet lowered to a state machine (ASYNC_PLAN.md
-            // milestone 1). The typechecker rejects any program containing an
-            // `@async` function before codegen runs, so this is unreachable for
-            // an accepted program.
-            TypedExprKind::Await { .. } => {
-                unreachable!("async lowering not implemented; gated in typechecker")
-            }
         }
     }
 }

@@ -101,18 +101,6 @@ impl CEmitter {
             CIntrinsic::Dlerror => "((uint8_t*)dlerror())".into(),
             CIntrinsic::CallExternal => format!("((int64_t(*)(void))({}))()", self.arg0(args)),
 
-            // -- Async driver hook ----------------------------------------
-            // Poll one coroutine frame once. Every frame's leading field is a
-            // `zen_poll_fn`; calling it advances the state machine and returns
-            // Ready/Pending. This is the whole driver surface stdlib builds on.
-            CIntrinsic::Poll => {
-                let frame = self.emit_expr_inline(&args[0]);
-                let out = self.emit_expr_inline(&args[1]);
-                let f = self.fresh_tmp();
-                self.line(&format!("void* {f} = (void*)({frame});"));
-                format!("((*(zen_poll_fn*){f})({f}, (void*)({out})))")
-            }
-
             // -- Inline C -------------------------------------------------
             CIntrinsic::InlineC => {
                 // The arg should be a string literal containing raw C code.

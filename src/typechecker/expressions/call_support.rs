@@ -24,25 +24,9 @@ impl TypeChecker {
 
         let (resolved_name, ret_type) = if let Some(info) = self.functions.get(&full_name).cloned()
         {
-            let (resolved, ret) = self
-                .resolve_callable_call("function", &full_name, &info, type_args, &typed_args, span);
-            // A call to an `@async` function yields a `Future<T>`, not `T`; the
-            // value is unwrapped to `T` only by `@await`.
-            let ret = if info.is_async {
-                Type::Future(Box::new(ret))
-            } else {
-                ret
-            };
-            (resolved, ret)
+            self.resolve_callable_call("function", &full_name, &info, type_args, &typed_args, span)
         } else if name == "cast" && typed_args.len() == 1 && !type_args.is_empty() {
             (full_name.clone(), self.resolve_type(&type_args[0]))
-        } else if name == "pending_then_ready" && module.is_none() && typed_args.len() == 2 {
-            // A compiler-provided *test* future (ASYNC_PLAN.md milestone 2): it
-            // returns Pending for the first `n` polls, then Ready(`value`). It is
-            // the deterministic Pending source used to prove genuine
-            // suspend/resume before a real I/O readiness source (milestone 3)
-            // exists. `pending_then_ready(n, value) -> Future<i32>`.
-            (full_name.clone(), Type::Future(Box::new(Type::I32)))
         } else if let Some(module) = module {
             let mangled = format!("{module}_{name}");
             if let Some(info) = self.methods.get(&full_name).cloned() {
@@ -91,9 +75,8 @@ impl TypeChecker {
     /// `TypedExprKind::Intrinsic` node the C backend emits directly. `syscall*`,
     /// `atomic_*`, and `fence` are settled OS/hardware hooks with full C lowering,
     /// exposed so the stdlib can build sys/io/concurrency on them (the recommended
-    /// path is the `stdlib/compiler.zen` facade). Still gated: the async runtime
-    /// hooks (mid-build, see ASYNC_PLAN.md) and comptime `type_match` (semantics
-    /// not settled).
+    /// path is the `stdlib/compiler.zen` facade). Still gated: comptime
+    /// `type_match` (semantics not settled).
     fn check_builtin_intrinsic_call(
         &mut self,
         name: &str,
@@ -102,7 +85,7 @@ impl TypeChecker {
         typed_args: Vec<TypedExpression>,
         span: Span,
     ) -> TypedExpression {
-        let gated = matches!(name, "async_enqueue" | "async_yield" | "type_match");
+        let gated = matches!(name, "type_match");
         if gated {
             self.push_error(
                 E0203,
