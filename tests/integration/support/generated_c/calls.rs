@@ -90,6 +90,7 @@ fn is_untracked_c_call_name(name: &str) -> bool {
             | "fputc"
             | "free"
             | "fwrite"
+            | "getenv"
             | "if"
             | "malloc"
             | "memcmp"
