@@ -14,8 +14,9 @@ Declarations are prefix-first; names come first:
 | Import | `{ io } = std` |
 | Immutable local | `name = value` |
 | Mutable inferred local | `name ::= value` |
+| Const inferred local | `name := value` |
 | Reassignment | `name = new_value` |
-| Typed local | `name: Type = value` |
+| Typed local (immutable / mutable / const) | `name: Type = value` · `name: Type ::= value` · `name: Type := value` |
 | Function | `name = (arg: Type) ResultType { final_expression }` |
 | Method | `Type.method = (self: Type) ResultType { final_expression }` |
 | Struct | `Name: { field: Type }` |
