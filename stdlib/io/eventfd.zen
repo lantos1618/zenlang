@@ -1,2 +1,40 @@
-// Parse-only placeholder for @std.io.eventfd.
-// Promote eventfd APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Kernel eventfd counter via the eventfd2(2) syscall, routed through the
+// std.compiler facade. An eventfd is a file descriptor wrapping a 64-bit counter:
+// writing adds to it, reading returns the accumulated total and resets it (the
+// building block for cross-thread/loop wakeups). read/write go through the read(2)
+// and write(2) syscalls on the fd.
+//   { eventfd_new, eventfd_write, eventfd_read, eventfd_close } = std.io.eventfd
+//
+// x86-64 Linux syscall numbers: eventfd2=290, read=0, write=1, close=3.
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Create an eventfd with an initial counter value. Returns the fd (>= 0 on ok).
+eventfd_new = (initval: i64) i64 {
+    sys2(290, initval, 0)
+}
+
+// Add `value` to the counter. Returns bytes written (8 on success).
+eventfd_write = (fd: i64, value: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(buf, value)
+    n = sys3(1, fd, @builtin.ptr_to_int(buf), 8)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    n
+}
+
+// Read and reset the counter, returning its accumulated value.
+eventfd_read = (fd: i64) i64 {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    sys3(0, fd, @builtin.ptr_to_int(buf), 8)
+    value = @builtin.load<i64>(buf)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    value
+}
+
+// Close the eventfd. Returns 0 on success.
+eventfd_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ eventfd_new, eventfd_write, eventfd_read, eventfd_close })
