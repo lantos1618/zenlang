@@ -194,3 +194,8 @@ fn test_stdlib_atomic() {
 fn test_stdlib_once() {
     run_test("stdlib_once");
 }
+
+#[test]
+fn test_stdlib_file() {
+    run_test("stdlib_file");
+}
