@@ -174,3 +174,8 @@ fn test_stdlib_process() {
 fn test_stdlib_sched() {
     run_test("stdlib_sched");
 }
+
+#[test]
+fn test_stdlib_time() {
+    run_test("stdlib_time");
+}

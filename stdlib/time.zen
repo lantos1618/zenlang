@@ -1,2 +1,42 @@
-// Parse-only placeholder for @std.time.
-// Promote time APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Wall-clock and monotonic time via clock_gettime (syscall 228) — x86-64 Linux.
+// The timespec struct is two i64 fields: tv_sec at offset 0, tv_nsec at offset 8.
+// CLOCK_REALTIME=0, CLOCK_MONOTONIC=1.
+//   { time_now_secs, time_now_nanos } = std.time
+
+{ sys2 } = std.compiler
+
+// Seconds since the Unix epoch (CLOCK_REALTIME).
+time_now_secs = () i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    addr = @builtin.ptr_to_int(buf)
+    sys2(228, 0, addr)
+    secs = @builtin.load<i64>(buf)
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs
+}
+
+// Nanoseconds since the Unix epoch (CLOCK_REALTIME), as a single i64
+// combining seconds*1_000_000_000 + nsec.
+time_now_nanos = () i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    addr = @builtin.ptr_to_int(buf)
+    sys2(228, 0, addr)
+    secs = @builtin.load<i64>(buf)
+    nsec = @builtin.load<i64>(@builtin.gep(buf, 8))
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs * 1000000000 + nsec
+}
+
+// Nanoseconds on the monotonic clock (CLOCK_MONOTONIC=1).
+// Useful for measuring elapsed time between two calls.
+time_monotonic_nanos = () i64 {
+    buf = @builtin.raw_allocate(cast(16, usize))
+    addr = @builtin.ptr_to_int(buf)
+    sys2(228, 1, addr)
+    secs = @builtin.load<i64>(buf)
+    nsec = @builtin.load<i64>(@builtin.gep(buf, 8))
+    @builtin.raw_deallocate(buf, cast(16, usize))
+    secs * 1000000000 + nsec
+}
+
+@export({ time_now_secs, time_now_nanos, time_monotonic_nanos })
