@@ -1,5 +1,48 @@
-// Parse-only placeholder for @std.io.net.unix_socket.
+// Unix-domain socket pair via the socketpair(2) syscall, routed through the
+// std.compiler facade. socketpair(53) writes two connected i32 fds into an
+// 8-byte buffer — identical layout to pipe2. Both ends support read/write.
 //
-// The previous syscall-heavy file was an unparseable sketch, not working stdlib
-// code. Restore Unix socket APIs here only with host-effect, parser,
-// typechecker, build, and docs-truth evidence.
+// AF_UNIX=1, SOCK_STREAM=1, protocol=0.
+//   { socketpair_new, socketpair_write, socketpair_read, socketpair_close } = std.io.net.unix_socket
+//
+// x86-64 Linux syscall numbers: socketpair=53, read=0, write=1, close=3.
+
+{ sys1, sys3, sys4 } = std.compiler
+
+// A connected pair of Unix-domain socket fds.
+SocketPairFds: { fd0: i64, fd1: i64 }
+
+// Create a connected Unix-domain socket pair. Returns SocketPairFds with
+// fd0 >= 0 on success.
+socketpair_new = () SocketPairFds {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    // socketpair(AF_UNIX=1, SOCK_STREAM=1, protocol=0, sv_ptr)
+    rc = sys4(53, 1, 1, 0, @builtin.ptr_to_int(buf))
+    fd0_i32 = @builtin.load<i32>(buf)
+    fd1_ptr = @builtin.gep(buf, 4)
+    fd1_i32 = @builtin.load<i32>(fd1_ptr)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    fd0 = cast(fd0_i32, i64)
+    fd1 = cast(fd1_i32, i64)
+    ok = rc >= 0
+    fd0_out = ok ? | true { fd0 } | false { rc }
+    fd1_out = ok ? | true { fd1 } | false { rc }
+    SocketPairFds { fd0: fd0_out, fd1: fd1_out }
+}
+
+// Write `len` bytes from `ptr` into one end of the socket pair.
+socketpair_write = (fd: i64, ptr: RawPtr<u8>, len: i64) i64 {
+    sys3(1, fd, @builtin.ptr_to_int(ptr), len)
+}
+
+// Read up to `len` bytes from one end of the socket pair.
+socketpair_read = (fd: i64, ptr: RawPtr<u8>, len: i64) i64 {
+    sys3(0, fd, @builtin.ptr_to_int(ptr), len)
+}
+
+// Close one socket fd.
+socketpair_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ SocketPairFds, socketpair_new, socketpair_write, socketpair_read, socketpair_close })

@@ -191,6 +191,46 @@ fn test_stdlib_eventfd() {
 }
 
 #[test]
+fn test_stdlib_pipe() {
+    run_test("stdlib_pipe");
+}
+
+#[test]
+fn test_stdlib_stat() {
+    run_test("stdlib_stat");
+}
+
+#[test]
+fn test_stdlib_poll() {
+    run_test("stdlib_poll");
+}
+
+#[test]
+fn test_stdlib_epoll() {
+    run_test("stdlib_epoll");
+}
+
+#[test]
+fn test_stdlib_timerfd() {
+    run_test("stdlib_timerfd");
+}
+
+#[test]
+fn test_stdlib_unix_socket() {
+    run_test("stdlib_unix_socket");
+}
+
+#[test]
+fn test_stdlib_terminal() {
+    run_test("stdlib_terminal");
+}
+
+#[test]
+fn test_stdlib_dir() {
+    run_test("stdlib_dir");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

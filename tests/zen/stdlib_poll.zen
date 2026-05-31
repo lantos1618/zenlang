@@ -1,0 +1,25 @@
+// Hermetic poll test: create an eventfd, signal it (write 1), then poll with
+// POLLIN and timeout=0. The fd is already readable so poll must return
+// immediately with POLLIN set in revents.
+{ io } = std
+{ eventfd_new, eventfd_write, eventfd_close } = std.io.eventfd
+{ poll_one } = std.io.mux.poll
+
+main = () i32 {
+    fd = eventfd_new(0)
+    fd_ok = fd >= 0
+    io.println("fd_ok=${cast(fd_ok, i32)}")
+
+    // Signal the fd so it becomes readable.
+    eventfd_write(fd, 1)
+
+    // POLLIN = 1; timeout = 0 (instant check).
+    revents = poll_one(fd, 1, 0)
+    // revents should have bit 0 (POLLIN) set.
+    pollin_set = revents > 0
+    io.println("pollin_set=${cast(pollin_set, i32)}")
+
+    rc = eventfd_close(fd)
+    io.println("closed=${cast(rc, i32)}")
+    0
+}

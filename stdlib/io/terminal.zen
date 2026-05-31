@@ -1,4 +1,16 @@
-// Parse-only placeholder for @std.io.terminal.
+// Terminal detection via the POSIX isatty(3) function, routed through @extern.
+// isatty returns 1 if the given file descriptor refers to a terminal, 0 otherwise.
+//   { is_tty } = std.io.terminal
 //
-// Terminal APIs need host-effect, parser, typechecker, build, and docs-truth
-// evidence before this module carries implementation code.
+// isatty is a libc function; it is not a raw syscall.
+
+@extern isatty = (fd: i32) i32
+
+// Returns true if fd is an open terminal (tty), false otherwise.
+is_tty = (fd: i64) bool {
+    fd_i32 = cast(fd, i32)
+    result = isatty(fd_i32)
+    result == 1
+}
+
+@export({ is_tty })

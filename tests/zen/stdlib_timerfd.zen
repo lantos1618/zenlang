@@ -1,0 +1,24 @@
+// Hermetic timerfd test: create a timerfd, arm it with a 1ms one-shot relative
+// timeout (0s + 1_000_000ns), then read. The read blocks until the timer fires
+// and returns an expiration count of 1 — deterministic because we read exactly
+// once after the single-shot fires.
+{ io } = std
+{ timerfd_create, timerfd_settime, timerfd_read, timerfd_close } = std.io.timerfd
+
+main = () i32 {
+    fd = timerfd_create()
+    fd_ok = fd >= 0
+    io.println("fd_ok=${cast(fd_ok, i32)}")
+
+    // Arm: 0s interval (single-shot), 0s + 1_000_000ns (~1ms) value.
+    rc = timerfd_settime(fd, 0, 1000000, 0, 0)
+    io.println("arm_ok=${cast(rc == 0, i32)}")
+
+    // Read blocks until expiry; count should be exactly 1.
+    count = timerfd_read(fd)
+    io.println("count=${cast(count, i32)}")
+
+    close_rc = timerfd_close(fd)
+    io.println("closed=${cast(close_rc, i32)}")
+    0
+}

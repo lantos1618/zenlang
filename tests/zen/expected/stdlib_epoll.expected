@@ -1,0 +1,5 @@
+fd_ok=1
+epfd_ok=1
+add_ok=1
+epollin_set=1
+closed=0

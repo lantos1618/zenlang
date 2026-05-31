@@ -1,4 +1,34 @@
-// Parse-only placeholder for @std.io.files.dir.
+// Directory listing via the getdents64(2) syscall, routed through the
+// std.compiler facade. getdents64(217) fills a caller-supplied buffer with
+// variable-length linux_dirent64 records; returns bytes written (>0) or error (<0).
 //
-// Directory APIs need host-effect, parser, typechecker, build, and docs-truth
-// evidence before this module carries implementation code.
+// Use open(2) with O_RDONLY|O_DIRECTORY to obtain a directory fd first.
+// O_RDONLY=0, O_DIRECTORY=65536; open syscall=2, getdents64=217, close=3.
+//   { dir_open, dir_read_raw, dir_close } = std.io.files.dir
+//
+// x86-64 Linux syscall numbers: open=2, getdents64=217, close=3.
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// Open a directory for reading. path must be NUL-terminated.
+// Returns fd >= 0 on success.
+dir_open = (path: StaticString) i64 {
+    addr = @builtin.ptr_to_int(@builtin.static_string_ptr(path))
+    // O_RDONLY=0 | O_DIRECTORY=65536
+    sys2(2, addr, 65536)
+}
+
+// Fill `buf` with up to `buf_len` bytes of linux_dirent64 records from the
+// open directory fd. Returns bytes filled (>0), 0 at end-of-directory, or <0
+// on error. Each record starts with [d_ino i64, d_off i64, d_reclen u16, d_type u8,
+// d_name...]; advance by d_reclen to reach the next record.
+dir_read_raw = (fd: i64, buf: RawPtr<u8>, buf_len: i64) i64 {
+    sys3(217, fd, @builtin.ptr_to_int(buf), buf_len)
+}
+
+// Close a directory fd. Returns 0 on success.
+dir_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ dir_open, dir_read_raw, dir_close })

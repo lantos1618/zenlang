@@ -1,0 +1,34 @@
+// Hermetic epoll test: create an eventfd, create an epoll instance, add the
+// eventfd with EPOLLIN, signal the fd, then epoll_wait_one with timeout=0.
+// The fd is already readable so epoll_wait_one must return EPOLLIN set.
+{ io } = std
+{ eventfd_new, eventfd_write, eventfd_close } = std.io.eventfd
+{ epoll_create, epoll_add, epoll_wait_one, epoll_close } = std.io.mux.epoll
+
+main = () i32 {
+    fd = eventfd_new(0)
+    fd_ok = fd >= 0
+    io.println("fd_ok=${cast(fd_ok, i32)}")
+
+    epfd = epoll_create()
+    epfd_ok = epfd >= 0
+    io.println("epfd_ok=${cast(epfd_ok, i32)}")
+
+    // Add fd with EPOLLIN(1).
+    add_rc = epoll_add(epfd, fd, 1)
+    io.println("add_ok=${cast(add_rc == 0, i32)}")
+
+    // Signal the eventfd so it is readable.
+    eventfd_write(fd, 1)
+
+    // Wait with timeout=0 (non-blocking).
+    revents = epoll_wait_one(epfd, 0)
+    // EPOLLIN=1; revents should have bit 0 set.
+    epollin_set = revents > 0
+    io.println("epollin_set=${cast(epollin_set, i32)}")
+
+    epoll_close(epfd)
+    rc = eventfd_close(fd)
+    io.println("closed=${cast(rc, i32)}")
+    0
+}

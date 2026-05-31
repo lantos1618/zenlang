@@ -1,2 +1,46 @@
-// Parse-only placeholder for @std.io.net.pipe.
-// Promote pipe APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// Anonymous byte pipe via the pipe2(2) syscall, routed through the std.compiler
+// facade. pipe2(293) writes two i32 fds into a caller-supplied 8-byte buffer:
+// [read_fd i32, write_fd i32]. Expose a thin struct pair plus write/read/close.
+//   { pipe_new, pipe_write, pipe_read, pipe_close } = std.io.net.pipe
+//
+// x86-64 Linux syscall numbers: pipe2=293, read=0, write=1, close=3.
+
+{ sys1, sys2, sys3 } = std.compiler
+
+// A read/write fd pair returned by pipe_new.
+PipeFds: { read_fd: i64, write_fd: i64 }
+
+// Create a pipe. Returns a PipeFds with both ends (read_fd >= 0 on success).
+pipe_new = () PipeFds {
+    buf = @builtin.raw_allocate(cast(8, usize))
+    rc = sys2(293, @builtin.ptr_to_int(buf), 0)
+    // The two i32 fds sit at byte offsets 0 and 4 in the buffer.
+    rfd_i32 = @builtin.load<i32>(buf)
+    wbuf   = @builtin.gep(buf, 4)
+    wfd_i32 = @builtin.load<i32>(wbuf)
+    @builtin.raw_deallocate(buf, cast(8, usize))
+    // Propagate error: if rc < 0, both fds come back as that error value.
+    rfd = cast(rfd_i32, i64)
+    wfd = cast(wfd_i32, i64)
+    ok = rc >= 0
+    rfd_out = ok ? | true { rfd } | false { rc }
+    wfd_out = ok ? | true { wfd } | false { rc }
+    PipeFds { read_fd: rfd_out, write_fd: wfd_out }
+}
+
+// Write `len` bytes from `ptr` into the write end. Returns bytes written.
+pipe_write = (fd: i64, ptr: RawPtr<u8>, len: i64) i64 {
+    sys3(1, fd, @builtin.ptr_to_int(ptr), len)
+}
+
+// Read up to `len` bytes from the read end into `ptr`. Returns bytes read.
+pipe_read = (fd: i64, ptr: RawPtr<u8>, len: i64) i64 {
+    sys3(0, fd, @builtin.ptr_to_int(ptr), len)
+}
+
+// Close one end of the pipe. Returns 0 on success.
+pipe_close = (fd: i64) i64 {
+    sys1(3, fd)
+}
+
+@export({ PipeFds, pipe_new, pipe_write, pipe_read, pipe_close })
