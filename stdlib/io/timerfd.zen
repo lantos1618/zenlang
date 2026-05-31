@@ -15,7 +15,7 @@
 // x86-64 Linux syscall numbers: timerfd_create=283, timerfd_settime=286,
 //   read=0, close=3.
 
-{ sys1, sys2, sys3, sys4 } = std.compiler
+{ sys1, sys2, sys3, sys4, raw_allocate, raw_deallocate, gep, ptr_to_int, load_i64, store_i64 } = std.compiler
 
 // Create a timerfd. clock_id=1 (CLOCK_MONOTONIC). Returns fd >= 0 on success.
 timerfd_create = () i64 {
@@ -27,27 +27,27 @@ timerfd_create = () i64 {
 // (0/0 = single-shot). Returns 0 on success.
 timerfd_settime = (fd: i64, sec: i64, nsec: i64, interval_sec: i64, interval_nsec: i64) i64 {
     // new_value itimerspec (32 bytes): [interval.sec, interval.nsec, value.sec, value.nsec]
-    buf = @builtin.raw_allocate(cast(32, usize))
-    insec_ptr = @builtin.gep(buf, 8)
-    vsec_ptr = @builtin.gep(buf, 16)
-    vnsec_ptr = @builtin.gep(buf, 24)
-    @builtin.store(buf, interval_sec)
-    @builtin.store(insec_ptr, interval_nsec)
-    @builtin.store(vsec_ptr, sec)
-    @builtin.store(vnsec_ptr, nsec)
+    buf = raw_allocate(cast(32, usize))
+    insec_ptr = gep(buf, 8)
+    vsec_ptr = gep(buf, 16)
+    vnsec_ptr = gep(buf, 24)
+    store_i64(buf, interval_sec)
+    store_i64(insec_ptr, interval_nsec)
+    store_i64(vsec_ptr, sec)
+    store_i64(vnsec_ptr, nsec)
     // old_value = NULL (0)
-    rc = sys4(286, fd, 0, @builtin.ptr_to_int(buf), 0)
-    @builtin.raw_deallocate(buf, cast(32, usize))
+    rc = sys4(286, fd, 0, ptr_to_int(buf), 0)
+    raw_deallocate(buf, cast(32, usize))
     rc
 }
 
 // Read the expiration count (blocks until at least one expiry).
 // Returns the number of expirations since the last read.
 timerfd_read = (fd: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
-    sys3(0, fd, @builtin.ptr_to_int(buf), 8)
-    count = @builtin.load<i64>(buf)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
+    sys3(0, fd, ptr_to_int(buf), 8)
+    count = load_i64(buf)
+    raw_deallocate(buf, cast(8, usize))
     count
 }
 

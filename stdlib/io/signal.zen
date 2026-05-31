@@ -23,7 +23,7 @@
 //     signal_send, signalfd_new, signalfd_read, signalfd_close,
 //     signum_sigusr1, signum_sigusr2, signum_sigterm } = std.io.signal
 
-{ sys1, sys2, sys3, sys4 } = std.compiler
+{ sys1, sys2, sys3, sys4, raw_allocate, raw_deallocate, ptr_to_int, store_i64, load_u32 } = std.compiler
 
 // --- Signal number constants ---
 signum_sighup    = () i64 { 1 }
@@ -71,7 +71,7 @@ sigset_bit = (signum: i64) i64 {
 // Write the sigset_t for `signum` into a caller-supplied 8-byte buffer.
 sigset_fill = (buf: RawPtr<u8>, signum: i64) void {
     bits = sigset_bit(signum)
-    @builtin.store(buf, bits)
+    store_i64(buf, bits)
 }
 
 // Call rt_sigprocmask(14). `how` is SIG_BLOCK(0)/SIG_UNBLOCK(1)/SIG_SETMASK(2).
@@ -85,20 +85,20 @@ signal_mask_raw = (how: i64, new_set: i64, old_set: i64) i64 {
 // Block signal `signum` in the current thread's signal mask.
 // Returns 0 on success, negative errno on failure.
 signal_block = (signum: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
     sigset_fill(buf, signum)
-    rc = signal_mask_raw(0, @builtin.ptr_to_int(buf), 0)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc = signal_mask_raw(0, ptr_to_int(buf), 0)
+    raw_deallocate(buf, cast(8, usize))
     rc
 }
 
 // Unblock signal `signum` in the current thread's signal mask.
 // Returns 0 on success, negative errno on failure.
 signal_unblock = (signum: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
     sigset_fill(buf, signum)
-    rc = signal_mask_raw(1, @builtin.ptr_to_int(buf), 0)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc = signal_mask_raw(1, ptr_to_int(buf), 0)
+    raw_deallocate(buf, cast(8, usize))
     rc
 }
 
@@ -113,17 +113,17 @@ signal_send = (pid: i64, signum: i64) i64 {
 // Returns a signalfd fd (>= 0) or negative errno.
 // signalfd4(289): (fd, mask_ptr, sigsetsize=8, flags).
 signalfd_new = (signum: i64, flags: i64) i64 {
-    buf = @builtin.raw_allocate(cast(8, usize))
+    buf = raw_allocate(cast(8, usize))
     sigset_fill(buf, signum)
-    rc = sys4(289, cast(0 - 1, i64), @builtin.ptr_to_int(buf), 8, flags)
-    @builtin.raw_deallocate(buf, cast(8, usize))
+    rc = sys4(289, cast(0 - 1, i64), ptr_to_int(buf), 8, flags)
+    raw_deallocate(buf, cast(8, usize))
     rc
 }
 
 // Read one signalfd_siginfo (128 bytes) from a signalfd fd into `buf`.
 // Returns 128 on success, or negative errno.
 signalfd_read = (sfd: i64, buf: RawPtr<u8>) i64 {
-    sys3(0, sfd, @builtin.ptr_to_int(buf), 128)
+    sys3(0, sfd, ptr_to_int(buf), 128)
 }
 
 // Close a signalfd fd.
@@ -133,7 +133,7 @@ signalfd_close = (sfd: i64) i64 {
 
 // Read the signal number from a signalfd_siginfo buffer (ssi_signo at byte 0).
 signalfd_signo = (buf: RawPtr<u8>) i64 {
-    v = @builtin.load<u32>(buf)
+    v = load_u32(buf)
     cast(v, i64)
 }
 

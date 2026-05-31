@@ -11,41 +11,41 @@
 //
 // x86-64 Linux syscall numbers: stat=4, fstat=5.
 
-{ sys2 } = std.compiler
+{ sys2, raw_allocate, raw_deallocate, gep, ptr_to_int, str_ptr, load_u32, load_i64 } = std.compiler
 
 // Lightweight stat result holding the most useful fields.
 StatResult: { ok: bool, st_mode: i64, st_size: i64, st_ino: i64 }
 
 // Query metadata for an open file descriptor. Returns a StatResult.
 fstat = (fd: i64) StatResult {
-    buf = @builtin.raw_allocate(cast(144, usize))
-    rc = sys2(5, fd, @builtin.ptr_to_int(buf))
+    buf = raw_allocate(cast(144, usize))
+    rc = sys2(5, fd, ptr_to_int(buf))
     succeeded = rc == 0
-    mode_ptr  = @builtin.gep(buf, 24)
-    size_ptr  = @builtin.gep(buf, 48)
-    ino_ptr   = @builtin.gep(buf, 8)
-    mode_u32  = @builtin.load<u32>(mode_ptr)
+    mode_ptr  = gep(buf, 24)
+    size_ptr  = gep(buf, 48)
+    ino_ptr   = gep(buf, 8)
+    mode_u32  = load_u32(mode_ptr)
     mode      = cast(mode_u32, i64)
-    sz        = @builtin.load<i64>(size_ptr)
-    ino       = @builtin.load<i64>(ino_ptr)
-    @builtin.raw_deallocate(buf, cast(144, usize))
+    sz        = load_i64(size_ptr)
+    ino       = load_i64(ino_ptr)
+    raw_deallocate(buf, cast(144, usize))
     StatResult { ok: succeeded, st_mode: mode, st_size: sz, st_ino: ino }
 }
 
 // Query metadata for a path (NUL-terminated StaticString).
 stat_path = (path: StaticString) StatResult {
-    buf = @builtin.raw_allocate(cast(144, usize))
-    path_ptr = @builtin.ptr_to_int(@builtin.static_string_ptr(path))
-    rc = sys2(4, path_ptr, @builtin.ptr_to_int(buf))
+    buf = raw_allocate(cast(144, usize))
+    path_ptr = ptr_to_int(str_ptr(path))
+    rc = sys2(4, path_ptr, ptr_to_int(buf))
     succeeded = rc == 0
-    mode_ptr = @builtin.gep(buf, 24)
-    size_ptr = @builtin.gep(buf, 48)
-    ino_ptr  = @builtin.gep(buf, 8)
-    mode_u32 = @builtin.load<u32>(mode_ptr)
+    mode_ptr = gep(buf, 24)
+    size_ptr = gep(buf, 48)
+    ino_ptr  = gep(buf, 8)
+    mode_u32 = load_u32(mode_ptr)
     mode     = cast(mode_u32, i64)
-    sz       = @builtin.load<i64>(size_ptr)
-    ino      = @builtin.load<i64>(ino_ptr)
-    @builtin.raw_deallocate(buf, cast(144, usize))
+    sz       = load_i64(size_ptr)
+    ino      = load_i64(ino_ptr)
+    raw_deallocate(buf, cast(144, usize))
     StatResult { ok: succeeded, st_mode: mode, st_size: sz, st_ino: ino }
 }
 

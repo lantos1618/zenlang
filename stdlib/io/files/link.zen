@@ -9,25 +9,25 @@
 //
 //   { file_link, file_symlink, file_readlink, link_unlink } = std.io.files.link
 
-{ sys2, sys3 } = std.compiler
+{ sys2, sys3, ptr_to_int } = std.compiler
 
 // Create a hard link from `oldpath` to `newpath`. Both paths must be
 // NUL-terminated. Returns 0 on success, negative errno on failure.
 file_link = (oldpath: RawPtr<u8>, newpath: RawPtr<u8>) i64 {
-    sys2(86, @builtin.ptr_to_int(oldpath), @builtin.ptr_to_int(newpath))
+    sys2(86, ptr_to_int(oldpath), ptr_to_int(newpath))
 }
 
 // Create a symbolic link at `linkpath` pointing to `target`. Both paths must
 // be NUL-terminated. Returns 0 on success, negative errno on failure.
 file_symlink = (target: RawPtr<u8>, linkpath: RawPtr<u8>) i64 {
-    sys2(88, @builtin.ptr_to_int(target), @builtin.ptr_to_int(linkpath))
+    sys2(88, ptr_to_int(target), ptr_to_int(linkpath))
 }
 
 // Read the destination of the symbolic link at `path` into `buf` (up to
 // `buf_len` bytes, NOT NUL-terminated by the kernel). Returns the number of
 // bytes placed into `buf`, or a negative errno on failure.
 file_readlink = (path: RawPtr<u8>, buf: RawPtr<u8>, buf_len: i64) i64 {
-    sys3(89, @builtin.ptr_to_int(path), @builtin.ptr_to_int(buf), buf_len)
+    sys3(89, ptr_to_int(path), ptr_to_int(buf), buf_len)
 }
 
 // Unlink (remove) a path. Uses unlinkat(263) with AT_FDCWD=-100 and flags=0.
@@ -35,7 +35,7 @@ file_readlink = (path: RawPtr<u8>, buf: RawPtr<u8>, buf_len: i64) i64 {
 // AT_FDCWD = -100 cast to i64. Syscall: unlinkat(dirfd, pathname, flags).
 link_unlink = (path: RawPtr<u8>) i64 {
     at_fdcwd = cast(0 - 100, i64)
-    sys3(263, at_fdcwd, @builtin.ptr_to_int(path), 0)
+    sys3(263, at_fdcwd, ptr_to_int(path), 0)
 }
 
 @export({ file_link, file_symlink, file_readlink, link_unlink })

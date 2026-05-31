@@ -4,33 +4,33 @@
 //   { file_open, file_open_create, file_read, file_write,
 //     file_close, file_unlink } = std.io.files.file
 
-{ sys1, sys2, sys3 } = std.compiler
+{ sys1, sys2, sys3, ptr_to_int } = std.compiler
 
 // Open a file by path (StaticString, null-terminated) with the given flags.
 // Returns a file descriptor (>= 0) or a negative error code.
 // flags: O_RDONLY=0, O_WRONLY=1, O_RDWR=2.
 file_open = (path: RawPtr<u8>, flags: i64) i64 {
-    addr = @builtin.ptr_to_int(path)
+    addr = ptr_to_int(path)
     sys2(2, addr, flags)
 }
 
 // Open (or create/truncate) a file for writing.
 // O_WRONLY=1, O_CREAT=64, O_TRUNC=512; mode 0644=420.
 file_open_create = (path: RawPtr<u8>) i64 {
-    addr = @builtin.ptr_to_int(path)
+    addr = ptr_to_int(path)
     flags = cast(1 | 64 | 512, i64)
     sys3(2, addr, flags, 420)
 }
 
 // Read up to `len` bytes from `fd` into `buf`. Returns bytes read or negative error.
 file_read = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys3(0, fd, addr, len)
 }
 
 // Write `len` bytes from `buf` to `fd`. Returns bytes written or negative error.
 file_write = (fd: i64, buf: RawPtr<u8>, len: i64) i64 {
-    addr = @builtin.ptr_to_int(buf)
+    addr = ptr_to_int(buf)
     sys3(1, fd, addr, len)
 }
 
@@ -41,7 +41,7 @@ file_close = (fd: i64) i64 {
 
 // Unlink (delete) a file by path. Returns 0 on success.
 file_unlink = (path: RawPtr<u8>) i64 {
-    addr = @builtin.ptr_to_int(path)
+    addr = ptr_to_int(path)
     sys1(87, addr)
 }
 
