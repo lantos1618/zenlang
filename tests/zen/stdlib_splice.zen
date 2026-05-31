@@ -1,0 +1,49 @@
+// Hermetic splice test: write bytes into a pipe, splice from the pipe read end
+// to another pipe's write end (pipe-to-pipe is valid since both fds are pipes),
+// then read from the second pipe's read end. Verifies that splice(275) moves
+// the data correctly.
+{ io } = std
+{ pipe_new, pipe_write, pipe_read, pipe_close } = std.io.net.pipe
+{ splice_move } = std.io.files.splice
+
+main = () i32 {
+    // Create two pipes.
+    p1 = pipe_new()
+    p2 = pipe_new()
+    pipes_ok = p1.read_fd >= 0 && p2.read_fd >= 0
+    io.println("pipes_ok=${cast(pipes_ok, i32)}")
+
+    // Write 8 known bytes into pipe1 write end.
+    wbuf = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(wbuf, cast(0x0807060504030201, i64))
+    nw = pipe_write(p1.write_fd, wbuf, 8)
+    io.println("wrote=${cast(nw, i32)}")
+    @builtin.raw_deallocate(wbuf, cast(8, usize))
+
+    // Close p1 write end so splice sees EOF eventually (not strictly needed for
+    // a bounded splice, but tidy).
+    pipe_close(p1.write_fd)
+
+    // Splice from p1.read_fd → p2.write_fd: move 8 bytes.
+    // flags=0 (no hints needed for this small synchronous transfer).
+    spliced = splice_move(p1.read_fd, p2.write_fd, 8, 0)
+    io.println("spliced=${cast(spliced, i32)}")
+    splice_ok = spliced == 8
+    io.println("splice_ok=${cast(splice_ok, i32)}")
+
+    // Read from p2 read end.
+    rbuf = @builtin.raw_allocate(cast(8, usize))
+    nr = pipe_read(p2.read_fd, rbuf, 8)
+    val = @builtin.load<i64>(rbuf)
+    @builtin.raw_deallocate(rbuf, cast(8, usize))
+    read_ok = nr == 8
+    io.println("read_ok=${cast(read_ok, i32)}")
+    match_ok = val == cast(0x0807060504030201, i64)
+    io.println("match_ok=${cast(match_ok, i32)}")
+
+    // Close remaining fds.
+    pipe_close(p1.read_fd)
+    pipe_close(p2.write_fd)
+    pipe_close(p2.read_fd)
+    0
+}
