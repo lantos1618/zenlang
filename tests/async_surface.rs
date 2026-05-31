@@ -211,15 +211,16 @@ fn awaiting_an_async_call_yields_the_inner_value_type() {
 
 #[test]
 fn async_await_ready_value_runs() {
-    // The milestone-1 slice: an `@async` fn that awaits a ready value, driven by
-    // `block_on`, compiles, links, runs, and prints the value. The end-to-end
-    // proof lives in the runtime fixture `tests/zen/async_await_ready.zen`
-    // (exercised by `runtime_fixtures::test_async_await_ready`); here we assert
-    // the program type-checks clean — i.e. the E3082 lowering gate is gone for
-    // this shape.
+    // The milestone-1 slice: an `@async` fn that awaits a ready value compiles
+    // (the E3082 lowering gate is gone for this top-level-await shape). The
+    // driver `block_on` is now ordinary stdlib Zen over `@builtin.poll`, so the
+    // end-to-end proof (which imports it) lives in the runtime fixture
+    // `tests/zen/async_await_ready.zen` (`runtime_fixtures::test_async_await_ready`);
+    // here we assert the async surface itself type-checks clean.
     let diags = frontend_diagnostics(
         "ready = @async (n: i32) i32 { n + 1 }\n\
-         main = () i32 { block_on(ready(41)) }\n",
+         chained = @async (n: i32) i32 { a = @await ready(n)\n a + 1 }\n\
+         main = () i32 { 0 }\n",
     );
     assert!(
         diags.is_empty(),

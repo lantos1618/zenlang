@@ -1,0 +1,32 @@
+// Async futures: the handle, and the single-future driver `block_on`.
+//
+//   { block_on } = std.concurrency.async.future
+//
+// A `Future<T>` is the value an `@async` call yields. The compiler resolves it
+// as a built-in generic type (like `RawPtr<T>`), so it is nameable here WITHOUT
+// importing this module and is the SAME type the compiler produces for an async
+// call. Its sole field is `frame: RawPtr<u8>` — the coroutine-frame pointer the
+// `@async`-call transform allocates. Driving a future means polling that frame
+// through the one irreducible compiler hook, `@builtin.poll`:
+//
+//   @builtin.poll(frame, out) -> bool   // true = Ready (wrote *out), false = Pending
+//
+// Everything below is ordinary Zen over that hook — no compiler magic.
+
+// Drive a future to completion on the current thread, returning its value.
+// Allocate a `T`-sized output cell, poll the frame until it reports Ready (each
+// Pending just re-polls — a busy spin; the cooperative `Scheduler` interleaves
+// multiple futures instead), then load the result out of the cell.
+block_on<T> = (f: Future<T>) T {
+    out = @builtin.raw_allocate(@builtin.sizeof<T>())
+    loop((l) {
+        @builtin.poll(f.frame, out) ?
+            | true { l.done() }
+            | false { l.next() }
+    })
+    result = @builtin.load<T>(out)
+    @builtin.raw_deallocate(out, @builtin.sizeof<T>())
+    result
+}
+
+@export({ block_on })

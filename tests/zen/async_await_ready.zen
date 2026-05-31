@@ -1,4 +1,5 @@
 { io } = std
+{ block_on } = std.concurrency.async.future
 
 // A leaf async function: ready immediately, no await.
 ready = @async (n: i32) i32 {

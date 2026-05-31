@@ -44,6 +44,13 @@ pub enum AstType {
     MutPtr(Box<AstType>),
     RawPtr(Box<AstType>),
 
+    /// The surface spelling of a suspendable computation, `Future<T>`. A
+    /// well-known builtin generic type (like `RawPtr<T>`): resolvable without an
+    /// import so `@async`/`@await` work in any program, and nameable in stdlib
+    /// signatures so it resolves to the SAME `Type::Future(T)` the compiler
+    /// produces for an `@async` call.
+    Future(Box<AstType>),
+
     Function {
         params: Vec<AstType>,
         ret: Box<AstType>,
@@ -70,6 +77,7 @@ impl AstType {
             AstType::Ptr(inner) => format!("Ptr<{}>", inner.display_name()),
             AstType::MutPtr(inner) => format!("MutPtr<{}>", inner.display_name()),
             AstType::RawPtr(inner) => format!("RawPtr<{}>", inner.display_name()),
+            AstType::Future(inner) => format!("Future<{}>", inner.display_name()),
             AstType::Function { params, ret } => {
                 format!("({}) {}", type_list(params), ret.display_name())
             }
@@ -89,7 +97,8 @@ impl AstType {
             | AstType::Slice(elem)
             | AstType::Ptr(elem)
             | AstType::MutPtr(elem)
-            | AstType::RawPtr(elem) => elem.any(predicate),
+            | AstType::RawPtr(elem)
+            | AstType::Future(elem) => elem.any(predicate),
             AstType::Function { params, ret } => {
                 params.iter().any(|param| param.any(predicate)) || ret.any(predicate)
             }

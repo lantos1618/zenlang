@@ -54,11 +54,6 @@ impl Resolver {
         table.lookup(Namespace::Value, name).is_some()
             || table.lookup(Namespace::Import, name).is_some()
             || locals.contains(name)
-            // `block_on` is a compiler-provided async driver (ASYNC_PLAN.md
-            // milestone 1), not a user-defined symbol; the typechecker types it
-            // `Future<T> -> T`. A user binding of the same name shadows it via
-            // the lookups above.
-            || name == "block_on"
             // `pending_then_ready` is a compiler-provided *test* future
             // (ASYNC_PLAN.md milestone 2): the deterministic Pending source used
             // to prove genuine suspend/resume. Typed `(i32, i32) -> Future<i32>`.

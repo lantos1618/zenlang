@@ -67,22 +67,6 @@ impl TypeChecker {
             // `scheduler_run(sched)`: round-robin poll every spawned future until
             // all are Ready (cooperative interleaving on Pending).
             (full_name.clone(), Type::Void)
-        } else if name == "block_on" && module.is_none() && typed_args.len() == 1 {
-            // `block_on(fut)` drives a future to completion and yields its value.
-            // A compiler-provided driver (ASYNC_PLAN.md milestone 1) standing in
-            // for the stdlib scheduler; legal from any (sync) context.
-            let Type::Future(value_ty) = &typed_args[0].ty else {
-                self.push_error(
-                    E3081,
-                    format!(
-                        "`block_on` expects a future, found `{}`",
-                        typed_args[0].ty.display_name()
-                    ),
-                    span,
-                );
-                return Ok(typed_call_expr(full_name, typed_args, Type::Unknown, span));
-            };
-            (full_name.clone(), (**value_ty).clone())
         } else if let Some(module) = module {
             let mangled = format!("{module}_{name}");
             if let Some(info) = self.methods.get(&full_name).cloned() {

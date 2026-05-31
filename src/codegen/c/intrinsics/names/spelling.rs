@@ -37,6 +37,7 @@ macro_rules! c_intrinsic_spellings {
             NullPtr => "null_ptr",
             Nullptr => "nullptr",
             Panic => "panic",
+            Poll => "poll",
             PtrToInt => "ptr_to_int",
             RawAllocate => "raw_allocate",
             RawDeallocate => "raw_deallocate",
