@@ -4,7 +4,7 @@
 { io } = std
 
 // Counter loop using loop closure
-count_to = (n: i32) void {
+count_to = (n: i64) void {
     i ::= 0
     loop((l) {
         i >= n ?
@@ -18,7 +18,7 @@ count_to = (n: i32) void {
 }
 
 // Infinite loop with explicit loop control
-find_power_of_two = (target: i32) i32 {
+find_power_of_two = (target: i64) i64 {
     val ::= 1
     loop((l) {
         val >= target ?
@@ -32,7 +32,7 @@ find_power_of_two = (target: i32) i32 {
 }
 
 // Fibonacci using loop
-fibonacci = (n: i32) i32 {
+fibonacci = (n: i64) i64 {
     n <= 1 ?
         | true { n }
         | false {
@@ -55,7 +55,7 @@ fibonacci = (n: i32) i32 {
 }
 
 // Counted accumulation loop
-sum_to = (limit: i32) i32 {
+sum_to = (limit: i64) i64 {
     total ::= 0
     i ::= 1
     loop((l) {
@@ -71,7 +71,7 @@ sum_to = (limit: i32) i32 {
 }
 
 // Nested loop control can target an outer loop.
-nested_stop = () i32 {
+nested_stop = () i64 {
     outer_count ::= 0
     stop ::= false
 
@@ -93,7 +93,7 @@ nested_stop = () i32 {
 }
 
 // UFC form works too.
-count_with_ufc = (limit: i32) i32 {
+count_with_ufc = (limit: i64) i64 {
     i ::= 0
     loop((l) {
         i = i + 1

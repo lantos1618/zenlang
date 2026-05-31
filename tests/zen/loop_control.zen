@@ -1,6 +1,6 @@
 { io } = std
 
-sum_to = (limit: i32) i32 {
+sum_to = (limit: i64) i64 {
     total ::= 0
     i ::= 0
 
@@ -17,7 +17,7 @@ sum_to = (limit: i32) i32 {
     total
 }
 
-nested_outer_done = () i32 {
+nested_outer_done = () i64 {
     outer_count ::= 0
     inner_count ::= 0
     stop ::= false
@@ -41,7 +41,7 @@ nested_outer_done = () i32 {
     outer_count * 10 + inner_count
 }
 
-ufc_control = () i32 {
+ufc_control = () i64 {
     i ::= 0
     loop((l) {
         i = i + 1
