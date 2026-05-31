@@ -1,0 +1,36 @@
+// The heap carves variable-sized chunks from one malloc and really reclaims them.
+// Two 32-byte allocations sit 40 bytes apart (32 payload + 8 header). After
+// freeing the first, the next 32-byte alloc reuses that exact chunk (delta 0).
+// A Vec<i64, Heap> then round-trips through the heap's realloc growth path.
+{ io } = std
+{ Allocator } = std.memory.allocator
+{ Heap, heap, heap_free } = std.memory.heap
+{ Vec, vec_new, vec_push, vec_get } = std.collections.vec
+
+main = () i32 {
+    h ::= heap(4096)
+
+    a = h.alloc(cast(32, usize))
+    b = h.alloc(cast(32, usize))
+    io.println("ab_gap=${cast(@builtin.ptr_to_int(b) - @builtin.ptr_to_int(a), i32)}")
+
+    h.free(a, cast(32, usize))
+    c = h.alloc(cast(32, usize))
+    io.println("reuse=${cast(@builtin.ptr_to_int(c) - @builtin.ptr_to_int(a), i32)}")
+
+    v ::= vec_new<i64, Heap>(h)
+    i ::= 0
+    loop((l) {
+        i >= 6 ?
+            | true { l.done() }
+            | false {
+                v = vec_push<i64, Heap>(v, cast(i * 10, i64))
+                i = i + 1
+                l.next()
+            }
+    })
+    io.println("v5=${cast(vec_get<i64, Heap>(v, 5), i32)}")
+
+    heap_free(h)
+    0
+}
