@@ -272,11 +272,21 @@ mapping + a real monomorphization arm); once a future can be named in a
 signature, `spawn`/`block_on`/the actor mailbox/the async allocator all become
 ordinary typed stdlib functions.
 
-**Known limitation — control-flow splitting.** `async_is_lowerable` still gates
-(E3082) awaits nested inside a sub-expression, `match`/`if` branch, or loop: the
-poll body is still a linear switch with one `case` per top-level await. The frame
-already carries the resume PC (`__state`) and the per-await handles, so the
-remaining work is purely emission: split branch/loop bodies into states.
+**Known limitation — control-flow splitting (increment 4, deferred).**
+`async_is_lowerable` still gates (E3082) awaits nested inside a sub-expression,
+`match`/`if` branch, or loop: the poll body is still a linear switch with one
+`case` per top-level await. The frame already carries the resume PC (`__state`)
+and the per-await handles, so the *state* side is ready; what remains is the
+emission. The async poll emitter (`emit_async_statement`/`emit_async_value`) is a
+**separate, simplified** path that does not reuse the normal
+match/loop/block emitters, so widening it means either making the normal emitters
+await-aware (and emitting `case` labels mid-construct, Duff's-device style, while
+ensuring no in-branch C declaration is jumped past — all branch locals must be
+frame-spilled, not emitted as C locals) or re-implementing those constructs in
+the async path. That is the genuine multi-week core and was deliberately *not*
+attempted half-way: a correct, tested partial that runs beats a broken whole. The
+boundary is pinned by `await_inside_branch_is_still_gated_with_e3082` and
+`await_nested_in_subexpression_is_gated_with_e3082` in `tests/async_surface.rs`.
 
 **Exact next step:** widen `async_is_lowerable` + the poll emission to handle
 `@await` inside `match`/`if` branches and loops — i.e. real control-flow

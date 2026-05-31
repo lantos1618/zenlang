@@ -175,6 +175,23 @@ fn await_nested_in_subexpression_is_gated_with_e3082() {
 }
 
 #[test]
+fn await_inside_branch_is_still_gated_with_e3082() {
+    // Real control-flow splitting (await inside a `?`/match branch) is the
+    // documented remaining milestone-2 step; until it lands such a body is gated
+    // with E3082 (frame ABI for resume/handles is in place, only the emission is
+    // missing). This pins the boundary so the gate is not silently widened.
+    let diags = frontend_diagnostics(
+        "g = @async () i32 { 1 }\n\
+         f = @async (c: bool) i32 { c ? | true { @await g() } | false { 0 } }\n\
+         main = () i32 { 0 }\n",
+    );
+    assert!(
+        has_code(&diags, "E3082"),
+        "expected E3082 (await inside a branch), got {diags:?}",
+    );
+}
+
+#[test]
 fn awaiting_an_async_call_yields_the_inner_value_type() {
     // `g` returns i32 → `g()` is Future<i32> → `@await g()` is i32, which
     // satisfies `f`'s i32 return. Only the E3082 lowering gate should fire (no
