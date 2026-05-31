@@ -196,6 +196,11 @@ fn test_stdlib_scheduler() {
 }
 
 #[test]
+fn test_stdlib_task() {
+    run_test("stdlib_task");
+}
+
+#[test]
 fn test_stdlib_memory() {
     run_test("stdlib_memory");
 }

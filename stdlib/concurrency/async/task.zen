@@ -1,2 +1,25 @@
-// Parse-only placeholder for @std.concurrency.async.task.
-// Promote only after parser, typechecker, lowering, and docs-truth evidence.
+// Tasks: the ergonomic entry point for cooperative async. A `Runtime` owns a
+// scheduler; `task_spawn` queues a unit of work as a coroutine, and `task_run`
+// drives them all to completion, interleaved at their yield points. Thin facade
+// over std.concurrency.async.scheduler — pure stdlib over the coroutine primitive.
+//   { Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+
+{ Scheduler, scheduler, scheduler_spawn, scheduler_run } = std.concurrency.async.scheduler
+
+Runtime: { sched: Scheduler }
+
+runtime = () Runtime {
+    Runtime { sched: scheduler() }
+}
+
+// Queue `work` as a task.
+task_spawn = (r: Runtime, work: () void) Runtime {
+    Runtime { sched: scheduler_spawn(r.sched, work) }
+}
+
+// Run every spawned task to completion.
+task_run = (r: Runtime) void {
+    scheduler_run(r.sched)
+}
+
+@export({ Runtime, runtime, task_spawn, task_run })

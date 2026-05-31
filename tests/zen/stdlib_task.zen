@@ -1,0 +1,28 @@
+// The task runtime spawns two tasks that each bump a shared counter twice (with a
+// yield between), then runs them. Both complete cooperatively → counter reaches 4.
+{ io } = std
+{ coroutine_yield } = std.concurrency.coroutine
+{ Runtime, runtime, task_spawn, task_run } = std.concurrency.async.task
+
+g_count ::= @builtin.null_ptr()
+
+bump = () void {
+    c0 = @builtin.load<i64>(g_count)
+    @builtin.store(g_count, c0 + 1)
+    coroutine_yield()
+    c1 = @builtin.load<i64>(g_count)
+    @builtin.store(g_count, c1 + 1)
+}
+
+main = () i32 {
+    g_count = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_count, cast(0, i64))
+
+    r ::= runtime()
+    r = task_spawn(r, bump)
+    r = task_spawn(r, bump)
+    task_run(r)
+
+    io.println("count=${cast(@builtin.load<i64>(g_count), i32)}")
+    0
+}
