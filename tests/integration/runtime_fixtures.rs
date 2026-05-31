@@ -171,6 +171,11 @@ fn test_stdlib_eventfd() {
 }
 
 #[test]
+fn test_stdlib_pipe() {
+    run_test("stdlib_pipe");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }

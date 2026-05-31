@@ -1,0 +1,33 @@
+// Hermetic pipe test: create a pipe pair, write 4 known bytes into the write
+// end, read them back from the read end, assert equality, then close both fds.
+// Uses only the in-process pipe — no network, no filesystem, no randomness.
+{ io } = std
+{ pipe_new, pipe_write, pipe_read, pipe_close } = std.io.net.pipe
+
+main = () i32 {
+    fds = pipe_new()
+    ok = fds.read_fd >= 0
+    io.println("pipe_ok=${cast(ok, i32)}")
+
+    // Write 4 known bytes.
+    wbuf = @builtin.raw_allocate(cast(4, usize))
+    @builtin.store(wbuf, cast(0x04030201, i32))
+    nw = pipe_write(fds.write_fd, wbuf, 4)
+    io.println("wrote=${cast(nw, i32)}")
+    @builtin.raw_deallocate(wbuf, cast(4, usize))
+
+    // Read them back.
+    rbuf = @builtin.raw_allocate(cast(4, usize))
+    nr = pipe_read(fds.read_fd, rbuf, 4)
+    io.println("read=${cast(nr, i32)}")
+    val = @builtin.load<i32>(rbuf)
+    @builtin.raw_deallocate(rbuf, cast(4, usize))
+    match_ok = val == 0x04030201
+    io.println("match=${cast(match_ok, i32)}")
+
+    rc_w = pipe_close(fds.write_fd)
+    rc_r = pipe_close(fds.read_fd)
+    both_closed = rc_w == 0 && rc_r == 0
+    io.println("closed=${cast(both_closed, i32)}")
+    0
+}
