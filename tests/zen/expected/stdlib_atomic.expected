@@ -1,0 +1,7 @@
+initial=5
+inc_prev=5
+after_inc=6
+cas_ok=1
+after_cas=9
+cas_fail=0
+still=9

@@ -1,0 +1,27 @@
+// new(5)->get=5; inc->previous=5, new=6; cas(6,9) succeeds, get=9; cas(6,…) fails.
+{ io } = std
+{ Atomic, atomic_new, atomic_get, atomic_set, atomic_inc, atomic_compare_set, atomic_free } = std.concurrency.primitives.atomic
+
+main = () i32 {
+    a = atomic_new(5)
+    v0 = atomic_get(a)
+    io.println("initial=${cast(v0, i32)}")
+
+    prev = atomic_inc(a)
+    io.println("inc_prev=${cast(prev, i32)}")
+    v1 = atomic_get(a)
+    io.println("after_inc=${cast(v1, i32)}")
+
+    swapped = atomic_compare_set(a, 6, 9)
+    io.println("cas_ok=${cast(swapped, i32)}")
+    v2 = atomic_get(a)
+    io.println("after_cas=${cast(v2, i32)}")
+
+    not_swapped = atomic_compare_set(a, 6, 99)
+    io.println("cas_fail=${cast(not_swapped, i32)}")
+    v3 = atomic_get(a)
+    io.println("still=${cast(v3, i32)}")
+
+    atomic_free(a)
+    0
+}

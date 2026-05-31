@@ -184,3 +184,8 @@ fn test_stdlib_time() {
 fn test_stdlib_uname() {
     run_test("stdlib_uname");
 }
+
+#[test]
+fn test_stdlib_atomic() {
+    run_test("stdlib_atomic");
+}
