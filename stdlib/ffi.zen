@@ -3,6 +3,8 @@
 // string, read its bytes, and hand a literal's data pointer to extern functions.
 //   { cstr_len, cstr_byte, static_cstr } = std.ffi
 
+{ gep, load_u8, str_ptr } = std.compiler
+
 @extern strlen = (s: RawPtr<u8>) usize
 
 // Length of a NUL-terminated C string (libc strlen).
@@ -12,13 +14,13 @@ cstr_len = (s: RawPtr<u8>) i64 {
 
 // The byte at index `i` of a C string / raw buffer.
 cstr_byte = (s: RawPtr<u8>, i: i64) i64 {
-    cast(@builtin.load<u8>(@builtin.gep(s, i)), i64)
+    cast(load_u8(gep(s, i)), i64)
 }
 
 // The NUL-terminated data pointer of a Zen string literal, for passing to
 // extern C functions expecting `const char*`.
 static_cstr = (s: StaticString) RawPtr<u8> {
-    @builtin.static_string_ptr(s)
+    str_ptr(s)
 }
 
 @export({ cstr_len, cstr_byte, static_cstr })

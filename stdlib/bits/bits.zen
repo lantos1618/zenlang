@@ -1,30 +1,32 @@
-// Bit-twiddling helpers — thin Zen wrappers over the compiler's @builtin
-// bit intrinsics. The intrinsics live in Rust (the compiler owns them); this
+// Bit-twiddling helpers — thin Zen wrappers over the compiler's bit
+// intrinsics. The intrinsics live in Rust (the compiler owns them); this
 // module is the stdlib surface programs call. `{ .. } = std.bits.bits`.
+
+{ ctpop, ctlz, cttz, bswap64 } = std.compiler
 
 // Number of set bits (population count).
 count_ones = (x: u64) u64 {
-    @builtin.ctpop(x)
+    ctpop(x)
 }
 
 // Number of leading zero bits (from the most-significant end of a u64).
 leading_zeros = (x: u64) u64 {
-    @builtin.ctlz(x)
+    ctlz(x)
 }
 
 // Number of trailing zero bits (from the least-significant end).
 trailing_zeros = (x: u64) u64 {
-    @builtin.cttz(x)
+    cttz(x)
 }
 
 // Reverse the byte order of a 64-bit value.
 byte_swap = (x: u64) u64 {
-    @builtin.bswap64(x)
+    bswap64(x)
 }
 
 // True when x is a power of two (exactly one bit set).
 is_power_of_two = (x: u64) bool {
-    @builtin.ctpop(x) == 1
+    ctpop(x) == 1
 }
 
 @export({ count_ones, leading_zeros, trailing_zeros, byte_swap, is_power_of_two })

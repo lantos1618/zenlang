@@ -1,16 +1,19 @@
 // Minimal heap-allocated i64 cell — proves allocator-backed stdlib types.
+
+{ raw_allocate, raw_deallocate, sizeof_i64, load_i64, store_i64 } = std.compiler
+
 Cell: { slot: RawPtr<u8> }
 
 cell_new = (v: i64) Cell {
-    p = @builtin.raw_allocate(@builtin.sizeof<i64>())
-    @builtin.store(p, v)
+    p = raw_allocate(sizeof_i64())
+    store_i64(p, v)
     Cell { slot: p }
 }
 cell_get = (c: Cell) i64 {
-    @builtin.load<i64>(c.slot)
+    load_i64(c.slot)
 }
 cell_free = (c: Cell) void {
-    @builtin.raw_deallocate(c.slot, @builtin.sizeof<i64>())
+    raw_deallocate(c.slot, sizeof_i64())
 }
 
 @export({ Cell, cell_new, cell_get, cell_free })

@@ -1,5 +1,7 @@
-// Append-only i64->i64 map, heap-backed via @builtin. Linear lookup (recursive).
+// Append-only i64->i64 map, heap-backed via std.compiler. Linear lookup (recursive).
 // `{ IntMap, intmap_new, intmap_set, intmap_get, intmap_len, intmap_free } = std.collections.intmap
+
+{ raw_allocate, raw_deallocate, raw_reallocate, gep, load_i64, store_i64 } = std.compiler
 
 IntMap: { keys: RawPtr<u8>, vals: RawPtr<u8>, len: i64, cap: i64 }
 
@@ -7,8 +9,8 @@ slot = (n: i64) i64 { n * 8 }
 
 intmap_new = () IntMap {
     IntMap {
-        keys: @builtin.raw_allocate(cast(slot(8), usize)),
-        vals: @builtin.raw_allocate(cast(slot(8), usize)),
+        keys: raw_allocate(cast(slot(8), usize)),
+        vals: raw_allocate(cast(slot(8), usize)),
         len: 0,
         cap: 8,
     }
@@ -21,15 +23,15 @@ intmap_set = (m: IntMap, key: i64, value: i64) IntMap {
         | true {
             nc = m.cap * 2
             IntMap {
-                keys: @builtin.raw_reallocate(m.keys, cast(slot(m.cap), usize), cast(slot(nc), usize)),
-                vals: @builtin.raw_reallocate(m.vals, cast(slot(m.cap), usize), cast(slot(nc), usize)),
+                keys: raw_reallocate(m.keys, cast(slot(m.cap), usize), cast(slot(nc), usize)),
+                vals: raw_reallocate(m.vals, cast(slot(m.cap), usize), cast(slot(nc), usize)),
                 len: m.len,
                 cap: nc,
             }
         }
         | false { m }
-    @builtin.store(@builtin.gep(grown.keys, slot(grown.len)), key)
-    @builtin.store(@builtin.gep(grown.vals, slot(grown.len)), value)
+    store_i64(gep(grown.keys, slot(grown.len)), key)
+    store_i64(gep(grown.vals, slot(grown.len)), value)
     IntMap { keys: grown.keys, vals: grown.vals, len: grown.len + 1, cap: grown.cap }
 }
 
@@ -37,8 +39,8 @@ scan = (m: IntMap, key: i64, i: i64) i64 {
     i >= m.len ?
         | true { cast(0 - 1, i64) }
         | false {
-            @builtin.load<i64>(@builtin.gep(m.keys, slot(i))) == key ?
-                | true { @builtin.load<i64>(@builtin.gep(m.vals, slot(i))) }
+            load_i64(gep(m.keys, slot(i))) == key ?
+                | true { load_i64(gep(m.vals, slot(i))) }
                 | false { scan(m, key, i + 1) }
         }
 }
@@ -49,8 +51,8 @@ intmap_get = (m: IntMap, key: i64) i64 {
 }
 
 intmap_free = (m: IntMap) void {
-    @builtin.raw_deallocate(m.keys, cast(slot(m.cap), usize))
-    @builtin.raw_deallocate(m.vals, cast(slot(m.cap), usize))
+    raw_deallocate(m.keys, cast(slot(m.cap), usize))
+    raw_deallocate(m.vals, cast(slot(m.cap), usize))
 }
 
 @export({ IntMap, intmap_new, intmap_len, intmap_set, intmap_get, intmap_free })

@@ -5,11 +5,12 @@
 //   { Vec, vec_new, vec_new_default, vec_push, vec_get, vec_len, vec_free } = std.collections.vec
 
 { Allocator, Mallocator, mallocator } = std.memory.allocator
+{ sizeof, gep, load, store } = std.compiler
 
 Vec<T, Alloc: Allocator = Mallocator>: { data: RawPtr<u8>, len: i64, cap: i64, alloc: Alloc }
 
 elem_size<T> = () i64 {
-    cast(@builtin.sizeof<T>(), i64)
+    cast(sizeof<T>(), i64)
 }
 
 vec_new<T, Alloc: Allocator> = (alloc: Alloc) Vec<T, Alloc> {
@@ -31,7 +32,7 @@ vec_len<T, Alloc: Allocator> = (v: Vec<T, Alloc>) i64 {
 }
 
 vec_get<T, Alloc: Allocator> = (v: Vec<T, Alloc>, index: i64) T {
-    @builtin.load<T>(@builtin.gep(v.data, index * elem_size<T>()))
+    load<T>(gep(v.data, index * elem_size<T>()))
 }
 
 vec_push<T, Alloc: Allocator> = (v: Vec<T, Alloc>, value: T) Vec<T, Alloc> {
@@ -48,7 +49,7 @@ vec_push<T, Alloc: Allocator> = (v: Vec<T, Alloc>, value: T) Vec<T, Alloc> {
             }
         }
         | false { v }
-    @builtin.store(@builtin.gep(grown.data, grown.len * elem_size<T>()), value)
+    store<T>(gep(grown.data, grown.len * elem_size<T>()), value)
     Vec<T, Alloc> { data: grown.data, len: grown.len + 1, cap: grown.cap, alloc: grown.alloc }
 }
 
