@@ -1,0 +1,23 @@
+// Hermetic dir test: open "/" (always exists, always has entries), call
+// dir_read_raw into a 4096-byte buffer, assert bytes > 0 (at least one entry),
+// then close. Does NOT parse individual dirent records — just proves the
+// getdents64 syscall works end-to-end.
+{ io } = std
+{ dir_open, dir_read_raw, dir_close } = std.io.files.dir
+
+main = () i32 {
+    fd = dir_open("/")
+    fd_ok = fd >= 0
+    io.println("dir_ok=${cast(fd_ok, i32)}")
+
+    buf = @builtin.raw_allocate(cast(4096, usize))
+    n = dir_read_raw(fd, buf, 4096)
+    @builtin.raw_deallocate(buf, cast(4096, usize))
+    // "/" has at least one entry (. and ..)
+    has_entries = n > 0
+    io.println("has_entries=${cast(has_entries, i32)}")
+
+    rc = dir_close(fd)
+    io.println("closed=${cast(rc, i32)}")
+    0
+}

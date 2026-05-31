@@ -206,6 +206,11 @@ fn test_stdlib_terminal() {
 }
 
 #[test]
+fn test_stdlib_dir() {
+    run_test("stdlib_dir");
+}
+
+#[test]
 fn test_stdlib_slice() {
     run_test("stdlib_slice");
 }
