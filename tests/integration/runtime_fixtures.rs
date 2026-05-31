@@ -311,6 +311,11 @@ fn test_stdlib_thread() {
 }
 
 #[test]
+fn test_stdlib_channel() {
+    run_test("stdlib_channel");
+}
+
+#[test]
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
