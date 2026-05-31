@@ -1,4 +1,23 @@
-// Parse-only placeholder for @std.sys.syscall.
-//
-// Syscall constants and wrappers need host-effect, ABI, parser, typechecker,
-// build, and docs-truth evidence before this module carries implementation code.
+// Raw syscall wrappers — a thin forwarding layer over std.compiler.
+// Prefer the higher-level wrappers in std.sys.* for most usage.
+// Import: { syscall0, syscall1, syscall2, syscall3, syscall4, syscall5, syscall6 }
+//           = std.sys.syscall
+
+{ sys0, sys1, sys2, sys3, sys4, sys5, sys6 } = std.compiler
+
+// Execute a syscall with 0 arguments.
+syscall0 = (n: i64) i64 { sys0(n) }
+// Execute a syscall with 1 argument.
+syscall1 = (n: i64, a0: i64) i64 { sys1(n, a0) }
+// Execute a syscall with 2 arguments.
+syscall2 = (n: i64, a0: i64, a1: i64) i64 { sys2(n, a0, a1) }
+// Execute a syscall with 3 arguments.
+syscall3 = (n: i64, a0: i64, a1: i64, a2: i64) i64 { sys3(n, a0, a1, a2) }
+// Execute a syscall with 4 arguments.
+syscall4 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64) i64 { sys4(n, a0, a1, a2, a3) }
+// Execute a syscall with 5 arguments.
+syscall5 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64, a4: i64) i64 { sys5(n, a0, a1, a2, a3, a4) }
+// Execute a syscall with 6 arguments.
+syscall6 = (n: i64, a0: i64, a1: i64, a2: i64, a3: i64, a4: i64, a5: i64) i64 { sys6(n, a0, a1, a2, a3, a4, a5) }
+
+@export({ syscall0, syscall1, syscall2, syscall3, syscall4, syscall5, syscall6 })
