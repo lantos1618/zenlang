@@ -1,0 +1,10 @@
+// Environment lookup through libc getenv: PATH is set in any process environment,
+// and a deliberately-bogus name is not — a deterministic present/absent pair.
+{ io } = std
+{ env_get, env_has } = std.sys.env
+
+main = () i32 {
+    io.println("path_set=${cast(env_has("PATH"), i32)}")
+    io.println("bogus_set=${cast(env_has("ZEN_NOPE_X9Q7"), i32)}")
+    0
+}
