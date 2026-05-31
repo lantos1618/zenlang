@@ -154,3 +154,41 @@ The lowering pass slots in **after typechecking, before C emission** — a new
 rewrites async `TypedFunction`s into the frame struct + poll fn + constructor
 described above. The MVP target is the single-await, already-ready case driven
 by a trivial `block_on`, proven by one runtime fixture.
+
+### Status & exact next step
+
+**Shipped (this slice):** the full surface (`@async`/`@await` lexing + parsing)
+and typing (`Type::Future<T>`, async-call → future, `@await` unwrap, the E3080/
+E3081 misuse codes), with parser + typechecker unit tests in
+`tests/async_surface.rs`. Programs that *define* an `@async` function are gated
+with **E3082** before codegen, so the build never emits a half-lowered async fn.
+The `Future`/`Await` arms in the C backend and `monomorphize_types` are therefore
+`unreachable!` for accepted programs (reached only if the E3082 gate is removed).
+
+**Next step (start of the lowering slice), in order:**
+
+1. Thread `is_async` from `Declaration::Function` onto `TypedFunction` (add the
+   field in `src/ast/typed.rs`, set it in
+   `src/typechecker/expressions/function_checking.rs::check_function`). Right now
+   the flag is consumed only to type the body and to drive the E3082 gate; the
+   lowering pass needs it on the typed node.
+2. Add `src/codegen/c/async_lowering.rs`: a function
+   `lower_async(program: &mut TypedProgram)` that, for each `is_async`
+   `TypedFunction`, emits the frame struct (as a `TypedTypeDef`), the poll fn,
+   and the constructor per the ABI above. For the MVP, support exactly one
+   `@await` whose operand is a ready future: no live-local spilling across the
+   suspend is required yet (the value is ready), so state `0` polls the inner
+   future, writes `__ret`, sets `__state = -1`, returns `true`.
+3. Provide a minimal C `block_on` (emit it inline in the runtime-helpers
+   preamble, `src/codegen/c/types/runtime_helpers.rs`) that loops `f__poll`
+   until it returns `true` and yields `*out`. Until the stdlib scheduler
+   (milestone 2) exists, this is a compiler-emitted helper.
+4. Remove the E3082 gate in `src/typechecker/program_checking.rs` and flip the
+   `unreachable!` arms to real emission. Replace the `#[ignore]` on
+   `async_await_ready_value_runs` in `tests/async_surface.rs` with a real
+   runtime fixture (`tests/zen/<name>.zen` + `expected/<name>.expected` + a
+   `#[test]` in `tests/integration/runtime_fixtures.rs`).
+
+Doing 1–4 as one coherent change proves the irreducible piece (suspend/resume
+frame + poll) end to end for the simplest case; N-await and live-local spilling
+across real suspends follow as the next milestone-1 increments.
