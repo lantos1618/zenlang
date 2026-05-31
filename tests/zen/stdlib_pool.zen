@@ -1,0 +1,22 @@
+// The pool hands out fixed-size blocks from one underlying malloc and truly
+// reclaims them: two allocations are one block_size apart, and after freeing a
+// block the next allocation reuses that exact block (LIFO free list, delta 0).
+{ io } = std
+{ Allocator } = std.memory.allocator
+{ Pool, pool, pool_free } = std.memory.pool
+
+main = () i32 {
+    p ::= pool(16, 4)
+
+    a = p.alloc(cast(16, usize))
+    b = p.alloc(cast(16, usize))
+    io.println("delta=${cast(@builtin.ptr_to_int(b) - @builtin.ptr_to_int(a), i32)}")
+
+    // Free b, then the next alloc must hand back that same block.
+    p.free(b, cast(16, usize))
+    c = p.alloc(cast(16, usize))
+    io.println("reuse=${cast(@builtin.ptr_to_int(c) - @builtin.ptr_to_int(b), i32)}")
+
+    pool_free(p)
+    0
+}

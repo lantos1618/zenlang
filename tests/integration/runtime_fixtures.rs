@@ -124,3 +124,18 @@ fn test_default_type_param() {
 fn test_stdlib_arena() {
     run_test("stdlib_arena");
 }
+
+#[test]
+fn test_stdlib_pool() {
+    run_test("stdlib_pool");
+}
+
+#[test]
+fn test_stdlib_heap() {
+    run_test("stdlib_heap");
+}
+
+#[test]
+fn test_stdlib_gpa() {
+    run_test("stdlib_gpa");
+}

@@ -1,0 +1,75 @@
+// Fixed-size-block pool allocator. Reserves `block_count` blocks of `block_size`
+// bytes from a single `raw_allocate`, then hands them out and reclaims them in
+// O(1) via an intrusive free list: each free block stores the byte-offset of the
+// next free block in its own first 8 bytes. Unlike the arena, `free` really does
+// return a block to the pool for reuse. Best for many uniform objects.
+//   { Pool, pool, pool_free } = std.memory.pool
+//
+// Requires block_size >= 8 (a free block must hold one i64 link).
+// ctl layout: [0..8) free_head offset (i64, -1 = empty)
+//             [8..16) block_size (i64) | [16..24) block_count (i64) | [24..) data
+
+{ Allocator } = std.memory.allocator
+
+Pool: { ctl: RawPtr<u8> }
+
+// Reserve a pool of `block_count` blocks, each `block_size` bytes.
+pool = (block_size: i64, block_count: i64) Pool {
+    ctl = @builtin.raw_allocate(cast(24 + block_size * block_count, usize))
+    @builtin.store(ctl, cast(0, i64))
+    @builtin.store(@builtin.gep(ctl, 8), block_size)
+    @builtin.store(@builtin.gep(ctl, 16), block_count)
+
+    // Thread the free list: block i points at block i+1, the last at -1.
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= block_count ?
+            | true { l.done() }
+            | false {
+                next = i + 1 >= block_count ?
+                    | true { cast(0 - 1, i64) }
+                    | false { (i + 1) * block_size }
+                @builtin.store(@builtin.gep(ctl, 24 + i * block_size), next)
+                i = i + 1
+                l.next()
+            }
+    })
+    Pool { ctl: ctl }
+}
+
+Pool.implements(Allocator) {
+    // Pop the head of the free list. Returns null when the pool is exhausted.
+    alloc = (self: Pool, size: usize) RawPtr<u8> {
+        head = @builtin.load<i64>(self.ctl)
+        head < 0 ?
+            | true { @builtin.null_ptr() }
+            | false {
+                p = @builtin.gep(self.ctl, 24 + head)
+                next = @builtin.load<i64>(p)
+                @builtin.store(self.ctl, next)
+                p
+            }
+    }
+    // Blocks are fixed-size: a realloc that fits stays in place. Growing beyond
+    // block_size is unsupported — pools are for uniform objects, not growth.
+    realloc = (self: Pool, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        p
+    }
+    // Push the block back onto the free list (O(1), LIFO).
+    free = (self: Pool, p: RawPtr<u8>, size: usize) void {
+        base = @builtin.gep(self.ctl, 24)
+        off = @builtin.ptr_to_int(p) - @builtin.ptr_to_int(base)
+        head = @builtin.load<i64>(self.ctl)
+        @builtin.store(p, head)
+        @builtin.store(self.ctl, cast(off, i64))
+    }
+}
+
+// Release the whole pool block at once.
+pool_free = (p: Pool) void {
+    block_size = @builtin.load<i64>(@builtin.gep(p.ctl, 8))
+    block_count = @builtin.load<i64>(@builtin.gep(p.ctl, 16))
+    @builtin.raw_deallocate(p.ctl, cast(24 + block_size * block_count, usize))
+}
+
+@export({ Pool, pool, pool_free, Pool.alloc, Pool.realloc, Pool.free })

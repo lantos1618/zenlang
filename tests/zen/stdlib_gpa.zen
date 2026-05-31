@@ -1,0 +1,37 @@
+// The GPA statically composes a Pool and a Heap and routes by size. Two small
+// allocations come from the pool, so they are exactly one pool block (64 bytes)
+// apart. A Vec then grows from 32 bytes past the 64-byte threshold, exercising
+// the pool->heap cross-boundary realloc, and still round-trips all its values.
+{ io } = std
+{ Allocator } = std.memory.allocator
+{ Gpa, gpa, gpa_free } = std.memory.gpa
+{ Vec, vec_new, vec_push, vec_get } = std.collections.vec
+
+main = () i32 {
+    g ::= gpa(64, 8, 4096)
+
+    // Small requests route to the pool: stride == pool block size (64).
+    s1 = g.alloc(cast(16, usize))
+    s2 = g.alloc(cast(16, usize))
+    io.println("pool_stride=${cast(@builtin.ptr_to_int(s2) - @builtin.ptr_to_int(s1), i32)}")
+    g.free(s2, cast(16, usize))
+    g.free(s1, cast(16, usize))
+
+    // Vec starts at 32 bytes (pool) and grows past 64 (heap) — boundary crossing.
+    v ::= vec_new<i64, Gpa>(g)
+    i ::= 0
+    loop((l) {
+        i >= 20 ?
+            | true { l.done() }
+            | false {
+                v = vec_push<i64, Gpa>(v, cast(i * 10, i64))
+                i = i + 1
+                l.next()
+            }
+    })
+    io.println("v0=${cast(vec_get<i64, Gpa>(v, 0), i32)}")
+    io.println("v19=${cast(vec_get<i64, Gpa>(v, 19), i32)}")
+
+    gpa_free(g)
+    0
+}

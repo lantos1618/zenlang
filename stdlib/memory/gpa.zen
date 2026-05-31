@@ -1,0 +1,75 @@
+// General-purpose allocator: a static composition of the other allocators. It
+// owns a Pool (fast fixed-size blocks) and a Heap (variable-size), and routes
+// each request by size — small allocations go to the pool, large ones to the
+// heap. The routing is a plain compile-time `<=` branch, not dynamic dispatch:
+// the pool/heap method calls are monomorphized like any other behavior call.
+//   { Gpa, gpa, gpa_free } = std.memory.gpa
+//
+// `threshold` is the pool's block size: requests up to it use the pool, the rest
+// the heap. `free`/`realloc` re-derive the route from the size argument, so a
+// block always returns to the allocator it came from. A realloc that crosses the
+// boundary (e.g. a Vec growing past `threshold`) moves the bytes between them.
+
+{ Allocator } = std.memory.allocator
+{ Pool, pool, pool_free } = std.memory.pool
+{ Heap, heap, heap_free } = std.memory.heap
+
+Gpa: { pool: Pool, heap: Heap, threshold: i64 }
+
+// Compose a GPA: a pool of `small_count` blocks of `small_block` bytes for small
+// requests, and a `big_cap`-byte heap for everything larger.
+gpa = (small_block: i64, small_count: i64, big_cap: i64) Gpa {
+    Gpa {
+        pool: pool(small_block, small_count),
+        heap: heap(big_cap),
+        threshold: small_block,
+    }
+}
+
+Gpa.implements(Allocator) {
+    alloc = (self: Gpa, size: usize) RawPtr<u8> {
+        cast(size, i64) <= self.threshold ?
+            | true { self.pool.alloc(size) }
+            | false { self.heap.alloc(size) }
+    }
+    // Same bucket: delegate. Crossing the boundary: allocate in the new bucket,
+    // copy the old bytes, free the old block in its bucket.
+    realloc = (self: Gpa, p: RawPtr<u8>, old: usize, new: usize) RawPtr<u8> {
+        old_small = cast(old, i64) <= self.threshold
+        new_small = cast(new, i64) <= self.threshold
+        old_small == new_small ?
+            | true {
+                new_small ?
+                    | true { self.pool.realloc(p, old, new) }
+                    | false { self.heap.realloc(p, old, new) }
+            }
+            | false {
+                np = new_small ?
+                    | true { self.pool.alloc(new) }
+                    | false { self.heap.alloc(new) }
+                @builtin.memcpy(np, p, old)
+                old_small ?
+                    | true {
+                        self.pool.free(p, old)
+                        np
+                    }
+                    | false {
+                        self.heap.free(p, old)
+                        np
+                    }
+            }
+    }
+    free = (self: Gpa, p: RawPtr<u8>, size: usize) void {
+        cast(size, i64) <= self.threshold ?
+            | true { self.pool.free(p, size) }
+            | false { self.heap.free(p, size) }
+    }
+}
+
+// Release both backing allocators.
+gpa_free = (g: Gpa) void {
+    pool_free(g.pool)
+    heap_free(g.heap)
+}
+
+@export({ Gpa, gpa, gpa_free, Gpa.alloc, Gpa.realloc, Gpa.free })
