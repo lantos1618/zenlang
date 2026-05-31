@@ -1,0 +1,14 @@
+// The range iterator yields a half-open integer sequence: range(2,7) has 5
+// values (2..6) summing to 20, and manual stepping reads 2 then 3.
+{ io } = std
+{ range, range_value, range_advance, range_count, range_sum } = std.core.iterator
+
+main = () i32 {
+    it = range(2, 7)
+    io.println("count=${cast(range_count(it), i32)}")
+    io.println("sum=${cast(range_sum(it), i32)}")
+    io.println("first=${cast(range_value(it), i32)}")
+    it2 = range_advance(it)
+    io.println("second=${cast(range_value(it2), i32)}")
+    0
+}

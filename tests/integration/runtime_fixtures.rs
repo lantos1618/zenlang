@@ -214,3 +214,8 @@ fn test_stdlib_once() {
 fn test_stdlib_file() {
     run_test("stdlib_file");
 }
+
+#[test]
+fn test_stdlib_iterator() {
+    run_test("stdlib_iterator");
+}

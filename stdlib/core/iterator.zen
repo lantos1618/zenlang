@@ -1,2 +1,52 @@
-// Parse-only placeholder for @std.core.iterator.
-// Promote Iterator APIs only after parser, typechecker, lowering, and docs-truth evidence.
+// A minimal integer-range iterator and folds over it. Zen behaviors don't carry
+// associated element types yet, so this is a concrete `RangeIter` value threaded
+// functionally (like the other stdlib types) rather than an `Iterator` behavior:
+// `range_has`/`range_value`/`range_advance` drive a loop, and `range_sum`/
+// `range_count` fold internally.
+//   { range, range_has, range_value, range_advance, range_sum, range_count } = std.core.iterator
+//
+// Half-open: range(2, 7) yields 2,3,4,5,6.
+
+RangeIter: { current: i64, end: i64 }
+
+range = (start: i64, end: i64) RangeIter {
+    RangeIter { current: start, end: end }
+}
+
+// Whether the iterator still has a value to yield.
+range_has = (it: RangeIter) bool {
+    it.current < it.end
+}
+
+// The current value (only meaningful while range_has is true).
+range_value = (it: RangeIter) i64 {
+    it.current
+}
+
+// The iterator advanced by one step.
+range_advance = (it: RangeIter) RangeIter {
+    RangeIter { current: it.current + 1, end: it.end }
+}
+
+// Number of values remaining.
+range_count = (it: RangeIter) i64 {
+    it.end - it.current
+}
+
+// Sum of all remaining values (folds to exhaustion).
+range_sum = (it: RangeIter) i64 {
+    acc ::= cast(0, i64)
+    cur ::= it
+    loop((l) {
+        range_has(cur) ?
+            | true {
+                acc = acc + range_value(cur)
+                cur = range_advance(cur)
+                l.next()
+            }
+            | false { l.done() }
+    })
+    acc
+}
+
+@export({ RangeIter, range, range_has, range_value, range_advance, range_count, range_sum })
