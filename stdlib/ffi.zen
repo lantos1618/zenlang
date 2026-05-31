@@ -1,2 +1,24 @@
-// Parse-only placeholder for @std.ffi.
-// Promote FFI APIs only after parser, typechecker, lowering, ABI, and docs-truth evidence.
+// FFI helpers for bridging Zen and C strings. A Zen `StaticString` is a
+// (ptr, len) pair; a C string is a NUL-terminated `char*`. These measure a C
+// string, read its bytes, and hand a literal's data pointer to extern functions.
+//   { cstr_len, cstr_byte, static_cstr } = std.ffi
+
+@extern strlen = (s: RawPtr<u8>) usize
+
+// Length of a NUL-terminated C string (libc strlen).
+cstr_len = (s: RawPtr<u8>) i64 {
+    cast(strlen(s), i64)
+}
+
+// The byte at index `i` of a C string / raw buffer.
+cstr_byte = (s: RawPtr<u8>, i: i64) i64 {
+    cast(@builtin.load<u8>(@builtin.gep(s, i)), i64)
+}
+
+// The NUL-terminated data pointer of a Zen string literal, for passing to
+// extern C functions expecting `const char*`.
+static_cstr = (s: StaticString) RawPtr<u8> {
+    @builtin.static_string_ptr(s)
+}
+
+@export({ cstr_len, cstr_byte, static_cstr })

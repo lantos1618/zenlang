@@ -1,4 +1,30 @@
-// Parse-only placeholder for @std.testing.
-//
-// Testing helpers should be restored only with parser, typechecker, build, and
-// docs-truth evidence.
+// Lightweight assertion helpers for Zen programs and fixtures. Each check prints
+// a deterministic `PASS <name>` / `FAIL <name>` line, so a test's expected output
+// pins exactly which assertions held — no hidden state, no exit-code magic.
+//   { assert_true, assert_false, assert_eq_i64 } = std.testing
+
+{ io } = std
+
+// Pass when `cond` is true.
+assert_true = (name: StaticString, cond: bool) void {
+    cond ?
+        | true { io.println("PASS ${name}") }
+        | false { io.println("FAIL ${name}") }
+}
+
+// Pass when `cond` is false.
+assert_false = (name: StaticString, cond: bool) void {
+    cond ?
+        | true { io.println("FAIL ${name}") }
+        | false { io.println("PASS ${name}") }
+}
+
+// Pass when two i64 values are equal.
+assert_eq_i64 = (name: StaticString, got: i64, want: i64) void {
+    eq = got == want
+    eq ?
+        | true { io.println("PASS ${name}") }
+        | false { io.println("FAIL ${name}") }
+}
+
+@export({ assert_true, assert_false, assert_eq_i64 })
