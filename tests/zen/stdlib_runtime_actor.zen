@@ -1,0 +1,88 @@
+// THE capstone, runnable: a cooperative actor whose EXECUTION MODE *is* its
+// allocator. One `actor_body`, written once, generic over its runtime `R`. It
+// allocates its accumulator THROUGH `r` and suspends THROUGH `r` after folding
+// each mailbox message. Hand it a SyncArena and it drains the mailbox straight
+// through (suspend is a no-op); hand it an AsyncArena — inside a coroutine — and
+// the SAME body suspends after each message, interleaving with the scheduler.
+// The only thing that changes is the allocator-runtime. No @async, no Future, no
+// function color: SyncArena.suspend and AsyncArena.suspend are statically
+// monomorphized. This unifies stdlib_alloc_switch (a function that switches) and
+// stdlib_party (mailbox actors) into one: the actor IS the switch.
+{ io } = std
+{ Runtime, SyncArena, AsyncArena, sync_arena, async_arena } = std.memory.runtime
+{ coroutine_new, coroutine_resume } = std.concurrency.coroutine
+
+// Written once. Colorless. Folds `n` i64 messages from `inbox` into an
+// accumulator allocated through `r`, suspending through `r` after each, then
+// publishes the total to `out`.
+actor_body<R: Runtime> = (r: R, inbox: RawPtr<u8>, out: RawPtr<u8>, n: i64) void {
+    acc = r.alloc(cast(8, usize))
+    @builtin.store(acc, cast(0, i64))
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                msg = @builtin.load<i64>(@builtin.gep(inbox, i * 8))
+                s = @builtin.load<i64>(acc)
+                @builtin.store(acc, s + msg)
+                r.suspend()                 // Sync: no-op; Async: yields the fiber
+                i = i + 1
+                l.next()
+            }
+    })
+    @builtin.store(out, @builtin.load<i64>(acc))
+}
+
+// Async path runs the SAME body as a coroutine; its mailbox/out/count live in
+// globals because a coroutine entry point takes no arguments.
+g_inbox ::= @builtin.null_ptr()
+g_out ::= @builtin.null_ptr()
+g_n ::= @builtin.null_ptr()
+async_actor = () void {
+    actor_body<AsyncArena>(async_arena(1024), g_inbox, g_out, @builtin.load<i64>(g_n))
+}
+
+// Fill `inbox` with messages 1..=n; return the inbox pointer.
+fill_inbox = (n: i64) RawPtr<u8> {
+    inbox = @builtin.raw_allocate(cast(n * 8, usize))
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= n ?
+            | true { l.done() }
+            | false {
+                @builtin.store(@builtin.gep(inbox, i * 8), i + 1)
+                i = i + 1
+                l.next()
+            }
+    })
+    inbox
+}
+
+main = () i32 {
+    n = cast(5, i64)            // messages 1+2+3+4+5 = 15
+
+    // Sync runtime: the actor drains its mailbox straight through, no coroutine.
+    sync_out = @builtin.raw_allocate(cast(8, usize))
+    actor_body<SyncArena>(sync_arena(1024), fill_inbox(n), sync_out, n)
+    io.println("sync=${cast(@builtin.load<i64>(sync_out), i32)}")
+
+    // Async runtime: SAME body, run as a coroutine — suspends after each message.
+    g_inbox = fill_inbox(n)
+    g_out = @builtin.raw_allocate(cast(8, usize))
+    g_n = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_n, n)
+    co ::= coroutine_new(async_actor)
+    yields ::= 0
+    loop((l) {
+        coroutine_resume(co) ?
+            | true {
+                yields = yields + 1
+                l.next()
+            }
+            | false { l.done() }
+    })
+    io.println("async=${cast(@builtin.load<i64>(g_out), i32)}")
+    io.println("async_yields=${cast(yields, i32)}")
+    0
+}

@@ -201,6 +201,11 @@ fn test_stdlib_alloc_switch() {
 }
 
 #[test]
+fn test_stdlib_runtime_actor() {
+    run_test("stdlib_runtime_actor");
+}
+
+#[test]
 fn test_stdlib_scheduler() {
     run_test("stdlib_scheduler");
 }
