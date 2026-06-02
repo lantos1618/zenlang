@@ -43,9 +43,7 @@ mb_push = (m: RawPtr<u8>, v: i64) void {
     tail = load_i64(gep(m, 8))
     cap = load_i64(gep(m, 24))
     store_i64(gep(m, 32 + tail * 8), v)
-    t1 = tail + 1
-    q = t1 / cap
-    next = t1 - q * cap
+    next = (tail + 1) - (((tail + 1) / cap) * cap)
     store_i64(gep(m, 8), next)
     store_i64(gep(m, 16), load_i64(gep(m, 16)) + 1)
 }
@@ -54,9 +52,7 @@ mb_pop = (m: RawPtr<u8>) i64 {
     head = load_i64(m)
     cap = load_i64(gep(m, 24))
     v = load_i64(gep(m, 32 + head * 8))
-    h1 = head + 1
-    q = h1 / cap
-    next = h1 - q * cap
+    next = (head + 1) - (((head + 1) / cap) * cap)
     store_i64(m, next)
     store_i64(gep(m, 16), load_i64(gep(m, 16)) - 1)
     v

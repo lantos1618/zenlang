@@ -1,0 +1,23 @@
+// Regression: an operand starting with `(` after a binary operator used to be
+// misparsed as a closure when its `)` happened to precede the next statement's
+// identifier (E2000 "expected identifier, found LParen"). A closure body is
+// always a `{ }` block, so `expr - (group)` followed by a plain statement is no
+// longer mistaken for one. Each line below pairs a parenthesized-operand
+// expression with a following statement to exercise the old trap.
+{ io } = std
+
+ring_mod = (x: i64, cap: i64) i64 {
+    next = (x + 1) - (((x + 1) / cap) * cap)
+    next
+}
+
+main = () i32 {
+    a = 7 - ((3))
+    b = a - (a + 1)
+    c = (a + b) - (b)
+    io.println("a=${a}")
+    io.println("b=${b}")
+    io.println("c=${c}")
+    io.println("ring=${cast(ring_mod(cast(10, i64), cast(4, i64)), i32)}")
+    0
+}

@@ -66,14 +66,7 @@ impl Parser {
                 Some(Token::RParen) => {
                     depth -= 1;
                     if depth == 0 {
-                        i += 1;
-                        while matches!(self.tokens.get(i).map(|(t, _)| t), Some(Token::Newline)) {
-                            i += 1;
-                        }
-                        return matches!(
-                            self.tokens.get(i).map(|(t, _)| t),
-                            Some(Token::LBrace | Token::Identifier(_))
-                        );
+                        return self.closure_body_follows(i + 1);
                     }
                     i += 1;
                 }
@@ -81,6 +74,37 @@ impl Parser {
                 Some(Token::Comma) if depth == 1 => return true,
                 Some(Token::EOF) | None => return false,
                 _ => i += 1,
+            }
+        }
+    }
+
+    /// After a candidate parameter-list `)`, decide whether what follows is a
+    /// closure body. A closure is `(params) ReturnType? { body }` — the body is
+    /// ALWAYS a brace block, so we require a `{` to follow (optionally past a
+    /// return type and newlines). This is what distinguishes a closure from a
+    /// parenthesized group like `x - (((a) / b) * c)`, whose `)` is followed by
+    /// an operator, bracket, or the next statement — NOT a brace. Without this,
+    /// a group whose `)` happened to precede an identifier (the next statement)
+    /// was misread as a closure, producing "expected identifier, found LParen".
+    fn closure_body_follows(&self, mut i: usize) -> bool {
+        loop {
+            match self.tokens.get(i).map(|(t, _)| t) {
+                Some(Token::Newline) => i += 1,
+                Some(Token::LBrace) => return true,
+                // Tokens that can appear in a return type before the body brace:
+                // named/generic/slice types like `void`, `Vec<A, B>`, `[]u8`.
+                Some(
+                    Token::Identifier(_)
+                    | Token::Dot
+                    | Token::Lt
+                    | Token::Gt
+                    | Token::ShiftRight
+                    | Token::Star
+                    | Token::LBracket
+                    | Token::RBracket
+                    | Token::Comma,
+                ) => i += 1,
+                _ => return false,
             }
         }
     }

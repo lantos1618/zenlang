@@ -46,6 +46,11 @@ fn test_cast() {
 }
 
 #[test]
+fn test_paren_operand() {
+    run_test("paren_operand");
+}
+
+#[test]
 fn test_multiple_defer() {
     run_test("multiple_defer");
 }
