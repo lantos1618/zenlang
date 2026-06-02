@@ -36,7 +36,12 @@ main = () i32 {{
 "#,
     );
     let errors = typecheck_errors(&source);
-    assert_nongeneric_type_args_diagnostic(&errors, "method", "Box.get", "non-generic method type-argument");
+    assert_nongeneric_type_args_diagnostic(
+        &errors,
+        "method",
+        "Box.get",
+        "non-generic method type-argument",
+    );
 }
 
 #[test]

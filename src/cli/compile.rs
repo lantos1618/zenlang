@@ -95,7 +95,10 @@ fn link_flags_for_library(entry: &str) -> Vec<String> {
     };
 
     let pkg = |args: &[&str]| -> Option<String> {
-        let out = process::Command::new("pkg-config").args(args).output().ok()?;
+        let out = process::Command::new("pkg-config")
+            .args(args)
+            .output()
+            .ok()?;
         out.status
             .success()
             .then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())

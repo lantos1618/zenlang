@@ -12,10 +12,7 @@ mod generic;
 /// with per-declaration `pub`, so the whole downstream pipeline (resolver,
 /// import-seeding, codegen, goldens) is unchanged. An exported name that matches
 /// no declaration is an error.
-pub(super) fn apply_export_manifests(
-    decls: &mut Vec<Declaration>,
-    errors: &mut Vec<CompileError>,
-) {
+pub(super) fn apply_export_manifests(decls: &mut Vec<Declaration>, errors: &mut Vec<CompileError>) {
     let mut exported: HashSet<String> = HashSet::new();
     let mut export_spans: Vec<(String, Span)> = Vec::new();
     for decl in decls.iter() {

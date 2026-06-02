@@ -23,12 +23,7 @@ fn stdlib_root() -> std::path::PathBuf {
 
 /// Paths that are fully exempt from the `@builtin.` ban.
 fn fully_exempt(relative: &str) -> bool {
-    matches!(
-        relative,
-        "compiler.zen"
-            | "build.zen"
-            | "io/io.zen"
-    )
+    matches!(relative, "compiler.zen" | "build.zen" | "io/io.zen")
 }
 
 /// Paths where @builtin is allowed only for global-var initializer uses

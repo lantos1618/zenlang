@@ -32,21 +32,12 @@ impl TypeChecker {
         let mut typed = self.check_module_graph_module(graph, entry)?;
         // Deduplicate by name to avoid C redefinition errors when multiple
         // modules import the same wrapper function from std.compiler.
-        let mut seen_fns: std::collections::HashSet<String> = typed
-            .functions
-            .iter()
-            .map(|f| f.name.clone())
-            .collect();
-        let mut seen_types: std::collections::HashSet<String> = typed
-            .types
-            .iter()
-            .map(|t| t.name.clone())
-            .collect();
-        let mut seen_globals: std::collections::HashSet<String> = typed
-            .globals
-            .iter()
-            .map(|g| g.name.clone())
-            .collect();
+        let mut seen_fns: std::collections::HashSet<String> =
+            typed.functions.iter().map(|f| f.name.clone()).collect();
+        let mut seen_types: std::collections::HashSet<String> =
+            typed.types.iter().map(|t| t.name.clone()).collect();
+        let mut seen_globals: std::collections::HashSet<String> =
+            typed.globals.iter().map(|g| g.name.clone()).collect();
         for mut dependency in dependency_programs {
             for f in dependency.functions.drain(..) {
                 if seen_fns.insert(f.name.clone()) {

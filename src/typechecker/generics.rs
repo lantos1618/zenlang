@@ -5,7 +5,5 @@
 //! deduplicated by a mangled key. See `docs/SEMA_DESIGN.md` for the intended
 //! end-state (memoized queries replacing the hand-maintained dedup maps).
 pub(crate) mod monomorphize;
-pub(crate) mod monomorphize_dependencies;
 pub(crate) mod monomorphize_inference;
-pub(crate) mod monomorphize_inference_shapes;
 pub(crate) mod substitute;

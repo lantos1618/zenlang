@@ -105,7 +105,9 @@ impl CEmitter {
                         // Marshal a `Str` argument to an `@extern` param into a
                         // null-terminated `const char*` (zen_str.ptr).
                         match &str_args {
-                            Some(positions) if positions.contains(&i) => format!("({}).ptr", emitted),
+                            Some(positions) if positions.contains(&i) => {
+                                format!("({}).ptr", emitted)
+                            }
                             _ => emitted,
                         }
                     })

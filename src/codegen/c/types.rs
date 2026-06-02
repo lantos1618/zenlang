@@ -111,7 +111,10 @@ impl CEmitter {
         for global in &program.globals {
             let val = self.emit_expr_inline(&global.value);
             if matches!(global.ty, Type::Function { .. }) {
-                self.line(&format!("{} = {val};", c_declarator(&global.ty, &global.name)));
+                self.line(&format!(
+                    "{} = {val};",
+                    c_declarator(&global.ty, &global.name)
+                ));
             } else {
                 let ty = Self::c_type(&global.ty);
                 let name = c_ident(&global.name);
@@ -253,7 +256,14 @@ fn order_types_by_value_deps(types: &[TypedTypeDef]) -> Vec<&TypedTypeDef> {
     }
 
     for i in 0..types.len() {
-        visit(i, types, &index, &mut visited, &mut HashSet::new(), &mut ordered);
+        visit(
+            i,
+            types,
+            &index,
+            &mut visited,
+            &mut HashSet::new(),
+            &mut ordered,
+        );
     }
     ordered
 }
