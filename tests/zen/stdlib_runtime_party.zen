@@ -1,0 +1,70 @@
+// Pony's Party, now running on Runtime-driven cooperative actors. Each actor
+// allocates its state THROUGH a runtime `r` and receives messages THROUGH `r`
+// (co_recv_r suspends via r.suspend() while the mailbox is empty). Spawned with
+// an AsyncArena, the friends and the host interleave cooperatively on one OS
+// thread — the actor's execution mode IS its allocator. This wires the capstone
+// (stdlib_runtime_actor: one body, allocator = the switch) into the multi-actor
+// Party (stdlib_party): the Hollywood actors, but allocator-driven.
+{ io } = std
+{ AsyncArena, async_arena } = std.memory.runtime
+{ co_init, co_spawn, co_send, co_recv_r, co_self, co_run } = std.concurrency.actor.coactor
+
+g_total ::= @builtin.null_ptr()
+g_responses ::= @builtin.null_ptr()
+
+// actor Party: drain `total` responses through its async runtime, allocating its
+// running count THROUGH r, announcing each, then the finale.
+party_loop = () void {
+    r ::= async_arena(1024)
+    total = @builtin.load<i64>(g_total)
+    count = r.alloc(cast(8, usize))
+    @builtin.store(count, cast(0, i64))
+    loop((l) {
+        @builtin.load<i64>(count) >= total ?
+            | true { l.done() }
+            | false {
+                who = co_recv_r(r)
+                io.println("friend ${cast(who, i32)} responded")
+                @builtin.store(count, @builtin.load<i64>(count) + 1)
+                l.next()
+            }
+    })
+    @builtin.store(g_responses, total)
+    io.println("Everyone responded!")
+}
+
+// actor Friend: wait (through r) for the hello, then respond to the Party (id 0)
+// with its own id. Its id is captured into state allocated through r.
+friend_loop = () void {
+    r ::= async_arena(1024)
+    me_cell = r.alloc(cast(8, usize))
+    @builtin.store(me_cell, co_self())
+    hello = co_recv_r(r)
+    co_send(cast(0, i64), @builtin.load<i64>(me_cell))
+}
+
+main = () i32 {
+    co_init()
+    total = cast(3, i64)
+    g_total = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_total, total)
+    g_responses = @builtin.raw_allocate(cast(8, usize))
+    @builtin.store(g_responses, cast(0, i64))
+
+    party = co_spawn(party_loop)        // id 0
+    i ::= cast(0, i64)
+    loop((l) {
+        i >= total ?
+            | true { l.done() }
+            | false {
+                fid = co_spawn(friend_loop)
+                co_send(fid, cast(0, i64))   // hello
+                i = i + 1
+                l.next()
+            }
+    })
+
+    co_run()
+    io.println("responses=${cast(@builtin.load<i64>(g_responses), i32)}")
+    0
+}

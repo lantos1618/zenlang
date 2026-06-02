@@ -206,6 +206,11 @@ fn test_stdlib_runtime_actor() {
 }
 
 #[test]
+fn test_stdlib_runtime_party() {
+    run_test("stdlib_runtime_party");
+}
+
+#[test]
 fn test_stdlib_scheduler() {
     run_test("stdlib_scheduler");
 }

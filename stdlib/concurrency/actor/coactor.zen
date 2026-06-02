@@ -15,6 +15,7 @@
 // sets g_self before each resume, so co_recv/co_self read it fresh after a yield.
 
 { Coroutine, coroutine_new, coroutine_resume, coroutine_yield } = std.concurrency.coroutine
+{ Runtime } = std.memory.runtime
 { raw_allocate, gep, load_i64, store_i64, load_u8, store_u8, load_rawptr, store_rawptr } = std.compiler
 
 // Global-var initializers must be C compile-time constants, so they start null
@@ -116,6 +117,28 @@ co_recv = () i64 {
     result
 }
 
+// Receive the next message for the current actor, suspending THROUGH the runtime
+// `r` while its mailbox is empty. This is the Runtime-driven recv: under an
+// AsyncArena, r.suspend() yields the fiber (cooperative); under a SyncArena it is
+// a no-op, so a single-actor drain runs straight through. Same body, the
+// allocator decides the execution mode.
+co_recv_r<R: Runtime> = (r: R) i64 {
+    result ::= cast(0, i64)
+    loop((l) {
+        mb = co_mailbox(co_self())
+        mb_count(mb) > 0 ?
+            | true {
+                result = mb_pop(mb)
+                l.done()
+            }
+            | false {
+                r.suspend()
+                l.next()
+            }
+    })
+    result
+}
+
 // Drive all actors round-robin until every fiber has returned. Sets g_self
 // before each resume so co_self/co_recv resolve to the right mailbox.
 co_run = () void {
@@ -185,4 +208,4 @@ load_u8_as_dec = (done: RawPtr<u8>, i: i64) i64 {
         | false { cast(0, i64) }
 }
 
-@export({ co_init, co_spawn, co_send, co_recv, co_self, co_run })
+@export({ co_init, co_spawn, co_send, co_recv, co_recv_r, co_self, co_run })
