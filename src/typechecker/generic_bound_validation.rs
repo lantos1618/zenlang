@@ -1,4 +1,4 @@
-use super::generics::monomorphize_types::substitute_ast_type;
+use super::generics::substitute::substitute_ast_type;
 use super::*;
 
 impl TypeChecker {

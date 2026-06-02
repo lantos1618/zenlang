@@ -4,7 +4,7 @@ use crate::ast::typed::Type;
 use crate::ast::AstType;
 use crate::error::Span;
 
-use super::monomorphize_names::reserve_specialization_name;
+use super::substitute::reserve_specialization_name;
 use super::super::{quoted_list, GenericFunctionTemplate, TypeChecker};
 
 impl TypeChecker {

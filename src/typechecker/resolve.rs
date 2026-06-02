@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::ast::typed::Type;
 use crate::ast::AstType;
 
-use super::generics::monomorphize_types::substitute_ast_type;
+use super::generics::substitute::substitute_ast_type;
 use super::TypeChecker;
 
 impl TypeChecker {
