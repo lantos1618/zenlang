@@ -1,14 +1,8 @@
 use super::*;
 
-include!("import_seeding/imports_modules.rs");
-include!("import_seeding/imports_graph_seeding.rs");
-include!("import_seeding/imports_dependencies.rs");
-include!("import_seeding/imports_behavior_extends.rs");
-include!("import_seeding/imports_behavior_dependencies.rs");
-include!("import_seeding/imports_source_dependencies.rs");
-include!("import_seeding/imports_source_dependency_types.rs");
-include!("import_seeding/imports_source_dependency_callables.rs");
-include!("import_seeding/imported_method_seeding.rs");
+include!("import_seeding/imports_core.rs");
+include!("import_seeding/imports_behaviors.rs");
+include!("import_seeding/imports_source.rs");
 
 fn module_declaration<'a>(module: &'a ResolvedModule, name: &str) -> Option<&'a Declaration> {
     module

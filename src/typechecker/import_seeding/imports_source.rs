@@ -111,3 +111,115 @@ impl TypeChecker {
     }
 
 }
+
+impl TypeChecker {
+    fn insert_source_type_dependency(
+        local_name: &str,
+        decl: &Declaration,
+        dependencies: &mut SourceModuleDependencies,
+        specialization_scope: Option<&str>,
+    ) {
+        match decl {
+            Declaration::Struct {
+                type_params,
+                fields,
+                public,
+                ..
+            } => {
+                let mut info = struct_info_from_ast_fields(type_params, fields);
+                if !*public {
+                    info.specialization_scope = specialization_scope.map(str::to_string);
+                }
+                dependencies.structs.insert(local_name.to_string(), info);
+            }
+            Declaration::Enum {
+                type_params,
+                variants,
+                public,
+                ..
+            } => {
+                let mut info = enum_info_from_ast_variants(type_params, variants);
+                if !*public {
+                    info.specialization_scope = specialization_scope.map(str::to_string);
+                }
+                dependencies.enums.insert(local_name.to_string(), info);
+            }
+            _ => {}
+        }
+    }
+}
+
+impl TypeChecker {
+    fn insert_source_import_type_method_dependencies(
+        local_name: &str,
+        source_name: &str,
+        imported_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+        dependencies: &mut SourceModuleDependencies,
+    ) {
+        for decl in &imported_module.program.declarations {
+            match decl {
+                Declaration::Method {
+                    type_name,
+                    method_name,
+                    ..
+                } if type_name == source_name => {
+                    Self::insert_source_imported_type_method_dependency(
+                        &method_signature_key(local_name, method_name),
+                        decl,
+                        imported_module,
+                        graph,
+                        dependencies,
+                        &imported_module.info.canonical_path,
+                    );
+                }
+                Declaration::ImplBlock {
+                    type_name,
+                    behavior: None,
+                    methods,
+                    ..
+                } if type_name == source_name => {
+                    for method in methods {
+                        let Some(name) = method.name() else {
+                            continue;
+                        };
+                        Self::insert_source_imported_type_method_dependency(
+                            &method_signature_key(local_name, name),
+                            method,
+                            imported_module,
+                            graph,
+                            dependencies,
+                            &imported_module.info.canonical_path,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn insert_source_imported_type_method_dependency(
+        key: &str,
+        decl: &Declaration,
+        imported_module: &ResolvedModule,
+        graph: &ResolvedModuleGraph,
+        dependencies: &mut SourceModuleDependencies,
+        specialization_scope: &str,
+    ) {
+        if !decl.is_public() {
+            return;
+        }
+
+        insert_callable_signature_scoped(
+            key,
+            decl,
+            &mut dependencies.methods,
+            &mut dependencies.generic_methods,
+            Some(specialization_scope),
+        );
+        if let Some(template) = dependencies.generic_methods.get_mut(key) {
+            template.dependencies = Self::source_module_dependencies(imported_module, graph);
+        }
+    }
+
+}
