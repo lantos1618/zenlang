@@ -12,7 +12,7 @@ pub use parts::{MatchArm, StringPart};
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Expression {
     IntLiteral {
-        value: i64,
+        value: i128,
         span: Span,
     },
     FloatLiteral {

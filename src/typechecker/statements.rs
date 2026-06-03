@@ -2,7 +2,7 @@ use crate::ast::typed::*;
 use crate::ast::Statement;
 use crate::error::{CompilerDiagnosticCode::*, Diagnostic, Span};
 
-use super::{literal_coerced_type, type_display_pair, TypeChecker};
+use super::{type_display_pair, TypeChecker};
 
 fn typed_assignment_statement(
     target: TypedExpression,
@@ -47,7 +47,7 @@ impl TypeChecker {
                 };
 
                 let typed_value = TypedExpression {
-                    ty: literal_coerced_type(&var_type, &typed_value),
+                    ty: self.literal_coerced_type(&var_type, &typed_value),
                     ..typed_value
                 };
 
@@ -98,9 +98,10 @@ impl TypeChecker {
                 span,
             } => {
                 let typed_target = self.check_expr(target)?;
-                let typed_value = self.check_expr(value)?;
+                let mut typed_value = self.check_expr(value)?;
                 if let TypedExprKind::Variable(name) = &typed_target.kind {
                     if let Some(info) = self.lookup_var_info(name).cloned() {
+                        typed_value.ty = self.literal_coerced_type(&info.ty, &typed_value);
                         self.check_assignment_target(
                             name,
                             &info.ty,
@@ -109,13 +110,17 @@ impl TypeChecker {
                             span,
                         );
                     }
-                } else if !self.types_compatible(&typed_target.ty, &typed_value.ty) {
-                    let (expected, actual) = type_display_pair(&typed_target.ty, &typed_value.ty);
-                    self.push_error(
-                        E3071,
-                        format!("assignment expects `{expected}`, found `{actual}`"),
-                        *span,
-                    );
+                } else {
+                    typed_value.ty = self.literal_coerced_type(&typed_target.ty, &typed_value);
+                    if !self.types_compatible(&typed_target.ty, &typed_value.ty) {
+                        let (expected, actual) =
+                            type_display_pair(&typed_target.ty, &typed_value.ty);
+                        self.push_error(
+                            E3071,
+                            format!("assignment expects `{expected}`, found `{actual}`"),
+                            *span,
+                        );
+                    }
                 }
                 Ok(typed_assignment_statement(typed_target, typed_value, *span))
             }

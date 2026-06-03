@@ -1,0 +1,41 @@
+{ io } = std
+
+take_i8 = (v: i8) void {
+}
+take_i16 = (v: i16) void {
+}
+take_i32 = (v: i32) void {
+}
+take_i64 = (v: i64) void {
+}
+take_u8 = (v: u8) void {
+}
+take_u16 = (v: u16) void {
+}
+take_u32 = (v: u32) void {
+}
+take_u64 = (v: u64) void {
+}
+take_usize = (v: usize) void {
+}
+take_f32 = (v: f32) void {
+}
+take_f64 = (v: f64) void {
+}
+
+main = () i32 {
+    take_i8(127)
+    take_i16(32767)
+    take_i32(2147483647)
+    take_i64(9223372036854775807)
+    take_u8(255)
+    take_u16(65535)
+    take_u32(4294967295)
+    take_u64(18446744073709551615)
+    take_usize(64)
+    take_f32(1.5)
+    take_f64(2.5)
+    take_f32(3)
+    io.println("literal_context=ok")
+    0
+}

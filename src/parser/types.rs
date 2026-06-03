@@ -29,7 +29,12 @@ impl Parser {
                     self.advance();
                     let (stok, sspan) = self.advance();
                     match stok {
-                        Token::IntLiteral(n) => Some(n as usize),
+                        Token::IntLiteral(n) => Some(usize::try_from(n).map_err(|_| {
+                            CompileError::Syntax(
+                                "array size literal out of range".into(),
+                                Some(sspan),
+                            )
+                        })?),
                         _ => {
                             return Err(CompileError::Syntax(
                                 "expected array size".into(),

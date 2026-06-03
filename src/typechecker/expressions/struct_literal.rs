@@ -1,6 +1,4 @@
 use super::*;
-use crate::typechecker::literal_coerced_type;
-
 impl TypeChecker {
     pub(super) fn check_struct_literal_expr(
         &mut self,
@@ -88,7 +86,7 @@ impl TypeChecker {
             if let Some(expected) = field_defs.get(field_name) {
                 // An untyped integer/float literal adopts the field's numeric
                 // type (`Vec { len: 0, cap: 4 }` with `i64` fields).
-                let actual_ty = literal_coerced_type(expected, &typed);
+                let actual_ty = self.literal_coerced_type(expected, &typed);
                 if !self.types_compatible(expected, &actual_ty) {
                     self.push_struct_field_type_error(field_name, name, expected, &typed);
                 } else {
@@ -118,7 +116,7 @@ impl TypeChecker {
                         }
                         let typed = typed?;
                         if let Some(expected) = field_defs.get(field_name) {
-                            let actual_ty = literal_coerced_type(expected, &typed);
+                            let actual_ty = self.literal_coerced_type(expected, &typed);
                             if !self.types_compatible(expected, &actual_ty) {
                                 self.push_struct_field_type_error(
                                     field_name, name, expected, &typed,

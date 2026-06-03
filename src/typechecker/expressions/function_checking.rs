@@ -52,7 +52,7 @@ impl TypeChecker {
         // match arms / if branches / block tails.
         if ret_type.is_integer() || ret_type.is_float() {
             if let Some(expr) = &mut body_block.expr {
-                coerce_result_to_numeric_type(expr, &ret_type);
+                self.coerce_result_to_numeric_type(expr, &ret_type);
                 body_block.ty = expr.ty.clone();
             }
         }
@@ -104,40 +104,51 @@ impl TypeChecker {
     }
 }
 
-/// Push an expected numeric return type into untyped numeric-literal results,
-/// recursing through `match` arms, `if` branches, and block tails so a function
-/// whose branches are bare literals (e.g. `1` in a `u64` function) type-checks
-/// without an explicit cast. Only literal leaves are retyped.
-fn coerce_result_to_numeric_type(expr: &mut TypedExpression, expected: &Type) {
-    if !(expected.is_integer() || expected.is_float()) {
-        return;
-    }
-    match &mut expr.kind {
-        TypedExprKind::IntLiteral(_) if expr.ty.is_integer() && expected.is_integer() => {
-            expr.ty = expected.clone();
+impl TypeChecker {
+    /// Push an expected numeric return type into untyped numeric-literal results,
+    /// recursing through `match` arms, `if` branches, and block tails so a function
+    /// whose branches are bare literals (e.g. `1` in a `u64` function) type-checks
+    /// without an explicit cast. Only literal leaves are retyped.
+    fn coerce_result_to_numeric_type(&mut self, expr: &mut TypedExpression, expected: &Type) {
+        if !(expected.is_integer() || expected.is_float()) {
+            return;
         }
-        TypedExprKind::FloatLiteral(_) if expr.ty.is_float() && expected.is_float() => {
-            expr.ty = expected.clone();
+        if matches!(&expr.kind, TypedExprKind::IntLiteral(_))
+            && expr.ty.is_integer()
+            && expected.is_integer()
+        {
+            expr.ty = self.literal_coerced_type(expected, expr);
+            return;
         }
-        TypedExprKind::Match { arms, .. } => {
-            for arm in arms.iter_mut() {
-                coerce_block_result_to_numeric_type(&mut arm.body, expected);
-            }
-            if arms.iter().all(|arm| &arm.body.ty == expected) {
-                expr.ty = expected.clone();
-            }
+        if matches!(&expr.kind, TypedExprKind::FloatLiteral(_))
+            && expr.ty.is_float()
+            && expected.is_float()
+        {
+            expr.ty = self.literal_coerced_type(expected, expr);
+            return;
         }
-        TypedExprKind::Block(block) => {
-            coerce_block_result_to_numeric_type(block, expected);
-            expr.ty = block.ty.clone();
-        }
-        _ => {}
-    }
-}
 
-fn coerce_block_result_to_numeric_type(block: &mut TypedBlock, expected: &Type) {
-    if let Some(expr) = &mut block.expr {
-        coerce_result_to_numeric_type(expr, expected);
-        block.ty = expr.ty.clone();
+        match &mut expr.kind {
+            TypedExprKind::Match { arms, .. } => {
+                for arm in arms.iter_mut() {
+                    self.coerce_block_result_to_numeric_type(&mut arm.body, expected);
+                }
+                if arms.iter().all(|arm| &arm.body.ty == expected) {
+                    expr.ty = expected.clone();
+                }
+            }
+            TypedExprKind::Block(block) => {
+                self.coerce_block_result_to_numeric_type(block, expected);
+                expr.ty = block.ty.clone();
+            }
+            _ => {}
+        }
+    }
+
+    fn coerce_block_result_to_numeric_type(&mut self, block: &mut TypedBlock, expected: &Type) {
+        if let Some(expr) = &mut block.expr {
+            self.coerce_result_to_numeric_type(expr, expected);
+            block.ty = expr.ty.clone();
+        }
     }
 }

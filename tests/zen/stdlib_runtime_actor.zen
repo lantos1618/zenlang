@@ -16,7 +16,7 @@
 // accumulator allocated through `r`, suspending through `r` after each, then
 // publishes the total to `out`.
 actor_body<R: Runtime> = (r: R, inbox: RawPtr<u8>, out: RawPtr<u8>, n: i64) void {
-    acc = r.alloc(cast(8, usize))
+    acc = r.alloc(8)
     @builtin.store(acc, cast(0, i64))
     i ::= cast(0, i64)
     loop((l) {

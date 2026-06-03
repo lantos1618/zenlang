@@ -182,3 +182,16 @@ fn format_float(v: f64) -> String {
         format!("{}.0", s)
     }
 }
+
+fn format_int_literal(v: i128, ty: &Type) -> String {
+    let unsigned_target = matches!(
+        ty,
+        Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::Usize
+    );
+    let suffix = if unsigned_target || v > i128::from(i64::MAX) {
+        "ULL"
+    } else {
+        "LL"
+    };
+    format!("{v}{suffix}")
+}

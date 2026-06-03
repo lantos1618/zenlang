@@ -40,7 +40,7 @@ impl Lexer {
             .iter()
             .filter(|c| **c != '_')
             .collect();
-        let val: i64 = text.parse().map_err(|_| {
+        let val: i128 = text.parse().map_err(|_| {
             CompileError::Syntax(
                 format!("invalid integer literal: {text}"),
                 Some(self.make_span(start, self.byte_pos())),
@@ -80,7 +80,7 @@ impl Lexer {
                 Some(self.make_span(start, self.byte_pos())),
             ));
         }
-        let val = i64::from_str_radix(&text, radix).map_err(|_| {
+        let val = i128::from_str_radix(&text, radix).map_err(|_| {
             CompileError::Syntax(
                 "integer literal out of range".to_string(),
                 Some(self.make_span(start, self.byte_pos())),

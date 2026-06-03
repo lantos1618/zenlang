@@ -73,7 +73,7 @@ impl CEmitter {
 
     pub(super) fn emit_expr_inline(&mut self, expr: &TypedExpression) -> String {
         match &expr.kind {
-            TypedExprKind::IntLiteral(v) => format!("{}LL", v),
+            TypedExprKind::IntLiteral(v) => format_int_literal(*v, &expr.ty),
             TypedExprKind::FloatLiteral(v) => format_float(*v),
             TypedExprKind::StringLiteral(s) => {
                 let escaped = c_escape_string(s);

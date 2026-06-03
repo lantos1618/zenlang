@@ -44,7 +44,7 @@ impl TypeChecker {
                             self.diagnostics.push(actual.expect_err("checked error"));
                             continue;
                         };
-                        let actual_ty = literal_coerced_type(&expected, &actual);
+                        let actual_ty = self.literal_coerced_type(&expected, &actual);
                         if !self.types_compatible(&expected, &actual_ty) {
                             let (expected, actual_display) =
                                 type_display_pair(&expected, &actual.ty);

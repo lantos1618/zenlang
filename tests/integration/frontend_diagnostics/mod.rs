@@ -2,6 +2,7 @@ mod behavior_extends;
 mod generic_behavior_imports;
 mod imported_generic_arity;
 mod imported_generic_calls;
+mod literal_context;
 mod support;
 
 use support::{assert_diagnostic_code_and_message, frontend_diagnostics_for_modules};

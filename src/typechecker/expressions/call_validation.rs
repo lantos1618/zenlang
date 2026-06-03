@@ -41,7 +41,7 @@ impl TypeChecker {
         for (idx, (expected, actual)) in expected_types.iter().zip(args.iter()).enumerate() {
             // An untyped integer/float literal adopts the parameter's numeric
             // type (`char.is_digit(53)` satisfies a `u8` parameter).
-            let actual_ty = crate::typechecker::literal_coerced_type(expected, actual);
+            let actual_ty = self.literal_coerced_type(expected, actual);
             if !self.types_compatible(expected, &actual_ty) {
                 let position = idx + 1;
                 let (expected, actual_display) = type_display_pair(expected, &actual_ty);

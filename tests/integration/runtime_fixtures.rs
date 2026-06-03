@@ -196,6 +196,11 @@ fn test_stdlib_multisync() {
 }
 
 #[test]
+fn test_literal_context_numeric() {
+    run_test("literal_context_numeric");
+}
+
+#[test]
 fn test_stdlib_alloc_switch() {
     run_test("stdlib_alloc_switch");
 }

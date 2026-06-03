@@ -158,17 +158,123 @@ impl TypeChecker {
     }
 }
 
-fn literal_coerced_type(expected: &Type, actual: &TypedExpression) -> Type {
-    match &actual.kind {
-        // An int literal soundly adopts an integer OR a float expected type
-        // (`ratio: f64 = 2` becomes 2.0), matching binary-op coercion (`1 + 2.5`).
-        // A float literal only adopts a float — never silently an integer.
-        TypedExprKind::IntLiteral(_) if expected.is_integer() || expected.is_float() => {
-            expected.clone()
+impl TypeChecker {
+    pub(in crate::typechecker) fn literal_coerced_type(
+        &mut self,
+        expected: &Type,
+        actual: &TypedExpression,
+    ) -> Type {
+        match &actual.kind {
+            // Numeric literals adopt an expected primitive numeric type only when
+            // the compile-time value fits that target. An int literal may adopt a
+            // float expected type (`ratio: f64 = 2` becomes 2.0), matching binary-
+            // op coercion (`1 + 2.5`). A float literal only adopts a float —
+            // never silently an integer.
+            TypedExprKind::IntLiteral(value) if expected.is_integer() => {
+                if int_literal_fits_integer_type(*value, expected) {
+                    expected.clone()
+                } else {
+                    self.push_numeric_literal_overflow(
+                        "integer",
+                        &value.to_string(),
+                        expected,
+                        actual.span,
+                    );
+                    Type::Unknown
+                }
+            }
+            TypedExprKind::IntLiteral(value) if expected.is_float() => {
+                if int_literal_fits_float_type(*value, expected) {
+                    expected.clone()
+                } else {
+                    self.push_numeric_literal_overflow(
+                        "integer",
+                        &value.to_string(),
+                        expected,
+                        actual.span,
+                    );
+                    Type::Unknown
+                }
+            }
+            TypedExprKind::FloatLiteral(value) if expected.is_float() => {
+                if float_literal_fits_float_type(*value, expected) {
+                    expected.clone()
+                } else {
+                    self.push_numeric_literal_overflow(
+                        "float",
+                        &value.to_string(),
+                        expected,
+                        actual.span,
+                    );
+                    Type::Unknown
+                }
+            }
+            _ => actual.ty.clone(),
         }
-        TypedExprKind::FloatLiteral(_) if expected.is_float() => expected.clone(),
-        _ => actual.ty.clone(),
     }
+
+    fn push_numeric_literal_overflow(
+        &mut self,
+        literal_kind: &str,
+        value: &str,
+        expected: &Type,
+        span: Span,
+    ) {
+        self.push_error(
+            E3074,
+            format!(
+                "{literal_kind} literal `{value}` does not fit in `{}`",
+                expected.display_name()
+            ),
+            span,
+        );
+    }
+}
+
+fn int_literal_fits_integer_type(value: i128, ty: &Type) -> bool {
+    let Some((min, max)) = integer_type_range(ty) else {
+        return false;
+    };
+    min <= value && value <= max
+}
+
+fn integer_type_range(ty: &Type) -> Option<(i128, i128)> {
+    let range = match ty {
+        Type::I8 => (i128::from(i8::MIN), i128::from(i8::MAX)),
+        Type::I16 => (i128::from(i16::MIN), i128::from(i16::MAX)),
+        Type::I32 => (i128::from(i32::MIN), i128::from(i32::MAX)),
+        Type::I64 => (i128::from(i64::MIN), i128::from(i64::MAX)),
+        Type::U8 => (0, i128::from(u8::MAX)),
+        Type::U16 => (0, i128::from(u16::MAX)),
+        Type::U32 => (0, i128::from(u32::MAX)),
+        Type::U64 | Type::Usize => (0, u64::MAX.into()),
+        _ => return None,
+    };
+    Some(range)
+}
+
+fn int_literal_fits_float_type(value: i128, ty: &Type) -> bool {
+    let value = value as f64;
+    float_literal_fits_float_type(value, ty)
+}
+
+fn float_literal_fits_float_type(value: f64, ty: &Type) -> bool {
+    if !value.is_finite() {
+        return false;
+    }
+    let Some(max) = float_type_abs_max(ty) else {
+        return false;
+    };
+    value.abs() <= max
+}
+
+fn float_type_abs_max(ty: &Type) -> Option<f64> {
+    let max = match ty {
+        Type::F32 => f64::from(f32::MAX),
+        Type::F64 => f64::MAX,
+        _ => return None,
+    };
+    Some(max)
 }
 
 fn type_display_pair(expected: &Type, actual: &Type) -> (String, String) {

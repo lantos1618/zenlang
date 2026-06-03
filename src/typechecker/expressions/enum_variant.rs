@@ -1,6 +1,4 @@
 use super::*;
-use crate::typechecker::literal_coerced_type;
-
 impl TypeChecker {
     pub(super) fn check_enum_variant_expr(
         &mut self,
@@ -70,7 +68,7 @@ impl TypeChecker {
             if let (Some(Some(expected)), Some(actual)) =
                 (variant_defs.get(variant), typed_payload.as_mut())
             {
-                actual.ty = literal_coerced_type(expected, actual);
+                actual.ty = self.literal_coerced_type(expected, actual);
             }
         }
         if enum_info.is_none() {

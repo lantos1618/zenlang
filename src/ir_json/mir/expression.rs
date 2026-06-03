@@ -11,7 +11,7 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
 
     lowered.kind = match &expr.kind {
         TypedExprKind::IntLiteral(value) => {
-            lowered.value = Some(serde_json::json!(value));
+            lowered.value = Some(int_literal_json_value(*value));
             "int"
         }
         TypedExprKind::FloatLiteral(value) => {
@@ -148,6 +148,18 @@ pub(super) fn mir_expression(expr: &TypedExpression) -> MirExpression {
     };
 
     lowered
+}
+
+fn int_literal_json_value(value: i128) -> serde_json::Value {
+    if value >= 0 {
+        if let Ok(value) = u64::try_from(value) {
+            return serde_json::json!(value);
+        }
+    } else if let Ok(value) = i64::try_from(value) {
+        return serde_json::json!(value);
+    }
+
+    serde_json::json!(value.to_string())
 }
 
 fn mir_match_kind(kind: &MatchKind) -> &'static str {

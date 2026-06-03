@@ -17,7 +17,7 @@ pub struct TypedExpression {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum TypedExprKind {
-    IntLiteral(i64),
+    IntLiteral(i128),
     FloatLiteral(f64),
     StringLiteral(String),
     BoolLiteral(bool),
